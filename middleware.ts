@@ -4,16 +4,18 @@ import { enforceApiCsrf } from '@/lib/csrf';
 import { hostnameFromHostHeader, isLoopbackHostname } from '@/lib/csrf';
 import { matchIndexNowKeyPath } from '@/lib/indexnow-key-file';
 import { REQUEST_PATHNAME_HEADER } from '@/lib/auth/admin-return-path';
-import { CONSENT_COOKIE, CONSENT_MIRROR_COOKIE } from '@/lib/consent';
+import { CONSENT_COOKIE, CONSENT_MIRROR_COOKIE, CONSENT_REGION_COOKIE } from '@/lib/consent';
 import { updateSession } from '@/lib/supabase/middleware';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { isKnownCitySlug } from '@/lib/pseo/city-data/city-slugs-edge';
 import { resolveStateSlug } from '@/lib/pseo/setting-state-config';
 import { getAllMetroSlugs } from '@/lib/metro-data';
 import { JOBS_TOP_SEGMENTS, isUnknownJobsTaxonomy } from '@/lib/pseo/jobs-segments-edge';
-// The dead-link half of canonicalActiveJobWhere, for the company-profile 410
-// gate below. Plain integer constant; lib/active-job-filter.ts reaches
-// @prisma/client through type-only imports, which the compiler erases.
+import { isCompanyProfileSlugShape } from '@/lib/company-slug';
+// The dead-link half of canonicalActiveJobWhere, for the job-detail and
+// company-profile 410 gates below. Plain integer constant;
+// lib/active-job-filter.ts reaches @prisma/client through type-only imports,
+// which the compiler erases.
 import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
 import {
     LISTING_GATE_SELECT,
@@ -520,7 +522,100 @@ const STRICT_CONSENT_COUNTRIES = new Set([
     'AU',
 ]);
 
-export async function middleware(request: NextRequest) {
+// ── Host canonicalisation (TECH-02, CS-04) ───────────────────────────
+// The production deployment also answers on its Vercel project alias
+// (<project>.vercel.app) and on each production deployment URL, and until
+// this block every one of them served the whole site as an indexable
+// duplicate of the canonical host. rel=canonical already pointed at the
+// canonical host, but Google ranks a redirect above rel=canonical, so a
+// production request on any *.vercel.app host is now a permanent 308 to
+// the same path and query on brand.baseUrl.
+//
+// WHAT IS NEVER REDIRECTED. Machine callers reach the deployment host
+// directly: Vercel cron and the batch dispatcher (/api/cron/*), Inngest
+// (/api/inngest), Stripe and other webhooks (/api/webhooks/*), and Vercel's
+// own /_vercel/* and /.well-known/* traffic. Vercel cron does not follow
+// redirects and a webhook sender may not either, so every /api path is
+// exempt, with the framework prefixes beside it. The
+// matcher below already skips static assets, robots.txt and sitemap.xml; on
+// the alias those stay 200 and name only canonical-host URLs, which is
+// harmless and keeps the alias crawlable enough for Googlebot to see the
+// page redirects.
+//
+// WHY IT CANNOT LOOP. It redirects only a host ending in .vercel.app, only to
+// the hostname in brand.baseUrl (config, never an env override that could be
+// set to the alias), and stands down when that hostname is the request host
+// or is itself a .vercel.app host. The target therefore never matches the
+// rule again. It also stands down when NEXT_PUBLIC_BASE_URL is set to a
+// different host than brand.baseUrl: that deployment says it lives somewhere
+// else (a fork serving from its alias before its domain is live), and
+// redirecting it to a domain it does not serve would take it offline.
+//
+// PREVIEWS. A preview deployment is also a .vercel.app host, but it is not a
+// duplicate of production and must never redirect there. Every preview
+// response instead carries X-Robots-Tag: noindex, nofollow (applied in
+// middleware() below, over whatever the pipeline set). robots.txt stays
+// crawlable on purpose: a robots.txt block would hide the noindex from
+// Google. Keep Vercel Deployment Protection on for previews as well.
+const CANONICAL_BASE = new URL(brand.baseUrl);
+const CANONICAL_HOSTNAME = CANONICAL_BASE.hostname.toLowerCase();
+const VERCEL_DEPLOYMENT_HOST_SUFFIX = '.vercel.app';
+const HOST_REDIRECT_EXEMPT_PREFIXES: readonly string[] = ['/api/', '/_next/', '/_vercel/', '/.well-known/'];
+const PREVIEW_ROBOTS_HEADER = 'noindex, nofollow';
+
+function isHostRedirectExemptPath(pathname: string): boolean {
+    return pathname === '/api' || HOST_REDIRECT_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+/** True unless NEXT_PUBLIC_BASE_URL names a host other than brand.baseUrl's. */
+function deploymentServesCanonicalHost(): boolean {
+    const configured = process.env.NEXT_PUBLIC_BASE_URL;
+    if (!configured) return true;
+    try {
+        return new URL(configured).hostname.toLowerCase() === CANONICAL_HOSTNAME;
+    } catch {
+        return false;
+    }
+}
+
+/** The 308 to the canonical host for a production *.vercel.app request, else null. */
+function canonicalHostRedirect(request: NextRequest): NextResponse | null {
+    if (process.env.VERCEL_ENV !== 'production') return null;
+    const host = hostnameFromHostHeader(request.headers.get('host'));
+    if (!host || !host.endsWith(VERCEL_DEPLOYMENT_HOST_SUFFIX)) return null;
+    if (host === CANONICAL_HOSTNAME || CANONICAL_HOSTNAME.endsWith(VERCEL_DEPLOYMENT_HOST_SUFFIX)) return null;
+    if (!deploymentServesCanonicalHost()) return null;
+    const { pathname, search } = request.nextUrl;
+    if (isHostRedirectExemptPath(pathname)) return null;
+    return NextResponse.redirect(`${CANONICAL_BASE.origin}${pathname}${search}`, 308);
+}
+
+// Edge-cache directives for listing pages (M-03; see the CDN-Cache-Control
+// block at the end of routeRequest). Page 1 of a listing is held for an hour
+// and served stale for a day while it revalidates; any other crawler-fetched
+// listing view is held for 5 minutes.
+const LISTING_FIRST_PAGE_EDGE_CACHE = 'public, s-maxage=3600, stale-while-revalidate=86400';
+const CRAWLER_LISTING_EDGE_CACHE = 'public, s-maxage=300, stale-while-revalidate=600';
+
+// Directory hubs outside /jobs that read ?page, so they render per request
+// like the /jobs listings, and whose HTML reads no cookie or header (M-03:
+// /companies and /blog page 1 measured 'private, no-store' with a slow cold
+// render). Exact paths only: a company profile or a blog post is its own
+// route with its own caching, and /companies/{slug} keeps its 410 gate above.
+const EDGE_CACHED_HUB_PATHS: ReadonlySet<string> = new Set(['/companies', '/blog']);
+
+export async function middleware(request: NextRequest): Promise<NextResponse> {
+    const hostRedirect = canonicalHostRedirect(request);
+    if (hostRedirect) return hostRedirect;
+
+    const response = await routeRequest(request);
+    if (process.env.VERCEL_ENV === 'preview') {
+        response.headers.set('X-Robots-Tag', PREVIEW_ROBOTS_HEADER);
+    }
+    return response;
+}
+
+async function routeRequest(request: NextRequest): Promise<NextResponse> {
     const url = request.nextUrl.clone();
     const pathname = url.pathname;
 
@@ -615,7 +710,7 @@ export async function middleware(request: NextRequest) {
                 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.PROD_SUPABASE_SERVICE_ROLE_KEY;
                 if (supabaseUrl && supabaseKey) {
                     const res = await fetch(
-                        `${supabaseUrl}/rest/v1/jobs?id=eq.${jobId}&select=id,is_published,expires_at,${LISTING_GATE_SELECT}`,
+                        `${supabaseUrl}/rest/v1/jobs?id=eq.${jobId}&select=id,is_published,expires_at,health_consecutive_missing,${LISTING_GATE_SELECT}`,
                         {
                             headers: {
                                 'apikey': supabaseKey,
@@ -638,11 +733,22 @@ export async function middleware(request: NextRequest) {
                         // the same predicate (unpublished OR date-expired) and
                         // renders a noindexed "Position Filled" shell as the
                         // fallback when this gate can't run (pages can't emit a
-                        // real 410 status). Change the predicate in BOTH places or
-                        // tests/regressions/seo-sitemaps-expired-mirror.test.ts fails.
+                        // real 410 status). Change the predicate in BOTH places;
+                        // tests/regressions/seo-sitemaps-middleware.test.ts and
+                        // seo-sitemaps-page-schema.test.ts pin the two halves.
+                        //
+                        // Dead link (CS-06): source presence counts the ingest runs
+                        // in a row whose feed no longer lists the job
+                        // (health_consecutive_missing). At DEAD_LINK_MISS_THRESHOLD
+                        // the sitemaps already drop it (activeIndexableJobWhere), and
+                        // the page must stop presenting it as open too: the posting
+                        // is gone at its source, so it answers 410 like an expired
+                        // job, and deindex-expired sends Google its URL_DELETED.
                         const row = rows[0];
                         const dateExpired = !!row?.expires_at && new Date(row.expires_at).getTime() < Date.now();
-                        if (rows.length === 0 || !row.is_published || dateExpired) {
+                        const deadLink = typeof row?.health_consecutive_missing === 'number'
+                            && row.health_consecutive_missing >= DEAD_LINK_MISS_THRESHOLD;
+                        if (rows.length === 0 || !row.is_published || dateExpired || deadLink) {
                             cacheLookupSet(cacheKey, true);
                             return removedJob410();
                         }
@@ -702,15 +808,25 @@ export async function middleware(request: NextRequest) {
     // DB stores normalizedName with spaces; the slug arrives as %20-encoded
     // and Next.js path matching is case-sensitive on byte values, so we
     // decode before querying.
+    //
+    // L-01 (indexing audit): profile URLs are display-name slugs
+    // (lib/company-slug.ts), and normalized_name evidence says nothing about
+    // them. /companies/one-medical matches no normalized_name row, and
+    // /companies/davita (live "DaVita", normalized_name "da-vita") matches a
+    // dormant variant row spelled "Davita". A slug with the display-name
+    // shape is therefore left to the page, which serves the live profile,
+    // 308s an old slug to the current one, or 404s. Only a slug that can
+    // never be a display-name slug (the percent-encoded space form the old
+    // sitemap emitted, mixed case, other characters) keeps the 410 gate.
     if (pathname.startsWith('/companies/') && pathname.split('/').length === 3) {
         const rawSlug = pathname.split('/')[2];
-        if (rawSlug && rawSlug.length > 0) {
-            let decodedSlug: string;
-            try {
-                decodedSlug = decodeURIComponent(rawSlug);
-            } catch {
-                decodedSlug = rawSlug;
-            }
+        let decodedSlug: string;
+        try {
+            decodedSlug = decodeURIComponent(rawSlug);
+        } catch {
+            decodedSlug = rawSlug;
+        }
+        if (rawSlug && rawSlug.length > 0 && !isCompanyProfileSlugShape(decodedSlug)) {
             // H7 fix: hot company URLs (one per AhrefsBot crawl burst) get
             // served from the in-process cache after the first miss. 60s TTL
             // is fine — if jobs ARE added for a previously-empty company,
@@ -740,15 +856,12 @@ export async function middleware(request: NextRequest) {
                     );
                     if (res.ok) {
                         let rows = await res.json();
-                        // SEO fix (B30): the sitemap now emits kebab-case
-                        // company URLs, but rows inserted before the
-                        // normalizer changed still hold the legacy space
-                        // form ("life stance"). The page resolver
-                        // (app/companies/[slug]/page.tsx
-                        // resolveCompanyNormalizedName) falls back from
-                        // "life-stance" to "life stance" — this gate must
-                        // apply the SAME fallback or it 410s the exact
-                        // kebab URL the page is built to resolve.
+                        // SEO fix (B30): rows inserted before the normalizer
+                        // went kebab-case still hold the legacy space form
+                        // ("life stance"). A hyphenated slug that reaches
+                        // this gate (only one that fails the display-name
+                        // shape) is also tried in that space form, so the
+                        // gate never 410s a row the page can still resolve.
                         let lookupDefinitive = true;
                         if (rows.length === 0 && decodedSlug.includes('-')) {
                             const legacyLookup = encodeURIComponent(decodedSlug.replace(/-/g, ' '));
@@ -1214,13 +1327,22 @@ export async function middleware(request: NextRequest) {
     // re-rendering (and re-running ~10+ DB queries) on every URL. Safe because
     // the region is read CLIENT-SIDE from this cookie (lib/consent.ts
     // getConsentRegion) and the SSR HTML itself is geo-neutral.
+    //
+    // M-03 (indexing audit): for users the cookie is written only when the
+    // browser does not already hold this region. An unchanged cookie is not
+    // re-sent, so a returning visitor's listing response carries no
+    // Set-Cookie and can be edge-cached (see the CDN-Cache-Control block
+    // below). The cookie lasts 1 day from its last write; once it expires,
+    // the next request writes it again.
     if (!isCrawler) {
-        response.cookies.set('pmhnp_consent_region', region, {
-            path: '/',
-            sameSite: 'lax',
-            secure: !isLocalhost,
-            maxAge: 60 * 60 * 24, // 1 day — re-evaluated on every visit
-        });
+        if (request.cookies.get(CONSENT_REGION_COOKIE)?.value !== region) {
+            response.cookies.set(CONSENT_REGION_COOKIE, region, {
+                path: '/',
+                sameSite: 'lax',
+                secure: !isLocalhost,
+                maxAge: 60 * 60 * 24, // 1 day from the last write
+            });
+        }
 
         // ── Consent Mirror (ISR fix F5) ──────────────────────────────
         // The authoritative consent cookie is HttpOnly (audit gap #19 —
@@ -1233,17 +1355,22 @@ export async function middleware(request: NextRequest) {
         // the mirror only affects that browser's own GA defaults, never
         // the server-side record. Crawler responses stay Set-Cookie-free
         // (see the consent-region rationale above) so they remain
-        // CDN-cacheable.
+        // CDN-cacheable. The mirror is written only when it differs from
+        // the authoritative value (M-03), so an unchanged choice adds no
+        // Set-Cookie either.
         const consentValue = request.cookies.get(CONSENT_COOKIE)?.value;
         if (consentValue) {
-            response.cookies.set(CONSENT_MIRROR_COOKIE, consentValue, {
-                path: '/',
-                sameSite: 'lax',
-                secure: !isLocalhost,
-                // Refreshed on every request; expiry only matters when the
-                // user stops visiting. Matches the region cookie's 1 day.
-                maxAge: 60 * 60 * 24,
-            });
+            if (request.cookies.get(CONSENT_MIRROR_COOKIE)?.value !== consentValue) {
+                response.cookies.set(CONSENT_MIRROR_COOKIE, consentValue, {
+                    path: '/',
+                    sameSite: 'lax',
+                    secure: !isLocalhost,
+                    // Lasts 1 day from its last write, like the region
+                    // cookie. Once it expires, or the choice changes, the
+                    // next request writes it again.
+                    maxAge: 60 * 60 * 24,
+                });
+            }
         } else if (request.cookies.get(CONSENT_MIRROR_COOKIE)) {
             // Consent was cleared (DELETE /api/consent) — drop the stale
             // mirror so the banner re-prompts with a clean slate.
@@ -1375,16 +1502,37 @@ export async function middleware(request: NextRequest) {
     // If either condition ever has to break, extend this crawler cache to
     // job-detail URLs instead. NOTE: confirm in prod by checking the
     // response headers / `x-vercel-cache` on a pSEO URL with a crawler UA.
+    //
+    // M-03 (indexing audit): page 1 of /jobs/{category}, /jobs/state/*,
+    // /jobs/{setting}/{state} and /jobs/{category}/city/* renders per request
+    // because it reads ?page, so the ISR revalidate on those routes never
+    // applies and a cold render took 1.2 to 3.3 s. Page 1 is therefore held at
+    // the edge for an hour and served stale for up to a day while it
+    // revalidates, for every user agent. The response HTML is user-neutral
+    // (the root layout reads no cookies or headers), and a response that
+    // sets a cookie (a first visit, a consent change or a Supabase session
+    // refresh) is never marked cacheable for a user. ?page=1 already 301s to
+    // the bare URL, so no page param means page 1. Deeper pages and /jobs
+    // itself keep the short crawler-only cache. Job-detail URLs stay out
+    // (isJobDetailUrl), so the 410 gate above is untouched.
+    //
+    // The same page-1 rule covers the /companies and /blog hubs
+    // (EDGE_CACHED_HUB_PATHS): they read ?page too, and their HTML is just
+    // as user-neutral. Their deeper pages get the crawler-only cache like
+    // any other paginated listing.
     const isJobDetailUrl =
         /\/jobs\/[^/]*[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(pathname);
-    if (
-        isCrawler &&
+    const isEdgeCachedHub = EDGE_CACHED_HUB_PATHS.has(pathname);
+    const isEdgeCacheCandidate =
         request.method === 'GET' &&
         !isNoindexPath &&
         !isJobDetailUrl &&
-        (pathname === '/jobs' || pathname.startsWith('/jobs/'))
-    ) {
-        response.headers.set('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+        (pathname === '/jobs' || pathname.startsWith('/jobs/') || isEdgeCachedHub);
+    const isListingFirstPage = (pathname.startsWith('/jobs/') || isEdgeCachedHub) && !pageParam;
+    if (isEdgeCacheCandidate && isListingFirstPage && (isCrawler || !response.headers.has('set-cookie'))) {
+        response.headers.set('CDN-Cache-Control', LISTING_FIRST_PAGE_EDGE_CACHE);
+    } else if (isEdgeCacheCandidate && isCrawler) {
+        response.headers.set('CDN-Cache-Control', CRAWLER_LISTING_EDGE_CACHE);
     }
 
     return response;

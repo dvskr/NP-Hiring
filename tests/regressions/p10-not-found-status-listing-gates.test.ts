@@ -66,7 +66,7 @@ describe('1. job detail: the profession quarantine is ruled in middleware', () =
     const code = mw.replace(/\r\n/g, '\n');
 
     it('the job gate selects the quarantine columns and 410s a failing row', () => {
-        expect(code).toContain('select=id,is_published,expires_at,${LISTING_GATE_SELECT}');
+        expect(code).toContain('select=id,is_published,expires_at,health_consecutive_missing,${LISTING_GATE_SELECT}');
         expect(code).toMatch(/passesListingQuarantine\(row\) === false\)\s*\{\s*cacheLookupSet\(cacheKey, true, 'quarantined'\);\s*return quarantinedJob410\(\);/);
     });
 
@@ -175,5 +175,36 @@ describe('2. city hub: known not-found URLs render the branded 404', () => {
         expect(body).toMatch(/if \(!res\.ok\) \{[\s\S]*?return false;/);
         expect(body).toMatch(/catch \(err\) \{[\s\S]*?return false;/);
         expect(body).not.toContain('unavailable503');
+    });
+});
+
+describe('TECH-06: a category landing with 0 canonical jobs is a 404, never an empty 200', () => {
+    const BESPOKE_LANDINGS = [
+        '1099', 'community-health', 'contract', 'correctional', 'entry-level', 'full-time', 'geriatric', 'hospital',
+        'inpatient', 'lgbtq', 'locum-tenens', 'mid-career', 'new-grad', 'outpatient', 'part-time', 'per-diem',
+        'private-practice', 'remote', 'senior', 'telehealth', 'travel', 'va', 'veterans',
+    ];
+
+    it.each(BESPOKE_LANDINGS)('/jobs/%s: metadata and page both 404 at 0 jobs', (slug) => {
+        const src = read(`app/jobs/${slug}/page.tsx`);
+        expect(src).toContain('if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();');
+        expect(src).toContain('if (isPageOutOfRange(page, facts.total, limit) || !shouldRenderCategoryLanding(facts.total)) notFound();');
+    });
+
+    it.each(BESPOKE_LANDINGS)('/jobs/%s: an explore card whose landing has 0 jobs is not linked', (slug) => {
+        const src = read(`app/jobs/${slug}/page.tsx`);
+        expect(src).toContain('if (count === 0) return null;');
+    });
+
+    it('the shared template 404s at 0 in metadata and page', () => {
+        const src = read('lib/pseo/category-landing-template.tsx');
+        expect(src.match(/!shouldRenderCategoryLanding\((?:totalJobs|facts\.total)\)/g)).toHaveLength(2);
+    });
+
+    it('the render-gate header records the rule, and metro guides keep rendering', () => {
+        const gate = read('lib/pseo/render-gate.ts');
+        expect(gate).toContain('export function shouldRenderCategoryLanding(totalJobs: number): boolean');
+        expect(gate).toMatch(/Metro guides keep rendering at 0 jobs/);
+        expect(read('app/jobs/metro/[slug]/page.tsx')).not.toContain('shouldRenderCategoryLanding');
     });
 });

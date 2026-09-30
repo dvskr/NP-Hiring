@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { safeInternalPath } from '@/lib/auth/safe-redirect';
+import { authSwitchHref, isApplyReturnPath } from '@/lib/apply-intent';
 import { Loader2, AlertCircle, Eye, EyeOff, ArrowRight, Mail, User, Building2 } from 'lucide-react';
 import GoogleSignInButton from './GoogleSignInButton';
 import {
@@ -57,6 +58,8 @@ export default function LoginContent() {
   // `|| undefined` lets GoogleSignInButton keep its default when absent.
   const redirectTo =
     safeInternalPath(searchParams.get('redirectTo') || searchParams.get('next'), '') || undefined;
+  // Arrived from a job's Apply button (/jobs/...?apply=1).
+  const applyingToJob = isApplyReturnPath(redirectTo);
 
   // Init role from URL param
   useEffect(() => {
@@ -68,10 +71,12 @@ export default function LoginContent() {
     if (resendCooldown > 0 || !email) return;
     setResendStatus('sending');
     try {
+      // `next` lets the resent link return to the page the visitor came from
+      // (the job being applied for).
       const res = await fetch('/api/auth/send-confirmation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, next: redirectTo }),
       });
       if (!res.ok) {
         setResendStatus('error');
@@ -160,7 +165,9 @@ export default function LoginContent() {
       <p style={{ fontSize: '14px', color: '#5A6B76', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
           ? `Manage your job listings and find top ${brand.niche.short} talent.`
-          : 'Access your saved jobs, applications, and profile.'}
+          : applyingToJob
+            ? 'Sign in to continue your application. We will bring you back to the job.'
+            : 'Access your saved jobs, applications, and profile.'}
       </p>
 
       {/* ═══ ROLE TOGGLE ═══ */}
@@ -296,7 +303,7 @@ export default function LoginContent() {
         {/* Sign up link */}
         <p style={{ textAlign: 'center', fontSize: '13px', color: '#5A6B76', marginTop: '14px', marginBottom: 0 }}>
           Don&apos;t have an account?{' '}
-          <Link href={role === 'employer' ? '/signup?role=employer' : '/signup'}
+          <Link href={authSwitchHref('signup', { redirectTo, employer: role === 'employer' })}
             style={{ fontWeight: 700, color: accent, textDecoration: 'none' }}>
             Create one
           </Link>

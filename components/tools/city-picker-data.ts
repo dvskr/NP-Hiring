@@ -14,6 +14,7 @@
  */
 import { CITIES } from '@/lib/pseo/city-data/cities';
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+import { localJobsPath } from '@/lib/city-link-path';
 import { CITY_SAMPLE_THRESHOLD, type NominalBasis } from './col-model';
 
 export interface SalaryAggregate {
@@ -34,7 +35,8 @@ export interface CityOption {
   basis: NominalBasis;
   sample: number;
   /**
-   * `/jobs/city/<slug>` when that page is known to render, else null.
+   * `/jobs/city/<slug>` when that page is known to render (the metro guide
+   * `/jobs/metro/<slug>` for a curated metro), else null.
    * See `cityJobsHref` — an ungated link here is an internal link to a 404.
    */
   jobsHref: string | null;
@@ -76,7 +78,9 @@ export function cityJobsHref(
   if (basis !== 'city') return null;
   if (!cityLinkResolves(city.name, city.stateCode)) return null;
   const routeSlug = buildCitySlug(city.name, city.stateCode);
-  return routeSlug ? `/jobs/city/${routeSlug}` : null;
+  // L-05: a curated metro links its guide directly (its city form only
+  // redirects there); any other city links its own page.
+  return routeSlug ? localJobsPath(routeSlug) : null;
 }
 
 /**

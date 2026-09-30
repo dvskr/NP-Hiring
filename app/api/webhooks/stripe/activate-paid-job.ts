@@ -27,7 +27,7 @@ import { config } from '@/lib/config';
 import { asPaidTier, paidPostWhere, type PaidTier } from '@/lib/pricing';
 import { logger } from '@/lib/logger';
 import { sendConfirmationEmail } from '@/lib/email-service';
-import { pingAllSearchEngines } from '@/lib/search-indexing';
+import { pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
 import { anonymizeEmail } from '@/lib/server-utils';
 import { trackServerPurchase, type PurchaseParams } from '@/lib/analytics-server';
 
@@ -312,9 +312,12 @@ export async function activatePaidJobCheckout(
 
   // Publish AFTER winning the claim — republish on webhook retry is
   // idempotent, but a refunded/disputed row never reaches this line.
+  // contentChangedAt: the posting goes public now, so its content is new
+  // now (sitemap lastmod, the page's "Last updated"; indexing audit
+  // fixSoon 5). Only the claim winner reaches this write, once per payment.
   const job = await prisma.job.update({
     where: { id: jobId },
-    data: { isPublished: true, isVerifiedEmployer: true },
+    data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: new Date() },
   });
 
   // Audit #2: record JobCharge for the new-post payment.
@@ -417,7 +420,8 @@ export async function activatePaidJobCheckout(
 
   // Ping search engines for new job (fire-and-forget)
   if (job.slug) {
-    pingAllSearchEngines(`${brand.baseUrl}/jobs/${job.slug}`).catch((err) =>
+    // Google only when the page carries a JobPosting (lib/job-page-indexing.ts).
+    pingSearchEnginesForJobPage(`${brand.baseUrl}/jobs/${job.slug}`, job).catch((err) =>
       logger.error('[Stripe] Background indexing ping failed (new job)', err)
     );
   }

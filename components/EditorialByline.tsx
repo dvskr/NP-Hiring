@@ -1,66 +1,147 @@
 /**
- * E-E-A-T byline + review-status schema helpers (content audit P1 #8).
+ * E-E-A-T byline + authorship/review schema helpers (content audit P1 #8,
+ * indexing audit CQ-12).
  *
- * This component NEVER invents a person, and never claims review work
- * that did not happen. It renders one of three honest states driven by
- * `brand.editorial.reviewer` (config/brand.ts) and the `generated` prop:
+ * This component NEVER invents a person, and never claims authorship or
+ * review work that did not happen. What it renders is driven by
+ * `brand.editorial.author`, `brand.editorial.reviewer` (config/brand.ts,
+ * both null until the owner fills them) and the `generated` prop:
  *
- *   - reviewer === null, generated === false: "Written and maintained by
- *     the {brand} editorial team" linking to /editorial-policy. Article
- *     schema stays Organization-only — editorialSchemaFields() returns {}
- *     so no Person is emitted anywhere.
- *   - reviewer === null, generated === true: the 51-state license guide
- *     series. Those pages are emitted programmatically from repo data and
- *     no human read them, so the byline says exactly that instead of
- *     claiming editorial review.
- *   - reviewer populated (a REAL contracted clinician): the named byline
- *     with credentials, and editorialSchemaFields() contributes a
- *     schema.org Person derived from the SAME config object the visible
- *     byline renders — schema and UI can never disagree.
+ *   - generated === true: the 51-state license guide series. Those pages
+ *     are emitted programmatically from repo data and no human wrote or
+ *     read them, so the byline says exactly that, whatever the config
+ *     holds, and the post page attaches no named person to their schema.
+ *   - author and reviewer both null: "Written and maintained by the
+ *     {brand} editorial team" linking to /editorial-policy.
+ *     editorialSchemaFields() returns {}, so the Article schema keeps the
+ *     Organization as author and no Person is emitted anywhere.
+ *   - author filled (a REAL person): "Written by {name}", and
+ *     editorialSchemaFields() emits a schema.org Person `author` that
+ *     overrides the page's Organization author (every consumer spreads it
+ *     after `author`).
+ *   - reviewer filled (a REAL contracted clinician): "Clinically reviewed
+ *     by {name, credentials}", and editorialSchemaFields() emits a Person
+ *     `reviewedBy`.
+ * The visible byline and the schema derive from the SAME config objects,
+ * so they can never disagree.
  *
- * Consumed by app/blog/[slug]/page.tsx (both the generic-post and the
- * license-guide branches flow through the same byline + schema path).
+ * Consumed by app/blog/[slug]/page.tsx, the three /resources guides,
+ * /scope-of-practice and the /salary-guide hub.
  */
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { BadgeCheck } from 'lucide-react';
-import { brand, type EditorialReviewer } from '@/config/brand';
+import { brand, type EditorialAuthor, type EditorialReviewer } from '@/config/brand';
 
 /** Display form of a named reviewer: "Jane Doe, DNP, APRN, FNP-BC". */
 export function reviewerDisplayName(reviewer: EditorialReviewer): string {
     return `${reviewer.name}, ${reviewer.credentials}`;
 }
 
+/** Display form of a named author: "Jane Doe" or "Jane Doe, MSN, APRN". */
+export function authorDisplayName(author: EditorialAuthor): string {
+    return author.credentials ? `${author.name}, ${author.credentials}` : author.name;
+}
+
+/** Person.url must be absolute; a bio path on this site gets the base URL. */
+function absoluteProfileUrl(url: string): string {
+    return url.startsWith('/') ? `${brand.baseUrl}${url}` : url;
+}
+
+function authorPerson(author: EditorialAuthor): Record<string, unknown> {
+    return {
+        '@type': 'Person',
+        name: author.name,
+        ...(author.credentials ? { honorificSuffix: author.credentials } : {}),
+        ...(author.title ? { jobTitle: author.title } : {}),
+        ...(author.profileUrl ? { url: absoluteProfileUrl(author.profileUrl) } : {}),
+    };
+}
+
+function reviewerPerson(reviewer: EditorialReviewer): Record<string, unknown> {
+    return {
+        '@type': 'Person',
+        name: reviewer.name,
+        honorificSuffix: reviewer.credentials,
+        ...(reviewer.title ? { jobTitle: reviewer.title } : {}),
+        ...(reviewer.profileUrl ? { url: absoluteProfileUrl(reviewer.profileUrl) } : {}),
+        ...(reviewer.npi
+            ? {
+                  identifier: {
+                      '@type': 'PropertyValue',
+                      propertyID: 'NPI',
+                      value: reviewer.npi,
+                  },
+              }
+            : {}),
+    };
+}
+
 /**
- * Schema fields to spread into an Article/BlogPosting JSON-LD object.
+ * Schema fields to spread into an Article/BlogPosting JSON-LD object, AFTER
+ * its Organization `author` so a configured author replaces it.
  *
- * Returns {} while the reviewer config is null (Organization-only schema,
- * the honest current state). When a real reviewer is configured, returns
- * the review attribution as a schema.org Person built from the same
- * config object the visible byline renders. The optional NPI is emitted
- * as a verifiable PropertyValue identifier.
+ * Returns {} while both configs are null (Organization authorship, the
+ * honest current state). A configured author adds `author` as a Person; a
+ * configured reviewer adds `reviewedBy` as a Person with the optional NPI as
+ * a verifiable PropertyValue identifier. Hand-written content only: the
+ * generated license guides never call it.
  */
 export function editorialSchemaFields(
     reviewer: EditorialReviewer | null = brand.editorial.reviewer,
+    author: EditorialAuthor | null = brand.editorial.author,
 ): Record<string, unknown> {
-    if (!reviewer) return {};
     return {
-        reviewedBy: {
-            '@type': 'Person',
-            name: reviewer.name,
-            honorificSuffix: reviewer.credentials,
-            ...(reviewer.title ? { jobTitle: reviewer.title } : {}),
-            ...(reviewer.profileUrl ? { url: reviewer.profileUrl } : {}),
-            ...(reviewer.npi
-                ? {
-                      identifier: {
-                          '@type': 'PropertyValue',
-                          propertyID: 'NPI',
-                          value: reviewer.npi,
-                      },
-                  }
-                : {}),
-        },
+        ...(author ? { author: authorPerson(author) } : {}),
+        ...(reviewer ? { reviewedBy: reviewerPerson(reviewer) } : {}),
     };
+}
+
+const LINK_STYLE = { color: '#BE185D', textDecoration: 'underline' } as const;
+
+/** A profile link: next/link for a path on this site, a plain anchor otherwise. */
+function ProfileLink({ href, children }: { href: string; children: ReactNode }) {
+    return href.startsWith('/') ? (
+        <Link href={href} style={LINK_STYLE}>{children}</Link>
+    ) : (
+        <a href={href} rel="noopener noreferrer" style={LINK_STYLE}>{children}</a>
+    );
+}
+
+function PolicyLink({ label }: { label: string }) {
+    return (
+        <Link href={brand.editorial.policyPath} style={LINK_STYLE}>
+            {label}
+        </Link>
+    );
+}
+
+/** "Written by {author}" or the editorial-team line. */
+function AuthorLine({ author }: { author: EditorialAuthor | null }) {
+    if (!author) return <>Written and maintained by the {brand.name} editorial team</>;
+    const name = <strong style={{ color: '#1A2E35' }}>{authorDisplayName(author)}</strong>;
+    return (
+        <>
+            Written by {author.profileUrl ? <ProfileLink href={author.profileUrl}>{name}</ProfileLink> : name}
+            {author.title ? <>, {author.title}</> : null}
+        </>
+    );
+}
+
+/** "Clinically reviewed by {reviewer}", with the optional profile link. */
+function ReviewerLine({ reviewer }: { reviewer: EditorialReviewer }) {
+    return (
+        <>
+            Clinically reviewed by{' '}
+            <strong style={{ color: '#1A2E35' }}>{reviewerDisplayName(reviewer)}</strong>
+            {reviewer.title ? <>, {reviewer.title}</> : null}
+            {reviewer.profileUrl ? (
+                <>
+                    {' '}(<ProfileLink href={reviewer.profileUrl}>profile</ProfileLink>)
+                </>
+            ) : null}
+        </>
+    );
 }
 
 interface EditorialBylineProps {
@@ -69,11 +150,10 @@ interface EditorialBylineProps {
     /**
      * TRUE for programmatically generated pages (the 51-state license guide
      * series, lib/blog-license-guides.ts). No human wrote or read those
-     * pages, so they must NOT claim editorial review — the byline states
-     * that they are generated from structured repo data and points at the
-     * policy page that explains the generator. A named clinical reviewer,
-     * once contracted, still takes precedence: if a real person actually
-     * reviewed the series, `reviewer` is the honest attribution.
+     * pages, so they must NOT claim authorship or review, whatever the
+     * config holds: the byline states that they are generated from
+     * structured repo data and points at the policy page that explains the
+     * generator.
      */
     generated?: boolean;
 }
@@ -82,6 +162,7 @@ export default function EditorialByline({
     variant = 'card',
     generated = false,
 }: EditorialBylineProps) {
+    const author = brand.editorial.author;
     const reviewer = brand.editorial.reviewer;
     const isHero = variant === 'hero';
     return (
@@ -98,52 +179,23 @@ export default function EditorialByline({
             }}
         >
             <BadgeCheck size={14} aria-hidden="true" style={{ color: '#BE185D', flexShrink: 0 }} />
-            {reviewer ? (
-                <span>
-                    Clinically reviewed by{' '}
-                    <strong style={{ color: '#1A2E35' }}>{reviewerDisplayName(reviewer)}</strong>
-                    {reviewer.title ? <>, {reviewer.title}</> : null}
-                    {reviewer.profileUrl ? (
-                        <>
-                            {' '}(
-                            <a
-                                href={reviewer.profileUrl}
-                                rel="noopener noreferrer"
-                                style={{ color: '#BE185D', textDecoration: 'underline' }}
-                            >
-                                profile
-                            </a>
-                            )
-                        </>
-                    ) : null}
-                    {' '}·{' '}
-                    <Link
-                        href={brand.editorial.policyPath}
-                        style={{ color: '#BE185D', textDecoration: 'underline' }}
-                    >
-                        Editorial policy
-                    </Link>
-                </span>
-            ) : generated ? (
+            {generated ? (
                 <span>
                     Generated by {brand.name} from structured state licensure data. This page was not individually
                     written or clinically reviewed ·{' '}
-                    <Link
-                        href={brand.editorial.policyPath}
-                        style={{ color: '#BE185D', textDecoration: 'underline' }}
-                    >
-                        How we produce our content
-                    </Link>
+                    <PolicyLink label="How we produce our content" />
                 </span>
             ) : (
                 <span>
-                    Written and maintained by the {brand.name} editorial team ·{' '}
-                    <Link
-                        href={brand.editorial.policyPath}
-                        style={{ color: '#BE185D', textDecoration: 'underline' }}
-                    >
-                        How we produce our content
-                    </Link>
+                    <AuthorLine author={author} />
+                    {reviewer ? (
+                        <>
+                            {' '}·{' '}
+                            <ReviewerLine reviewer={reviewer} />
+                        </>
+                    ) : null}
+                    {' '}·{' '}
+                    <PolicyLink label={reviewer ? 'Editorial policy' : 'How we produce our content'} />
                 </span>
             )}
         </p>

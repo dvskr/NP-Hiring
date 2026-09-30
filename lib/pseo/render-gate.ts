@@ -11,11 +11,27 @@
  * non-finite input (NaN, an undefined coerced to a number) fails every
  * comparison and therefore gates closed.
  *
- * RENDER (200 versus 404) is a separate decision from INDEX. Only the
- * category x city page 404s below its floor (doorway reasoning below). Every
- * other type renders for users and answers `noindex, follow` when its index
- * gate fails, keeps its self canonical, and stays internally linked. Only
- * paginated pages canonical to page 1.
+ * RENDER (200 versus 404) is a separate decision from INDEX. The category x
+ * city page 404s below its floor (doorway reasoning below; 0 jobs included,
+ * TECH-07), and a category landing (`/jobs/{category}`, the shared template
+ * and the bespoke pages alike) 404s at 0 canonical jobs (TECH-06: an empty
+ * "0 positions" page answering 200 is the soft-404 pattern Google keeps
+ * crawling); from 1 to the listing floor it renders `noindex, follow`.
+ * Every other type renders for users and answers `noindex, follow` when its
+ * index gate fails, keeps its self canonical, and stays internally linked.
+ * Metro guides keep rendering at 0 jobs: they carry reviewed editorial
+ * content and every curated metro is linked from /jobs/locations and the
+ * state hubs, so a 404 would turn those links into dead ends. PAGINATION (TECH-08): every page N >= 2 of a
+ * listing is its OWN canonical (`?page=N`, never page 1) and answers
+ * `noindex, follow` in its meta robots, the same verdict the middleware's
+ * X-Robots-Tag sends; a page past the last one is a 404
+ * (lib/pseo/listing-pagination.tsx owns the rule).
+ *
+ * COUNTS (indexing audit fixSoon 8): every index gate below counts distinct
+ * postings, not rows. Exact duplicate rows (the same employer, normalized
+ * title, city and state) are one posting, and the strict category x state
+ * gate also counts role clusters (one employer's role across locations).
+ * lib/pseo/posting-clusters.ts owns both definitions.
  */
 
 /* ─── Category x city render gate (S4) ─────────────────────────────────── */
@@ -27,8 +43,9 @@
  * it on doorway pages), so the page calls notFound() instead.
  *
  * Threshold = 3, aligned with the city page (app/jobs/city/[slug]/page.tsx),
- * the sitemap gate, and the seo_threshold_decision.md project memory (do NOT
+ * the link gates, and the seo_threshold_decision.md project memory (do NOT
  * raise, do NOT lower: all four thin-content specs re-examined it and agree).
+ * This is the RENDER floor only; the index floor is the listing floor below.
  */
 export const MIN_JOBS_FOR_CATEGORY_CITY = 3;
 
@@ -39,34 +56,52 @@ export function shouldRenderCategoryCity(
   return jobCount >= threshold;
 }
 
-/* ─── Index thresholds (PLAN C.2 table) ────────────────────────────────── */
+/* ─── Category landing render gate (TECH-06) ───────────────────────────── */
+
+/** A category landing renders at this many canonical jobs or more; below, 404. */
+export const MIN_JOBS_FOR_CATEGORY_LANDING_RENDER = 1;
 
 /**
- * Minimum canonical listings for any listing page (category landing,
- * category x state, category x city, city) to be indexable. Same value as
- * the category x city render gate: the doorway floor and the index floor
- * are one decision, so they share one constant.
+ * Whether a category landing (`/jobs/{category}`) renders at all. At 0
+ * canonical jobs it calls notFound(): the page would only say "0 positions".
+ * From 1 up to the listing floor it renders `noindex, follow`
+ * (shouldIndexCategoryLanding). Links to a landing must use the same count
+ * so no internal link lands on the 404.
+ */
+export function shouldRenderCategoryLanding(totalJobs: number): boolean {
+  return totalJobs >= MIN_JOBS_FOR_CATEGORY_LANDING_RENDER;
+}
+
+/* ─── Thresholds (PLAN C.2 table, raised by the 2026-09 indexing audit) ─── */
+
+/**
+ * The count half of the old listing gate, kept at the category x city render
+ * floor: shouldIndexListingPage reads it, and the low-inventory copy of the
+ * landings uses it to decide which sibling categories are worth naming. No
+ * page type indexes on it alone any more; see the listing floor below.
  */
 export const MIN_JOBS_FOR_INDEX = MIN_JOBS_FOR_CATEGORY_CITY;
 
 /**
- * Minimum distinct employers behind a local listing page (category x city,
- * city). A page listing one employer's postings is a subset of that
- * employer's company page; the crawl's near-duplicate clusters were exactly
- * those pages. The gate reverses on its own when a second employer posts.
+ * The listing floor (indexing audit fixSoon 1, CQ-06 to CQ-08): state hubs,
+ * category landings, city pages and category x city pages index only with at
+ * least this many distinct postings ...
  */
-export const MIN_EMPLOYERS_FOR_INDEX = 2;
+export const MIN_POSTINGS_FOR_LISTING_INDEX = 5;
 
 /**
- * Independent data signals a category x state page must show beyond its
- * count before it indexes (see shouldIndexSettingState). Mirrors the old
- * category x city quality score (noindex below 25 points) but is computed
- * from facts the page actually renders.
+ * ... from at least this many distinct employers. Three or four postings,
+ * or one or two staffing firms, restate what the state hub and the company
+ * pages already say; the audit found exactly those pages in the near-
+ * duplicate clusters. The gate reopens on its own as inventory grows.
  */
-export const MIN_SETTING_STATE_INDEX_SIGNALS = 2;
+export const MIN_EMPLOYERS_FOR_LISTING_INDEX = 3;
 
-/** State hub: canonical jobs in the state. */
-export const MIN_JOBS_FOR_STATE_HUB_INDEX = 3;
+/** State hub: distinct postings in the state (the listing floor). */
+export const MIN_JOBS_FOR_STATE_HUB_INDEX = MIN_POSTINGS_FOR_LISTING_INDEX;
+
+/** State hub: distinct employers in the state (the listing floor). */
+export const MIN_EMPLOYERS_FOR_STATE_HUB_INDEX = MIN_EMPLOYERS_FOR_LISTING_INDEX;
 
 /**
  * State hub: sections that rendered from in-state live aggregates (spec3
@@ -75,11 +110,24 @@ export const MIN_JOBS_FOR_STATE_HUB_INDEX = 3;
  */
 export const MIN_DATA_SECTIONS_FOR_STATE_HUB_INDEX = 4;
 
-/** Metro guide: canonical jobs inside the metro scope (metroScopeWhere). */
+/** Metro guide: distinct postings inside the metro scope (metroScopeWhere). */
 export const MIN_JOBS_FOR_METRO_INDEX = 3;
 
-/** City directory: cities the directory can link (each at 3 or more jobs). */
-export const MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX = 3;
+/**
+ * Metro guide: postings first posted in the last 30 days (the recency
+ * facts' `last30`, which read originalPostedAt with createdAt as the
+ * fallback). A metro whose every role is older than that describes a market
+ * that is not hiring now (CQ-08: Nashville, three roles, none recent).
+ */
+export const MIN_RECENT_POSTINGS_FOR_METRO_INDEX = 1;
+
+/**
+ * City directory: cities the directory can link (each at 3 or more jobs).
+ * Raised from 3 to 5 (FB-1, M-05): a directory with fewer linkable cities
+ * repeats the state hub's city grid and competes with the hub for the same
+ * "NP jobs in {State}" query, so it stays a `noindex, follow` navigation page.
+ */
+export const MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX = 5;
 
 /**
  * Company profile: active jobs. Five is the floor the repo already uses for
@@ -103,6 +151,68 @@ export const MIN_ACTIVE_JOBS_FOR_MARKET_SNAPSHOT = 1;
  * the render gate, named for this use so a later change is deliberate.
  */
 export const MIN_JOBS_FOR_LINK_LIST_ROW = MIN_JOBS_FOR_CATEGORY_CITY;
+
+/* ─── Category x state (setting x state) ───────────────────────────────── */
+
+/**
+ * FB-1 switch for every `/jobs/{setting}/{state}` page. While it is false no
+ * setting x state page indexes, whatever its stored verdict: robots answer
+ * `noindex, follow` (the page stays live, canonical and linked), the cities
+ * sitemap skips the whole setting x state section, and the sitemap index
+ * counts none of it. It lives in code, not in PseoStats, so it takes effect
+ * at deploy instead of after the next 6-hourly aggregate-pseo run.
+ *
+ * The cron keeps storing the strict verdict (shouldIndexSettingState) in
+ * PseoStats.indexable, so the owner can see which pages would re-enter
+ * before turning this on (fixSoon 16: re-admit only after the first crawl of
+ * the hubs, metros and jobs has settled in Search Console).
+ */
+export const SETTING_STATE_INDEXING_ENABLED = false;
+
+/** Strict setting x state gate (CQ-01, fixSoon 16): distinct postings. */
+export const MIN_POSTINGS_FOR_SETTING_STATE_INDEX = MIN_POSTINGS_FOR_LISTING_INDEX;
+
+/** Strict setting x state gate: distinct employers. */
+export const MIN_EMPLOYERS_FOR_SETTING_STATE_INDEX = 3;
+
+/** Strict setting x state gate: distinct role clusters (employer plus normalized title). */
+export const MIN_ROLE_CLUSTERS_FOR_SETTING_STATE_INDEX = 3;
+
+/** Strict setting x state gate: the largest employer's share of the postings, at most. */
+export const MAX_TOP_EMPLOYER_SHARE_FOR_SETTING_STATE_INDEX = 0.5;
+
+/**
+ * Strict setting x state gate: the setting's postings as a share of the
+ * parent state hub's postings, at most. A setting that holds (nearly) every
+ * job of its state is the hub again under another URL (the audit's Utah and
+ * Rhode Island pages were 100 percent copies of their hubs).
+ */
+export const MAX_HUB_SHARE_FOR_SETTING_STATE_INDEX = 0.7;
+
+/**
+ * Strict setting x state gate: postings first posted in the last 30 days, at
+ * least (skeptic 2's hard requirement). A page whose every role is older
+ * describes a market that is not hiring now (/jobs/1099/massachusetts passed
+ * the old gate with four MedElite postings, the newest 39 days old).
+ */
+export const MIN_RECENT_POSTINGS_FOR_SETTING_STATE_INDEX = 1;
+
+/**
+ * Sibling de-duplication: two passing settings in one state whose counted
+ * job sets overlap this much or more (shared jobs over the smaller set) are
+ * one page twice; only the larger indexes (the audit's outpatient/ohio and
+ * a specialty page for Ohio listed the same 10 LifeStance jobs).
+ * lib/pseo/setting-state-index.ts dedupeSiblingSettingStates applies it.
+ */
+export const MAX_SIBLING_OVERLAP_FOR_SETTING_STATE_INDEX = 0.7;
+
+/**
+ * Settings whose name is a work mode. Their gate facts count only fully
+ * remote rows (isRemote and not isHybrid, the structured work mode), never
+ * the category tag, which description keywords also set (CQ-05: remote pages
+ * listing only hybrid roles).
+ */
+export const STRUCTURED_REMOTE_SETTING_SLUGS: readonly string[] = ['remote', 'telehealth'];
 
 /* ─── PseoStats freshness ───────────────────────────────────────────────── */
 
@@ -138,88 +248,146 @@ function isFirstPage(page: number): boolean {
 }
 
 /**
- * Category landing (always renders) and the count half of every listing
- * page: index only page 1 with MIN_JOBS_FOR_INDEX or more canonical jobs.
- * Paginated pages stay `noindex, follow` and canonical to page 1.
+ * The count half of a listing gate: page 1 with MIN_JOBS_FOR_INDEX or more
+ * canonical jobs. Paginated pages stay `noindex, follow` with their own canonical, not
+ * page 1. Not an index gate on its own any more: category landings read
+ * shouldIndexCategoryLanding, which adds the listing floor.
  */
 export function shouldIndexListingPage(jobCount: number, page: number = 1): boolean {
   return isFirstPage(page) && jobCount >= MIN_JOBS_FOR_INDEX;
 }
 
-/** Facts a category x state page renders, computed live and by the cron. */
-export interface SettingStateIndexFacts {
-  /** Canonical jobs for the setting in the state. */
-  totalJobs: number;
+export interface ListingFloorInput {
+  /** Distinct postings (exact duplicate rows collapsed). */
+  activeJobs: number;
   /** Distinct employers behind them. */
-  employerCount: number;
-  /** Cities named on the page (S2). */
-  namedCityCount: number;
-  /** A gated posted-pay benchmark rendered (S4). */
-  hasBenchmark: boolean;
-  /** Jobs posted in the last 30 days (S5). */
-  postedLast30Days: number;
-  /** The role-setup section rendered at least one dimension (S3). */
-  roleSetupRenders: boolean;
+  distinctEmployers: number;
 }
 
-const SIGNAL_MIN_EMPLOYERS = MIN_EMPLOYERS_FOR_INDEX;
-const SIGNAL_MIN_NAMED_CITIES = 2;
-const SIGNAL_MIN_POSTED_LAST_30_DAYS = 1;
+/** The listing floor alone: 5 or more distinct postings from 3 or more employers. */
+export function meetsListingFloor(input: ListingFloorInput): boolean {
+  return (
+    input.activeJobs >= MIN_POSTINGS_FOR_LISTING_INDEX &&
+    input.distinctEmployers >= MIN_EMPLOYERS_FOR_LISTING_INDEX
+  );
+}
+
+export interface CategoryLandingIndexInput extends ListingFloorInput {
+  /** Defaults to 1. */
+  page?: number;
+}
 
 /**
- * How many independent data signals a category x state page shows beyond
- * its count. Exposed so the cron can store the verdict and an admin view
- * can explain it.
+ * Category landing (`/jobs/{category}`, always renders): index page 1 at
+ * the listing floor. The aggregate-pseo cron stores the same verdict on the
+ * 'category-landing' PseoStats row (PseoStats.indexable), which is what the
+ * primary sitemap should read.
  */
-export function countSettingStateIndexSignals(facts: SettingStateIndexFacts): number {
-  return [
-    facts.employerCount >= SIGNAL_MIN_EMPLOYERS,
-    facts.namedCityCount >= SIGNAL_MIN_NAMED_CITIES,
-    facts.hasBenchmark === true,
-    facts.postedLast30Days >= SIGNAL_MIN_POSTED_LAST_30_DAYS,
-    facts.roleSetupRenders === true,
-  ].filter(Boolean).length;
+export function shouldIndexCategoryLanding(input: CategoryLandingIndexInput): boolean {
+  return isFirstPage(input.page ?? 1) && meetsListingFloor(input);
+}
+
+/** Facts the strict category x state gate reads (cron and tests). */
+export interface SettingStateIndexFacts {
+  /**
+   * Distinct postings for the setting in the state. For the work-mode
+   * settings (STRUCTURED_REMOTE_SETTING_SLUGS) only fully remote rows count.
+   */
+  postings: number;
+  /** Distinct employers behind them. */
+  employers: number;
+  /** Distinct (employer, normalized title) pairs behind them. */
+  roleClusters: number;
+  /** Postings held by the largest employer. */
+  topEmployerPostings: number;
+  /** The parent /jobs/state hub's own index verdict (shouldIndexStateHub). */
+  hubIndexable: boolean;
+  /** Distinct postings on the parent state hub. */
+  hubPostings: number;
+  /**
+   * Counted rows first posted in the last 30 days (originalPostedAt, else
+   * createdAt: the recency the listing facts use).
+   */
+  postedLast30Days: number;
 }
 
 /**
  * Category x state (`/jobs/{category}/{state}`): renders at 1 or more jobs
- * (0 stays 404); indexes at MIN_JOBS_FOR_INDEX or more jobs AND at least
- * MIN_SETTING_STATE_INDEX_SIGNALS of {employers of 2 or more, named cities
- * of 2 or more, benchmark, posted in the last 30 days, role-setup rendered}.
- * The cron stores the same verdict in PseoStats.indexable for the sitemap.
+ * (0 stays 404). The strict gate of CQ-01 and fixSoon 16: page 1 only, and
+ * every one of
+ *   - MIN_POSTINGS_FOR_SETTING_STATE_INDEX or more distinct postings,
+ *   - MIN_EMPLOYERS_FOR_SETTING_STATE_INDEX or more employers,
+ *   - MIN_ROLE_CLUSTERS_FOR_SETTING_STATE_INDEX or more role clusters,
+ *   - the largest employer at MAX_TOP_EMPLOYER_SHARE_FOR_SETTING_STATE_INDEX
+ *     of the postings or less,
+ *   - an indexable parent state hub,
+ *   - the setting at MAX_HUB_SHARE_FOR_SETTING_STATE_INDEX of the hub's
+ *     postings or less,
+ *   - MIN_RECENT_POSTINGS_FOR_SETTING_STATE_INDEX or more postings first
+ *     posted in the last 30 days.
+ * The old "3 jobs plus any 2 of 5 soft signals" rule is gone: named cities,
+ * role setup and recency are satisfied by almost any three postings.
+ *
+ * One more rule needs every setting of the state at once, so the cron
+ * applies it after this gate: of two passing siblings that share
+ * MAX_SIBLING_OVERLAP_FOR_SETTING_STATE_INDEX or more of their jobs, only
+ * the larger keeps its verdict (dedupeSiblingSettingStates in
+ * lib/pseo/setting-state-index.ts).
+ *
+ * This is the verdict the cron stores. Whether a page actually indexes is
+ * isSettingStateIndexable(stored verdict), which also reads the FB-1 switch.
  */
 export function shouldIndexSettingState(facts: SettingStateIndexFacts, page: number = 1): boolean {
-  if (!shouldIndexListingPage(facts.totalJobs, page)) return false;
-  return countSettingStateIndexSignals(facts) >= MIN_SETTING_STATE_INDEX_SIGNALS;
+  if (!isFirstPage(page)) return false;
+  if (!(facts.postedLast30Days >= MIN_RECENT_POSTINGS_FOR_SETTING_STATE_INDEX)) return false;
+  if (facts.postings < MIN_POSTINGS_FOR_SETTING_STATE_INDEX) return false;
+  if (facts.employers < MIN_EMPLOYERS_FOR_SETTING_STATE_INDEX) return false;
+  if (facts.roleClusters < MIN_ROLE_CLUSTERS_FOR_SETTING_STATE_INDEX) return false;
+  if (!(facts.topEmployerPostings / facts.postings <= MAX_TOP_EMPLOYER_SHARE_FOR_SETTING_STATE_INDEX)) return false;
+  if (facts.hubIndexable !== true) return false;
+  return facts.hubPostings > 0 && facts.postings / facts.hubPostings <= MAX_HUB_SHARE_FOR_SETTING_STATE_INDEX;
 }
 
-export interface LocalListingIndexInput {
-  /** Canonical jobs on the page. */
-  activeJobs: number;
-  /** Distinct employers behind them (PseoStats.distinctEmployers for the sitemap). */
-  distinctEmployers: number;
+/**
+ * Whether a category x state page indexes, from the cron's stored verdict:
+ * only while SETTING_STATE_INDEXING_ENABLED is on. Every reader of the
+ * stored setting-state `indexable` flag (page robots, the cities sitemap,
+ * the sitemap index, link lists that promise an indexable target, the admin
+ * coverage count) goes through this, so the switch reaches all of them at
+ * deploy. tests/regressions/setting-state-switch-readers.test.ts finds the
+ * readers by what they select and pins each one to this function.
+ */
+export function isSettingStateIndexable(
+  storedVerdict: boolean,
+  enabled: boolean = SETTING_STATE_INDEXING_ENABLED,
+): boolean {
+  return enabled === true && storedVerdict === true;
+}
+
+export interface LocalListingIndexInput extends ListingFloorInput {
   /** Defaults to 1. */
   page?: number;
 }
 
 /**
  * Category x city and city pages (render at 3 or more, unchanged): index
- * page 1 only with MIN_JOBS_FOR_INDEX or more jobs from
- * MIN_EMPLOYERS_FOR_INDEX or more distinct employers. Replaces the old
- * `getPageQualityScore`, which read donor columns that said nothing about
- * the page's own content.
+ * page 1 only at the listing floor. The city page is the parent of its
+ * category x city pages, so both read one floor; a child indexing below its
+ * parent's floor would invert the hierarchy.
  */
 export function shouldIndexLocalListingPage(input: LocalListingIndexInput): boolean {
-  return (
-    isFirstPage(input.page ?? 1) &&
-    input.activeJobs >= MIN_JOBS_FOR_INDEX &&
-    input.distinctEmployers >= MIN_EMPLOYERS_FOR_INDEX
-  );
+  return isFirstPage(input.page ?? 1) && meetsListingFloor(input);
 }
 
 export interface StateHubIndexInput {
-  /** Canonical jobs in the state. */
+  /** Distinct postings in the state. */
   activeJobs: number;
+  /**
+   * Distinct employers in the state. Optional only so a caller that has not
+   * been updated yet still compiles: an absent count gates CLOSED, so such a
+   * caller (a sitemap) can under-list hubs but never list a noindex hub.
+   */
+  distinctEmployers?: number;
   /** Sections that rendered from in-state live aggregates. */
   liveDataSections: number;
   /** Defaults to 1. */
@@ -227,15 +395,16 @@ export interface StateHubIndexInput {
 }
 
 /**
- * State hub (`/jobs/state/{state}`, renders at 1 or more): index page 1 with
- * MIN_JOBS_FOR_STATE_HUB_INDEX or more jobs AND
- * MIN_DATA_SECTIONS_FOR_STATE_HUB_INDEX or more live data sections. The
- * sitemap reads the same predicate (replacing its `>= 1` state gate).
+ * State hub (`/jobs/state/{state}`, renders at 1 or more): index page 1 at
+ * the listing floor (CQ-07) AND MIN_DATA_SECTIONS_FOR_STATE_HUB_INDEX or
+ * more live data sections. lib/pseo/state-hub-index.ts computes the input
+ * for the page, the cron and the sitemap from one set of rules.
  */
 export function shouldIndexStateHub(input: StateHubIndexInput): boolean {
   return (
     isFirstPage(input.page ?? 1) &&
     input.activeJobs >= MIN_JOBS_FOR_STATE_HUB_INDEX &&
+    (input.distinctEmployers ?? Number.NaN) >= MIN_EMPLOYERS_FOR_STATE_HUB_INDEX &&
     input.liveDataSections >= MIN_DATA_SECTIONS_FOR_STATE_HUB_INDEX
   );
 }
@@ -248,24 +417,33 @@ export interface StateCityDirectoryIndexInput {
 /**
  * City directory (`/jobs/locations/{state}`; render rule unchanged): index
  * with MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX or more linkable cities. A
- * directory with one or two duplicates the hub's city grid.
+ * directory with fewer duplicates the hub's city grid.
  */
 export function shouldIndexStateCityDirectory(input: StateCityDirectoryIndexInput): boolean {
   return input.linkableCities >= MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX;
 }
 
 export interface MetroIndexInput {
-  /** Canonical jobs inside metroScopeWhere(metro). */
+  /** Distinct postings inside metroScopeWhere(metro). */
   activeJobs: number;
+  /**
+   * Postings first posted in the last 30 days. Optional only so a caller
+   * that has not been updated yet still compiles: an absent count gates
+   * CLOSED (under-listing, never a noindex URL in a sitemap).
+   */
+  postedLast30Days?: number;
 }
 
 /**
  * Metro guide (`/jobs/metro/{slug}`; renders for every curated slug): index
- * with MIN_JOBS_FOR_METRO_INDEX or more canonical metro jobs. The sitemap
- * reads the same predicate through the shared metroScopeWhere.
+ * with MIN_JOBS_FOR_METRO_INDEX or more distinct postings, at least
+ * MIN_RECENT_POSTINGS_FOR_METRO_INDEX of them posted in the last 30 days.
  */
 export function shouldIndexMetro(input: MetroIndexInput): boolean {
-  return input.activeJobs >= MIN_JOBS_FOR_METRO_INDEX;
+  return (
+    input.activeJobs >= MIN_JOBS_FOR_METRO_INDEX &&
+    (input.postedLast30Days ?? Number.NaN) >= MIN_RECENT_POSTINGS_FOR_METRO_INDEX
+  );
 }
 
 export interface SalaryGuideStateIndexInput {
@@ -299,7 +477,7 @@ export function shouldIndexCompanyProfile(activeJobs: number): boolean {
 /**
  * Live market snapshot (license guides LIC-L3 and similar blocks): render
  * at MIN_ACTIVE_JOBS_FOR_MARKET_SNAPSHOT or more jobs, else the alert
- * sentence. A render gate, not an index gate: license guides always index.
+ * sentence. A render gate, not an index gate.
  */
 export function shouldRenderMarketSnapshot(activeJobs: number): boolean {
   return activeJobs >= MIN_ACTIVE_JOBS_FOR_MARKET_SNAPSHOT;

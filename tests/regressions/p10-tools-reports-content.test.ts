@@ -132,7 +132,9 @@ describe('D4 salary guide Top Cities gate', () => {
     );
     // The gate has to reach the href or it gates nothing: a linked city that
     // does not clear the floor is a link to a noindex page.
-    expect(src).toContain('href: linkable ? `/jobs/city/${buildCitySlug(city.name, code)}` : null,');
+    // L-05: the gated href goes through localJobsPath, so a curated metro
+    // links its guide instead of a city URL that only redirects there.
+    expect(src).toContain('href: linkable ? localJobsPath(buildCitySlug(city.name, code)) : null,');
     // ...and the render has to HONOUR the null, or the gate computes a value
     // nothing reads. The gated city is still NAMED, so failing the floor
     // removes the link, not the row.

@@ -48,6 +48,7 @@ import {
   MIN_JOBS_FOR_STATE_HUB_INDEX,
   shouldIndexStateHub,
 } from '@/lib/pseo/render-gate';
+import { countHubLiveDataSections, stateHubIndexInput } from '@/lib/pseo/state-hub-index';
 import { postedPaySentence } from '@/components/seo/pseo';
 
 const ROOT = process.cwd();
@@ -76,6 +77,9 @@ const NOW = new Date('2026-09-20T00:00:00Z');
 const FULL: ListingFacts = {
   total: 12,
   distinctEmployers: 3,
+  distinctPostings: 12,
+  roleClusters: 6,
+  topEmployerPostings: 6,
   topEmployers: [
     { name: 'Lakeside Health', count: 6, companyPath: '/companies/lakeside-health' },
     { name: 'Northwind Clinics', count: 4, companyPath: null },
@@ -95,6 +99,7 @@ const FULL: ListingFacts = {
   recency: { total: 12, datedCount: 12, last7: 2, last30: 7, newestPostedAt: new Date('2026-09-15T00:00:00Z') },
   newGradFriendly: 2,
   salaryDisclosedCount: 7,
+  salaryDisclosedEmployers: 3,
   benchmark: { scope: 'Texas', median: 128_000, p25: 115_000, p75: 142_000, postings: 7, employers: 3 },
   computedAt: NOW,
   sampled: false,
@@ -365,14 +370,16 @@ describe('HUB thin content: every figure comes from the canonical facts loader',
     expect(meta).toContain('buildHubTitle({');
     expect(meta).toContain('buildHubDescription({');
     expect(meta).not.toContain('keywords');
-    expect(meta).toContain('shouldIndexStateHub({ activeJobs: facts.total, liveDataSections, page })');
+    // CQ-07: the hub gate counts distinct postings and employers.
+    expect(meta).toMatch(/shouldIndexStateHub\(\{\s*activeJobs: facts\.distinctPostings,\s*distinctEmployers: facts\.distinctEmployers,\s*liveDataSections,\s*page,\s*\}\)/);
     expect(meta).toMatch(/\.\.\.\(!indexable && \{\s*robots: \{\s*index: false,\s*follow: true,/);
-    expect(meta).toContain('canonical: `${brand.baseUrl}/jobs/state/${stateSlug}`');
+    // TECH-08: every page is its own canonical (page N is ?page=N, never page 1).
+    expect(meta).toContain('canonical: listingCanonical(`/jobs/state/${stateSlug}`, page)');
     // The hero deck is the same live summary, not the generic sentence.
     expect(src).toContain('description={heroDescription}');
   });
 
-  it('counts the live data sections with the same seven-line recipe as app/sitemap.ts', () => {
+  it('counts the live data sections with the one shared seven-line recipe (lib/pseo/state-hub-index.ts)', () => {
     const recipe = (source: string): string[] => {
       const start = source.indexOf('buildHubEmployersSentence({ stateName, facts');
       const end = source.indexOf('// S7', start);
@@ -380,11 +387,21 @@ describe('HUB thin content: every figure comes from the canonical facts loader',
       expect(end, 'S7 line missing').toBeGreaterThan(start);
       return [...source.slice(start, end).matchAll(/build(Hub\w+)\(/g)].map((m) => m[1]);
     };
-    const page = recipe(pageSrc());
-    const sitemap = recipe(fs.readFileSync(path.join(ROOT, 'app/sitemap.ts'), 'utf8'));
-    expect(page).toEqual(['HubEmployersSentence', 'HubCitiesSentences', 'HubCategoriesSentence', 'HubWorkModeSentence', 'HubSettingsSentence', 'HubRecencySentence']);
-    expect(sitemap).toEqual(page);
+    const shared = recipe(fs.readFileSync(path.join(ROOT, 'lib/pseo/state-hub-index.ts'), 'utf8'));
+    expect(shared).toEqual(['HubEmployersSentence', 'HubCitiesSentences', 'HubCategoriesSentence', 'HubWorkModeSentence', 'HubSettingsSentence', 'HubRecencySentence']);
+    // The page no longer carries its own copy; it imports the shared count.
+    expect(pageSrc()).toContain("import { countHubLiveDataSections } from '@/lib/pseo/state-hub-index';");
+    expect(pageSrc()).not.toMatch(/function countHubLiveDataSections/);
     expect(pageSrc()).toContain('publishable.has(stateName)');
+    // app/sitemap.ts either reads the shared layer or still carries a copy
+    // that names the same builders in the same order.
+    const sitemapSrc = fs.readFileSync(path.join(ROOT, 'app/sitemap.ts'), 'utf8');
+    if (!sitemapSrc.includes("from '@/lib/pseo/state-hub-index'")) {
+      expect(recipe(sitemapSrc)).toEqual(shared);
+    }
+    // The fixture recipe below is the shared recipe.
+    expect(countHubLiveDataSections('Texas', FULL, true)).toBe(countLiveSections('Texas', FULL, true));
+    expect(countHubLiveDataSections('Delaware', ONE_JOB, false)).toBe(countLiveSections('Delaware', ONE_JOB, false));
   });
 
   it('HUB-S10: one array from buildHubFaqs feeds the accordion and a gated FAQPage node', () => {
@@ -519,13 +536,22 @@ describe('HUB-meta and HUB-S10 builders over the hub fixtures', () => {
   it('index gate: a full hub indexes, the Delaware shape renders noindex', () => {
     const fullSections = countLiveSections('Texas', FULL, true);
     expect(fullSections).toBe(7);
-    expect(shouldIndexStateHub({ activeJobs: FULL.total, liveDataSections: fullSections })).toBe(true);
+    expect(shouldIndexStateHub(stateHubIndexInput('Texas', FULL, true))).toBe(true);
+    expect(shouldIndexStateHub({ activeJobs: FULL.distinctPostings, distinctEmployers: FULL.distinctEmployers, liveDataSections: fullSections })).toBe(true);
     const thinSections = countLiveSections('Delaware', ONE_JOB, false);
     expect(thinSections).toBeLessThan(MIN_DATA_SECTIONS_FOR_STATE_HUB_INDEX);
     expect(ONE_JOB.total).toBeLessThan(MIN_JOBS_FOR_STATE_HUB_INDEX);
-    expect(shouldIndexStateHub({ activeJobs: ONE_JOB.total, liveDataSections: thinSections })).toBe(false);
+    expect(shouldIndexStateHub(stateHubIndexInput('Delaware', ONE_JOB, false))).toBe(false);
     // Page 2 of a full hub never indexes.
-    expect(shouldIndexStateHub({ activeJobs: FULL.total, liveDataSections: fullSections, page: 2 })).toBe(false);
+    expect(shouldIndexStateHub(stateHubIndexInput('Texas', FULL, true, 2))).toBe(false);
+  });
+
+  it('CQ-07: a 4-job or 2-employer hub stays noindex however many sections render', () => {
+    const fullSections = countLiveSections('Texas', FULL, true);
+    expect(shouldIndexStateHub({ activeJobs: 4, distinctEmployers: 3, liveDataSections: fullSections })).toBe(false);
+    expect(shouldIndexStateHub({ activeJobs: 12, distinctEmployers: 2, liveDataSections: fullSections })).toBe(false);
+    // Kansas: 3 jobs from 3 employers used to index.
+    expect(shouldIndexStateHub({ activeJobs: 3, distinctEmployers: 3, liveDataSections: fullSections })).toBe(false);
   });
 });
 

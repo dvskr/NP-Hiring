@@ -2,13 +2,34 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ExternalLink, LogIn, Zap } from 'lucide-react';
+import { Bell, Bookmark, ExternalLink, ListChecks, LogIn, Zap } from 'lucide-react';
 import useAppliedJobs from '@/lib/hooks/useAppliedJobs';
-import { shouldLabelDirectApply } from '@/lib/direct-apply';
+import {
+  applyCtaLabel,
+  continueApplicationNote,
+  resolveApplyRoute,
+  APPLY_CTA_LABELS,
+  CONTINUE_TO_EMPLOYER_LABEL,
+} from '@/lib/direct-apply';
+import {
+  authGateHref,
+  canLinkToEmployer,
+  hasApplyIntent,
+  isRenderedElement,
+  resolveApplyStep,
+  withApplyIntent,
+  withoutApplyIntent,
+} from '@/lib/apply-intent';
 
 import InPlatformApplyForm, { type PlatformApplyOutcome } from '@/components/InPlatformApplyForm';
 import { trackJobApply } from '@/lib/analytics';
 import { buildTrackedJobItem, type TrackedJob } from '@/components/analytics/ViewTrackers';
+import {
+  safeApplyHref,
+  externalApplyLinkProps,
+  externalApplyHint,
+  isMailtoHref,
+} from '@/components/jobs/safe-external-href';
 import Link from 'next/link';
 import { brand } from '@/config/brand';
 
@@ -20,8 +41,9 @@ interface ApplyButtonProps {
   applyOnPlatform?: boolean;
   /**
    * Whether the job was posted directly by an employer on this platform
-   * (vs aggregated from an external source). Used to label external
-   * applies as "Direct Apply" instead of generic "Apply Now".
+   * (vs aggregated from an external source). With the apply URL it decides
+   * whether the call to action can say the application continues on the
+   * employer's site (lib/direct-apply.ts).
    */
   sourceType?: string | null;
   /**
@@ -44,11 +66,214 @@ interface ApplyButtonProps {
   sourceProvider?: string | null;
 }
 
+/**
+ * Counts one apply click on the job (employer dashboards read it as
+ * "clicks"). Fire and forget: the apply flow never waits on it.
+ */
+function postApplyClick(jobId: string): void {
+  try {
+    fetch(`/api/jobs/${jobId}/track-apply`, { method: 'POST' }).catch(() => { });
+  } catch { }
+}
+
 function formatAppliedDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
   });
+}
+
+const CTA_STYLE: React.CSSProperties = {
+  minHeight: '52px',
+  borderRadius: '18px',
+  background: '#BE185D',
+  border: '1px solid rgba(255,255,255,0.3)',
+  boxShadow: '6px 6px 16px rgba(190,24,93,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
+};
+
+// Full width in the mobile sticky bar; on desktop it fills the sidebar row
+// beside the "Applied" chip, so "Apply on employer site" fits on one line.
+const CTA_CLASS = 'apply-btn inline-flex items-center justify-center gap-2 text-center text-white px-6 py-4 lg:py-3 font-bold transition-all text-lg w-full lg:flex-1 lg:min-w-0 touch-manipulation';
+
+const CONTINUE_CLASS = 'apply-btn inline-flex items-center justify-center gap-2 text-center text-white px-5 py-3 font-bold transition-all text-base w-full touch-manipulation';
+
+const PANEL_STYLE: React.CSSProperties = {
+  backgroundColor: 'rgba(190,24,93,0.06)',
+  border: '1px solid rgba(190,24,93,0.18)',
+};
+
+/**
+ * What an account adds, for the gate. Only features the board has today:
+ * /my-applications, job alerts and saved jobs.
+ */
+const GATE_BENEFITS = [
+  { Icon: ListChecks, text: 'Track every application in one place' },
+  { Icon: Bell, text: 'Get alerts when matching roles are posted' },
+  { Icon: Bookmark, text: 'Save jobs to come back to later' },
+] as const;
+
+interface ApplyAuthGateProps {
+  applyOnPlatform: boolean;
+  onSignUp: () => void;
+  onSignIn: () => void;
+  onBack: () => void;
+}
+
+/**
+ * The sign-up or log-in gate every signed-out Apply click opens (owner
+ * decision 2026-09). It replaces the button area; the job description
+ * above it stays readable without an account.
+ */
+export function ApplyAuthGate({ applyOnPlatform, onSignUp, onSignIn, onBack }: ApplyAuthGateProps) {
+  return (
+    <div className="w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <LogIn size={18} style={{ color: '#BE185D' }} aria-hidden="true" />
+        <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+          Sign in to apply
+        </h3>
+      </div>
+
+      <p className="text-sm mb-4 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+        {applyOnPlatform
+          ? `Easy Apply sends your ${brand.name} profile and resume to the employer. Create a free account or sign in to apply.`
+          : "Create a free account or sign in to continue to the employer's application. We will bring you straight back to this job."}
+      </p>
+
+      <ul className="space-y-2 mb-4">
+        {GATE_BENEFITS.map(({ Icon, text }) => (
+          <li key={text} className="flex items-center gap-2.5">
+            <Icon size={14} className="flex-shrink-0" style={{ color: '#BE185D' }} aria-hidden="true" />
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              {text}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={onSignUp}
+          className="w-full py-3 rounded-xl font-bold text-white transition-all text-sm"
+          style={{
+            background: '#BE185D',
+            borderRadius: '16px',
+            border: '1px solid rgba(255,255,255,0.3)',
+            boxShadow: '6px 6px 16px rgba(190,24,93,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
+          }}
+        >
+          Create Free Account
+        </button>
+        <button
+          type="button"
+          onClick={onSignIn}
+          className="w-full py-3 min-h-[44px] rounded-xl font-semibold transition-all text-sm"
+          style={{
+            backgroundColor: '#EDF2EE',
+            color: 'var(--text-primary)',
+            border: '1px solid rgba(255,255,255,0.5)',
+            borderRadius: '16px',
+            boxShadow: '5px 5px 12px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.03)',
+          }}
+        >
+          Sign In
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={onBack}
+        className="w-full text-center text-xs mt-3 py-1"
+        style={{ color: 'var(--text-tertiary)' }}
+      >
+        ← Back
+      </button>
+    </div>
+  );
+}
+
+interface ContinueToEmployerPanelProps {
+  href: string;
+  note: string;
+  onContinue: () => void;
+  onDismiss: () => void;
+}
+
+/**
+ * Shown to a signed-in candidate who arrived with an apply intent (back from
+ * sign up or log in, or from a job card) on an external job. The new tab is
+ * opened by their own click on this real link, never by window.open.
+ */
+export function ContinueToEmployerPanel({ href, note, onContinue, onDismiss }: ContinueToEmployerPanelProps) {
+  return (
+    <div className="w-full rounded-2xl p-4" style={PANEL_STYLE}>
+      <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+        Continue your application
+      </p>
+      <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+        {note}
+      </p>
+      <a
+        href={href}
+        {...externalApplyLinkProps(href)}
+        onClick={onContinue}
+        className={CONTINUE_CLASS}
+        style={{ ...CTA_STYLE, minHeight: '48px', borderRadius: '14px' }}
+      >
+        {CONTINUE_TO_EMPLOYER_LABEL}
+        <ExternalLink size={18} aria-hidden="true" />
+        <span className="sr-only">{externalApplyHint(href)}</span>
+      </a>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="w-full text-center text-xs mt-3 py-1"
+        style={{ color: 'var(--text-tertiary)' }}
+      >
+        Not now
+      </button>
+    </div>
+  );
+}
+
+interface ApplyButtonPlaceholderProps {
+  /** The job page's own path, e.g. /jobs/nurse-practitioner-austin-tx-123. */
+  jobPath: string;
+  applyLink: string | null;
+  applyOnPlatform: boolean;
+  sourceType: string | null;
+}
+
+/**
+ * Server-rendered stand-in for ApplyButton while its Suspense boundary is
+ * pending. ApplyButton reads useSearchParams() (the ?apply=1 intent), and on
+ * the ISR job route an unwrapped search-param read bails the WHOLE page out
+ * to client rendering, so the page wraps it in Suspense with this fallback.
+ * It reserves the button's 52px height so hydration causes no layout shift.
+ *
+ * Applying requires an account (owner decision 2026-09), so the stand-in
+ * never links to the employer. Before hydration (or without JavaScript) it
+ * is a GET form to /signup that returns to this job with the apply intent;
+ * a signed-in visitor is sent straight back by the /signup page. A form,
+ * not a link, so crawlers do not queue a sign-up URL for every job.
+ */
+export function ApplyButtonPlaceholder({ jobPath, applyLink, applyOnPlatform, sourceType }: ApplyButtonPlaceholderProps) {
+  const hasApplyPath = applyOnPlatform || safeApplyHref(applyLink) !== null;
+  const returnPath = withApplyIntent(jobPath);
+  if (!hasApplyPath || !returnPath) {
+    return <div aria-hidden="true" style={{ minHeight: '52px', width: '100%' }} />;
+  }
+  return (
+    <form action="/signup" method="get" className="w-full">
+      <input type="hidden" name="redirectTo" value={returnPath} />
+      <button type="submit" className={CTA_CLASS} style={CTA_STYLE}>
+        {applyOnPlatform && <Zap size={18} fill="currentColor" aria-hidden="true" />}
+        {applyCtaLabel({ applyLink, sourceType, applyOnPlatform })}
+        <span className="sr-only"> (create a free account or sign in to apply)</span>
+      </button>
+    </form>
+  );
 }
 
 export default function ApplyButton({
@@ -101,15 +326,22 @@ export default function ApplyButton({
       .finally(() => { if (active) setAuthResolved(true); });
     return () => { active = false; };
   }, [isAuthenticated]);
-  // Use the shared detection so the detail-page button matches the
-  // card's label exactly — both consider both `sourceType === 'employer'`
-  // AND known ATS URL patterns (greenhouse, lever, workday, etc.).
-  // Before this, a Greenhouse-aggregated job got "Direct Apply" on the
-  // card but "Apply Now" on the detail page, which looked broken.
-  const directApply = shouldLabelDirectApply({ applyLink, sourceType, applyOnPlatform });
+
+  // Owner decision 2026-09: applying requires an account. The employer's
+  // application is a real link only for a visitor known to be signed in;
+  // everyone else gets a button that opens the sign-up or log-in gate. Only
+  // a value that parses as an http(s) or mailto: URL may become the href.
+  const externalHref = applyOnPlatform ? null : safeApplyHref(applyLink);
+  const applyRoute = resolveApplyRoute({ applyLink, sourceType, applyOnPlatform });
+  const stepInput = { applyOnPlatform, hasExternalHref: externalHref !== null, authResolved, authed };
+  const hasApplyPath = resolveApplyStep(stepInput) !== 'unavailable';
+  const employerLinkHref = canLinkToEmployer(stepInput) ? externalHref : null;
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPlatformApply, setShowPlatformApply] = useState(false);
+  // Signed in, external job, arrived with an apply intent: show the
+  // "Continue to employer application" link instead of opening a tab.
+  const [showContinuePanel, setShowContinuePanel] = useState(false);
   const [serverApplied, setServerApplied] = useState<{ applied: boolean; appliedAt?: string; status?: string } | null>(null);
   // Tracks whether the user just clicked an EXTERNAL apply link. Drives the
   // "Did you apply?" confirmation prompt — we don't auto-mark applied because
@@ -118,6 +350,9 @@ export default function ApplyButton({
   // pollute /my-applications or the dashboard.
   const [awaitingApplyConfirm, setAwaitingApplyConfirm] = useState(false);
   const autoOpened = useRef(false);
+  // This instance's outer element. The ?apply=1 effect reads it to tell
+  // whether this is the instance on screen (see isRenderedElement).
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // Check server for existing application (for platform-apply jobs)
   useEffect(() => {
@@ -128,13 +363,15 @@ export default function ApplyButton({
       .catch(() => { });
   }, [authed, applyOnPlatform, jobId]);
 
-  // Auto-open the apply popup when arriving via ?apply=1 from a job card.
-  // Fires once per mount; only for in-platform jobs to avoid popping a new
-  // tab on external links without a user gesture.
+  // Apply intent (?apply=1): set by a job card's Apply button and by the
+  // return trip from sign up or log in. Fires once per mount. A signed-out
+  // visitor gets the gate; a signed-in one gets the Easy Apply form, or for
+  // an external job the "Continue to employer application" link. A new tab
+  // is never opened here, because this runs outside a user gesture.
   useEffect(() => {
     if (autoOpened.current) return;
-    if (searchParams?.get('apply') !== '1') return;
-    if (!applyOnPlatform) return;
+    if (!hasApplyIntent(searchParams)) return;
+    if (!hasApplyPath) return;
     // F26: wait until auth state is KNOWN before latching. The job detail
     // page doesn't pass isAuthenticated, so authed starts false while the
     // /api/auth/me probe is in flight — acting on that provisional value
@@ -149,14 +386,36 @@ export default function ApplyButton({
     // the re-run re-arms it with fresh auth state, still firing exactly once.
     const open = setTimeout(() => {
       autoOpened.current = true;
+      // The job page mounts two ApplyButtons, the desktop sidebar and the
+      // mobile sticky bar, and CSS hides one of them. Both read the same
+      // ?apply=1, so only the instance on screen acts on it: two would
+      // count the apply click twice and stack two Easy Apply modals (each
+      // portals to document.body). Which one is visible depends on the
+      // viewport, so a prop from the page cannot choose it.
+      if (!isRenderedElement(rootRef.current)) return;
+      // The intent is used up once acted on: strip ?apply=1 from the address
+      // bar so a reload, a Back press or a copied link does not reopen the
+      // form or count the click again. null (not history.state, which
+      // carries Next's own __NA marker) sends the call through the App
+      // Router's replaceState patch, which keeps its internal state and
+      // updates useSearchParams; the autoOpened latch keeps this effect from
+      // acting again. The gate re-adds ?apply=1 (buildReturnUrl) when used.
+      const clean = withoutApplyIntent(window.location.pathname, window.location.search);
+      if (clean) window.history.replaceState(null, '', clean);
       if (!authed) {
         setShowAuthModal(true);
-      } else {
+      } else if (applyOnPlatform) {
+        // The Apply click that began this trip (before sign in, or on a job
+        // card) is counted once, here, as the Easy Apply form opens. An
+        // external job counts it when the continue link is clicked.
+        postApplyClick(jobId);
         setShowPlatformApply(true);
+      } else {
+        setShowContinuePanel(true);
       }
     }, 0);
     return () => clearTimeout(open);
-  }, [searchParams, applyOnPlatform, authed, authResolved]);
+  }, [searchParams, applyOnPlatform, hasApplyPath, authed, authResolved, jobId]);
 
   // Safety net: if the auth probe resolves to authenticated while the
   // sign-in gate is showing (e.g. the user clicked Apply during the brief
@@ -170,83 +429,100 @@ export default function ApplyButton({
       setShowAuthModal(false);
       if (applyOnPlatform) {
         setShowPlatformApply(true);
+      } else {
+        setShowContinuePanel(true);
       }
     }, 0);
     return () => clearTimeout(swap);
   }, [authed, showAuthModal, applyOnPlatform]);
 
+  // The "Did you finish applying?" prompt replaces the apply link, so it is
+  // raised one tick after the click: the browser has already started the
+  // navigation to the employer's page by then (a link removed from the page
+  // during its own click would not navigate). Cleared on unmount.
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+  }, []);
+
   const applied = isApplied(jobId) || serverApplied?.applied;
   const appliedDate = getAppliedDate(jobId);
 
-  // Fire the click-tracker. Used by both apply paths (external link + platform
-  // form). Previously only external clicks were tracked, so platform-apply
-  // jobs always reported 0 clicks even when they had real applications —
-  // employer dashboards showed misleading "0 clicks · N applicants" rows.
-  const fireApplyClick = () => {
-    try {
-      fetch(`/api/jobs/${jobId}/track-apply`, {
-        method: 'POST',
-      }).catch(() => { });
-    } catch { }
+  // The click tracker for both apply paths (external link and Easy Apply
+  // form), so employer dashboards never read "0 clicks, N applicants".
+  const fireApplyClick = () => postApplyClick(jobId);
+
+  // An Apply click that lands before the /api/auth/me probe settles is held
+  // here instead of flashing the sign-in gate. Showing the gate swapped the
+  // Apply button out of the DOM; the safety net above then opened the modal
+  // with focus already on <body>, so closing it lost keyboard focus.
+  const [pendingApply, setPendingApply] = useState(false);
+
+  /**
+   * External apply by a signed-in candidate: the link itself opens the
+   * employer's application (no preventDefault). Track the click for
+   * engagement analytics, but do NOT mark applied — clicking the link only
+   * signals intent. The "Did you apply?" confirmation prompt below captures
+   * the actual outcome once the user returns from the employer's site.
+   */
+  const handleExternalApplyClick = () => {
+    fireApplyClick();
+    trackJobApply(buildTrackedJobItem(trackedJob), 'external');
+    const alreadyApplied = isApplied(jobId);
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    confirmTimer.current = setTimeout(() => {
+      setShowContinuePanel(false);
+      if (!alreadyApplied) setAwaitingApplyConfirm(true);
+    }, 0);
   };
 
-  // An Easy Apply click that lands before the /api/auth/me probe settles is
-  // held here instead of flashing the sign-in gate. Showing the gate swapped
-  // the Apply button out of the DOM; the safety net below then opened the
-  // modal with focus already on <body>, so closing it lost keyboard focus.
-  const [pendingPlatformApply, setPendingPlatformApply] = useState(false);
-
+  /**
+   * The Apply button: every signed-out click opens the gate (Easy Apply and
+   * external alike), a click before the sign-in probe answers is held, and a
+   * signed-in click opens Easy Apply (or, for an external job whose link
+   * button raced the probe, the continue link).
+   */
   const handleApply = () => {
-    if (applyOnPlatform && !authResolved) {
-      setPendingPlatformApply(true);
+    const step = resolveApplyStep(stepInput);
+    if (step === 'unavailable') return;
+    if (step === 'wait-for-auth') {
+      setPendingApply(true);
       return;
     }
-
-    // If user is not authenticated, show auth gate
-    if (!authed) {
+    if (step === 'auth-gate') {
       setShowAuthModal(true);
       return;
     }
-
-    // Platform apply: show inline form (and bump the click counter — opening
-    // the form is the equivalent intent-to-apply moment as clicking external)
-    if (applyOnPlatform) {
-      fireApplyClick();
-      setShowPlatformApply(true);
+    if (step === 'continue-to-employer') {
+      setShowContinuePanel(true);
       return;
     }
-
-    // External apply: open link in new tab. Track the click for engagement
-    // analytics, but do NOT mark applied — clicking the link only signals
-    // intent. The "Did you apply?" confirmation prompt below captures the
-    // actual outcome once the user returns from the employer's site.
-    if (applyLink) {
-      fireApplyClick();
-      trackJobApply(buildTrackedJobItem(trackedJob), 'external');
-      window.open(applyLink, '_blank', 'noopener,noreferrer');
-      if (!isApplied(jobId)) {
-        setAwaitingApplyConfirm(true);
-      }
-    }
+    // Platform apply: show inline form (and bump the click counter — opening
+    // the form is the equivalent intent-to-apply moment as clicking external)
+    fireApplyClick();
+    setShowPlatformApply(true);
   };
 
-  // Resume the held Easy Apply click once auth is known: the gate for a
-  // signed-out visitor, the modal for a signed-in one. Deferred a tick like
-  // the other auth transitions above.
+  // Resume the held Apply click once auth is known: the gate for a
+  // signed-out visitor, the modal (or the continue link) for a signed-in
+  // one. Deferred a tick like the other auth transitions above.
   useEffect(() => {
-    if (!pendingPlatformApply || !authResolved) return;
+    if (!pendingApply || !authResolved) return;
     const resume = setTimeout(() => {
-      setPendingPlatformApply(false);
+      setPendingApply(false);
       if (!authed) {
         setShowAuthModal(true);
         return;
       }
-      // Same click tracking as fireApplyClick (inlined to keep deps exact).
-      fetch(`/api/jobs/${jobId}/track-apply`, { method: 'POST' }).catch(() => { });
+      if (!applyOnPlatform) {
+        setShowContinuePanel(true);
+        return;
+      }
+      postApplyClick(jobId);
       setShowPlatformApply(true);
     }, 0);
     return () => clearTimeout(resume);
-  }, [pendingPlatformApply, authResolved, authed, jobId]);
+  }, [pendingApply, authResolved, authed, applyOnPlatform, jobId]);
 
   /** User explicitly confirms they completed the application on the employer's site. */
   const handleConfirmApplied = () => {
@@ -256,7 +532,7 @@ export default function ApplyButton({
     setAwaitingApplyConfirm(false);
   };
 
-  /** User dismisses the prompt — they didn't apply (yet). Reverts to Apply Now. */
+  /** User dismisses the prompt — they didn't apply (yet). Reverts to the Apply button. */
   const handleDismissApplyConfirm = () => {
     setAwaitingApplyConfirm(false);
   };
@@ -323,28 +599,25 @@ export default function ApplyButton({
     }
   }, [showPlatformApply]);
 
-  // F26: build the post-auth return target from pathname + search (not just
-  // pathname) so ?apply=1 survives the login/signup round trip. For
-  // in-platform jobs we force apply=1 even when the user clicked Apply
-  // directly on the detail page, so the apply modal auto re-opens via the
-  // ?apply=1 effect above instead of making them find the button again.
-  const buildReturnUrl = (): string => {
-    const params = new URLSearchParams(window.location.search);
-    if (applyOnPlatform) params.set('apply', '1');
-    const query = params.toString();
-    return query ? `${window.location.pathname}?${query}` : window.location.pathname;
-  };
+  // F26: the post-auth return target is this page (pathname + search) with
+  // the apply intent set, for Easy Apply AND external jobs, so the candidate
+  // lands back here with the Easy Apply form open or the "Continue to
+  // employer application" link showing, instead of hunting for the button.
+  const buildReturnUrl = (): string =>
+    withApplyIntent(window.location.pathname, window.location.search) ?? '/jobs';
 
   const handleSignIn = () => {
-    window.location.href = `/login?redirectTo=${encodeURIComponent(buildReturnUrl())}`;
+    window.location.href = authGateHref('login', buildReturnUrl());
   };
 
   const handleSignUp = () => {
-    window.location.href = `/signup?redirectTo=${encodeURIComponent(buildReturnUrl())}`;
+    window.location.href = authGateHref('signup', buildReturnUrl());
   };
 
+  const ctaLabel = applyCtaLabel({ applyLink, sourceType, applyOnPlatform }, { applied: Boolean(applied) });
+
   return (
-    <div className="flex flex-col w-full">
+    <div ref={rootRef} className="flex flex-col w-full">
       {/* Already Applied Notice (server-verified for platform apply jobs) */}
       {applyOnPlatform && serverApplied?.applied && !showPlatformApply && (
         <div
@@ -391,91 +664,17 @@ export default function ApplyButton({
 
       {showAuthModal ? (
         /* Inline Auth Gate — replaces button area when triggered */
-        <div className="w-full">
-          {/* Title */}
-          <div className="flex items-center gap-2 mb-3">
-            <LogIn size={18} style={{ color: '#BE185D' }} />
-            <h3
-              className="text-base font-bold"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Sign in to apply
-            </h3>
-          </div>
-
-          {/* Description */}
-          <p
-            className="text-sm mb-4 leading-relaxed"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Create a free account to apply and unlock these benefits:
-          </p>
-
-          {/* Benefits */}
-          <div className="space-y-2 mb-4">
-            {[
-              { icon: '👀', text: `Get noticed by employers hiring ${brand.niche.short}s` },
-              { icon: '💬', text: 'Receive direct messages from recruiters' },
-              { icon: '⚡', text: 'Auto-fill applications with our Chrome extension (coming soon)' },
-            ].map((item) => (
-              <div key={item.text} className="flex items-center gap-2.5">
-                <span className="text-sm flex-shrink-0">{item.icon}</span>
-                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  {item.text}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Buttons */}
-          <div className="space-y-2">
-            <button
-              onClick={handleSignUp}
-              className="w-full py-3 rounded-xl font-bold text-white transition-all text-sm"
-              style={{
-                background: '#BE185D',
-                borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.3)',
-                boxShadow: '6px 6px 16px rgba(190,24,93,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
-              }}
-            >
-              Create Free Account
-            </button>
-            <button
-              onClick={handleSignIn}
-              className="w-full py-3 min-h-[44px] rounded-xl font-semibold transition-all text-sm"
-              style={{
-                backgroundColor: '#EDF2EE',
-                color: 'var(--text-primary)',
-                border: '1px solid rgba(255,255,255,0.5)',
-                borderRadius: '16px',
-                boxShadow: '5px 5px 12px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.03)',
-              }}
-            >
-              Sign In
-            </button>
-          </div>
-
-          {/* Dismiss */}
-          <button
-            onClick={() => setShowAuthModal(false)}
-            className="w-full text-center text-xs mt-3 py-1"
-            style={{ color: 'var(--text-tertiary)' }}
-          >
-            ← Back
-          </button>
-        </div>
+        <ApplyAuthGate
+          applyOnPlatform={applyOnPlatform}
+          onSignUp={handleSignUp}
+          onSignIn={handleSignIn}
+          onBack={() => setShowAuthModal(false)}
+        />
       ) : awaitingApplyConfirm ? (
         /* Inline confirmation — user just clicked the external apply link.
            Click alone doesn't prove they applied; ask explicitly so we don't
            pollute /my-applications with phantom records. */
-        <div
-          className="w-full rounded-2xl p-4"
-          style={{
-            backgroundColor: 'rgba(190,24,93,0.06)',
-            border: '1px solid rgba(190,24,93,0.18)',
-          }}
-        >
+        <div className="w-full rounded-2xl p-4" style={PANEL_STYLE}>
           <p
             className="text-sm font-semibold mb-1"
             style={{ color: 'var(--text-primary)' }}
@@ -518,35 +717,53 @@ export default function ApplyButton({
               Not yet
             </button>
           </div>
-          {applyLink && (
-            <button
-              onClick={() => window.open(applyLink, '_blank', 'noopener,noreferrer')}
-              className="text-xs hover:underline mt-3"
+          {employerLinkHref && (
+            <a
+              href={employerLinkHref}
+              {...externalApplyLinkProps(employerLinkHref)}
+              className="inline-block text-xs hover:underline mt-3"
               style={{ color: 'var(--text-tertiary)' }}
             >
               ↗ Reopen the apply link
-            </button>
+            </a>
           )}
         </div>
+      ) : showContinuePanel && employerLinkHref ? (
+        <ContinueToEmployerPanel
+          href={employerLinkHref}
+          note={continueApplicationNote(applyRoute, isMailtoHref(employerLinkHref))}
+          onContinue={handleExternalApplyClick}
+          onDismiss={() => setShowContinuePanel(false)}
+        />
       ) : (
         <>
           <div className="flex items-center gap-3">
-            <button
-              ref={applyButtonRef}
-              onClick={handleApply}
-              className="apply-btn inline-flex items-center justify-center gap-2 text-white px-8 py-4 lg:py-3 font-bold transition-all text-lg w-full lg:w-auto touch-manipulation"
-              style={{
-                minHeight: '52px',
-                borderRadius: '18px',
-                background: '#BE185D',
-                border: '1px solid rgba(255,255,255,0.3)',
-                boxShadow: '6px 6px 16px rgba(190,24,93,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
-              }}
-            >
-              {applyOnPlatform && <Zap size={18} fill="currentColor" />}
-              {applied ? 'Apply Again' : applyOnPlatform ? 'Easy Apply' : directApply ? 'Direct Apply' : 'Apply Now'}
-              {!applyOnPlatform && <ExternalLink size={20} />}
-            </button>
+            {employerLinkHref ? (
+              <a
+                href={employerLinkHref}
+                {...externalApplyLinkProps(employerLinkHref)}
+                onClick={handleExternalApplyClick}
+                className={CTA_CLASS}
+                style={CTA_STYLE}
+              >
+                {ctaLabel}
+                <ExternalLink size={20} aria-hidden="true" />
+                <span className="sr-only">{externalApplyHint(employerLinkHref)}</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                ref={applyButtonRef}
+                onClick={handleApply}
+                disabled={!hasApplyPath}
+                className={CTA_CLASS}
+                style={hasApplyPath ? CTA_STYLE : { ...CTA_STYLE, opacity: 0.6, cursor: 'not-allowed' }}
+              >
+                {applyOnPlatform && <Zap size={18} fill="currentColor" aria-hidden="true" />}
+                {hasApplyPath ? ctaLabel : APPLY_CTA_LABELS.none}
+                {!applyOnPlatform && hasApplyPath && <ExternalLink size={20} aria-hidden="true" />}
+              </button>
+            )}
 
             {applied && (
               <span className="hidden lg:inline-flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-full text-sm font-medium">
@@ -586,8 +803,6 @@ export default function ApplyButton({
         </>
       )}
 
-
-
       <style>{`
         .apply-btn:hover {
           transform: translateY(-3px);
@@ -602,4 +817,3 @@ export default function ApplyButton({
     </div>
   );
 }
-

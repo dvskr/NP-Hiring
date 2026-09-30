@@ -165,7 +165,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
         `<span style="display:inline-block;padding:5px 14px;border-radius:20px;font-family:${SANS};font-size:11px;font-weight:600;letter-spacing:0.3px;background:${bg};color:${fg};${border ? 'border:1px solid ' + border + ';' : ''}">${text}</span>`;
       const applyLabelFor = (t: string) =>
         t === 'easy' ? '⚡ Easy Apply'
-        : t === 'direct' ? 'Direct Apply'
+        : t === 'direct' ? 'Apply on employer site'
         : 'Apply Now ↗';
 
       const jobCards = jobs.map((j) => `

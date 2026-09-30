@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
+import { SIGNUP_RETURN_METADATA_KEY, authSwitchHref, isApplyReturnPath } from '@/lib/apply-intent'
 import { Loader2, AlertCircle, CheckCircle, Eye, EyeOff, Bell, ArrowRight, User, Building2, Mail } from 'lucide-react'
 import { trackSignUp } from '@/lib/analytics'
 import GoogleSignInButton from './GoogleSignInButton'
@@ -79,6 +80,9 @@ export default function SignUpForm() {
   // path; empty fallback + `|| undefined` means "no redirect requested".
   const redirectTo =
     safeInternalPath(searchParams.get('redirectTo') || searchParams.get('next'), '') || undefined;
+  // Arrived from a job's Apply button (/jobs/...?apply=1): the copy says the
+  // candidate will be brought back to that job.
+  const applyingToJob = isApplyReturnPath(redirectTo);
 
   useEffect(() => {
     const roleParam = searchParams.get('role');
@@ -89,10 +93,13 @@ export default function SignUpForm() {
     if (resendCooldown > 0) return;
     setResendStatus('sending');
     try {
+      // `next` lets the resent link return to the same page (the job being
+      // applied for). If the endpoint ignores it, /auth/confirm still reads
+      // the return path stashed in the auth metadata at sign up.
       const res = await fetch('/api/auth/send-confirmation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, next: redirectTo }),
       });
       if (!res.ok) { setResendStatus('error'); }
       else {
@@ -162,6 +169,11 @@ export default function SignUpForm() {
             want_job_highlights: role === 'seeker' ? wantJobHighlights : false,
             highlights_frequency: role === 'seeker' ? highlightsFrequency : null,
             newsletter_opt_in: newsletterOptIn,
+            // Apply intent survives the email confirmation round trip even
+            // when the confirmation link arrives without ?next= (a resent
+            // link, or a redirect that lost its query): /auth/confirm falls
+            // back to this value (lib/apply-intent.ts signupReturnPath).
+            [SIGNUP_RETURN_METADATA_KEY]: redirectTo ?? null,
           },
         },
       });
@@ -260,6 +272,11 @@ export default function SignUpForm() {
           <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>
             We have sent a confirmation link to <strong>{email}</strong>.
           </p>
+          {applyingToJob && (
+            <p style={{ fontSize: '14px', color: '#4B5E68', margin: 0 }}>
+              Open the link in that email and we will take you back to the job you were applying for.
+            </p>
+          )}
           <p style={{ fontSize: '12px', color: '#4B5E68', margin: 0 }}>
             Check your spam or junk folder if you do not see it within a few minutes.
           </p>
@@ -274,7 +291,7 @@ export default function SignUpForm() {
                "Did not receive it? Resend"}
             </button>
           </div>
-          <Link href="/login" style={{ ...linkStyle, fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: accent }}>
+          <Link href={authSwitchHref('login', { redirectTo, employer: role === 'employer' })} style={{ ...linkStyle, fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: accent }}>
             Go to login <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -297,7 +314,9 @@ export default function SignUpForm() {
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
           ? `Start posting jobs and hiring qualified ${brand.niche.short}s.`
-          : `Join thousands of ${brand.niche.short}s finding their perfect role.`}
+          : applyingToJob
+            ? 'Applying takes a free account. We will bring you back to the job when you are done.'
+            : `Join thousands of ${brand.niche.short}s finding their perfect role.`}
       </p>
 
       {/* ═══ ROLE TOGGLE ═══ */}
@@ -528,7 +547,7 @@ export default function SignUpForm() {
         {/* Login link */}
         <p style={{ textAlign: 'center', fontSize: '13px', color: '#6B7F8A', marginTop: '14px', marginBottom: 0 }}>
           Already have an account?{' '}
-          <Link href={role === 'employer' ? '/login?role=employer' : '/login'}
+          <Link href={authSwitchHref('login', { redirectTo, employer: role === 'employer' })}
             style={{ fontWeight: 700, color: accent, textDecoration: 'none' }}>
             Sign in
           </Link>

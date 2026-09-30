@@ -28,6 +28,7 @@ import {
     TREND_MIN_MONTH_SAMPLE,
 } from '@/lib/reports/report-model';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 import { loadHiringReportSnapshot } from '@/lib/reports/queries';
 import { formatCount } from '@/lib/display-text';
 
@@ -246,7 +247,8 @@ export default async function ReportsHubPage() {
                         month, and a trend is drawn only once{' '}
                         {formatCount(TREND_MIN_MONTHS, 'such month')} exist. A pay figure is published only
                         from {BENCHMARK_MIN_POSTINGS} or more postings with employer stated pay across{' '}
-                        {BENCHMARK_MIN_EMPLOYERS} or more employers, and pay that our own enrichment
+                        {BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer contributing
+                        more than {MAX_EMPLOYER_SHARE_PERCENT}% of them, and pay that our own enrichment
                         pipeline inferred is excluded from that sample entirely.
                     </p>
                     <p style={{ fontSize: '13.5px', color: MUTED_TEXT, lineHeight: 1.75, margin: '0 0 10px 0' }}>

@@ -6,7 +6,7 @@ import { Metadata } from 'next';
 // Without it, /do-not-sell shipped the generic root-layout title and no
 // canonical — a duplicate-title cluster with every other bare page.
 export const metadata: Metadata = {
-    title: `Do Not Sell or Share My Personal Information | ${brand.name}`,
+    title: 'Do Not Sell or Share My Personal Information',
     description: `Opt out of the sale or sharing of your personal information under the CCPA/CPRA. One click disables analytics and marketing cookies on ${brand.name} for this device.`,
     alternates: {
         canonical: `${brand.baseUrl}/do-not-sell`,

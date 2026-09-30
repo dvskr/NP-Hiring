@@ -381,9 +381,10 @@ export default async function LicensureCheckerToolPage() {
           </h2>
           <div className="tool-three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/resources/fpa-guide', title: 'Full practice authority guide', blurb: 'All 50 states classified, and what FPA does to pay.' },
+              { href: '/scope-of-practice', title: 'Scope of practice by state', blurb: 'The practice rule in each state, before you license there.' },
+              { href: '/resources/fpa-guide', title: 'Full practice authority guide', blurb: 'What full practice authority means, and how the three classifications differ.' },
               { href: '/tools/cost-of-living-comparison', title: 'Cost-of-living comparator', blurb: 'Before you move for a license, check what the salary is worth.' },
-              { href: '/jobs/telehealth', title: 'Telehealth roles', blurb: 'Where multi-state licensure pays for itself fastest.' },
+              { href: '/jobs/telehealth', title: 'Telehealth roles', blurb: 'Roles where a multi-state license widens where you can work.' },
               { href: '/jobs/travel', title: 'Travel roles', blurb: 'Assignment work across compact and non-compact states.' },
               { href: '/resources', title: 'All career resources', blurb: 'Guides, state licensure series, and the salary guide.' },
               { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'What each state currently pays, from live postings.' },

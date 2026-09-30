@@ -186,7 +186,8 @@ describe('post shape', () => {
     it('the editorial byline comes from the shared component, not post copy', () => {
         const page = read('app/blog/[slug]/page.tsx');
         expect(page).toContain("import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline'");
-        expect(page).toContain('...editorialSchemaFields(),');
+        // Hand-written posts spread the shared helper (CQ-12: generated guides get none).
+        expect(page).toContain(': editorialSchemaFields();');
         for (const { slug, body } of BODIES) {
             expect(body, `${slug}: hand-written byline in post copy`).not.toMatch(/reviewed by|written by/i);
         }

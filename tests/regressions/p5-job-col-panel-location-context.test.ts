@@ -172,7 +172,9 @@ describe('P5 A5 (3) — the city link carries both guards; other links use route
         const below = buildJobLocationContext(houstonJob(), MIN_CITY_JOBS_FOR_LINK - 1)!;
         expect(below.cityJobsHref).toBeNull();
         const at = buildJobLocationContext(houstonJob(), MIN_CITY_JOBS_FOR_LINK)!;
-        expect(at.cityJobsHref).toBe(`/jobs/city/${buildCitySlug('Houston', 'TX')}`);
+        // Houston is a curated metro, so the link goes to its guide, never
+        // to the city URL that only redirects there (L-05).
+        expect(at.cityJobsHref).toBe(`/jobs/metro/${buildCitySlug('Houston', 'TX')}`);
     });
 
     it('never links a lossy-slug city, however much inventory it has', () => {

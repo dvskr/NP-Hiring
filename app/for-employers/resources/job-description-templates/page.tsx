@@ -24,7 +24,8 @@ const PAGE_URL = `${brand.baseUrl}/for-employers/resources/job-description-templ
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Job Description Templates`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `${JD_TEMPLATES.length} Free ${brand.niche.short} Job Description Templates by Setting | ${brand.name}`,
+  // L-02: brand suffix comes from the root layout title template, once.
+  title: `${JD_TEMPLATES.length} Free ${brand.niche.short} Job Description Templates by Setting`,
   description: `Free ${brand.niche.descriptor} job description templates for every practice setting: outpatient, inpatient, telehealth, urgent care, emergency, community health, and correctional health. Customize and post in minutes.`,
   keywords: [
     `${brand.niche.short} job description template`,

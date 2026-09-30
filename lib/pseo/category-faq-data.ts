@@ -216,7 +216,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     remote: ({ totalJobs, avgSalary }) => [
         {
             question: `How many remote ${NP} jobs are available?`,
-            answer: `There ${isAre(totalJobs)} currently ${totalJobs} remote ${NP} ${pluralize(totalJobs, 'job opening', 'job openings')} listed on ${brand.name}. These include fully remote, hybrid, and telehealth positions, and each listing names the states where it requires licensure.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} remote ${NP} ${pluralize(totalJobs, 'job opening', 'job openings')} listed on ${brand.name}. Each one is fully remote: hybrid roles that need days on site are not counted here, and each listing names the states where it requires licensure.`,
         },
         {
             question: `What do remote ${NP} jobs pay?`,
@@ -234,7 +234,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     telehealth: ({ totalJobs, avgSalary }) => [
         {
             question: `How many telehealth ${NP} positions are available?`,
-            answer: `There ${isAre(totalJobs)} currently ${totalJobs} telehealth ${NP} ${pluralize(totalJobs, 'position', 'positions')} listed on ${brand.name}. Telehealth positions include video visits, phone consultations, and asynchronous virtual care roles across telehealth platforms and health systems.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} telehealth ${NP} ${pluralize(totalJobs, 'position', 'positions')} listed on ${brand.name}. Each one is a fully remote virtual care role: video visits, phone consultations, or asynchronous care on a telehealth platform or for a health system.`,
         },
         {
             question: `What is the difference between telehealth and remote ${NP} jobs?`,
@@ -252,7 +252,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     travel: ({ totalJobs, avgSalary }) => [
         {
             question: `How many travel ${NP} jobs are currently available?`,
-            answer: `There ${isAre(totalJobs)} currently ${totalJobs} travel and locum tenens ${NP} ${pluralize(totalJobs, 'position', 'positions')} listed on ${brand.name}. These are short-term assignments with a stated length in healthcare settings across the country.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} travel ${NP} ${pluralize(totalJobs, 'position', 'positions')} listed on ${brand.name}. These are short-term assignments with a stated length; locum tenens assignments have their own listings.`,
         },
         {
             question: `How much do travel ${NP} positions pay?`,

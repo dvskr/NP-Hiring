@@ -300,6 +300,9 @@ export async function POST(request: NextRequest) {
           isPublished: false, // Will be flipped by webhook on successful payment
           sourceType: 'employer',
           expiresAt,
+          // Stamped again when the row first publishes (activate-paid-job.ts);
+          // never left NULL (indexing audit fixSoon 5).
+          contentChangedAt: new Date(),
           qualityScore,
           benefits: Array.isArray(rawBody.benefits) ? rawBody.benefits : [],
           setting: rawBody.setting || null,

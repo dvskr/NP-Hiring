@@ -76,7 +76,13 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 import { getPostBySlug, getAllPublishedSlugs, isSupersededLicenseGuideRow } from '@/lib/blog';
-import { getAllLicenseGuideSlugs, LICENSE_GUIDE_REVIEWED_AT, LICENSE_GUIDE_STATES } from '@/lib/blog-license-guides';
+import {
+    getAllLicenseGuideSlugs,
+    getLicenseGuideFactRows,
+    getLicenseGuideReviewedAt,
+    LICENSE_GUIDE_REVIEWED_AT,
+    LICENSE_GUIDE_STATES,
+} from '@/lib/blog-license-guides';
 import { getAllMdxPosts } from '@/lib/blog-mdx-posts';
 import { LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
 
@@ -115,11 +121,25 @@ describe('license-guide fallback vs editorial control', () => {
 
     /**
      * 2026-09 practice-authority pass: a mirror synced before the series
-     * review (the sync stamps reviewed_at with LICENSE_GUIDE_REVIEWED_AT)
+     * review (the sync stamps reviewed_at with the guide's review date)
      * would keep serving the tier-derived physician claims the pass removed
      * until someone reruns the sync against production. A row dated before
      * the review is superseded; one dated on or after it still wins.
+     *
+     * The review date is the guide's own (getLicenseGuideReviewedAt): the
+     * series date LICENSE_GUIDE_REVIEWED_AT, or the later date its licensing
+     * facts were checked. New Mexico's facts were checked after the series
+     * review, so its guide's review date moved with them, and a mirror synced
+     * before the facts landed is superseded too.
      */
+    const NM_REVIEWED_AT = getLicenseGuideReviewedAt('new-mexico');
+
+    it('New Mexico\'s review date is the later of the series review and its facts check', () => {
+        expect(Date.parse(NM_REVIEWED_AT)).toBeGreaterThan(Date.parse(LICENSE_GUIDE_REVIEWED_AT));
+        const latestCheck = getLicenseGuideFactRows('NM').map(({ fact }) => fact.checkedOn).sort().at(-1);
+        expect(NM_REVIEWED_AT).toBe(`${latestCheck}T00:00:00.000Z`);
+    });
+
     it('a published row reviewed before the series review is superseded by the generated guide', async () => {
         db.rows = [{
             slug: SLUG,
@@ -131,20 +151,36 @@ describe('license-guide fallback vs editorial control', () => {
         }];
         const post = await getPostBySlug(SLUG);
         expect(post!.id).toBe('license-guide-new-mexico');
-        expect(post!.reviewed_at).toBe(LICENSE_GUIDE_REVIEWED_AT);
+        expect(post!.reviewed_at).toBe(NM_REVIEWED_AT);
         expect(post!.content).not.toContain('No collaborative or supervising physician is required');
     });
 
-    it('a published row reviewed on or after the series review still wins', async () => {
+    it('a published row synced at the series review but before the facts check is superseded too', async () => {
         db.rows = [{
             slug: SLUG,
             status: 'published',
             id: 'row-1',
-            title: 'Reviewed edit',
+            title: 'Mirror from before the facts',
             content: 'db copy',
             reviewed_at: LICENSE_GUIDE_REVIEWED_AT,
         }];
-        expect((await getPostBySlug(SLUG))!.title).toBe('Reviewed edit');
+        const post = await getPostBySlug(SLUG);
+        expect(post!.id).toBe('license-guide-new-mexico');
+        expect(post!.reviewed_at).toBe(NM_REVIEWED_AT);
+    });
+
+    it('a published row reviewed on or after the guide\'s review still wins', async () => {
+        for (const reviewedAt of [NM_REVIEWED_AT, new Date(Date.parse(NM_REVIEWED_AT) + 86_400_000).toISOString()]) {
+            db.rows = [{
+                slug: SLUG,
+                status: 'published',
+                id: 'row-1',
+                title: 'Reviewed edit',
+                content: 'db copy',
+                reviewed_at: reviewedAt,
+            }];
+            expect((await getPostBySlug(SLUG))!.title, reviewedAt).toBe('Reviewed edit');
+        }
     });
 
     it('supersession applies to license-guide slugs only', () => {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { formatCT } from '@/lib/format-ct';
 import { BadgeCheck, Building2, Clock, ShieldQuestion } from 'lucide-react';
+import { companyProfilePath } from '@/lib/company-slug';
 
 /* ─── Types (mirror app/api/admin/company-claims/claim-select.ts) ─── */
 interface ClaimCompany {
@@ -50,13 +51,6 @@ function badge(text: string, color: 'green' | 'gray' | 'red' | 'orange' | 'blue'
         blue: { bg: 'rgba(59,130,246,0.12)', text: '#3B82F6' },
     };
     return <span style={{ display: 'inline-flex', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, backgroundColor: colors[color].bg, color: colors[color].text, whiteSpace: 'nowrap' }}>{text}</span>;
-}
-
-/** Canonical public URL for a Company row. Legacy rows hold the space-form
- *  normalizedName ("life stance"); the profile resolver only falls back
- *  kebab→space, so emit the kebab form or the link 404s. */
-function companyHref(normalizedName: string): string {
-    return `/companies/${normalizedName.replace(/ /g, '-')}`;
 }
 
 export default function AdminCompanyClaimsPage() {
@@ -239,7 +233,7 @@ export default function AdminCompanyClaimsPage() {
                                             <tr key={c.id}>
                                                 <td style={{ ...td, fontWeight: 600, color: '#1A2E35', minWidth: 180 }}>
                                                     <a
-                                                        href={companyHref(c.company.normalizedName)}
+                                                        href={companyProfilePath(c.company)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{ color: '#BE185D', textDecoration: 'none' }}

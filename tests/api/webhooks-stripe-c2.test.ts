@@ -233,7 +233,10 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
         expect(prisma.employerJob.update).toHaveBeenCalledWith(expect.objectContaining({
             where: { id: 'ejA', paymentStatus: 'pending' },
         }));
-        expect(prisma.job.update).toHaveBeenCalledWith(expect.objectContaining({ data: { isPublished: true, isVerifiedEmployer: true } }));
+        // First publish stamps contentChangedAt (indexing audit fixSoon 5).
+        expect(prisma.job.update).toHaveBeenCalledWith(expect.objectContaining({
+            data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: expect.any(Date) },
+        }));
         expect(prisma.jobCharge.create).toHaveBeenCalled();
     });
 

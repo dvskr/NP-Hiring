@@ -8,6 +8,7 @@ import { inngest } from '@/lib/inngest/client';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
 import { parseLocation } from '@/lib/location-parser';
+import { contentChangeStamp } from '@/lib/job-content-change';
 import {
   WORK_MODES,
   normalizeWorkMode,
@@ -106,9 +107,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // The stored values of every rendered field this edit can write, so the
+    // update only moves contentChangedAt when the posting really changes.
     const currentJob = await prisma.job.findUnique({
       where: { id: employerJob.jobId },
-      select: { mode: true, setting: true, population: true },
+      select: {
+        mode: true,
+        setting: true,
+        population: true,
+        title: true,
+        location: true,
+        jobType: true,
+        description: true,
+        descriptionSummary: true,
+        applyLink: true,
+        applyOnPlatform: true,
+        minSalary: true,
+        maxSalary: true,
+        salaryPeriod: true,
+        normalizedMinSalary: true,
+        normalizedMaxSalary: true,
+        salaryIsEstimated: true,
+        displaySalary: true,
+        city: true,
+        state: true,
+        stateCode: true,
+        isRemote: true,
+        isHybrid: true,
+        benefits: true,
+      },
     });
     if (!currentJob) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -175,35 +202,42 @@ export async function POST(request: NextRequest) {
     const profession = classifyEmployerJob(jobData.title, jobData.description);
 
     // Update job
+    const renderedUpdate = {
+      title: jobData.title,
+      location: jobData.location,
+      mode: workMode ?? undefined,
+      jobType: jobData.jobType,
+      description: jobData.description,
+      descriptionSummary: summarizeForMeta(jobData.description),
+      applyLink: applyOnPlatform ? null : jobData.applyLink,
+      applyOnPlatform,
+      minSalary: parsedMinSalary,
+      maxSalary: parsedMaxSalary,
+      salaryPeriod: parsedSalaryPeriod,
+      normalizedMinSalary: normalizedSalary.normalizedMinSalary,
+      normalizedMaxSalary: normalizedSalary.normalizedMaxSalary,
+      salaryIsEstimated: normalizedSalary.salaryIsEstimated,
+      salaryConfidence: normalizedSalary.salaryConfidence,
+      displaySalary,
+      city: parsedLoc.city,
+      state: parsedLoc.state,
+      stateCode: parsedLoc.stateCode,
+      isRemote: workModeFlags.isRemote,
+      isHybrid: workModeFlags.isHybrid,
+      professionClass: profession.professionClass,
+      professionConfidence: profession.professionConfidence,
+      benefits: benefitsResult?.ok ? benefitsResult.value : undefined,
+      setting: settingResult?.ok ? settingResult.value : undefined,
+      population: populationResult?.ok ? populationResult.value : undefined,
+    };
     const updatedJob = await prisma.job.update({
       where: { id: employerJob.jobId },
       data: {
-        title: jobData.title,
-        location: jobData.location,
-        mode: workMode ?? undefined,
-        jobType: jobData.jobType,
-        description: jobData.description,
-        descriptionSummary: summarizeForMeta(jobData.description),
-        applyLink: applyOnPlatform ? null : jobData.applyLink,
-        applyOnPlatform,
-        minSalary: parsedMinSalary,
-        maxSalary: parsedMaxSalary,
-        salaryPeriod: parsedSalaryPeriod,
-        normalizedMinSalary: normalizedSalary.normalizedMinSalary,
-        normalizedMaxSalary: normalizedSalary.normalizedMaxSalary,
-        salaryIsEstimated: normalizedSalary.salaryIsEstimated,
-        salaryConfidence: normalizedSalary.salaryConfidence,
-        displaySalary,
-        city: parsedLoc.city,
-        state: parsedLoc.state,
-        stateCode: parsedLoc.stateCode,
-        isRemote: workModeFlags.isRemote,
-        isHybrid: workModeFlags.isHybrid,
-        professionClass: profession.professionClass,
-        professionConfidence: profession.professionConfidence,
-        benefits: benefitsResult?.ok ? benefitsResult.value : undefined,
-        setting: settingResult?.ok ? settingResult.value : undefined,
-        population: populationResult?.ok ? populationResult.value : undefined,
+        ...renderedUpdate,
+        // contentChangedAt (sitemap lastmod, "Last updated") moves only when
+        // the edit changes what the posting shows; re-saving an unchanged
+        // form leaves it alone.
+        ...contentChangeStamp(currentJob, renderedUpdate),
         updatedAt: new Date(),
       },
     });

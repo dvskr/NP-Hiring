@@ -516,10 +516,15 @@ describe('P2 #13: thin plan METRO-M1 to M6 (one predicate, gated pay, live facts
 
     it('M1: robots follow shouldIndexMetro over the canonical count, with a self canonical', () => {
         expect(METRO_PAGE_SRC).toMatch(/import \{[^}]*\bshouldIndexMetro\b[^}]*\} from '@\/lib\/pseo\/render-gate'/);
-        expect(METRO_PAGE_CODE).toContain('shouldIndexMetro({ activeJobs: facts.total })');
+        // CQ-08: distinct postings, and at least one posted in the last 30 days.
+        expect(METRO_PAGE_CODE).toContain('shouldIndexMetro({ activeJobs: facts.distinctPostings, postedLast30Days: facts.recency.last30 })');
         expect(METRO_PAGE_CODE).toContain('{ index: false, follow: true }');
         expect(METRO_PAGE_CODE).toContain('canonical: `${brand.baseUrl}/jobs/metro/${slug}`');
-        expect(SITEMAP_CODE).toContain('shouldIndexMetro({ activeJobs: inventory.activeJobs })');
+        // CQ-08: the sitemap gates on the page's own input (distinct
+        // postings and the 30-day recency count), never the raw count alone.
+        expect(SITEMAP_CODE).toContain('loadMetroIndexInput(metro, now)');
+        expect(SITEMAP_CODE).toContain('shouldIndexMetro(indexInput)');
+        expect(SITEMAP_CODE).not.toContain('shouldIndexMetro({ activeJobs: inventory.activeJobs })');
     });
 
     it('M1: the zero-job state makes no freshness claim and links the state surfaces', () => {

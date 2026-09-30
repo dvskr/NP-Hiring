@@ -30,7 +30,9 @@ import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { brand } from '@/config/brand';
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+import { localJobsPath } from '@/lib/city-link-path';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 import { nlcTableLabel } from '@/lib/blog-license-guides';
 import { pluralize } from '@/lib/display-text';
 import type { CityCount, EmployerFact, ListingFacts } from '@/lib/pseo/listing-facts';
@@ -170,7 +172,9 @@ function cityNode(city: CityCount): ReactNode {
     cityLinkResolves(city.name, city.stateCode);
   if (!linkable || city.stateCode === null) return <span key={label}>{label}</span>;
   return (
-    <Link key={label} href={`/jobs/city/${buildCitySlug(city.name, city.stateCode)}`} className="lg-link" style={TEXT_LINK_STYLE}>
+    // L-05: a curated metro links its guide directly (its city form only
+    // redirects there); any other city links its own page.
+    <Link key={label} href={localJobsPath(buildCitySlug(city.name, city.stateCode))} className="lg-link" style={TEXT_LINK_STYLE}>
       {label}
     </Link>
   );
@@ -190,7 +194,10 @@ export function buildSnapshotPaySentence(stateName: string, salary: GatedSalary)
   if (salary.gatePassed && salary.median !== null) {
     return `Median posted pay in ${stateName}: ${formatDollars(salary.median)} across ${salary.postings} postings with disclosed pay from ${salary.employers} employers.`;
   }
-  return `${brand.name} does not publish a ${stateName} median yet because fewer than ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay.`;
+  // CQ-15: the gate also withholds a median when one employer holds more
+  // than the cap, so the sentence states the whole rule instead of claiming
+  // that too few postings disclose pay.
+  return `${brand.name} does not publish a ${stateName} median yet: it needs at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`;
 }
 
 function Paragraph({ children }: { children: ReactNode }) {

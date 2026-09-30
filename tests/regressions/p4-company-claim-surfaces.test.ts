@@ -385,15 +385,54 @@ describe('Company.description has no writer — which is why the fallback branch
         return blocks;
     }
 
-    it('no Company write anywhere sets description or website', () => {
+    /**
+     * Files that write a Company row and assign `website` in an object
+     * literal (`data: { website: ... }` or a spread `{ website: ... }`). A
+     * select (`website: true`) and a where guard (`website: null`) do not
+     * count. Scanning the whole file, not only the write call, catches a
+     * data object built before the call, as the populate script builds it.
+     */
+    function companyWebsiteWriters(): string[] {
+        const writers: string[] = [];
+        const skip = new Set(['node_modules', '.next', '.git', 'tests', 'public']);
+        const writeRe = /(?:prisma|tx)\.company\.(?:create|update|updateMany|upsert)\(/;
+        const assignRe = /\{\s*website:\s*(?!true\b|null\b)\S/;
+        const walk = (dir: string) => {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                if (entry.name.startsWith('.') || skip.has(entry.name)) continue;
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) { walk(full); continue; }
+                if (!/\.(ts|tsx)$/.test(entry.name)) continue;
+                const src = fs.readFileSync(full, 'utf8');
+                if (writeRe.test(src) && assignRe.test(src)) writers.push(path.relative(ROOT, full).replace(/\\/g, '/'));
+            }
+        };
+        for (const top of ['app', 'lib', 'components', 'scripts']) {
+            if (fs.existsSync(path.join(ROOT, top))) walk(path.join(ROOT, top));
+        }
+        return writers.sort();
+    }
+
+    it('no Company write sets description, and only the reviewed populate script and the admin profile editor set website', () => {
         const blocks = companyWriteBlocks();
         // Sanity: the matcher must actually be finding the known writers,
         // otherwise this test passes vacuously.
         expect(blocks.length).toBeGreaterThan(0);
         for (const block of blocks) {
             expect(block, 'a Company write now sets description').not.toMatch(/^\s*description:/m);
-            expect(block, 'a Company write now sets website').not.toMatch(/^\s*website:/m);
         }
+        // GFJ-08: Company.website feeds JobPosting hiringOrganization.sameAs,
+        // so it is written only by the reviewed, dry-run-by-default populate
+        // script and by an admin through PATCH /api/admin/companies/[id]/profile.
+        // Nothing automatic (ingest, the claim flow) may set it.
+        expect(companyWebsiteWriters()).toEqual([
+            'app/api/admin/companies/[id]/profile/route.ts',
+            'scripts/indexing-fixes/populate-company-website-logo.ts',
+        ]);
+        const script = read('scripts/indexing-fixes/populate-company-website-logo.ts');
+        expect(script).toContain('...(plan.website ? { website: plan.website } : {}),');
+        expect(script).toContain('if (opts.apply && plans.length > 0) {');
+        expect(script).toContain('await tx.company.updateMany({ where: guard, data });');
     });
 });
 

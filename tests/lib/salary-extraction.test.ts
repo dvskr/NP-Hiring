@@ -145,8 +145,11 @@ describe('detectJobType', () => {
         expect(detectJobType('Part-time PMHNP needed')).toBe('Part-Time');
     });
 
-    it('detects Contract', () => {
-        expect(detectJobType('Contract position for 6 months')).toBe('Contract');
+    it('detects Contract only from 1099 or an independent contractor (indexing audit H-03)', () => {
+        expect(detectJobType('1099 independent contractor position')).toBe('Contract');
+        // A fixed-term assignment may be W-2 employment, so free text alone
+        // does not make it a contract.
+        expect(detectJobType('Contract position for 6 months')).toBeNull();
     });
 
     it('detects Per Diem', () => {
@@ -170,19 +173,27 @@ describe('validateAndNormalizeSalary', () => {
         expect(r.salaryPeriod).toBe('hourly');
     });
 
-    it('clamps impossibly high hourly rate to the 350/hr ceiling', () => {
-        // Behavior changed 2026-05-05: out-of-range values are clamped
-        // to the period's bound rather than dropped to null. Ceiling is
-        // the NP pack's CRNA/specialty contractor max (config/niche/
-        // salary.ts jobNormalizer.periodBounds.hourly, from the donor's
-        // contractorHourlyMax=350).
+    it('drops an impossibly high hourly rate instead of publishing the 350/hr ceiling', () => {
+        // Behavior changed 2026-09-28 (indexing audit CQ-02): clamping to
+        // the period's bound published figures no employer stated, so an
+        // out-of-range value is now DROPPED. Ceiling is the NP pack's
+        // CRNA/specialty contractor max (config/niche/salary.ts
+        // jobNormalizer.periodBounds.hourly).
         const r = validateAndNormalizeSalary(500, null, 'hourly', 'CRNA', 'hour');
-        expect(r.minSalary).toBe(350); // clamped from 500 to bounds.max
+        expect(r.minSalary).toBeNull();
+        expect(r.salaryPeriod).toBeNull();
     });
 
-    it('clamps impossibly low annual salary to the $30k floor', () => {
+    it('drops an impossibly low annual salary instead of raising it to the $30k floor', () => {
         const r = validateAndNormalizeSalary(10000, null, 'annual', 'PMHNP', 'year');
-        expect(r.minSalary).toBe(30000); // clamped from 10000 to bounds.min
+        expect(r.minSalary).toBeNull();
+    });
+
+    it('keeps the in-band side of a range when the other side is implausible', () => {
+        const r = validateAndNormalizeSalary(10000, 90000, 'annual', 'PMHNP', 'year');
+        expect(r.minSalary).toBeNull();
+        expect(r.maxSalary).toBe(90000);
+        expect(r.salaryPeriod).toBe('annual');
     });
 
     it('swaps min/max if reversed', () => {

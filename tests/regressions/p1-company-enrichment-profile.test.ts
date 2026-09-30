@@ -245,10 +245,15 @@ describe('P1 #12 — similar-employers module', () => {
         // Legacy rows store space-form normalizedName ("life stance"); the
         // page resolver never decodes %20, so a raw interpolation 404s.
         // Same fix class as app/sitemap.ts B30.
-        expect(src).toContain(
-            "href={`/companies/${employer.normalizedName.replace(/ /g, '-')}`}",
-        );
+        //
+        // WHY THIS PIN CHANGED (indexing audit L-01): the canonical slug is now
+        // the display-name slug from lib/company-slug.ts (/companies/one-medical,
+        // not /companies/one), and the normalizedName form only 308s there. The
+        // intent is unchanged and stricter: one shared builder, always kebab
+        // form, never a raw normalizedName interpolation.
+        expect(src).toContain('href={companyProfilePath(employer)}');
         expect(src).not.toContain('href={`/companies/${employer.normalizedName}`}');
+        expect(src).not.toContain("href={`/companies/${employer.normalizedName.replace(/ /g, '-')}`}");
     });
 });
 
@@ -291,8 +296,11 @@ describe('P1 #12 — /companies hub links point at pages that actually render', 
         // href construction out of the card markup and into the entry mappers
         // (the A–Z slice and the spotlight strip both build it), so pinning
         // `href={...}` pinned a location, not the behaviour.
-        expect(hub).toContain("`/companies/${company.normalizedName.replace(/ /g, '-')}`");
+        // Indexing audit L-01: through the shared display-name slug builder
+        // (lib/company-slug.ts), the one form the profile serves without a 308.
+        expect(hub).toContain('href: companyProfilePath(company)');
         expect(hub).not.toContain('`/companies/${company.normalizedName}`');
+        expect(hub).not.toContain("`/companies/${company.normalizedName.replace(/ /g, '-')}`");
     });
 
     it('the card set uses a predicate at least as strict as the profile 404 gate', () => {

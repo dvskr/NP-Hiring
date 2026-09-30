@@ -17,6 +17,7 @@ import { ASHBY_TENANTS } from './tenants/ashby';
 import type { Aggregator, RawJobData } from './types';
 import { checkJobHealth, type HealthDecision } from '@/lib/health/check-job-health';
 import { htmlToReadableText } from '@/lib/sanitize';
+import { resolveCountryValue } from '@/lib/location-parser';
 
 interface AshbyPostalAddress {
     addressRegion?: string;
@@ -73,8 +74,26 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildLocation(job: AshbyJob): string {
-    const addr = job.address?.postalAddress;
+/** An address whose country resolves to the United States, or names none. */
+function isUsOrUnknownAddress(addr: AshbyPostalAddress): boolean {
+    const country = resolveCountryValue(addr.addressCountry ?? null);
+    return country === null || country === 'US';
+}
+
+/**
+ * Where an Ashby posting is: "City, Region" from its address, preferring
+ * the first US address when a secondary location is in the United States
+ * and the primary is not (such a posting is a US job and is filed under its
+ * US place); else its location text; else "Remote" when Ashby flags it
+ * remote; else "United States".
+ */
+export function ashbyLocation(job: Pick<AshbyJob, 'address' | 'secondaryLocations' | 'location' | 'isRemote'>): string {
+    const addresses = [job.address, ...(job.secondaryLocations ?? []).map((s) => s.address)]
+        .map((a) => a?.postalAddress)
+        .filter((a): a is AshbyPostalAddress => !!a && !!(a.addressLocality || a.addressRegion));
+    const primary = job.address?.postalAddress;
+    const usSecondary = primary && !isUsOrUnknownAddress(primary) ? addresses.find(isUsOrUnknownAddress) : undefined;
+    const addr = usSecondary ?? primary;
     if (addr) {
         const city = addr.addressLocality;
         const state = addr.addressRegion;
@@ -84,6 +103,22 @@ function buildLocation(job: AshbyJob): string {
     if (job.location) return job.location;
     if (job.isRemote) return 'Remote';
     return 'United States';
+}
+
+/**
+ * Every country an Ashby posting names (its primary address and each
+ * secondary location's address), for the normalizer's non-US gate, or
+ * undefined when none is given. A posting that lists the United States
+ * among other countries is a US job (owner decision), so the whole list is
+ * passed.
+ */
+export function ashbyCountries(job: Pick<AshbyJob, 'address' | 'secondaryLocations'>): string[] | undefined {
+    const values = [job.address, ...(job.secondaryLocations ?? []).map((s) => s.address)]
+        .map((a) => a?.postalAddress?.addressCountry)
+        .map((c) => (typeof c === 'string' ? c.trim() : ''))
+        .filter(Boolean);
+    const unique = [...new Set(values)];
+    return unique.length > 0 ? unique : undefined;
 }
 
 function mapEmploymentType(type?: string): string | null {
@@ -161,7 +196,7 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
                 title: j.title,
                 company: tenant.name,
                 employer: tenant.name,
-                location: buildLocation(j),
+                location: ashbyLocation(j),
                 description,
                 applyLink,
                 postedDate: j.publishedDate,
@@ -170,6 +205,8 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
                 minSalary: salary.minSalary,
                 maxSalary: salary.maxSalary,
                 salaryPeriod: salary.salaryPeriod,
+                // For the non-US gate (owner decision: US jobs only).
+                country: ashbyCountries(j),
                 sourceProvider: 'ashby',
                 sourceSite: 'ashby',
             } as RawJobData);

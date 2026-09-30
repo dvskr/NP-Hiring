@@ -130,8 +130,16 @@ describe('P8 — ApplyButton ?apply=1 auto-open', () => {
         // Latching before arming the timer + clearing on cleanup would let a
         // dep re-run (or StrictMode double-invoke) cancel the open while the
         // latch blocks every retry — the popup would silently never open.
+        // Signed out: the gate. Signed in: Easy Apply opens its form (and
+        // counts the apply click), and an external job shows the "Continue
+        // to employer application" link (a new tab is never opened from an
+        // effect; owner decision 2026-09). Between the latch and the first
+        // branch, the instance CSS hides (the page mounts a desktop and a
+        // mobile ApplyButton) returns, so only the visible one acts. The
+        // visible one then strips ?apply=1 from the address bar, so a reload
+        // or Back press does not open the form or count the click again.
         expect(src).toMatch(
-            /const open = setTimeout\(\(\) => \{\s*autoOpened\.current = true;\s*if \(!authed\) \{\s*setShowAuthModal\(true\);\s*\} else \{\s*setShowPlatformApply\(true\);\s*\}\s*\}, 0\);/,
+            /const open = setTimeout\(\(\) => \{\s*autoOpened\.current = true;(?:\s*\/\/[^\n]*)*\s*if \(!isRenderedElement\(rootRef\.current\)\) return;(?:\s*\/\/[^\n]*)*\s*const clean = withoutApplyIntent\(window\.location\.pathname, window\.location\.search\);\s*if \(clean\) window\.history\.replaceState\(null, '', clean\);\s*if \(!authed\) \{\s*setShowAuthModal\(true\);\s*\} else if \(applyOnPlatform\) \{(?:\s*\/\/[^\n]*)*\s*postApplyClick\(jobId\);\s*setShowPlatformApply\(true\);\s*\} else \{\s*setShowContinuePanel\(true\);\s*\}\s*\}, 0\);/,
         );
         expect(src).toMatch(/return \(\) => clearTimeout\(open\)/);
     });

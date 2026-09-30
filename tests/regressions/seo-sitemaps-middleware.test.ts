@@ -70,4 +70,10 @@ describe('B31 — middleware stays the authoritative expired-job 410', () => {
   it('410 predicate covers absent, unpublished, and date-expired rows', () => {
     expect(mw).toMatch(/rows\.length === 0 \|\| !row\.is_published \|\| dateExpired/);
   });
+
+  it('410 predicate also covers dead-link rows at DEAD_LINK_MISS_THRESHOLD (CS-06)', () => {
+    expect(mw).toMatch(/rows\.length === 0 \|\| !row\.is_published \|\| dateExpired \|\| deadLink\)/);
+    expect(mw).toMatch(/row\.health_consecutive_missing >= DEAD_LINK_MISS_THRESHOLD/);
+    expect(mw).toContain('select=id,is_published,expires_at,health_consecutive_missing,');
+  });
 });

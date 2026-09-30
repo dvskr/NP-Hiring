@@ -1,15 +1,23 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { MapPin, Briefcase, Wifi, Video, GraduationCap, Calendar } from 'lucide-react';
+import { MapPin, Briefcase, Wifi, Video, Calendar } from 'lucide-react';
 import { brand } from '@/config/brand';
 
 interface InternalLinksProps {
     state?: string | null;
+    /** Accepted for callers; the links key on the state name. */
     stateCode?: string | null;
+    /** Accepted for callers; no city link is offered here. */
     city?: string | null;
+    /**
+     * True only for a job verified as fully remote (isVerifiedFullyRemote in
+     * app/jobs/[slug]/job-posting-facts.ts), never the stored isRemote flag.
+     * It alone decides the "More Remote ... Jobs" link.
+     */
     isRemote?: boolean;
     isTelehealth?: boolean;
+    /** The page's resolved primary employment type, never the raw column. */
     jobType?: string | null;
+    /** The verified work mode label (resolveWorkModeLabel), never the raw column. */
     mode?: string | null;
 }
 
@@ -23,8 +31,6 @@ const clayPebbleShadow = '4px 4px 10px rgba(0,0,0,0.06), -2px -2px 6px rgba(255,
  */
 export default function InternalLinks({
     state,
-    stateCode,
-    city,
     isRemote,
     isTelehealth,
     jobType,
@@ -42,8 +48,11 @@ export default function InternalLinks({
         });
     }
 
-    // Remote jobs link
-    if (isRemote || mode?.toLowerCase().includes('remote')) {
+    // Remote jobs link. Indexing audit GFJ-01: only a verified remote job
+    // offers "More Remote ... Jobs". A mode string is not read here: stale
+    // rows carry "Remote" on on-site jobs, and the link would contradict the
+    // page's work-mode chip, title and JobPosting markup.
+    if (isRemote) {
         links.push({
             href: '/jobs/remote',
             label: `More Remote ${brand.niche.short} Jobs`,

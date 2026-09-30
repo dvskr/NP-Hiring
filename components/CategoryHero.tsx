@@ -249,6 +249,10 @@ export default function CategoryHero({
           <h1 className="cath5-h1">
             {headlineLine1}<br />
             {headlineLine2}
+            {/* M-06: the sub line is display:block, so this space never
+                shows; it keeps the extracted H1 text from running
+                "NP Jobs" into the sub line. */}
+            {' '}
             <span className="cath5-h1-sub">
               <em>{headlineSub}</em>
             </span>

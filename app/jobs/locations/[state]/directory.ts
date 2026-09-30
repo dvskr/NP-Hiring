@@ -26,6 +26,8 @@ import { getMetroCity } from '@/lib/metro-data';
 import { selectCityEmployers, type EmployerGroupRow } from '@/lib/pseo/city-employers';
 import { selectWorkModeMix, type WorkModeMix } from '@/lib/pseo/listing-facts';
 import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
+import { foldCityName } from '@/lib/pseo/city-name-fold';
+import { isTallyCity } from '@/lib/pseo/city-tally';
 
 /**
  * A city page calls notFound() below 3 jobs (app/jobs/city/[slug]/page.tsx,
@@ -49,10 +51,47 @@ export const MIN_TRACKED_CITIES = 3;
 export const CITY_CARD_EMPLOYER_LIMIT = 3;
 
 export interface CityJobRow {
-  /** City name exactly as stored on the job rows. */
+  /** City name exactly as stored on the job rows (or its folded city, see foldDirectoryCityRows). */
   city: string;
   /** Live count of canonical active jobs in that city. */
   count: number;
+  /**
+   * Jobs stored under exactly this spelling, which is what the city page
+   * counts (it matches the stored name). Set on folded rows, where `count`
+   * also holds the neighborhoods and variant spellings folded in; the link
+   * gate reads this so a link never lands on a page that counts fewer jobs
+   * than the render floor. Absent means `count`.
+   */
+  linkCount?: number;
+}
+
+/**
+ * Fold a state's city rows onto the cities they belong to (CQ-08):
+ * "Boston-" onto Boston, "Uptown Dallas" onto Dallas, "Irving Park" onto
+ * Chicago (lib/pseo/city-name-fold.ts). Counts sum; `linkCount` keeps only
+ * the rows stored under the folded name itself (case-insensitive, the city
+ * page's own match). Every directory reader folds, so the page, the locations
+ * hub, the state hub's directory link and app/sitemap.ts (through
+ * tallyDirectoryCities) agree.
+ *
+ * A stored value that is not a town (CQ-02, lib/pseo/city-tally.ts: a
+ * street number, a facility, a work mode such as "Remote") is dropped
+ * before folding, so it is never linked, named, counted as a tracked city
+ * or added to the directory's job total. Pure.
+ */
+export function foldDirectoryCityRows(rows: readonly CityJobRow[], stateCode: string): CityJobRow[] {
+  const folded = new Map<string, Required<CityJobRow>>();
+  for (const row of rows) {
+    if (row.city.trim().length === 0 || row.count <= 0) continue;
+    if (!isTallyCity(row.city, stateCode)) continue;
+    const city = foldCityName(row.city, stateCode);
+    const key = city.toLowerCase();
+    const entry = folded.get(key) ?? { city, count: 0, linkCount: 0 };
+    entry.count += row.count;
+    if (row.city.trim().toLowerCase() === key) entry.linkCount += row.linkCount ?? row.count;
+    folded.set(key, entry);
+  }
+  return [...folded.values()];
 }
 
 export interface StateCityDirectory {
@@ -92,7 +131,7 @@ export function buildStateCityDirectory(
   const minLinkJobs = options.minLinkJobs ?? MIN_CITY_JOBS_FOR_LINK;
   const canLink = options.canLink ?? (() => true);
   const usable = rows.filter((row) => row.city.trim().length > 0 && row.count > 0);
-  const isLinkable = (row: CityJobRow) => row.count >= minLinkJobs && canLink(row);
+  const isLinkable = (row: CityJobRow) => (row.linkCount ?? row.count) >= minLinkJobs && canLink(row);
   return {
     linkable: usable.filter(isLinkable).sort(byVolumeThenName),
     emerging: usable.filter((row) => !isLinkable(row)).sort(byVolumeThenName),
@@ -154,8 +193,15 @@ export function parseCitySlugToName(slug: string): string | null {
  *
  * Curated metro slugs are exempt: /jobs/metro/<slug> is served from
  * lib/metro-data.ts by exact slug match and never re-parses a name.
+ *
+ * A stored value that is not a town (CQ-02, lib/pseo/city-tally.ts) is never
+ * linked, whatever its count: "Remote, TX" or "1730, RI" round-trips
+ * cleanly, so without this veto it was linked, and app/sitemap.ts (which
+ * lists city pages through this check) submitted /jobs/city/remote-tx.
+ * Every town in the city dataset passes.
  */
 export function cityLinkResolves(cityName: string, stateCode: string): boolean {
+  if (!isTallyCity(cityName, stateCode)) return false;
   const slug = buildCitySlug(cityName, stateCode);
   if (!slug) return false;
   if (getMetroCity(slug)) return true;
@@ -300,7 +346,7 @@ export function tallyDirectoryCities(
     [...cityCounts].map(([stateName, cities]): [string, JurisdictionCityRows] => [
       stateName,
       {
-        rows: [...cities].map(([city, count]) => ({ city, count })),
+        rows: foldDirectoryCityRows([...cities].map(([city, count]) => ({ city, count })), STATE_CODES[stateName]),
         newest: newest.get(stateName) ?? null,
       },
     ]),
@@ -331,16 +377,20 @@ export interface CityDetail {
 /**
  * Group the state's rows by city and derive what each city card prints:
  * the DIR-L2 employer line and the DIR-L4 work mode split. Pure; keyed by
- * the trimmed city spelling, so look a card up with `city.trim()`.
+ * the trimmed city spelling, so look a card up with `city.trim()`. With a
+ * `stateCode` the rows group under their folded city (foldDirectoryCityRows),
+ * matching the folded directory rows.
  */
 export function selectCityDetails(
   rows: readonly CityDetailRow[],
   minLinkJobs: number = MIN_CITY_JOBS_FOR_LINK,
+  stateCode?: string,
 ): Map<string, CityDetail> {
   const byCity = new Map<string, CityDetailRow[]>();
   for (const row of rows) {
-    const city = row.city?.trim();
-    if (!city) continue;
+    const stored = row.city?.trim();
+    if (!stored) continue;
+    const city = stateCode ? foldCityName(stored, stateCode) : stored;
     byCity.set(city, [...(byCity.get(city) ?? []), row]);
   }
   const details = new Map<string, CityDetail>();
@@ -404,7 +454,7 @@ export function summarizeStateDirectories(
   }
   const summaries = new Map<string, StateCityDirectorySummary>();
   for (const [stateName, stateCode] of Object.entries(STATE_CODES)) {
-    const directory = buildStateCityDirectory(rowsByState.get(stateName) ?? [], {
+    const directory = buildStateCityDirectory(foldDirectoryCityRows(rowsByState.get(stateName) ?? [], stateCode), {
       canLink: (row) => cityLinkResolves(row.city, stateCode),
     });
     if (!shouldRenderStateCityDirectory(directory)) continue;

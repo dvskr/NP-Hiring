@@ -25,15 +25,18 @@
  * Styling is clay throughout (owner decision 2026-09-20): the shared
  * sections in components/seo/pseo/* plus this file's own clayCard token.
  *
- * QUERY NOTE: the legacy keyword registry (lib/filters.ts CATEGORY_FILTERS)
- * still carries the donor board's keyword set, while the ingest classifier
- * (lib/pseo/category-tagger.ts) now emits the 42-slug NP taxonomy (2026-07
- * classifier migration). For slugs with no keyword entry we gate on the
- * precomputed `categoryTags` column instead of letting
- * buildCategoryWhereClause degrade to "all published jobs", so pages render
- * an honest empty state until those rows are tagged.
+ * QUERY NOTE: every landing bucket comes from landingBucketWhere
+ * (lib/pseo/landing-where.ts), the one clause the bespoke landings, their
+ * sibling cards and the aggregate-pseo landing verdict also read: the
+ * category's one predicate (categoryPredicate), the same clause its state
+ * and city pages count with (CQ-14).
+ *
+ * PAGINATION (TECH-08, TECH-09, TECH-10, M-01): lib/pseo/listing-pagination
+ * sets the page size, the self canonical of every page, noindex, follow on
+ * page 2 and later, the 404 past the last page and the crawlable page links.
+ * The primary CTAs stay on this page (#listings and its own later pages),
+ * never a noindexed filtered /jobs URL.
  */
-import { Prisma } from '@prisma/client';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import {
@@ -45,7 +48,7 @@ import {
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
-import { buildCategoryWhereClause, CATEGORY_FILTERS, CATEGORY_EXTRA_OR } from '@/lib/filters';
+import { landingBucketWhere } from '@/lib/pseo/landing-where';
 import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { formatCount, pluralize } from '@/lib/display-text';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -96,9 +99,22 @@ import {
     buildCategoryLandingTitle,
     labelNoun,
     labelSentence,
+    shouldIndexCategoryLanding,
 } from '@/lib/pseo/category-metadata';
 import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
-import { MIN_JOBS_FOR_INDEX, shouldIndexListingPage } from '@/lib/pseo/render-gate';
+import { MIN_JOBS_FOR_INDEX, shouldRenderCategoryLanding } from '@/lib/pseo/render-gate';
+import { loadIndexableLandingSlugs } from '@/lib/pseo/landing-verdicts';
+import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
+import {
+    LISTING_PAGE_SIZE,
+    ListingPagination,
+    isPageOutOfRange,
+    listingCanonical,
+    listingPagePath,
+    pageOffset,
+    parseListingPage,
+    totalPagesFor,
+} from '@/lib/pseo/listing-pagination';
 
 // ─── Category copy ───────────────────────────────────────────────────────────
 
@@ -245,25 +261,13 @@ function landingRole(slug: string): string {
 
 // ─── Query ───────────────────────────────────────────────────────────────────
 
-function categoryWhere(slug: string): Prisma.JobWhereInput {
-    const hasLegacyKeywordFilter =
-        (CATEGORY_FILTERS[slug]?.length ?? 0) > 0 || (CATEGORY_EXTRA_OR[slug]?.length ?? 0) > 0;
-    // TODO(content): migrate lib/filters.ts CATEGORY_FILTERS and
-    // lib/pseo/category-tagger.ts to the NP taxonomy. Until then, slugs
-    // without a keyword entry gate on the precomputed categoryTags column
-    // so the page never lists off-category jobs.
-    return hasLegacyKeywordFilter
-        ? buildCategoryWhereClause(slug)
-        : buildCategoryWhereClause(slug, { categoryTags: { has: slug } });
-}
-
 /**
  * The one facts load per landing (LAND-T3): getListingFacts composes the
  * canonical predicate and is React cache()d on the scope key, so
  * generateMetadata and the page body share a single set of queries.
  */
 function getLandingFacts(slug: string): Promise<ListingFacts> {
-    return getListingFacts(`category-landing:${slug}`, categoryWhere(slug));
+    return getListingFacts(`category-landing:${slug}`, landingBucketWhere(slug));
 }
 
 /**
@@ -307,7 +311,7 @@ async function getStateSpokeLinks(slug: string): Promise<StateSpokeLink[]> {
     if (!STATE_ELIGIBLE_CATEGORY_SLUGS.includes(slug)) return [];
     const rows = await prisma.job.groupBy({
         by: ['state'],
-        where: canonicalBucketWhere(categoryWhere(slug)),
+        where: canonicalBucketWhere(landingBucketWhere(slug)),
         _count: { state: true },
     });
     // Canonicalize raw state values (full names expected; codes tolerated)
@@ -340,7 +344,7 @@ async function getRelatedCategories(slug: string): Promise<RelatedCategory[]> {
     return Promise.all(axisSiblings(slug).map(async (sibling): Promise<RelatedCategory> => {
         let count: number | null = null;
         try {
-            count = await prisma.job.count({ where: canonicalBucketWhere(categoryWhere(sibling)) });
+            count = await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(sibling)) });
         } catch (error) {
             console.error(`[category-landing] sibling count failed for "${sibling}":`, error);
         }
@@ -358,18 +362,20 @@ const HIGHLIGHT_ICONS: Record<string, LucideIcon> = {
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 
-function parsePage(raw: string | undefined): number {
-    return Math.max(1, parseInt(raw || '1', 10) || 1);
-}
-
 export async function buildCategoryLandingMetadata(
     slug: string,
     searchParams: { page?: string },
 ): Promise<Metadata> {
     const role = landingRole(slug);
-    const page = parsePage(searchParams.page);
+    const page = parseListingPage(searchParams.page);
     const facts = await getLandingFacts(slug);
     const totalJobs = facts.total;
+    // TECH-09: a page past the last one is a 404, never an empty 200.
+    // TECH-06: so is a landing with 0 canonical jobs ("0 positions").
+    if (isPageOutOfRange(page, totalJobs) || !shouldRenderCategoryLanding(totalJobs)) {
+        const { notFound } = await import('next/navigation');
+        notFound();
+    }
     const title = buildCategoryLandingTitle({ role, totalJobs });
     const description = buildCategoryLandingDescription({
         role,
@@ -399,12 +405,15 @@ export async function buildCategoryLandingMetadata(
                 alt: `${role} Jobs`,
             }],
         },
-        // Self canonical on page 1; paginated views canonical to page 1.
-        alternates: { canonical: `${brand.baseUrl}/jobs/${slug}` },
-        // thin-spec-1 8.3 / PLAN C.2: index only page 1 at MIN_JOBS_FOR_INDEX
-        // or more canonical jobs, through the same gate the sitemap reads.
-        // Every other view stays follow and keeps its canonical.
-        ...(!shouldIndexListingPage(totalJobs, page) && { robots: { index: false, follow: true } }),
+        // TECH-08 / M-01: every page is its own canonical (page N never
+        // canonicals to page 1).
+        alternates: { canonical: listingCanonical(`/jobs/${slug}`, page) },
+        // Indexing audit fixSoon 1 / PLAN C.2: page 1 indexes at the listing
+        // floor (5 or more distinct postings from 3 or more employers), the
+        // same verdict the cron stores for the sitemap; the gate is false on
+        // page 2 and later, so they answer noindex, follow, matching the
+        // middleware header.
+        ...(!shouldIndexCategoryLanding(facts, page) && { robots: { index: false, follow: true } }),
     };
 }
 
@@ -435,6 +444,24 @@ const PEACH_STAGE = 'linear-gradient(180deg, #FDFBF7 0%, #FFF3E8 50%, #FDFBF7 10
  * tests/regressions/p6-nav-mesh-sibling-band-coverage.test.ts, which proves
  * the full-coverage invariant against CATEGORY_AXES.
  */
+/**
+ * The sibling cards with the landings that are indexable now (the stored
+ * category-landing verdicts, lib/pseo/landing-verdicts.ts) moved ahead of
+ * the rest, each group in axis order. Nothing is dropped: a sibling that
+ * renders but is not indexable is still a useful link. With no verdicts
+ * (the read failed) the axis order stands.
+ */
+export function preferIndexableSiblings<T extends { slug: string }>(
+    siblings: readonly T[],
+    indexable: ReadonlySet<string> | null,
+): T[] {
+    if (!indexable) return [...siblings];
+    return [
+        ...siblings.filter((sibling) => indexable.has(sibling.slug)),
+        ...siblings.filter((sibling) => !indexable.has(sibling.slug)),
+    ];
+}
+
 export function axisSiblings(slug: string, limit = 6): string[] {
     const axis = Object.values(CATEGORY_AXES).find((slugs) => (slugs as readonly string[]).includes(slug));
     if (!axis) return [];
@@ -565,8 +592,8 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
     const role = landingRole(slug);
     const noun = labelNoun(slug, label);
     const midSentenceLabel = labelSentence(label);
-    const take = 10;
-    const skip = (page - 1) * take;
+    const take = LISTING_PAGE_SIZE;
+    const skip = pageOffset(page, take);
     // GA4 item_list_name for this landing's listings, read by the
     // view_item_list impression and by every card's select_item: GA4 joins a
     // click to its impression on this string alone, so one value feeds both.
@@ -575,13 +602,29 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
     // (never with the query string).
     const listName = `${label} Jobs`;
 
-    const [facts, stateLinks, related] = await Promise.all([
+    const [facts, stateLinks, relatedByAxis, indexableLandings] = await Promise.all([
         getLandingFacts(slug),
         getStateSpokeLinks(slug),
         getRelatedCategories(slug),
+        loadIndexableLandingSlugs('category-landing-siblings'),
     ]);
+    // SITE-COPY 152c: indexable siblings first, by the same stored verdicts
+    // the sitemap, the /jobs hub grid and the footer read.
+    const related = preferIndexableSiblings(relatedByAxis, indexableLandings);
+    // TECH-09: a page past the last one is a 404. TECH-06: so is a landing
+    // with 0 canonical jobs.
+    if (isPageOutOfRange(page, facts.total, take) || !shouldRenderCategoryLanding(facts.total)) {
+        const { notFound } = await import('next/navigation');
+        notFound();
+    }
+    const totalPages = totalPagesFor(facts.total, take);
+    // TECH-06: a related landing with 0 jobs answers 404; never link it. An
+    // unknown count (the sibling query failed) keeps the link, as before.
+    const linkableRelated = related.filter((sibling) => sibling.count === null || shouldRenderCategoryLanding(sibling.count));
+    const basePath = `/jobs/${slug}`;
+    // L-06: cards never need the multi-KB description body.
     const jobs = facts.total > 0
-        ? await prisma.job.findMany({ where: canonicalBucketWhere(categoryWhere(slug)), orderBy: BEST_SORT_ORDER_BY, skip, take })
+        ? await prisma.job.findMany({ where: canonicalBucketWhere(landingBucketWhere(slug)), omit: JOB_LISTING_OMIT, orderBy: BEST_SORT_ORDER_BY, skip, take })
         : [];
 
     // Bespoke editorial (P1 #5) + hero art via the asset-registry contract
@@ -667,12 +710,17 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                     breadcrumbs={breadcrumbTrail.map((crumb) => ({ label: crumb.name, href: crumb.url }))}
                     indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf(slug) + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
                     headlineLine1={label}
-                    headlineLine2={`${brand.niche.short} Jobs`}
-                    headlineSub="find your next role."
+                    headlineLine2={noun === label ? 'Jobs' : `${brand.niche.short} Jobs`}
+                    // CQ-16: the H1 reads as one noun phrase ("Remote NP Jobs
+                    // in the United States."), never "... NP Jobs find your
+                    // next role.". Non-US postings are excluded at ingest.
+                    headlineSub="in the United States."
                     stats={heroStats}
                     description={heroDescription}
                     ctaLabel={`Browse ${label} Jobs`}
-                    ctaHref={`/jobs?category=${slug}`}
+                    // TECH-10: the primary CTA stays on this indexable page (its
+                    // own listings), never a noindexed filtered /jobs URL.
+                    ctaHref="#listings"
                     secondaryCtaLabel="Set Alert"
                     secondaryCtaHref="/job-alerts"
                 />
@@ -689,7 +737,7 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                             {heroDescription}
                         </p>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                            <Link href={`/jobs?category=${slug}`} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
+                            <Link href="#listings" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
                                 Browse {label} Jobs <ArrowRight size={16} />
                             </Link>
                             <Link href="/job-alerts" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', border: '1px solid rgba(190,24,93,0.25)' }}>
@@ -702,11 +750,11 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
 
             {/* JOB LISTINGS: the grid, the LAND-L7 block below the index floor,
                 and a sidebar holding the page's one alert CTA. */}
-            <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px' }}>
+            <div id="listings" style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px', scrollMarginTop: '80px' }}>
                 <div className="grid lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-3">
                         <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
-                            {label} Positions ({facts.total})
+                            {label} Positions ({facts.total}){page > 1 ? `, page ${page} of ${totalPages}` : ''}
                         </h2>
                         {jobs.length > 0 && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -718,13 +766,17 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         {isLowInventory && (
                             <LowInventoryBlock label={midSentenceLabel} total={facts.total} related={related} />
                         )}
-                        {jobs.length > 0 && (
+                        {/* TECH-10 / M-01: the rest of this category is on this
+                            listing's own pages (self canonical, noindex,
+                            follow), never a noindexed filtered /jobs URL. */}
+                        {page < totalPages && (
                             <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                                <Link href={`/jobs?category=${slug}`} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
-                                    Browse All {label} Jobs <ArrowRight size={16} />
+                                <Link href={listingPagePath(basePath, page + 1)} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
+                                    More {label} Jobs <ArrowRight size={16} />
                                 </Link>
                             </div>
                         )}
+                        <ListingPagination basePath={basePath} page={page} totalPages={totalPages} label={`${noun} jobs`} />
                     </div>
                     <div className="lg:col-span-1">
                         {/* Alert cadence: /api/cron/send-alerts runs in the daily
@@ -849,7 +901,7 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                     <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 24px' }}>
                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>State by State</p>
                         <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px' }}>
-                            Browse {label} {brand.niche.short} Jobs by State
+                            Browse {noun} Jobs by State
                         </h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' }}>
                             {stateLinks.map((link) => (
@@ -863,14 +915,15 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                 </div>
             )}
 
-            {/* LAND-L6 RELATED CATEGORIES: same taxonomy axis, live counts. */}
-            {related.length > 0 && (
+            {/* LAND-L6 RELATED CATEGORIES: same taxonomy axis, live counts.
+                A sibling at 0 jobs 404s (TECH-06), so it is not linked. */}
+            {linkableRelated.length > 0 && (
                 <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
                     <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Keep Exploring</p>
                         <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Related Categories</h2>
                         <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-                            {related.map((sibling) => (
+                            {linkableRelated.map((sibling) => (
                                 <Link key={sibling.slug} href={`/jobs/${sibling.slug}`} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center' }}>
                                     <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{sibling.label}</span>
                                     <span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{buildRelatedCategorySub(sibling.count ?? 0)}</span>
@@ -893,6 +946,9 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                     category={slug}
                     totalJobs={facts.total}
                     avgSalary={facts.benchmark ? facts.benchmark.median : undefined}
+                    // APRN-axis roles are not NP roles (CQ-06): "Nurse
+                    // Anesthetist Jobs FAQ", never "... NP Jobs FAQ".
+                    heading={noun === label ? `${noun} Jobs FAQ` : undefined}
                 />
             )}
 

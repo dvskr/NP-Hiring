@@ -24,9 +24,13 @@ interface AboutClientProps {
   // proportions (5%/20%/35%/18%) — that was a fabricated statistic, so the
   // omission path replaced it (live review item #4b, omit-not-fabricate).
   dioramaCounts?: DioramaCounts;
+  // Indexing audit M-08: states with at least one live job, measured by
+  // lib/states-covered.ts. This tile was a hardcoded 50 while the board
+  // listed jobs in 44 states. null, 0 or absent omits the tile.
+  statesCovered?: number | null;
 }
 
-export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }: AboutClientProps) {
+export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts, statesCovered }: AboutClientProps) {
   // SEO Fix M16: render live counts from Prisma instead of the hardcoded
   // 320/1,240/2,105/885 strings the audit flagged. Counts arrive already
   // floor-gated by app/about/page.tsx from the canonical predicate
@@ -38,6 +42,8 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
     outpatient: null,
   };
   const fmt = (n: number) => n.toLocaleString();
+  const showStatesCovered = typeof statesCovered === 'number' && statesCovered > 0;
+  const statTileCount = showStatesCovered ? 3 : 2;
   return (
     <div className="ab-body">
       {/* ═══ HERO ═══ */}
@@ -84,7 +90,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
 
       {/* ═══ STATS ═══ */}
       <section><div className="ab-wrap">
-        <div className="ab-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="ab-stats" style={{ gridTemplateColumns: `repeat(${statTileCount}, 1fr)` }}>
           {/* Live review item #4a/#4c: exact canonical counts — the "+"
               suffix implied more inventory than /jobs actually browses, and
               the old "Verified" qualifier on the employer stat claimed a
@@ -92,7 +98,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
               employer with an active listing). */}
           <div className="ab-stat"><div className="ico"><Briefcase size={24} /></div><div className="num">{totalJobs.toLocaleString()}</div><div className="lab">Active Jobs</div></div>
           <div className="ab-stat"><div className="ico"><Users size={24} /></div><div className="num">{totalEmployers.toLocaleString()}</div><div className="lab">Employers</div></div>
-          <div className="ab-stat"><div className="ico"><MapPin size={24} /></div><div className="num">50</div><div className="lab">States Covered</div></div>
+          {showStatesCovered && <div className="ab-stat"><div className="ico"><MapPin size={24} /></div><div className="num">{statesCovered}</div><div className="lab">States Covered</div></div>}
         </div>
       </div></section>
 

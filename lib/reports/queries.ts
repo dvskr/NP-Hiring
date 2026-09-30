@@ -11,6 +11,12 @@
  *     the report's pay table carries the exact min-sample /
  *     min-distinct-employer gates of the public benchmark widget (see the
  *     TRUTH RULE note in components/tools/EmployerBenchmarkWidget.tsx).
+ *   - The pay table also sits under the employer-share cap (indexing audit
+ *     CQ-15, lib/salary-guide-gate.ts summarizeCappedBenchmarks): a state, or
+ *     the national row, is published only when no single employer contributes
+ *     more than MAX_EMPLOYER_SHARE_PERCENT of the postings behind it, the
+ *     policy /salary-guide uses. A national row held by the cap is reported
+ *     as such (nationalHeldByEmployerShare), never as "sample too small".
  *   - "Disclosed pay" means the pay range came from the posting itself:
  *     a normalized range present AND salaryIsEstimated=false. Figures the
  *     enrichment pipeline inferred count as NOT disclosed.
@@ -24,13 +30,15 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { loadLiveReportData } from './live-load';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import type { Prisma } from '@prisma/client';
 import { CATEGORY_AXES } from '@/lib/pseo/taxonomy-registry';
+import { categoryPredicateWhere, type CategoryTag } from '@/lib/pseo/category-tagger';
 import { CATEGORY_LABELS, isCategoryFaqSlug } from '@/lib/pseo/category-faq-data';
 import { SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
 import {
-    summarizeBenchmarks,
     type BenchmarkSummary,
 } from '@/components/tools/benchmark-model';
+import { summarizeCappedBenchmarks } from '@/lib/salary-guide-gate';
 import type { CountGroup, MonthlyDisclosureRow } from './report-model';
 
 /**
@@ -77,8 +85,12 @@ export interface HiringReportSnapshot {
     modes: ModeCounts;
     /** Active postings flagged open to new grads. */
     newGradFriendly: number;
-    /** Advertised-pay distribution, benchmark-gated. */
-    salary: BenchmarkSummary;
+    /**
+     * Advertised-pay distribution, benchmark-gated and under the employer-share
+     * cap. nationalHeldByEmployerShare is true when the national row cleared the
+     * size gate but one employer holds more than the cap allows.
+     */
+    salary: BenchmarkSummary & { nationalHeldByEmployerShare: boolean };
     disclosure: DisclosureCounts;
 }
 
@@ -88,11 +100,22 @@ const REPORT_SPECIALTY_SLUGS: readonly string[] = [
     ...CATEGORY_AXES.aprn,
 ];
 
+/**
+ * CQ-14: a specialty is counted with its one category predicate (the stored
+ * tag, with the legacy fallback for untagged rows), the clause its landing,
+ * state pages and index verdict read, so the report never gives a specialty
+ * a different count from its own pages. Nested AND, so the predicate's OR
+ * cannot replace the active-job gate's.
+ */
+export function specialtyCountWhere(where: Prisma.JobWhereInput, slug: string): Prisma.JobWhereInput {
+    return { AND: [where, categoryPredicateWhere(slug as CategoryTag)] };
+}
+
 async function countBySpecialty(now: Date): Promise<CountGroup[]> {
     const where = activeIndexableJobWhere(now);
     const counts = await Promise.all(
         REPORT_SPECIALTY_SLUGS.map((slug) =>
-            prisma.job.count({ where: { ...where, categoryTags: { has: slug } } }),
+            prisma.job.count({ where: specialtyCountWhere(where, slug) }),
         ),
     );
     return REPORT_SPECIALTY_SLUGS.map((slug, i) => ({
@@ -113,7 +136,7 @@ async function countByState(now: Date): Promise<CountGroup[]> {
     );
 }
 
-async function loadSalarySummary(now: Date): Promise<BenchmarkSummary> {
+async function loadSalarySummary(now: Date): Promise<HiringReportSnapshot['salary']> {
     // Same shape as loadBenchmarkSummary in EmployerBenchmarkWidget.tsx, but
     // scoped to the report's active-inventory filter so the pay table and
     // the posting counts describe the same population.
@@ -132,7 +155,8 @@ async function loadSalarySummary(now: Date): Promise<BenchmarkSummary> {
             normalizedMaxSalary: true,
         },
     });
-    return summarizeBenchmarks(rows);
+    const { national, states, nationalHeld } = summarizeCappedBenchmarks(rows);
+    return { national, states, nationalHeldByEmployerShare: nationalHeld !== null };
 }
 
 async function aggregateHiringReportSnapshot(): Promise<HiringReportSnapshot> {

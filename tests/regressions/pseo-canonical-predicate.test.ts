@@ -53,9 +53,14 @@ describe('the count producers import the canonical predicate', () => {
 
     it('the sitemap counts every pSEO section with canonicalBucketWhere', () => {
         const code = stripComments(read(SITEMAP));
-        // State hubs, salary states, metros, directories, city pages and the
-        // city employer groupBy: six canonical scopes, plus the hub row fetch.
-        expect(code.match(/canonicalBucketWhere\(/g)?.length).toBeGreaterThanOrEqual(6);
+        // State counts (hubs and salary states), metros, both directory
+        // groupings and city pages: five canonical scopes here. The hub
+        // verdicts and the city and metro gate inputs are counted in the
+        // shared layer, over the same predicate.
+        expect(code.match(/canonicalBucketWhere\(/g)?.length).toBeGreaterThanOrEqual(5);
+        for (const shared of ['lib/pseo/state-hub-index.ts', 'lib/pseo/sitemap-index-inputs.ts']) {
+            expect(stripComments(read(shared)), shared).toContain('canonicalBucketWhere(');
+        }
         expect(code).not.toContain('PUBLISHED_LISTING_WHERE');
         // The OR-clobber shape lib/canonical-counts.ts exists to prevent.
         expect(code).not.toMatch(/\.\.\.ACTIVE_JOB_WHERE,\s*OR:/);

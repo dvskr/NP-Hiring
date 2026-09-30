@@ -5,7 +5,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
-import { classifyCodeExchangeFailure, confirmHeading } from './confirm-state'
+import { authGateHref } from '@/lib/apply-intent'
+import { classifyCodeExchangeFailure, confirmDestination, confirmHeading, confirmLoginHref } from './confirm-state'
+
+/** The validated ?next= on this page's URL, or undefined when there is none. */
+function explicitNextFromUrl(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  return safeInternalPath(new URLSearchParams(window.location.search).get('next'), '') || undefined
+}
 
 /**
  * /auth/confirm
@@ -34,10 +41,12 @@ export default function AuthConfirmPage() {
     if (!email || resendStatus === 'sending' || resendStatus === 'sent') return
     setResendStatus('sending')
     try {
+      // Carry the return target (for example the job being applied for) so
+      // the new link lands back on it.
       const res = await fetch('/api/auth/send-confirmation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, next: explicitNextFromUrl() }),
       })
       setResendStatus(res.ok ? 'sent' : 'error')
     } catch {
@@ -47,6 +56,10 @@ export default function AuthConfirmPage() {
 
   useEffect(() => {
     const handleAuth = async () => {
+      // Every "go log in" fallback below keeps an explicit ?next= (the job
+      // being applied for), so a bad or reused link never loses the apply
+      // intent. Plain /login until the URL has been read.
+      let loginHref = '/login'
       try {
         const supabase = createClient()
 
@@ -65,6 +78,12 @@ export default function AuthConfirmPage() {
         // straight to their dashboards — so this is safe for every role.
         // Explicit intent (?next=/jobs/xyz?apply=1 etc.) always wins.
         const nextPath = requestedNext === '/dashboard' ? '/onboarding/professional' : requestedNext
+        // Without an explicit ?next= (a resent link, or a redirect that lost
+        // its query), the return path stashed in the auth metadata at sign
+        // up decides instead, so an apply intent survives the email round
+        // trip (confirm-state.ts confirmDestination).
+        const hasExplicitNext = requestedNext !== '/dashboard'
+        loginHref = confirmLoginHref(nextPath, hasExplicitNext)
         const queryError = urlParams.get('error')
         const queryErrorCode = urlParams.get('error_code')
         const queryErrorDesc = urlParams.get('error_description')
@@ -89,7 +108,7 @@ export default function AuthConfirmPage() {
           }
           setStatus('error')
           setMessage(queryErrorDesc?.replace(/\+/g, ' ') || 'Authentication failed. Please try again.')
-          setTimeout(() => router.push('/login'), 4000)
+          setTimeout(() => router.push(loginHref), 4000)
           return
         }
 
@@ -119,7 +138,7 @@ export default function AuthConfirmPage() {
               setTimeout(() => router.push(loginUrl), 4000)
             } else {
               setMessage('This link is invalid or has expired. Redirecting to login...')
-              setTimeout(() => router.push('/login'), 3000)
+              setTimeout(() => router.push(loginHref), 3000)
             }
             return
           }
@@ -155,7 +174,8 @@ export default function AuthConfirmPage() {
               body: JSON.stringify({ email: userEmail }),
             }).catch(() => {})
           }
-          setTimeout(() => router.push(nextPath), 1500)
+          const destination = confirmDestination(nextPath, hasExplicitNext, data.session?.user, Date.now())
+          setTimeout(() => router.push(destination), 1500)
           return
         }
 
@@ -166,7 +186,7 @@ export default function AuthConfirmPage() {
           console.log('No code or hash fragment found, redirecting to login')
           setStatus('error')
           setMessage('This link is invalid or has expired. Redirecting to login...')
-          setTimeout(() => router.push('/login'), 2000)
+          setTimeout(() => router.push(loginHref), 2000)
           return
         }
 
@@ -183,7 +203,7 @@ export default function AuthConfirmPage() {
           console.error('Auth error from hash:', errorParam, errorDescription)
           setStatus('error')
           setMessage(errorDescription?.replace(/\+/g, ' ') || 'Authentication failed. Please try again.')
-          setTimeout(() => router.push('/login'), 3000)
+          setTimeout(() => router.push(loginHref), 3000)
           return
         }
 
@@ -191,7 +211,7 @@ export default function AuthConfirmPage() {
           console.error('Missing tokens in hash fragment')
           setStatus('error')
           setMessage('Invalid authentication link. Please request a new one.')
-          setTimeout(() => router.push('/login'), 3000)
+          setTimeout(() => router.push(loginHref), 3000)
           return
         }
 
@@ -205,7 +225,7 @@ export default function AuthConfirmPage() {
           console.error('Failed to set session:', error.message)
           setStatus('error')
           setMessage('Your session has expired or is invalid. Please try again.')
-          setTimeout(() => router.push('/login'), 3000)
+          setTimeout(() => router.push(loginHref), 3000)
           return
         }
 
@@ -233,12 +253,13 @@ export default function AuthConfirmPage() {
             body: JSON.stringify({ email: userEmail2 }),
           }).catch(() => {})
         }
-        setTimeout(() => router.push(nextPath), 1500)
+        const destination = confirmDestination(nextPath, hasExplicitNext, data.session?.user ?? data.user, Date.now())
+        setTimeout(() => router.push(destination), 1500)
       } catch (err) {
         console.error('Auth confirm unexpected error:', err)
         setStatus('error')
         setMessage('Something went wrong. Please try again.')
-        setTimeout(() => router.push('/login'), 3000)
+        setTimeout(() => router.push(loginHref), 3000)
       }
     }
 
@@ -371,7 +392,7 @@ export default function AuthConfirmPage() {
             )}
             <p style={{ fontSize: '12px', color: 'var(--text-secondary, #94A3B8)', margin: '12px 0 0', textAlign: 'center' }}>
               Already confirmed?{' '}
-              <Link href="/login" style={{ color: '#F472B6', fontWeight: 600 }}>Sign in</Link>
+              <Link href={authGateHref('login', explicitNextFromUrl())} style={{ color: '#F472B6', fontWeight: 600 }}>Sign in</Link>
             </p>
           </div>
         )}

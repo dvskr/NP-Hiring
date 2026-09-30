@@ -9,11 +9,20 @@ import path from 'node:path';
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-describe('image sitemap emits absolute image URLs', () => {
-  it('does not prepend BASE_URL to an already-absolute image', () => {
-    const src = read('app/image-sitemap.xml/route.ts');
-    expect(src).not.toMatch(/<image:loc>\$\{BASE_URL\}\$\{entry\.image\}/);
-    expect(src).toContain("entry.image.startsWith('http')");
+describe('sitemap images are absolute URLs', () => {
+  // The standalone image sitemap is retired (indexing audit FB-4); the state
+  // dioramas ride on the gated /sitemap.xml entries through lib/image-seo.ts,
+  // which must build one absolute URL without doubling a slash.
+  it('the retired route stays deleted', () => {
+    expect(fs.existsSync(path.join(ROOT, 'app', 'image-sitemap.xml'))).toBe(false);
+  });
+
+  it('lib/image-seo.ts joins the base URL and the local path exactly once', async () => {
+    const { stateDioramaSitemapImages } = await import('@/lib/image-seo');
+    const { stateDioramaSrc } = await import('@/components/StateImage');
+    const expected = [`https://example.com${stateDioramaSrc('texas')}`];
+    expect(stateDioramaSitemapImages('texas', 'https://example.com/')).toEqual(expected);
+    expect(stateDioramaSitemapImages('texas', 'https://example.com')).toEqual(expected);
   });
 });
 

@@ -8,6 +8,8 @@
  * failure rethrown, and company links only for companies with active jobs.
  */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getGatedBenchmark } from '@/lib/salary-analytics';
@@ -19,7 +21,6 @@ import {
   MIX_MIN_POSTINGS_LISTING,
   TOP_EMPLOYERS_LIMIT,
   TOP_LIST_LIMIT,
-  companyProfilePath,
   emptyListingFacts,
   fieldMixQualifies,
   getListingFacts,
@@ -212,6 +213,28 @@ describe('selectCities and selectStates', () => {
     expect(selectStates([row({ state: 'Ohio' }), row({ state: 'Texas' }), row({ state: 'Texas' }), row({ state: '' })]))
       .toEqual([{ name: 'Texas', count: 2 }, { name: 'Ohio', count: 1 }]);
   });
+
+  it('CQ-02: skips street numbers, addresses and facility names stored as the city', () => {
+    const cities = selectCities([
+      row({ city: '1730', stateCode: 'RI' }),
+      row({ city: '5100 Buckeyestown Pike Suite 200 Frederick', stateCode: 'MD' }),
+      row({ city: 'MAIN CAMPUS', stateCode: 'SC' }),
+      row({ city: 'GBMC Hospital', stateCode: 'MD' }),
+      row({ city: 'SMG Psychiatric Specialists', stateCode: 'VA' }),
+      row({ city: 'MMC', stateCode: 'ME' }),
+      row({ city: 'Providence', stateCode: 'RI' }),
+    ]);
+    expect(cities).toEqual([{ name: 'Providence', stateCode: 'RI', count: 1 }]);
+  });
+
+  it('CQ-02: the "led by" and "Top city" sources never name an implausible value first', () => {
+    const cities = selectCities([
+      row({ city: '1730', stateCode: 'RI' }),
+      row({ city: '1730', stateCode: 'RI' }),
+      row({ city: 'Warwick', stateCode: 'RI' }),
+    ]);
+    expect(cities[0]?.name).toBe('Warwick');
+  });
 });
 
 describe('label resolution', () => {
@@ -229,9 +252,28 @@ describe('label resolution', () => {
 
   it('counts only registry category tags and labels them from the config', () => {
     expect(selectCategoryTop([
-      row({ categoryTags: ['remote', 'not-a-slug'] }),
-      row({ categoryTags: ['remote', 'full-time'] }),
+      row({ categoryTags: ['remote', 'not-a-slug'], isRemote: true }),
+      row({ categoryTags: ['remote', 'full-time'], isRemote: true, jobType: 'Full-Time' }),
     ])).toEqual([{ label: 'Remote', count: 2 }, { label: 'Full-Time', count: 1 }]);
+  });
+
+  it('CQ-05: counts a category only under its one predicate, never a stale tag', () => {
+    const top = selectCategoryTop([
+      // Tagged remote by the old description sweep, but hybrid: not remote.
+      row({ categoryTags: ['remote'], isRemote: false, isHybrid: true, title: 'Nurse Practitioner' }),
+      // Fully remote with no remote tag yet: remote.
+      row({ categoryTags: ['outpatient'], isRemote: true, title: 'Nurse Practitioner' }),
+      // A Part-Time job the old sweep tagged full-time: part-time.
+      row({ categoryTags: ['full-time'], jobType: 'Part-Time', title: 'Nurse Practitioner' }),
+      // Telehealth tag on an on-site job: not telehealth.
+      row({ categoryTags: ['telehealth'], isRemote: false, title: 'Telehealth Nurse Practitioner' }),
+    ], 10);
+    const byLabel = new Map(top.map((entry) => [entry.label, entry.count]));
+    expect(byLabel.get('Remote')).toBe(1);
+    expect(byLabel.get('Part-Time')).toBe(1);
+    expect(byLabel.has('Full-Time')).toBe(false);
+    expect(byLabel.has('Telehealth')).toBe(false);
+    expect(byLabel.get('Outpatient')).toBe(1);
   });
 });
 
@@ -268,6 +310,30 @@ describe('tallyListingFacts and emptyListingFacts', () => {
     expect(tally.newGradFriendly).toBe(1);
     expect(tally.workMode.total).toBe(4);
   });
+
+  it('counts the employers behind disclosed pay, so the below-gate sentence can name what failed (CQ-08)', () => {
+    const tally = tallyListingFacts([
+      row({ employer: 'Sunrise Clinic', normalizedMinSalary: 120000 }),
+      row({ employer: 'Sunrise Clinic', normalizedMinSalary: 125000 }),
+      row({ employer: 'Moon Health', normalizedMinSalary: 130000 }),
+      row({ employer: 'Star Care', normalizedMinSalary: 130000, salaryIsEstimated: true }),
+    ], NOW);
+    expect(tally.salaryDisclosedCount).toBe(3);
+    expect(tally.salaryDisclosedEmployers).toBe(2);
+  });
+
+  it('counts distinct postings, role clusters and the top employer (fixSoon 8)', () => {
+    const tally = tallyListingFacts([
+      row({ title: 'Nurse Practitioner' }),
+      row({ title: 'Nurse Practitioner' }),
+      row({ title: 'Nurse Practitioner', city: 'Dallas' }),
+      row({ title: 'Family Nurse Practitioner', employer: 'Moon Health' }),
+    ], NOW);
+    expect(tally.distinctPostings).toBe(3);
+    expect(tally.roleClusters).toBe(2);
+    expect(tally.topEmployerPostings).toBe(2);
+    expect(emptyListingFacts(NOW)).toMatchObject({ distinctPostings: 0, roleClusters: 0, topEmployerPostings: 0, salaryDisclosedEmployers: 0 });
+  });
 });
 
 describe('scope helpers', () => {
@@ -288,8 +354,11 @@ describe('scope helpers', () => {
     });
   });
 
-  it('companyProfilePath matches the sitemap kebab form', () => {
-    expect(companyProfilePath('one medical')).toBe('/companies/one-medical');
+  it('builds no company path of its own: employer links come from lib/company-slug', () => {
+    const src = fs.readFileSync(path.join(process.cwd(), 'lib', 'pseo', 'listing-facts.ts'), 'utf8');
+    expect(src).toContain("import { companyProfilePath } from '@/lib/company-slug';");
+    expect(src).not.toMatch(/export function companyProfilePath/);
+    expect(src).not.toMatch(/normalizedName\.replace\(/);
   });
 });
 
@@ -326,6 +395,22 @@ describe('getListingFacts loader', () => {
     expect(benchmark).toHaveBeenCalledWith(where);
   });
 
+  it('distinctPostings takes the duplicates the sample found off the counted total', async () => {
+    count.mockResolvedValue(6);
+    findMany.mockResolvedValue([
+      row({ title: 'Nurse Practitioner' }),
+      row({ title: 'Nurse Practitioner' }),
+      row({ title: 'Nurse Practitioner', city: 'Dallas' }),
+      row({ title: 'Nurse Practitioner', city: 'Waco' }),
+      row({ title: 'Nurse Practitioner', city: 'Waco' }),
+      row({ title: 'Nurse Practitioner', city: 'Tyler' }),
+    ]);
+    const facts = await getListingFacts('test:distinct-postings', { state: 'Texas' });
+    expect(facts.total).toBe(6);
+    expect(facts.distinctPostings).toBe(4);
+    expect(facts.roleClusters).toBe(1);
+  });
+
   it('issues one capped findMany with the minimal select', async () => {
     await getListingFacts('test:one-query', { state: 'Texas' });
 
@@ -335,10 +420,13 @@ describe('getListingFacts loader', () => {
     expect(args.take).toBe(LISTING_FACTS_ROW_CAP);
     expect(Object.keys(args.select).sort()).toEqual([
       'categoryTags', 'city', 'companyId', 'createdAt', 'employer', 'isHybrid', 'isRemote', 'jobType',
-      'newGradFriendly', 'normalizedMinSalary', 'originalPostedAt', 'salaryIsEstimated', 'setting', 'state', 'stateCode',
+      'minYearsExperience', 'newGradFriendly', 'normalizedMinSalary', 'originalPostedAt', 'salaryIsEstimated', 'setting', 'state', 'stateCode',
+      // The title feeds the posting and role-cluster counts of the index gates (fixSoon 8).
+      'title',
     ]);
+    // Never the multi-KB description; the short title is selected on purpose.
     expect(args.select.description).toBeUndefined();
-    expect(args.select.title).toBeUndefined();
+    expect(args.select.title).toBe(true);
   });
 
   it('tallies rows and links only companies that still have active jobs', async () => {
@@ -348,7 +436,9 @@ describe('getListingFacts loader', () => {
       row({ employer: 'Moon Health', companyId: 'c2' }),
     ]);
     count.mockResolvedValue(3);
-    companyFindMany.mockResolvedValue([{ id: 'c1', normalizedName: 'sunrise clinic' }]);
+    // The display-name slug wins over the dedup key: "Sunrise Clinic, Inc."
+    // with normalizedName "sunrise" links /companies/sunrise-clinic.
+    companyFindMany.mockResolvedValue([{ id: 'c1', name: 'Sunrise Clinic, Inc.', normalizedName: 'sunrise' }]);
 
     const facts = await getListingFacts('test:company-paths', {});
 
@@ -359,6 +449,7 @@ describe('getListingFacts loader', () => {
       { name: 'Moon Health', count: 1, companyPath: null },
     ]);
     expect(facts.sampled).toBe(false);
+    expect(companyFindMany.mock.calls[0][0].select).toEqual({ id: true, name: true, normalizedName: true });
 
     const companyWhere = companyFindMany.mock.calls[0][0].where as Prisma.CompanyWhereInput;
     const [ids, active] = companyWhere.AND as Prisma.CompanyWhereInput[];

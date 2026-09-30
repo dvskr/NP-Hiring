@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { brand } from '@/config/brand';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
-import { MIN_JOBS_FOR_INDEX } from '@/lib/pseo/render-gate';
+import { MIN_EMPLOYERS_FOR_LISTING_INDEX, MIN_POSTINGS_FOR_LISTING_INDEX } from '@/lib/pseo/render-gate';
 import {
   DESCRIPTION_MAX,
   SERP_TITLE_MAX,
@@ -129,16 +129,23 @@ describe('buildCategoryLandingDescription', () => {
   });
 });
 
-describe('landing index rule and robots', () => {
+describe('landing index rule and robots (the listing floor, CQ-06 and fixSoon 1)', () => {
+  const AT_FLOOR = { distinctPostings: MIN_POSTINGS_FOR_LISTING_INDEX, distinctEmployers: MIN_EMPLOYERS_FOR_LISTING_INDEX };
+
   it('indexes page 1 at the listing floor and nothing below or beyond', () => {
-    expect(shouldIndexCategoryLanding(MIN_JOBS_FOR_INDEX - 1)).toBe(false);
-    expect(shouldIndexCategoryLanding(MIN_JOBS_FOR_INDEX)).toBe(true);
-    expect(shouldIndexCategoryLanding(MIN_JOBS_FOR_INDEX, 2)).toBe(false);
+    expect(shouldIndexCategoryLanding(AT_FLOOR)).toBe(true);
+    expect(shouldIndexCategoryLanding({ ...AT_FLOOR, distinctPostings: MIN_POSTINGS_FOR_LISTING_INDEX - 1 })).toBe(false);
+    expect(shouldIndexCategoryLanding({ ...AT_FLOOR, distinctEmployers: MIN_EMPLOYERS_FOR_LISTING_INDEX - 1 })).toBe(false);
+    expect(shouldIndexCategoryLanding(AT_FLOOR, 2)).toBe(false);
+  });
+
+  it('a single-employer national landing never indexes, whatever its size (CQ-06: dermatology, anesthesia)', () => {
+    expect(shouldIndexCategoryLanding({ distinctPostings: 40, distinctEmployers: 1 })).toBe(false);
   });
 
   it('noindex pages stay follow', () => {
-    expect(categoryLandingRobots(0)).toEqual({ index: false, follow: true });
-    expect(categoryLandingRobots(MIN_JOBS_FOR_INDEX)).toEqual({ index: true, follow: true });
-    expect(categoryLandingRobots(MIN_JOBS_FOR_INDEX, 3)).toEqual({ index: false, follow: true });
+    expect(categoryLandingRobots({ distinctPostings: 0, distinctEmployers: 0 })).toEqual({ index: false, follow: true });
+    expect(categoryLandingRobots(AT_FLOOR)).toEqual({ index: true, follow: true });
+    expect(categoryLandingRobots(AT_FLOOR, 3)).toEqual({ index: false, follow: true });
   });
 });

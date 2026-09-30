@@ -270,7 +270,10 @@ describe('P3 #9: city links are gated on actually resolving', () => {
     'app/jobs/locations/page.tsx',
     'app/jobs/locations/[state]/page.tsx',
     'app/jobs/city/[slug]/page.tsx',
-    'app/jobs/[slug]/page.tsx',
+    // The job page's city crumb moved to its breadcrumb module (indexing
+    // audit H-02), which gates it on cityLinkResolves and the city page's
+    // own index verdict.
+    'app/jobs/[slug]/job-breadcrumbs.ts',
     'app/salary-guide/[state]/page.tsx',
     'app/sitemap.ts',
   ])('%s gates its city URLs on cityLinkResolves', (rel) => {
@@ -366,7 +369,7 @@ describe('W2-CITYHUB: the city hub resolves its dataset record and links by data
 
   it('robots come from the shared local-listing gate and the canonical stays self', () => {
     const code = src();
-    expect(code).toMatch(/shouldIndexLocalListingPage\(\{\s*activeJobs: facts\.total,\s*distinctEmployers: facts\.distinctEmployers,?\s*\}\)/);
+    expect(code).toMatch(/shouldIndexLocalListingPage\(\{\s*activeJobs: facts\.distinctPostings,\s*distinctEmployers: facts\.distinctEmployers,?\s*\}\)/);
     expect(code).toContain('canonical: `${brand.baseUrl}/jobs/city/${slug}`');
     expect(code).toMatch(/index: false,\s*follow: true/);
   });

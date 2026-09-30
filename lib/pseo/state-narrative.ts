@@ -286,12 +286,14 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
 
     // Sentence 4: pay. Renders only when the caller passed the gated median;
     // below the gate the sentence says so and prints no figure of any kind,
-    // and a caller that passes nothing gets no pay sentence.
+    // and a caller that passes nothing gets no pay sentence. The gate also
+    // withholds a median when one employer holds more than the CQ-15 cap,
+    // so the sentence never claims that too few postings disclose pay.
     if (medianK !== undefined) {
         parts.push(
             medianK > 0
                 ? `Across ${stateName} postings that disclose annual pay, the median is $${medianK}K per year.`
-                : `Not enough ${stateName} postings disclose pay to publish a median, so compare compensation posting by posting.`,
+                : `No median is published for ${stateName} postings yet, so compare compensation posting by posting.`,
         );
     }
 

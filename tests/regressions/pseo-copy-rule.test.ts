@@ -445,7 +445,9 @@ describe('pseo-copy-rule: rendered setting-state and city copy', () => {
         expect(both).not.toContain('$999K');
         // Below the gate: the sentence says so and prints no figure.
         const gated = buildPlainStateNarrative({ ...base, avgSalaryK: 999, medianSalaryK: 0 });
-        expect(gated).toContain('Not enough Texas postings disclose pay');
+        // CQ-15: the gate can withhold a median for employer concentration
+        // too, so the sentence never claims too few postings disclose pay.
+        expect(gated).toContain('No median is published for Texas postings yet');
         expect(gated).not.toContain('$');
     });
 

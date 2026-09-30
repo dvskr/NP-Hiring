@@ -17,14 +17,16 @@
  *
  * Gate parity: the job and employer floors and the freshness window come
  * from lib/pseo/render-gate.ts, the same module app/api/sitemaps/index and
- * cities/[batch] read (shouldIndexLocalListingPage, the stored setting-state
- * indexable verdict, pseoStatsFreshnessThreshold). Only the population
+ * cities/[batch] read (shouldIndexLocalListingPage, the stored category x
+ * city and setting-state indexable verdicts, pseoStatsFreshnessThreshold). Only the population
  * floor is still a sitemap-side literal, mirrored here and drift-guarded by
  * tests/regressions/p1-gsc-ops-coverage.test.ts.
  */
 import {
+    isSettingStateIndexable,
     MIN_JOBS_FOR_CATEGORY_CITY,
     PSEO_STATS_MAX_AGE_HOURS,
+    SETTING_STATE_INDEXING_ENABLED,
     shouldIndexLocalListingPage,
 } from '@/lib/pseo/render-gate';
 import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
@@ -52,6 +54,13 @@ export interface PseoCoverageRow {
     totalJobs: number;
     /** Distinct employers behind totalJobs (PseoStats.distinctEmployers). */
     distinctEmployers: number;
+    /**
+     * The cron's stored category x city verdict (PseoStats.indexable). It
+     * counts distinct postings, so it can hold a page under the floor that
+     * the raw row counts would admit; the cities sitemap skips a row without
+     * it (app/api/sitemaps/cities/[batch]/route.ts).
+     */
+    indexable: boolean;
     updatedAt: Date;
 }
 
@@ -121,6 +130,7 @@ export function computeCategoryCityCoverage(input: CategoryCityCoverageInput): C
 
         const population = input.populationBySlug.get(row.locationSlug);
         const isIndexable =
+            row.indexable &&
             entry.sitemapEligible &&
             shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers }) &&
             row.updatedAt >= freshCutoff &&
@@ -160,12 +170,15 @@ export interface SettingStateCoverage {
 
 /**
  * Setting×state axis: renders whenever a stats row exists with ≥1 job;
- * indexed when the stored indexable verdict is true AND the row is fresh
- * (mirrors the sitemap routes' setting-state gate).
+ * indexed only while the FB-1 switch (SETTING_STATE_INDEXING_ENABLED) is
+ * on, when the stored indexable verdict is true AND the row is fresh
+ * (mirrors the sitemap routes' setting-state gate, isSettingStateIndexable).
+ * `indexingEnabled` exists for tests; production reads the switch.
  */
 export function computeSettingStateCoverage(
     rows: readonly SettingStateCoverageRow[],
     now: Date = new Date(),
+    indexingEnabled: boolean = SETTING_STATE_INDEXING_ENABLED,
 ): SettingStateCoverage {
     const freshCutoff = pseoFreshnessThreshold(now);
     let renderable = 0;
@@ -173,7 +186,7 @@ export function computeSettingStateCoverage(
     for (const row of rows) {
         if (row.totalJobs < 1) continue;
         renderable += 1;
-        if (row.indexable && row.updatedAt >= freshCutoff) indexable += 1;
+        if (isSettingStateIndexable(row.indexable, indexingEnabled) && row.updatedAt >= freshCutoff) indexable += 1;
     }
     return { total: rows.length, renderable, indexable };
 }

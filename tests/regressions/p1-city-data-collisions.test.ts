@@ -21,8 +21,8 @@ import {
   getCityByNameState,
 } from '@/lib/pseo/city-data/cities';
 import {
-  MIN_EMPLOYERS_FOR_INDEX,
-  MIN_JOBS_FOR_INDEX,
+  MIN_EMPLOYERS_FOR_LISTING_INDEX,
+  MIN_POSTINGS_FOR_LISTING_INDEX,
   shouldIndexLocalListingPage,
 } from '@/lib/pseo/render-gate';
 
@@ -294,18 +294,19 @@ describe('#9: deleting a copied bundle never de-indexes the page', () => {
     const src = fs.readFileSync(path.join(ROOT, 'lib/pseo/category-city-template.tsx'), 'utf8');
     expect(src).not.toMatch(/getPageQualityScore/);
     expect(src).not.toMatch(/Meets minimum/);
-    expect(src).toContain('shouldIndexLocalListingPage({ activeJobs: stats.totalJobs, distinctEmployers, page })');
+    // The page count less its exact duplicate rows (fixSoon 8).
+    expect(src).toMatch(/shouldIndexLocalListingPage\(\{\s*activeJobs: Math\.max\(0, stats\.totalJobs - duplicateRows\),\s*distinctEmployers,\s*page,\s*\}\)/);
     expect(src).toContain('robots: { index: shouldIndex, follow: true }');
     // The gate is pure and takes no city-dataset field, so a record with every
     // copied value deleted indexes exactly as one that kept them.
     const repaired = getCityBySlug('portland-me')!;
     expect(repaired.metroArea).toBeNull();
     expect(repaired.healthcareSystems).toEqual([]);
-    const atFloor = { activeJobs: MIN_JOBS_FOR_INDEX, distinctEmployers: MIN_EMPLOYERS_FOR_INDEX };
+    const atFloor = { activeJobs: MIN_POSTINGS_FOR_LISTING_INDEX, distinctEmployers: MIN_EMPLOYERS_FOR_LISTING_INDEX };
     expect(shouldIndexLocalListingPage(atFloor)).toBe(true);
     // Only live inventory can move the verdict, in either direction.
-    expect(shouldIndexLocalListingPage({ ...atFloor, activeJobs: MIN_JOBS_FOR_INDEX - 1 })).toBe(false);
-    expect(shouldIndexLocalListingPage({ ...atFloor, distinctEmployers: MIN_EMPLOYERS_FOR_INDEX - 1 })).toBe(false);
+    expect(shouldIndexLocalListingPage({ ...atFloor, activeJobs: MIN_POSTINGS_FOR_LISTING_INDEX - 1 })).toBe(false);
+    expect(shouldIndexLocalListingPage({ ...atFloor, distinctEmployers: MIN_EMPLOYERS_FOR_LISTING_INDEX - 1 })).toBe(false);
   });
 });
 

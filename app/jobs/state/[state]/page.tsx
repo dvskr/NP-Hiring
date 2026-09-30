@@ -46,6 +46,13 @@ import { METRO_CITIES } from '@/lib/metro-data';
 import { Job } from '@/lib/types';
 import { getAuthorityLabel, getStatePracticeAuthority } from '@/lib/state-practice-authority';
 import { canonicalBucketWhere } from '@/lib/canonical-counts';
+import {
+  LISTING_PAGE_SIZE,
+  isPageOutOfRange,
+  listingCanonical,
+  pageOffset,
+  parseListingPage,
+} from '@/lib/pseo/listing-pagination';
 import { getListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import {
   CATEGORY_OVERLAP_NOTE,
@@ -55,7 +62,6 @@ import {
   buildHubCategoriesSentence,
   buildHubCitiesSentences,
   buildHubDescription,
-  buildHubEmployersSentence,
   buildHubFaqs,
   buildHubRecencySentence,
   buildHubScheduleSentence,
@@ -71,6 +77,9 @@ import {
   shouldIndexStateHub,
 } from '@/lib/pseo/render-gate';
 import { getNeighboringStates } from '@/lib/pseo/neighboring-states';
+// HUB-S1 to S7 as the index gate counts them, shared with the aggregate-pseo
+// cron (the category x state gate reads the parent hub) and app/sitemap.ts.
+import { countHubLiveDataSections } from '@/lib/pseo/state-hub-index';
 import { getNearbyStates, getPracticeEnvironment, isLicenseGuideLive } from '@/lib/pseo/practice-environment';
 import { getPublishableSalaryGuideStates } from '@/lib/salary-analytics';
 import { buildLicenseGuideSteps, getLicenseGuideState } from '@/lib/blog-license-guides';
@@ -108,7 +117,11 @@ const NP = brand.niche.short;
 // while this stays at one hour.
 export const revalidate = 3600;
 
-const PAGE_SIZE = 10;
+/**
+ * Listings per page (M-01): raised from 10 so most of a state's inventory is
+ * linked from its indexable first page (California showed 10 of 65 jobs).
+ */
+const PAGE_SIZE = LISTING_PAGE_SIZE;
 
 /**
  * GA4 item_list_name for the listings on every state hub. The
@@ -217,24 +230,6 @@ async function getPublishableSalaryStates(): Promise<ReadonlySet<string>> {
   }
 }
 
-/**
- * HUB-S1 to S7 as the index gate counts them: each section's own builder
- * decides (null means the section is omitted) and S7 counts only when the
- * state publishes a gated median. This MUST stay identical to
- * countHubLiveDataSections in app/sitemap.ts (PLAN C.2: robots and the
- * sitemap read one predicate) until the count moves into the shared layer.
- */
-function countHubLiveDataSections(stateName: string, facts: ListingFacts, publishesMedian: boolean): number {
-  return [
-    buildHubEmployersSentence({ stateName, facts }) !== null, // S1
-    buildHubCitiesSentences(facts.cities) !== null, // S2
-    buildHubCategoriesSentence(facts.categoryTop) !== null, // S3
-    buildHubWorkModeSentence(facts.workMode) !== null, // S4
-    buildHubSettingsSentence(facts.settings) !== null, // S5
-    buildHubRecencySentence(facts.recency) !== null, // S6
-    publishesMedian, // S7
-  ].filter(Boolean).length;
-}
 
 interface CategoryRow { slug: string; label: string; count: number }
 
@@ -299,7 +294,7 @@ async function getNearbyStateCounts(stateName: string): Promise<Map<string, numb
 export async function generateMetadata({ params, searchParams }: StatePageProps): Promise<Metadata> {
   try {
     const [{ state: stateParam }, sp] = await Promise.all([params, searchParams]);
-    const page = Math.max(1, parseInt(sp.page || '1'));
+    const page = parseListingPage(sp.page);
     const stateInfo = parseStateParam(stateParam);
 
     if (!stateInfo) {
@@ -324,7 +319,12 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
       facts,
       topCategories: categoryRows.map((row) => row.label),
     });
-    const indexable = shouldIndexStateHub({ activeJobs: facts.total, liveDataSections, page });
+    const indexable = shouldIndexStateHub({
+      activeJobs: facts.distinctPostings,
+      distinctEmployers: facts.distinctEmployers,
+      liveDataSections,
+      page,
+    });
 
     return {
       title,
@@ -341,17 +341,20 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
         }],
       },
       alternates: {
-        // Canonical always points to page 1 (no ?page query): paginated
-        // views are not indexable on their own (P3.5).
+        // TECH-08 / M-01: every page is its own canonical (page N is
+        // ?page=N, never page 1); page 2 and later answer noindex, follow
+        // below, matching the middleware header.
         // Canonical anchored on the normalized slug, NOT the request param.
         // /jobs/state/ny, /jobs/state/CA, /jobs/state/New%20York all resolve to
         // the same state but each would emit a different canonical if we used
         // the raw param, splintering the indexed forms.
-        canonical: `${brand.baseUrl}/jobs/state/${stateSlug}`,
+        canonical: listingCanonical(`/jobs/state/${stateSlug}`, page),
       },
-      // PLAN C.2: index page 1 only with 3 or more canonical jobs AND 4 or
-      // more live data sections (shouldIndexStateHub, the sitemap's gate).
-      // Below it the page stays a 200 with a self canonical and follow.
+      // PLAN C.2 and CQ-07: index page 1 only at the listing floor (5 or
+      // more distinct postings from 3 or more employers) AND with 4 or more
+      // live data sections (shouldIndexStateHub, the sitemap's gate). Below
+      // it the page stays a 200 with a self canonical and follow.
+      // shouldIndexStateHub is false on page 2 and later.
       ...(!indexable && {
         robots: {
           index: false,
@@ -417,13 +420,24 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
     const qs = new URLSearchParams(sp as Record<string, string>).toString();
     permanentRedirect(`/jobs/state/${stateSlug}${qs ? `?${qs}` : ''}`);
   }
-  const page = Math.max(1, parseInt(sp.page || '1'));
-  const skip = (page - 1) * PAGE_SIZE;
+  const page = parseListingPage(sp.page);
+  const skip = pageOffset(page, PAGE_SIZE);
+
+  // TECH-09: a page past the last one is a 404, never an empty 200. Page 2
+  // and later check the range BEFORE the listing query, like the setting x
+  // state and landing templates, so an out-of-range page never reaches
+  // Prisma. Page 1 is never out of range and keeps every query in parallel.
+  // loadHubData is request-cached, so the promise below is the same one
+  // generateMetadata awaits.
+  const hubData = loadHubData(stateName, stateCode, stateSlug);
+  if (page > 1 && isPageOutOfRange(page, (await hubData).facts.total, PAGE_SIZE)) {
+    notFound();
+  }
 
   // Fetch all data in parallel for content enrichment
   const [jobs, hub, nearbyCounts, licenseGuideLive, cityDirectories] = await Promise.all([
     getStateJobs(stateName, stateCode, skip, PAGE_SIZE),
-    loadHubData(stateName, stateCode, stateSlug),
+    hubData,
     getNearbyStateCounts(stateName),
     isLicenseGuideLive(stateSlug),
     getStatesWithCityDirectory(),

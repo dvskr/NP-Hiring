@@ -224,7 +224,10 @@ describe('P3 #13 — token-bearing pages have their own tab title', () => {
 
     it.each(routes)('$layout sets a specific title', ({ layout, title }) => {
         const src = read(layout);
-        expect(src).toContain(`title: \`${title} | \${brand.name}\``);
+        // L-02 / CS-10: the root layout template appends " | {brand}", so
+        // the page title carries no suffix of its own (no doubled brand).
+        expect(src).toContain(`title: '${title}',`);
+        expect(src).not.toContain('| ${brand.name}`');
         // These URLs carry reset/unsubscribe tokens — never indexable.
         expect(src).toContain('robots: { index: false, follow: false }');
     });

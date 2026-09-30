@@ -83,7 +83,7 @@ describe('P1 #5 — category landing editorial content', () => {
         // a source here — see the "ingest constants are not market data"
         // block below.
         const allowed = new Set<string>([
-            STAT_SOURCES.averageSalary.formatted, // $129,210
+            STAT_SOURCES.averageSalary.formatted, // $132,300 (May 2025)
         ]);
 
         it('salary narratives contain only derived figures', () => {
@@ -131,7 +131,7 @@ describe('P1 #5 — category landing editorial content', () => {
      * values (primary care "anchors the center" ≈ $140k vs '$100K-140K';
      * emergency/acute-care "upper end" ≈ $170k vs '$115K-160K'; CRNA
      * "extends to $400K" vs '$180K-250K') and put primary care above the
-     * cited $129,210 all-NP median.
+     * cited all-NP median ($129,210 at the time; $132,300 since the May 2025 refresh).
      */
     describe('truth rule — ingest normalizer constants never reach the page', () => {
         const bannedFigures = [

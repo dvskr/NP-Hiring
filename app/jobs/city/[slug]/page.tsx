@@ -18,6 +18,11 @@ import {
     cityLinkResolves,
     shouldRenderStateCityDirectory,
 } from '@/app/jobs/locations/[state]/directory';
+// L-05: a related city that is a curated metro links its guide, not the
+// city form that only redirects there.
+import { localJobsPath } from '@/lib/city-link-path';
+// CQ-02: a stored city value that is not a town is never counted or linked.
+import { isTallyCity } from '@/lib/pseo/city-tally';
 import JobCard from '@/components/JobCard';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
@@ -220,12 +225,20 @@ function stateSlugOf(stateName: string): string {
 
 /* Data fetching */
 
+/**
+ * Listing cards on a city page. The page is ISR (no ?page), so the cap sits
+ * above any city's inventory: every job in the city is linked from this
+ * indexable page (M-01, TECH-10) instead of from a noindexed filtered
+ * /jobs?location view. A city past the cap links its state hub for the rest.
+ */
+const CITY_LISTING_TAKE = 60;
+
 async function getCityJobs(city: ParsedCitySlug) {
     return prisma.job.findMany({
         where: canonicalBucketWhere(cityBucket(city)),
         omit: JOB_LISTING_OMIT, // Perf1: cards don't use the full description body
         orderBy: BEST_SORT_ORDER_BY,
-        take: 10,
+        take: CITY_LISTING_TAKE,
     });
 }
 
@@ -243,8 +256,17 @@ interface StateCityLinks {
 }
 
 /**
+ * City groups read for the nearby-markets block. Twice the directory's
+ * 12-row view, so stored values that are not towns (CQ-02: "Remote", a
+ * street number, a facility), which are dropped below, cannot crowd real
+ * cities out of the slice.
+ */
+const STATE_CITY_GROUP_TAKE = 24;
+
+/**
  * Other cities in the same state for the nearby-markets block, plus the
- * directory verdict from the same rows.
+ * directory verdict from the same rows. Only values that read as a town
+ * count (isTallyCity, lib/pseo/city-tally.ts).
  */
 async function getStateCityLinks(city: ParsedCitySlug): Promise<StateCityLinks> {
     const rows = await prisma.job.groupBy({
@@ -255,9 +277,11 @@ async function getStateCityLinks(city: ParsedCitySlug): Promise<StateCityLinks> 
         }),
         _count: { city: true },
         orderBy: { _count: { city: 'desc' } },
-        take: 12,
+        take: STATE_CITY_GROUP_TAKE,
     });
-    const named = rows.flatMap((row) => (row.city ? [{ city: row.city, count: row._count.city }] : []));
+    const named = rows.flatMap((row) =>
+        row.city && isTallyCity(row.city, city.stateCode) ? [{ city: row.city, count: row._count.city }] : [],
+    );
 
     // #4: only surface cities at/above the page's MIN_JOBS render gate so the
     // block never links to a city page that will notFound() (soft-404 trap).
@@ -279,7 +303,7 @@ async function getStateCityLinks(city: ParsedCitySlug): Promise<StateCityLinks> 
     }));
 
     // The directory gate needs one linkable city and three tracked cities; the
-    // top-12 slice answers both exactly (a state with three or more cities
+    // top slice answers both exactly (a state with three or more towns
     // carrying jobs always fills three rows).
     const directory = buildStateCityDirectory(named, {
         canLink: (row) => cityLinkResolves(row.city, city.stateCode),
@@ -439,10 +463,15 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
         });
         const ogImageUrl = `/api/og/city?${ogParams.toString()}`;
 
-        // PLAN C.2: the same predicate app/sitemap.ts reads. A rendered page
-        // below the gate answers noindex, follow and keeps its self canonical.
-        const indexable = shouldIndexLocalListingPage({
-            activeJobs: facts.total,
+        // PLAN C.2 and CQ-08: the same predicate app/sitemap.ts reads, at the
+        // listing floor (5 or more distinct postings from 3 or more
+        // employers). A rendered page below the gate answers noindex, follow
+        // and keeps its self canonical. CQ-02: a slug whose name is not a
+        // town ("remote-tx", "1730-ri") never indexes, the same veto
+        // (cityLinkResolves, through isTallyCity) that keeps it out of the
+        // sitemap and every city link.
+        const indexable = isTallyCity(parsed.cityName, stateCode) && shouldIndexLocalListingPage({
+            activeJobs: facts.distinctPostings,
             distinctEmployers: facts.distinctEmployers,
         });
 
@@ -808,7 +837,8 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                 stats={heroStats}
                 description={description}
                 ctaLabel={`View All ${displayName} Jobs`}
-                ctaHref={`/jobs?location=${encodeURIComponent(displayName)}`}
+                // TECH-10: the primary CTA stays on this indexable page.
+                ctaHref="#jobs"
             />
 
             {/* JOB LISTINGS */}
@@ -840,16 +870,17 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                     ))}
                                 </div>
 
-                                {/* Browse All CTA */}
+                                {/* Past the cap only: the rest of the state's listings
+                                    live on its indexable hub (TECH-10). */}
                                 {facts.total > jobs.length && (
                                     <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                                        <Link href={`/jobs?location=${encodeURIComponent(displayName)}`} className="pseo-clay-lift" style={{
+                                        <Link href={`/jobs/state/${stateSlug}`} className="pseo-clay-lift" style={{
                                             padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px',
                                             background: '#BE185D', color: '#fff', textDecoration: 'none',
                                             display: 'inline-flex', alignItems: 'center', gap: '8px',
                                             boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
                                         }}>
-                                            View all {facts.total} jobs in {displayName}
+                                            More jobs across {stateName}
                                         </Link>
                                     </div>
                                 )}
@@ -923,7 +954,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             </h3>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                 {links.related.map((city) => (
-                                    <Link key={city.slug} href={`/jobs/city/${city.slug}`} className="pseo-clay-tile pseo-clay-lift" style={clayTile}>
+                                    <Link key={city.slug} href={localJobsPath(city.slug)} className="pseo-clay-tile pseo-clay-lift" style={clayTile}>
                                         <span>{city.name}</span>
                                         <span style={clayMeta}>{formatCount(city.count, 'job')}</span>
                                     </Link>

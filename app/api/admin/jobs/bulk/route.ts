@@ -11,11 +11,31 @@ type BulkAction = (typeof SUPPORTED_ACTIONS)[number];
 const isBulkAction = (value: unknown): value is BulkAction =>
     typeof value === 'string' && (SUPPORTED_ACTIONS as readonly string[]).includes(value);
 
-/** Update payload for every non-destructive action. Unpublish paths pin against ingest renewal. */
-function updateDataFor(action: Exclude<BulkAction, 'hard_delete'>): Record<string, unknown> {
-    if (action === 'publish') return publishStateFields(true);
+/** Update payload for the non-destructive actions other than publish. Unpublish paths pin against ingest renewal. */
+function updateDataFor(action: Exclude<BulkAction, 'hard_delete' | 'publish'>): Record<string, unknown> {
     if (action === 'unpublish' || action === 'delete') return publishStateFields(false);
     return { isFeatured: action === 'feature' };
+}
+
+/**
+ * Bulk publish. A row that was unpublished comes back to the sitemap and the
+ * listings, so its content changed now: it stamps contentChangedAt (sitemap
+ * lastmod, the page's "Last updated", and the index-urls cron resubmits it),
+ * as the single admin PATCH, toggle-publish and the Stripe paths do for a
+ * revival (lib/job-content-change.ts contentChangeStamp, `revived`). A row
+ * that was already published keeps its stamp. Each row is written once: the
+ * already-published rows first, then the revived ones, each guarded by the
+ * state it was in.
+ */
+async function publishWithRevivalStamp(ids: string[]): Promise<void> {
+    await prisma.job.updateMany({
+        where: { id: { in: ids }, isPublished: true },
+        data: publishStateFields(true),
+    });
+    await prisma.job.updateMany({
+        where: { id: { in: ids }, isPublished: false },
+        data: { ...publishStateFields(true), contentChangedAt: new Date() },
+    });
 }
 
 /**
@@ -95,6 +115,9 @@ export async function POST(request: NextRequest) {
             });
             const remainingIds = new Set(remaining.map((j) => j.id));
             affectedIds = jobs.map((j) => j.id).filter((jobId) => !remainingIds.has(jobId));
+        } else if (action === 'publish') {
+            await publishWithRevivalStamp(jobs.map((j) => j.id));
+            affectedIds = jobs.map((j) => j.id);
         } else {
             await prisma.job.updateMany({
                 where: { id: { in: jobs.map((j) => j.id) } },

@@ -123,10 +123,12 @@ describe('the category x city template states no figure it cannot source', () =>
 
     it('takes its robots from the shared index gate, not a bespoke score', () => {
         const src = code();
-        expect(src).toContain('shouldIndexLocalListingPage({ activeJobs: stats.totalJobs, distinctEmployers, page })');
-        // A noindex page keeps a self canonical and stays crawlable.
+        // The listing floor over the page count less its exact duplicate rows (fixSoon 8).
+        expect(src).toMatch(/shouldIndexLocalListingPage\(\{\s*activeJobs: Math\.max\(0, stats\.totalJobs - duplicateRows\),\s*distinctEmployers,\s*page,\s*\}\)/);
+        // A noindex page keeps a self canonical and stays crawlable; page N
+        // is its own canonical (TECH-08), never page 1 or the parent category.
         expect(src).toContain('robots: { index: shouldIndex, follow: true }');
-        expect(src).toMatch(/canonical: `\$\{brand\.baseUrl\}\$\{basePath\}`/);
+        expect(src).toContain('canonical: listingCanonical(basePath, page)');
         // No keywords metadata (thin-spec section 6). `CategoryConfig.keywords`
         // survives as a routing/config field, but nothing hands it to Next.
         const start = src.indexOf('export async function buildCategoryCityMetadata');

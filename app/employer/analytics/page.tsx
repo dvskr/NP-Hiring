@@ -17,7 +17,7 @@ import { brand } from '@/config/brand';
 import EmployerAnalyticsClient from './EmployerAnalyticsClient';
 
 export const metadata = {
-  title: `Job Analytics | ${brand.name}`,
+  title: 'Job Analytics',
   description: `Per-job views, apply clicks, and CTR for your active and historical ${brand.niche.short} postings.`,
 };
 

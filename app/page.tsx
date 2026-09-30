@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Bell, Building2, Calculator, Receipt, ShieldCheck, Stethoscope, type LucideIcon } from 'lucide-react';
 
 import { getSiteStats } from '@/lib/site-stats';
+import { getIndexableLandingSlugs } from '@/lib/homepage-links';
 import { brand } from '@/config/brand';
 import EmployerTrustSection from '@/components/EmployerTrustSection';
 import FeaturedJobsSection from '@/components/FeaturedJobsSection';
@@ -59,7 +60,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     // SEO Fix #7: trim title to ≤60 chars (Google SERP cap). Previous title
     // ran 77 chars and got truncated mid-phrase, costing CTR.
-    title: `${jobCountDisplay} ${brand.niche.short} Jobs: ${brand.niche.long} Job Board`,
+    //
+    // Indexing audit L-03: the root layout's title template does not apply to
+    // the page in its own segment, so the homepage title used to carry no
+    // brand at all ("638 NP Jobs: Nurse Practitioner Job Board"). Google's
+    // site-name system reads the homepage <title>, so the brand leads it, set
+    // as `absolute` so no template can ever append it a second time.
+    title: { absolute: `${brand.name}: ${jobCountDisplay} ${brand.niche.long} Jobs, Updated Daily` },
     description: `Browse ${jobCountDisplay} ${brand.niche.short} jobs updated daily. Remote, telehealth, and in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
     openGraph: {
       title: `${jobCountDisplay} ${brand.niche.short} Jobs: Find Your Next Position`,
@@ -69,7 +76,9 @@ export async function generateMetadata(): Promise<Metadata> {
           url: HOME_OG_IMAGE,
           width: 1200,
           height: 630,
-          alt: `${brand.name} job board: ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount}+ companies across 50 states`,
+          // No "across 50 states": the live inventory does not always cover
+          // every state, and an unmeasured coverage claim is not a fact.
+          alt: `${brand.name} job board: ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount} companies`,
         },
       ],
     },
@@ -84,6 +93,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
+  // H-04: the hero's category stickers render only while their landing is
+  // indexable, so the homepage never spends a link on a noindexed or empty
+  // landing (lib/homepage-links.ts).
+  const indexableLandingSlugs = await getIndexableLandingSlugs();
+
   return (
     <>
       {/* Structured data — outside content div to prevent hydration mismatch */}
@@ -106,7 +120,7 @@ export default async function Home() {
       {/* Main content */}
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #F5D5C4 15%, #F0C4AF 50%, #FDFBF7 100%)' }}>
         {/* 1. Hero — above the fold */}
-        <HomepageHero />
+        <HomepageHero indexableLandingSlugs={indexableLandingSlugs} />
 
         {/* 2. Employer Clay Dough Strip */}
         <EmployerTrustSection />
@@ -184,7 +198,7 @@ const FREE_TOOLS: readonly FreeTool[] = [
   {
     href: '/resources/fpa-guide',
     label: 'Full Practice Authority Guide',
-    blurb: 'All 50 states classified as full, reduced, or restricted.',
+    blurb: 'What full practice authority means, and how it shapes practice and pay.',
     icon: ShieldCheck,
     chip: 'Guide',
   },

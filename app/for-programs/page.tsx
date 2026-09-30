@@ -5,8 +5,8 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema'
 import ProgramEmbedBuilder from '@/components/ProgramEmbedBuilder'
 import { prisma } from '@/lib/prisma'
 import { getSiteStatsOrNull } from '@/lib/site-stats'
+import { getStatesCovered } from '@/lib/states-covered'
 import {
-  canonicalActiveJobWhere,
   COUNT_DISPLAY_FLOOR,
   SUBSCRIBER_DISPLAY_FLOOR,
 } from '@/lib/canonical-counts'
@@ -26,7 +26,9 @@ import {
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: `For Program Directors: Free ${brand.niche.short} Jobs Widget | ${brand.name}`,
+  // L-02 / CS-10: brand suffix comes from the root layout title template,
+  // once; a manual suffix here rendered "| NP Hiring | NP Hiring".
+  title: `For Program Directors: Free ${brand.niche.short} Jobs Widget`,
   description:
     `Help your ${brand.niche.short} students land their first job. Free embeddable jobs widget for your career services page, plus quarterly placement reports for your accreditation file.`,
   alternates: { canonical: `${brand.baseUrl}/for-programs` },
@@ -105,7 +107,8 @@ async function getProgramGuide() {
 
 interface ProgramsStats {
   totalJobs: number
-  statesCovered: number
+  /** null when the state count could not be read: the pill is omitted. */
+  statesCovered: number | null
   subscribers: number
 }
 
@@ -118,23 +121,21 @@ interface ProgramsStats {
  *
  * Now: job + subscriber totals come from the canonical SiteStat snapshot
  * (lib/site-stats.ts — the same numbers the homepage quotes), states-covered
- * is derived under the same canonical predicate, and ANY failure returns
- * null so the caller OMITS the stat pills instead of fabricating them
- * (the /press page's omit-not-fabricate rule).
+ * comes from lib/states-covered.ts (the canonical predicate, the 50 states
+ * only, the same figure /about shows), and ANY failure returns null so the
+ * caller OMITS the stat pills instead of fabricating them (the /press page's
+ * omit-not-fabricate rule).
  */
 async function getProgramsStats(): Promise<ProgramsStats | null> {
   try {
-    const [stats, stateRows] = await Promise.all([
+    const [stats, statesCovered] = await Promise.all([
       getSiteStatsOrNull(),
-      prisma.job.groupBy({
-        by: ['stateCode'],
-        where: { ...canonicalActiveJobWhere(), stateCode: { not: null } },
-      }),
+      getStatesCovered(),
     ])
     if (!stats) return null
     return {
       totalJobs: stats.totalJobs,
-      statesCovered: stateRows.length,
+      statesCovered,
       subscribers: stats.totalSubscribers,
     }
   } catch {
@@ -166,7 +167,7 @@ export default async function ForProgramsPage() {
               color: '#065F46',
             }]
           : []),
-        ...(stats.statesCovered > 0
+        ...(stats.statesCovered !== null && stats.statesCovered > 0
           ? [{
               value: String(stats.statesCovered),
               label: 'States Covered',

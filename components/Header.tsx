@@ -18,8 +18,14 @@ import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { getMobileMenuMotion } from '@/components/header-nav-motion';
 
 /*
- * Header — Floating claymorphic navbar.
- * Warm diorama palette, pill-shaped, centered nav items.
+ * Header: floating pill navbar, centered nav items.
+ *
+ * Palette: option B "soft blush" (owner decision 5, 2026-09-29), replacing the
+ * mint bar. Bar #FCEEF0 with a berry hairline rgba(122,28,43,0.15) and a soft
+ * berry shadow; menu text #3D2A2E; hover tint rgba(190,24,93,0.08) with text
+ * #7A1C2B; current page #7A1C2B on rgba(190,24,93,0.12); focus ring #BE185D.
+ * The neumorphic white inset highlights went with the mint. Contrast against
+ * the bar and the tints is pinned in tests/regressions/header-soft-blush.test.ts.
  */
 
 export default function Header() {
@@ -183,7 +189,7 @@ export default function Header() {
           Total nav footprint = 18px top + 64px nav pill + 18px bottom = 100px.
           The strip is now symmetric (was 12/0) so the floating nav reads as
           vertically centered inside its background panel instead of flush
-          against the bottom edge. (Floating mint pill — owner direction 2026-09-12: gutters on top,
+          against the bottom edge. (Floating pill, owner direction 2026-09-12: gutters on top,
           left and right, no max-width cap. The hero pulls up under it by 80.) */}
       <div style={{ height: 100 }} />
 
@@ -208,17 +214,20 @@ export default function Header() {
             // change vs. the previous fixed value), then scales with the
             // viewport up to a ceiling of 1680px on very wide screens.
             // Wrapper padding (16px each side) still bounds it on narrow.
-            // Floating mint pill (owner direction 2026-09-12): spans the full width
-            // minus the wrapper's 16px side gutters — no max-width cap.
+            // Floating pill (owner direction 2026-09-12): spans the full width
+            // minus the wrapper's 16px side gutters, no max-width cap.
+            // Soft blush (owner decision 5): the resting shadow is the one the
+            // owner picked; once the page scrolls it deepens in the same hue so
+            // the bar still lifts off the content sliding under it.
             maxWidth: 'none',
             width: '100%',
             height: 64,
             borderRadius: '18px',
-            backgroundColor: '#D5F5F1',
-            border: '1px solid rgba(122,28,43,0.12)',
+            backgroundColor: '#FCEEF0',
+            border: '1px solid rgba(122,28,43,0.15)',
             boxShadow: scrolled
-              ? '0 8px 32px rgba(90,74,66,0.14), 0 2px 8px rgba(90,74,66,0.06), inset 0 1px 0 rgba(255,255,255,0.7)'
-              : '0 4px 20px rgba(90,74,66,0.10), 0 1px 4px rgba(90,74,66,0.04), inset 0 1px 0 rgba(255,255,255,0.7)',
+              ? '0 10px 30px rgba(122,28,43,0.12), 0 2px 6px rgba(90,74,66,0.06)'
+              : '0 6px 22px rgba(122,28,43,0.08), 0 1px 3px rgba(90,74,66,0.05)',
             display: 'flex',
             alignItems: 'center',
             paddingLeft: 'clamp(12px, 2vw, 32px)',
@@ -242,10 +251,9 @@ export default function Header() {
               style={{
                 padding: '12px',
                 borderRadius: '10px',
-                color: '#5A4A42',
-                backgroundColor: '#B9EBD6',
-                border: '1px solid rgba(255,255,255,0.5)',
-                boxShadow: '3px 3px 8px rgba(90,74,66,0.08), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6)',
+                color: '#3D2A2E',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid rgba(122,28,43,0.15)',
                 cursor: 'pointer',
               }}
               aria-label="Toggle menu"
@@ -349,7 +357,10 @@ export default function Header() {
             <div
               // Fully opaque (1.0) -- 0.98 let the page content bleed through
               // visibly underneath the menu, which combined with the scroll
-              // lock bug made the menu feel see-through.
+              // lock bug made the menu feel see-through. The panel keeps the
+              // page tone (the same #F5F0EB as the strip around the bar), so
+              // it reads as one sheet under the blush pill; its rows and
+              // dividers carry the blush palette.
               className="absolute inset-0"
               style={{ backgroundColor: '#F5F0EB' }}
               onClick={() => setIsMenuOpen(false)}
@@ -372,12 +383,13 @@ export default function Header() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setIsMenuOpen(false)}
+                      aria-current={active ? 'page' : undefined}
                       style={{
                         padding: '14px 16px',
                         fontSize: '16px',
                         fontWeight: active ? 600 : 500,
-                        color: active ? '#BE185D' : '#5A4A42',
-                        backgroundColor: active ? 'rgba(190,24,93,0.08)' : 'transparent',
+                        color: active ? '#7A1C2B' : '#3D2A2E',
+                        backgroundColor: active ? 'rgba(190,24,93,0.12)' : 'transparent',
                         borderRadius: '14px',
                         marginBottom: '2px',
                         display: 'flex',
@@ -396,8 +408,9 @@ export default function Header() {
 
               {/* Extra links for public mobile users */}
               {!userRole && (
-                <div className="mt-3 pt-4" style={{ borderTop: '1px solid rgba(90,74,66,0.08)' }}>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-3 px-4" style={{ color: '#A89890' }}>More</p>
+                <div className="mt-3 pt-4" style={{ borderTop: '1px solid rgba(122,28,43,0.10)' }}>
+                  {/* #6B5B53: the old #A89890 read 2.4:1 on the panel, below AA. */}
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-3 px-4" style={{ color: '#6B5B53' }}>More</p>
                   <nav className="flex flex-col">
                     {mobileExtraLinks.map((link) => {
                       const ExtraIcon = link.icon;
@@ -407,12 +420,13 @@ export default function Header() {
                           key={link.href}
                           href={link.href}
                           onClick={() => setIsMenuOpen(false)}
+                          aria-current={active ? 'page' : undefined}
                           style={{
                             padding: '12px 16px',
                             fontSize: '15px',
                             fontWeight: active ? 600 : 400,
-                            color: active ? '#BE185D' : '#7A6A62',
-                            backgroundColor: active ? 'rgba(190,24,93,0.06)' : 'transparent',
+                            color: active ? '#7A1C2B' : '#5A4A42',
+                            backgroundColor: active ? 'rgba(190,24,93,0.12)' : 'transparent',
                             borderRadius: '12px',
                             marginBottom: '1px',
                             display: 'flex',
@@ -435,7 +449,7 @@ export default function Header() {
                   signed IN, this would duplicate the bell + avatar that's
                   already visible in the top header strip behind the menu. */}
               {!userRole && (
-                <div className="mt-6 pt-5 px-4" style={{ borderTop: '1px solid rgba(90,74,66,0.08)' }}>
+                <div className="mt-6 pt-5 px-4" style={{ borderTop: '1px solid rgba(122,28,43,0.10)' }}>
                   <HeaderAuth onNavigate={() => setIsMenuOpen(false)} onRoleChange={(role) => setUserRole(role)} />
                 </div>
               )}
@@ -458,38 +472,72 @@ export default function Header() {
           border-radius: 12px;
           font-size: 13.5px;
           font-weight: 500;
-          color: #5A4A42;
+          color: #3D2A2E;
           background-color: transparent;
           border: 1px solid transparent;
           box-shadow: none;
           text-decoration: none;
           white-space: nowrap;
-          transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+          transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
         }
         .nav-pill-floating:hover:not([aria-current="page"]) {
-          background-color: #B9EBD6;
-          color: #5A4A42;
-          border-color: rgba(255,255,255,0.5);
-          box-shadow: 3px 3px 8px rgba(90,74,66,0.10), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 3px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02);
-          transform: translateY(-1px);
+          background-color: rgba(190,24,93,0.08);
+          color: #7A1C2B;
         }
         .nav-pill-floating[aria-current="page"] {
           font-weight: 600;
-          color: #9D174D;
-          background-color: rgba(190,24,93,0.10);
-          border-color: rgba(190,24,93,0.15);
-          box-shadow: inset 1px 1px 3px rgba(190,24,93,0.06), 2px 2px 6px rgba(190,24,93,0.06);
+          color: #7A1C2B;
+          background-color: rgba(190,24,93,0.12);
         }
         .nav-pill-floating:focus-visible {
           outline: 2px solid #BE185D;
           outline-offset: 2px;
         }
         .nav-pill-floating:active {
-          transform: translateY(0) scale(0.98) !important;
+          transform: scale(0.98);
+        }
+        /* Employer "Post Job" CTA: the same solid berry as Sign up. Every
+           state lives here, not in inline styles or mouse handlers, because
+           an inline box-shadow beats the global :focus-visible ring. */
+        .header-post-job {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          border-radius: 12px;
+          font-size: 13.5px;
+          font-weight: 700;
+          color: #FFFFFF;
+          background-color: #9D174D;
+          border: 1px solid #9D174D;
+          box-shadow: 0 4px 12px rgba(157,23,77,0.25);
+          text-decoration: none;
+          white-space: nowrap;
+          transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+        }
+        .header-post-job--compact {
+          padding: 7px 12px;
+          font-size: 13px;
+        }
+        .header-post-job:hover {
+          background-color: #831843;
+          border-color: #831843;
+          box-shadow: 0 6px 16px rgba(157,23,77,0.30);
+          transform: translateY(-1px);
+        }
+        .header-post-job:focus-visible {
+          outline: 2px solid #BE185D;
+          outline-offset: 2px;
+        }
+        .header-post-job:active {
+          transform: scale(0.98);
         }
         @media (prefers-reduced-motion: reduce) {
-          .nav-pill-floating { transition: none; }
-          .nav-pill-floating:hover:not([aria-current="page"]) { transform: none; }
+          .nav-pill-floating,
+          .header-post-job { transition: none; }
+          .nav-pill-floating:active,
+          .header-post-job:hover,
+          .header-post-job:active { transform: none; }
         }
         /* Mobile menu scroll container. 100px == the fixed overlay's top
            offset (the nav footprint), so the cap matches the visible box.
@@ -524,38 +572,17 @@ export default function Header() {
 }
 
 /**
- * Primary employer CTA — `+ Post Job`. Filled-pill, branded primary color,
- * visually distinct from the ghost-style nav pills next to it. Surfaces the
- * employer's #1 money action from every page in one tap.
+ * Primary employer CTA, `+ Post Job`. A solid berry pill (the same fill as
+ * Sign up), visually distinct from the ghost-style nav pills next to it.
+ * Surfaces the employer's main money action from every page in one tap.
+ * Styled by the .header-post-job rules in Header's stylesheet so hover never
+ * writes an inline box-shadow over the keyboard focus ring.
  */
 function PostJobCTA({ mobile = false }: { mobile?: boolean }) {
   return (
     <Link
       href="/post-job"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: mobile ? '7px 12px' : '8px 16px',
-        borderRadius: '12px',
-        fontSize: mobile ? '13px' : '13.5px',
-        fontWeight: 700,
-        color: '#FFFFFF',
-        background: 'linear-gradient(135deg, #BE185D, #9D174D)',
-        border: '1px solid rgba(255,255,255,0.25)',
-        boxShadow: '0 2px 8px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
-        textDecoration: 'none',
-        whiteSpace: 'nowrap',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = '0 4px 14px rgba(190,24,93,0.35), inset 0 1px 0 rgba(255,255,255,0.25)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.2)';
-      }}
+      className={mobile ? 'header-post-job header-post-job--compact' : 'header-post-job'}
       aria-label="Post a new job"
     >
       <Plus size={mobile ? 14 : 15} strokeWidth={2.5} />

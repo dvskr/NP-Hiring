@@ -177,7 +177,7 @@ async function getData() {
             _count: { _all: true },
         }),
         prisma.$queryRaw<PseoCoverageRow[]>`
-            SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "updatedAt"
+            SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable", "updatedAt"
             FROM "PseoStats"
             WHERE "type" = 'category-city' AND "totalJobs" >= ${MIN_JOBS_FOR_CATEGORY_CITY}`,
         prisma.$queryRaw<SettingStateCoverageRow[]>`

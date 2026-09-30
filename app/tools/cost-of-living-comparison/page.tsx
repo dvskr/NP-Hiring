@@ -30,10 +30,10 @@ import {
 } from '@/components/tools/city-picker-data';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import {
-  summarizeBenchmarks,
   BENCHMARK_MIN_POSTINGS,
   BENCHMARK_MIN_EMPLOYERS,
 } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT, summarizeCappedBenchmarks } from '@/lib/salary-guide-gate';
 import {
   npSalaryAnalyticsWhere,
   NP_SALARY_ANALYTICS_SELECT,
@@ -88,7 +88,9 @@ const EMPTY_DATA: ComparatorData = { options: [], defaultPair: null, statesCover
  * P9 #2c/#2d: every nominal figure this tool renders is a gated MEDIAN over
  * the NP-eligible analytics pool (npSalaryAnalyticsWhere + NP-title gate),
  * per state and per city, published only past the benchmark gate
- * (n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS). The old
+ * (n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS) and the
+ * employer-share cap (no single employer above MAX_EMPLOYER_SHARE_PERCENT
+ * of the postings, indexing audit CQ-15), the policy /salary-guide uses. The old
  * `_avg` mean-of-min/max here ran over every published disclosed-salary row
  * — psychiatrist/PA/podiatrist pay included — and city columns published
  * an "average" of as few as 3 postings.
@@ -103,7 +105,7 @@ async function loadComparatorData(): Promise<ComparatorData> {
 
     // Per-state gated medians. `sample` = postings behind the median.
     const stateNominals = new Map<string, SalaryAggregate>();
-    for (const row of summarizeBenchmarks(npRows).states) {
+    for (const row of summarizeCappedBenchmarks(npRows).states) {
       stateNominals.set(row.scope, { nominal: row.median, sample: row.postings });
     }
     const postingsCounted = npRows.length;
@@ -119,7 +121,7 @@ async function loadComparatorData(): Promise<ComparatorData> {
       })
       .filter((row): row is NonNullable<typeof row> => row != null);
     const cityNominals = new Map<string, SalaryAggregate>();
-    for (const row of summarizeBenchmarks(cityKeyedRows).states) {
+    for (const row of summarizeCappedBenchmarks(cityKeyedRows).states) {
       cityNominals.set(row.scope, { nominal: row.median, sample: row.postings });
     }
 
@@ -145,7 +147,7 @@ const FAQS = [
   },
   {
     q: 'Where does the salary data come from?',
-    a: `Live postings on this board. Where a city has at least ${BENCHMARK_MIN_POSTINGS} published listings with disclosed, non-estimated pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, we use the true median of those postings' midpoints; below that threshold the state median stands in, and each column tells you which basis it used and how many postings sit behind it. Listings whose pay was inferred rather than posted are excluded entirely.`,
+    a: `Live postings on this board. Where a city has at least ${BENCHMARK_MIN_POSTINGS} published listings with disclosed, non-estimated pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them, we use the true median of those postings' midpoints; otherwise the state median stands in, and each column tells you which basis it used and how many postings sit behind it. Listings whose pay was inferred rather than posted are excluded entirely.`,
   },
   {
     q: 'Does a higher salary in an expensive city still come out ahead?',
@@ -169,7 +171,7 @@ export default async function CostOfLivingComparisonPage() {
 
   const assumptions: readonly string[] = [
     `Nominal pay is the true median midpoint of published ${brand.niche.short}-eligible postings on this board that disclose a salary range. Postings whose pay was inferred rather than posted by the employer are excluded.`,
-    `A city uses its own postings when it has at least ${BENCHMARK_MIN_POSTINGS} of them with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers; otherwise the state median stands in. Each column states which basis it used and the sample size behind it.`,
+    `A city uses its own postings when it has at least ${BENCHMARK_MIN_POSTINGS} of them with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, none contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them; otherwise the state median stands in. Each column states which basis it used and the sample size behind it.`,
     'The cost-of-living index comes from this site’s city dataset, where 100 is the national average. It covers living costs (housing, groceries, utilities, transport, and healthcare), not taxes.',
     'The adjusted figure is nominal pay multiplied by (100 ÷ the city’s index), the same formula used for cost-of-living adjusted pay across the rest of this site.',
     'The picker carries the largest cities in each state, plus every city with enough postings to publish a gated median of its own.',

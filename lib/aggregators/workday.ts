@@ -17,6 +17,7 @@ import {
     WORKDAY_TITLE_PREFILTER_TERMS as TITLE_PREFILTER_TERMS,
 } from './search-terms/workday';
 import { WORKDAY_TENANTS, type WorkdayTenant } from './tenants/workday';
+import { parseLocation, resolveCountryValue } from '@/lib/location-parser';
 type WorkdayCompany = WorkdayTenant;
 const WORKDAY_COMPANIES: readonly WorkdayCompany[] = WORKDAY_TENANTS;
 
@@ -42,6 +43,178 @@ export interface WorkdayJobRaw {
     description: string;
     applyLink: string;
     postedDate?: string;
+    /**
+     * Further work sites of a multi-location requisition, from the detail
+     * endpoint. They are also joined into `location` ("Denver, CO; Aurora,
+     * CO"), which is what the job page reads to emit one jobLocation Place
+     * per site (CS-03); this field keeps the raw list for logs.
+     */
+    additionalLocations?: string[];
+    /**
+     * Countries of the requisition's sites (ISO alpha-2 or descriptor), for
+     * the non-US gate; see workdayCountries.
+     */
+    country?: string[];
+    /** jobPostingInfo.timeType ("Full time", "Part time"): the structured employment type (H-03). */
+    jobType?: string;
+    /** jobPostingInfo.remoteType ("Onsite", "Hybrid", "Remote"): the structured work mode (GFJ-01). */
+    workMode?: string;
+}
+
+/** What the detail endpoint adds to a search hit. */
+export interface WorkdayJobDetails {
+    description: string;
+    realPostedDate?: string;
+    /** jobPostingInfo.location: the primary work site ("Denver, CO"). */
+    primaryLocation?: string;
+    additionalLocations: string[];
+    country?: string;
+    /** jobPostingInfo.timeType, when the tenant publishes it. */
+    timeType?: string;
+    /** jobPostingInfo.remoteType, when the tenant publishes it. */
+    remoteType?: string;
+}
+
+const EMPTY_DETAILS: WorkdayJobDetails = { description: '', additionalLocations: [] };
+
+/**
+ * Search-hit location texts that name no place: "2 Locations", "Multiple
+ * Locations", or the bare country. Storing them left 12 DaVita rows and
+ * others with no city or state, so no JobPosting jobLocation (indexing
+ * audit CS-03 / fixSoon 6).
+ */
+const VAGUE_WORKDAY_LOCATION_RE =
+    /^(?:\d+\s+locations?|multiple\s+locations?|various\s+locations?|united\s+states(?:\s+of\s+america)?|usa|us)$/i;
+
+export function isVagueWorkdayLocation(text: string | null | undefined): boolean {
+    const t = (text ?? '').trim();
+    return t === '' || VAGUE_WORKDAY_LOCATION_RE.test(t);
+}
+
+/** Separator between the sites of a multi-location row (the job page splits on it). */
+export const WORKDAY_LOCATION_JOINER = '; ';
+
+/** A site string that parses to a US state, so the job page can emit it as a Place. */
+function namesUsPlace(text: string): boolean {
+    const parsed = parseLocation(text);
+    return !!parsed.stateCode && parsed.country === 'US';
+}
+
+/**
+ * The location a Workday row is filed under: the search hit's text when it
+ * names a place, otherwise the detail endpoint's primary location. Falls
+ * back to the vague text only when the detail endpoint had nothing, so the
+ * row is at least honest about not knowing.
+ *
+ * A multi-location requisition ("2 Locations") also lists its further sites
+ * (jobPostingInfo.additionalLocations). They were parsed and then dropped,
+ * so such a row emitted one Place. Every further site that names a US place
+ * is now joined after the primary one ("Denver, CO; Aurora, CO"): the
+ * parser files the row under the first, and the job page's
+ * resolveJobPlaces emits a jobLocation array from the list (CS-03).
+ */
+export function resolveWorkdayLocation(
+    locationsText: string | null | undefined,
+    details: Pick<WorkdayJobDetails, 'primaryLocation'> & Partial<Pick<WorkdayJobDetails, 'additionalLocations'>>,
+): string {
+    const listText = (locationsText ?? '').trim();
+    const primary = details.primaryLocation?.trim();
+    let base: string;
+    if (!isVagueWorkdayLocation(listText)) base = listText;
+    else if (primary && !isVagueWorkdayLocation(primary)) base = primary;
+    else return listText || 'United States';
+
+    const seen = new Set([base.toLowerCase()]);
+    const extra: string[] = [];
+    for (const site of details.additionalLocations ?? []) {
+        const s = site.trim();
+        if (!s || isVagueWorkdayLocation(s) || seen.has(s.toLowerCase()) || !namesUsPlace(s)) continue;
+        seen.add(s.toLowerCase());
+        extra.push(s);
+    }
+    return extra.length > 0 ? [base, ...extra].join(WORKDAY_LOCATION_JOINER) : base;
+}
+
+/**
+ * The countries a Workday requisition is in, for the normalizer's non-US
+ * gate, or undefined when the detail endpoint names none. Its country field
+ * describes the primary site only, so a requisition whose further sites
+ * include a US place ("Toronto, ON" first, then "Detroit, MI") also carries
+ * 'US': a posting that includes the United States among its locations is a
+ * US job (owner decision, 2026-09-29).
+ */
+export function workdayCountries(
+    details: Pick<WorkdayJobDetails, 'country'> & Partial<Pick<WorkdayJobDetails, 'additionalLocations'>>,
+): string[] | undefined {
+    const country = details.country?.trim();
+    if (!country) return undefined;
+    const hasUsSite = (details.additionalLocations ?? []).some((site) => namesUsPlace(site));
+    return hasUsSite && resolveCountryValue(country) !== 'US' ? [country, 'US'] : [country];
+}
+
+function readCountry(value: unknown): string | undefined {
+    if (!value || typeof value !== 'object') return undefined;
+    const v = value as { alpha2Code?: unknown; descriptor?: unknown };
+    if (typeof v.alpha2Code === 'string' && v.alpha2Code.trim()) return v.alpha2Code.trim();
+    if (typeof v.descriptor === 'string' && v.descriptor.trim()) return v.descriptor.trim();
+    return undefined;
+}
+
+/**
+ * Pull the fields ingest needs out of a detail response
+ * (`{ jobPostingInfo: { jobDescription, startDate, postedOn, location,
+ * additionalLocations, country, jobRequisitionLocation } }`). Pure, so it
+ * can be tested without the network.
+ */
+export function parseWorkdayDetail(data: unknown): WorkdayJobDetails {
+    const info = (data && typeof data === 'object'
+        ? (data as { jobPostingInfo?: Record<string, unknown> }).jobPostingInfo
+        : undefined) ?? {};
+    const description = typeof info.jobDescription === 'string' ? info.jobDescription : '';
+
+    // Extract the REAL original posting date from the detail endpoint
+    // Priority: startDate (exact ISO date "2026-03-05") > postedOn ("Posted 7 Days Ago")
+    let realPostedDate: string | undefined;
+    if (typeof info.startDate === 'string' && info.startDate) {
+        const d = new Date(info.startDate);
+        if (!isNaN(d.getTime())) realPostedDate = d.toISOString();
+    }
+    if (!realPostedDate && typeof info.postedOn === 'string') {
+        realPostedDate = parsePostedAgoText(info.postedOn);
+    }
+
+    const primaryLocation = typeof info.location === 'string' && info.location.trim()
+        ? info.location.trim()
+        : undefined;
+    const additionalLocations = Array.isArray(info.additionalLocations)
+        ? info.additionalLocations
+            .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+            .map((s) => s.trim())
+        : [];
+    const requisitionLocation = info.jobRequisitionLocation as { country?: unknown } | undefined;
+    const country = readCountry(requisitionLocation?.country) ?? readCountry(info.country);
+    const timeType = readText(info.timeType);
+    const remoteType = readText(info.remoteType);
+
+    return {
+        description,
+        realPostedDate,
+        primaryLocation,
+        additionalLocations,
+        country,
+        ...(timeType ? { timeType } : {}),
+        ...(remoteType ? { remoteType } : {}),
+    };
+}
+
+/** A trimmed string field, or a `{ descriptor }` object's text, else undefined. */
+function readText(value: unknown): string | undefined {
+    if (typeof value === 'string') return value.trim() || undefined;
+    if (value && typeof value === 'object') {
+        const descriptor = (value as { descriptor?: unknown }).descriptor;
+        if (typeof descriptor === 'string' && descriptor.trim()) return descriptor.trim();
+    }
+    return undefined;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -82,10 +255,10 @@ function parsePostedAgoText(text: string): string | undefined {
 }
 
 /**
- * Fetch job description AND real posted date from the Workday job detail endpoint
- * The detail endpoint returns jobPostingInfo which has the real "Posted X Days Ago" text
+ * Fetch job description, real posted date, work sites and country from the
+ * Workday job detail endpoint (jobPostingInfo). See parseWorkdayDetail.
  */
-async function fetchJobDetails(company: WorkdayCompany, externalPath: string): Promise<{ description: string; realPostedDate?: string }> {
+async function fetchJobDetails(company: WorkdayCompany, externalPath: string): Promise<WorkdayJobDetails> {
     const url = `https://${company.slug}.wd${company.instance}.myworkdayjobs.com/wday/cxs/${company.slug}/${company.site}${externalPath}`;
 
     try {
@@ -98,32 +271,11 @@ async function fetchJobDetails(company: WorkdayCompany, externalPath: string): P
         });
         clearTimeout(timeout);
 
-        if (!res.ok) return { description: '' };
+        if (!res.ok) return EMPTY_DETAILS;
 
-        const data = await res.json();
-        const info = data?.jobPostingInfo;
-        const description = info?.jobDescription || '';
-
-        // Extract the REAL original posting date from the detail endpoint
-        // Priority: startDate (exact ISO date "2026-03-05") > postedOn ("Posted 7 Days Ago")
-        let realPostedDate: string | undefined;
-
-        // 1. Try startDate first — exact date from Workday
-        if (info?.startDate) {
-            const d = new Date(info.startDate);
-            if (!isNaN(d.getTime())) {
-                realPostedDate = d.toISOString();
-            }
-        }
-
-        // 2. Fallback: parse relative "Posted X Days Ago" text
-        if (!realPostedDate && info?.postedOn) {
-            realPostedDate = parsePostedAgoText(info.postedOn);
-        }
-
-        return { description, realPostedDate };
+        return parseWorkdayDetail(await res.json());
     } catch {
-        return { description: '' };
+        return EMPTY_DETAILS;
     }
 }
 
@@ -136,8 +288,8 @@ async function fetchDetailsConcurrent(
     company: WorkdayCompany,
     paths: string[],
     concurrency: number,
-): Promise<Array<{ description: string; realPostedDate?: string }>> {
-    const results: Array<{ description: string; realPostedDate?: string }> = new Array(paths.length);
+): Promise<WorkdayJobDetails[]> {
+    const results: WorkdayJobDetails[] = new Array(paths.length);
     let cursor = 0;
     async function worker(): Promise<void> {
         while (true) {
@@ -226,10 +378,20 @@ async function fetchCompanyJobs(company: WorkdayCompany): Promise<WorkdayJobRaw[
                         externalId: `workday-${company.slug}-${jobId}`,
                         title: posting.title,
                         company: company.name,
-                        location: posting.locationsText || 'United States',
+                        // "2 Locations" / "United States" name no place;
+                        // the detail endpoint's primary location does.
+                        location: resolveWorkdayLocation(posting.locationsText, details),
                         description: details.description,
                         applyLink: `${applyBase}${posting.externalPath}`,
                         postedDate,
+                        ...(details.additionalLocations.length > 0
+                            ? { additionalLocations: details.additionalLocations }
+                            : {}),
+                        ...(workdayCountries(details) ? { country: workdayCountries(details) } : {}),
+                        // Structured fields the normalizer prefers over any
+                        // text scan: employment type (H-03), work mode (GFJ-01).
+                        ...(details.timeType ? { jobType: details.timeType } : {}),
+                        ...(details.remoteType ? { workMode: details.remoteType } : {}),
                     });
                 }
 

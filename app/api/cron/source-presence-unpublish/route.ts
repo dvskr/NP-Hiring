@@ -31,10 +31,10 @@ import { HealthRecorder } from '@/lib/health';
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
+import { presenceUnpublishMinMisses } from '@/lib/health/presence-unpublish-threshold';
 
 export const maxDuration = 120;
 
-const DEFAULT_MIN_MISSES = 3;
 const DEFAULT_MAX_UNPUBLISH_PER_RUN = 1_000;
 const PRESENCE_UNPUBLISH_VERSION = 'v1.0.0';
 
@@ -87,15 +87,19 @@ export async function GET(req: Request): Promise<NextResponse> {
     }
 }
 
+/**
+ * The miss threshold, from the helper the deindex-expired cron also reads
+ * (lib/health/presence-unpublish-threshold.ts), so the rows this cron takes
+ * down are exactly the rows that cron sends as removals. An invalid value is
+ * logged here and falls back to the default there.
+ */
 function readThreshold(log = logger): number {
     const raw = process.env.JOB_HEALTH_MIN_PRESENCE_MISSES;
-    if (!raw) return DEFAULT_MIN_MISSES;
-    const parsed = parseInt(raw, 10);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        log.warn('Invalid JOB_HEALTH_MIN_PRESENCE_MISSES — falling back to default', { raw });
-        return DEFAULT_MIN_MISSES;
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    if (raw && (!Number.isFinite(parsed) || parsed < 1)) {
+        log.warn('Invalid JOB_HEALTH_MIN_PRESENCE_MISSES, falling back to default', { raw });
     }
-    return parsed;
+    return presenceUnpublishMinMisses(raw);
 }
 
 async function runSweep(

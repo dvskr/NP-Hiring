@@ -25,6 +25,7 @@ import { rateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { embed, AiGatewayError } from '@/lib/ai/gateway';
 import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
+import { liveLinkWhere } from '@/lib/dead-link-threshold';
 import { semanticJobSearch, reciprocalRankFusion } from '@/lib/ai/vector-search';
 import { parseSemanticQuery } from '@/lib/ai/query-parser';
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
@@ -195,7 +196,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             ...(state ? { stateCode: state } : {}),
             ...(remoteOnly ? { isRemote: true } : {}),
             OR: tokenOr,
-            AND: GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })),
+            // Plus the dead-link gate: such a job answers 410 on its own URL.
+            AND: [...GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })), liveLinkWhere()],
         },
         select: { id: true },
         take: 50,
@@ -254,7 +256,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const jobs = await prisma.job.findMany({
         where: {
             id: { in: fused.map((h) => h.jobId) },
-            AND: GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })),
+            // The vector leg does not read the dead-link gate; this choke point does.
+            AND: [...GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })), liveLinkWhere()],
         },
         select: {
             id: true, title: true, slug: true, employer: true, location: true,

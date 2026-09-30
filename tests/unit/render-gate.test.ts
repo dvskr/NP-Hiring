@@ -12,22 +12,33 @@ import path from 'node:path';
 import {
   MIN_JOBS_FOR_CATEGORY_CITY,
   MIN_JOBS_FOR_INDEX,
-  MIN_EMPLOYERS_FOR_INDEX,
-  MIN_SETTING_STATE_INDEX_SIGNALS,
+  MIN_POSTINGS_FOR_LISTING_INDEX,
+  MIN_EMPLOYERS_FOR_LISTING_INDEX,
   MIN_JOBS_FOR_STATE_HUB_INDEX,
+  MIN_EMPLOYERS_FOR_STATE_HUB_INDEX,
   MIN_DATA_SECTIONS_FOR_STATE_HUB_INDEX,
   MIN_JOBS_FOR_METRO_INDEX,
+  MIN_RECENT_POSTINGS_FOR_METRO_INDEX,
   MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX,
   MIN_ACTIVE_JOBS_FOR_COMPANY_INDEX,
   MIN_JOBS_FOR_LINK_LIST_ROW,
+  MIN_POSTINGS_FOR_SETTING_STATE_INDEX,
+  MIN_EMPLOYERS_FOR_SETTING_STATE_INDEX,
+  MIN_ROLE_CLUSTERS_FOR_SETTING_STATE_INDEX,
+  MAX_TOP_EMPLOYER_SHARE_FOR_SETTING_STATE_INDEX,
+  MAX_HUB_SHARE_FOR_SETTING_STATE_INDEX,
+  SETTING_STATE_INDEXING_ENABLED,
+  STRUCTURED_REMOTE_SETTING_SLUGS,
   PSEO_STATS_MAX_AGE_HOURS,
   PSEO_STATS_MAX_AGE_MS,
   isPseoStatsFresh,
   pseoStatsFreshnessThreshold,
   shouldRenderCategoryCity,
   shouldIndexListingPage,
+  meetsListingFloor,
+  shouldIndexCategoryLanding,
   shouldIndexSettingState,
-  countSettingStateIndexSignals,
+  isSettingStateIndexable,
   shouldIndexLocalListingPage,
   shouldIndexStateHub,
   shouldIndexStateCityDirectory,
@@ -46,19 +57,39 @@ describe('thresholds', () => {
     expect(MIN_JOBS_FOR_CATEGORY_CITY).toBe(3);
   });
 
-  it('the listing index floor and the link-list floor are the category x city floor', () => {
+  it('the count half and the link-list floor are the category x city render floor', () => {
     expect(MIN_JOBS_FOR_INDEX).toBe(MIN_JOBS_FOR_CATEGORY_CITY);
     expect(MIN_JOBS_FOR_LINK_LIST_ROW).toBe(MIN_JOBS_FOR_CATEGORY_CITY);
   });
 
-  it('every other floor matches the PLAN C.2 table', () => {
-    expect(MIN_EMPLOYERS_FOR_INDEX).toBe(2);
-    expect(MIN_SETTING_STATE_INDEX_SIGNALS).toBe(2);
-    expect(MIN_JOBS_FOR_STATE_HUB_INDEX).toBe(3);
+  it('the listing floor is 5 distinct postings from 3 employers (indexing audit fixSoon 1)', () => {
+    expect(MIN_POSTINGS_FOR_LISTING_INDEX).toBe(5);
+    expect(MIN_EMPLOYERS_FOR_LISTING_INDEX).toBe(3);
+    // The index floor sits above the render floor, never below it.
+    expect(MIN_POSTINGS_FOR_LISTING_INDEX).toBeGreaterThan(MIN_JOBS_FOR_CATEGORY_CITY);
+  });
+
+  it('every other floor matches the PLAN C.2 table as raised by the audit', () => {
+    expect(MIN_JOBS_FOR_STATE_HUB_INDEX).toBe(5);
+    expect(MIN_EMPLOYERS_FOR_STATE_HUB_INDEX).toBe(3);
     expect(MIN_DATA_SECTIONS_FOR_STATE_HUB_INDEX).toBe(4);
     expect(MIN_JOBS_FOR_METRO_INDEX).toBe(3);
-    expect(MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX).toBe(3);
+    expect(MIN_RECENT_POSTINGS_FOR_METRO_INDEX).toBe(1);
+    expect(MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX).toBe(5);
     expect(MIN_ACTIVE_JOBS_FOR_COMPANY_INDEX).toBe(5);
+  });
+
+  it('the strict setting x state gate carries the CQ-01 thresholds', () => {
+    expect(MIN_POSTINGS_FOR_SETTING_STATE_INDEX).toBe(5);
+    expect(MIN_EMPLOYERS_FOR_SETTING_STATE_INDEX).toBe(3);
+    expect(MIN_ROLE_CLUSTERS_FOR_SETTING_STATE_INDEX).toBe(3);
+    expect(MAX_TOP_EMPLOYER_SHARE_FOR_SETTING_STATE_INDEX).toBe(0.5);
+    expect(MAX_HUB_SHARE_FOR_SETTING_STATE_INDEX).toBe(0.7);
+    expect([...STRUCTURED_REMOTE_SETTING_SLUGS].sort()).toEqual(['remote', 'telehealth']);
+  });
+
+  it('FB-1: setting x state indexing ships switched off', () => {
+    expect(SETTING_STATE_INDEXING_ENABLED).toBe(false);
   });
 
   it('shouldRenderCategoryCity still gates at 3', () => {
@@ -86,7 +117,7 @@ describe('PseoStats freshness', () => {
   });
 });
 
-describe('shouldIndexListingPage (category landing, count half of every listing page)', () => {
+describe('shouldIndexListingPage (the count half only)', () => {
   it.each([
     [0, 1, false],
     [2, 1, false],
@@ -108,115 +139,175 @@ describe('shouldIndexListingPage (category landing, count half of every listing 
   });
 });
 
-describe('shouldIndexSettingState (category x state)', () => {
-  const NONE: SettingStateIndexFacts = {
-    totalJobs: 3,
-    employerCount: 1,
-    namedCityCount: 1,
-    hasBenchmark: false,
-    postedLast30Days: 0,
-    roleSetupRenders: false,
-  };
-
-  it('3 jobs with zero signals does not index', () => {
-    expect(countSettingStateIndexSignals(NONE)).toBe(0);
-    expect(shouldIndexSettingState(NONE)).toBe(false);
+describe('meetsListingFloor and shouldIndexCategoryLanding (CQ-06, fixSoon 1)', () => {
+  it.each([
+    [5, 3, true],
+    [4, 3, false],
+    [5, 2, false],
+    [16, 2, false],
+    [3, 1, false],
+    [50, 9, true],
+  ])('postings=%i employers=%i -> %s', (activeJobs, distinctEmployers, expected) => {
+    expect(meetsListingFloor({ activeJobs, distinctEmployers })).toBe(expected);
+    expect(shouldIndexCategoryLanding({ activeJobs, distinctEmployers })).toBe(expected);
   });
 
-  it('3 jobs with one signal does not index', () => {
-    expect(shouldIndexSettingState({ ...NONE, employerCount: 2 })).toBe(false);
-    expect(shouldIndexSettingState({ ...NONE, hasBenchmark: true })).toBe(false);
+  it('a landing indexes only on page 1', () => {
+    expect(shouldIndexCategoryLanding({ activeJobs: 50, distinctEmployers: 9, page: 2 })).toBe(false);
   });
 
-  it.each<[string, Partial<SettingStateIndexFacts>]>([
-    ['employers + cities', { employerCount: 2, namedCityCount: 2 }],
-    ['employers + benchmark', { employerCount: 2, hasBenchmark: true }],
-    ['cities + recency', { namedCityCount: 2, postedLast30Days: 1 }],
-    ['benchmark + role setup', { hasBenchmark: true, roleSetupRenders: true }],
-    ['recency + role setup', { postedLast30Days: 1, roleSetupRenders: true }],
-  ])('3 jobs with two signals (%s) indexes', (_label, facts) => {
-    expect(shouldIndexSettingState({ ...NONE, ...facts })).toBe(true);
-  });
-
-  it('counts each signal at its own floor', () => {
-    expect(countSettingStateIndexSignals({ ...NONE, employerCount: 2, namedCityCount: 2, postedLast30Days: 1 })).toBe(3);
-    expect(countSettingStateIndexSignals({
-      ...NONE, employerCount: 2, namedCityCount: 2, hasBenchmark: true, postedLast30Days: 1, roleSetupRenders: true,
-    })).toBe(5);
-  });
-
-  it('all five signals cannot rescue 2 jobs', () => {
-    const rich: SettingStateIndexFacts = {
-      totalJobs: 2,
-      employerCount: 2,
-      namedCityCount: 2,
-      hasBenchmark: true,
-      postedLast30Days: 5,
-      roleSetupRenders: true,
-    };
-    expect(shouldIndexSettingState(rich)).toBe(false);
-  });
-
-  it('page 2 never indexes', () => {
-    expect(shouldIndexSettingState({ ...NONE, employerCount: 2, namedCityCount: 2 }, 2)).toBe(false);
+  it('a non-finite count gates closed', () => {
+    expect(meetsListingFloor({ activeJobs: Number.NaN, distinctEmployers: 5 })).toBe(false);
+    expect(meetsListingFloor({ activeJobs: 9, distinctEmployers: Number.NaN })).toBe(false);
   });
 });
 
-describe('shouldIndexLocalListingPage (category x city and city)', () => {
+describe('shouldIndexSettingState (the strict category x state gate, CQ-01)', () => {
+  /** Eight postings from four employers in five roles; the hub is indexable and three times larger. */
+  const PASSING: SettingStateIndexFacts = {
+    postings: 8,
+    employers: 4,
+    roleClusters: 5,
+    topEmployerPostings: 3,
+    hubIndexable: true,
+    hubPostings: 24,
+    postedLast30Days: 2,
+  };
+
+  it('a page that clears every condition indexes', () => {
+    expect(shouldIndexSettingState(PASSING)).toBe(true);
+  });
+
+  it('3 jobs from 1 employer in 3 cities, all recent, does not index (the old gate passed it)', () => {
+    expect(shouldIndexSettingState({
+      postings: 3,
+      employers: 1,
+      roleClusters: 1,
+      topEmployerPostings: 3,
+      hubIndexable: true,
+      hubPostings: 40,
+      postedLast30Days: 3,
+    })).toBe(false);
+  });
+
+  it('a setting whose jobs are its noindex hub does not index (Utah, Rhode Island)', () => {
+    expect(shouldIndexSettingState({ ...PASSING, hubIndexable: false, hubPostings: 8 })).toBe(false);
+    // Even an indexable hub: a setting holding every hub job is the hub again.
+    expect(shouldIndexSettingState({ ...PASSING, hubPostings: 8 })).toBe(false);
+  });
+
+  it.each<[string, Partial<SettingStateIndexFacts>]>([
+    ['4 postings', { postings: 4, topEmployerPostings: 2, hubPostings: 24 }],
+    ['2 employers', { employers: 2 }],
+    ['2 role clusters', { roleClusters: 2 }],
+    ['top employer above half', { topEmployerPostings: 5 }],
+    ['parent hub noindex', { hubIndexable: false }],
+    ['more than 70 percent of the hub', { hubPostings: 11 }],
+    ['no hub postings', { hubPostings: 0 }],
+    // Skeptic 2's hard requirement: /jobs/1099/massachusetts passed the old
+    // gate with four postings, the newest 39 days old.
+    ['no posting in the last 30 days', { postedLast30Days: 0 }],
+    ['an unknown recency', { postedLast30Days: Number.NaN }],
+  ])('fails on %s', (_label, over) => {
+    expect(shouldIndexSettingState({ ...PASSING, ...over })).toBe(false);
+  });
+
+  it('sits exactly on each boundary and passes', () => {
+    expect(shouldIndexSettingState({
+      postings: 5,
+      employers: 3,
+      roleClusters: 3,
+      // 2 of 5 is 40 percent; 50 percent needs an even count, below.
+      topEmployerPostings: 2,
+      hubIndexable: true,
+      hubPostings: 8, // 5 of 8 is 62.5 percent
+      postedLast30Days: 1,
+    })).toBe(true);
+    expect(shouldIndexSettingState({ ...PASSING, postings: 10, topEmployerPostings: 5, hubPostings: 100 })).toBe(true);
+    expect(shouldIndexSettingState({ ...PASSING, postings: 7, topEmployerPostings: 3, hubPostings: 10 })).toBe(true);
+  });
+
+  it('page 2 never indexes', () => {
+    expect(shouldIndexSettingState(PASSING, 2)).toBe(false);
+  });
+});
+
+describe('isSettingStateIndexable (the FB-1 switch over the stored verdict)', () => {
+  it('nothing indexes while the switch is off, whatever the stored verdict', () => {
+    expect(isSettingStateIndexable(true)).toBe(false);
+    expect(isSettingStateIndexable(false)).toBe(false);
+  });
+
+  it('once switched on, the stored verdict decides', () => {
+    expect(isSettingStateIndexable(true, true)).toBe(true);
+    expect(isSettingStateIndexable(false, true)).toBe(false);
+  });
+});
+
+describe('shouldIndexLocalListingPage (category x city and city, the listing floor)', () => {
   it.each([
-    [2, 2, 1, false],
-    [3, 1, 1, false],
-    [3, 2, 1, true],
-    [10, 1, 1, false],
-    [10, 2, 1, true],
-    [3, 2, 2, false],
+    [3, 2, 1, false],
+    [4, 3, 1, false],
+    [5, 2, 1, false],
+    [5, 3, 1, true],
+    [19, 7, 1, true],
+    [5, 3, 2, false],
     [0, 0, 1, false],
-  ])('jobs=%i employers=%i page=%i -> %s', (activeJobs, distinctEmployers, page, expected) => {
+  ])('postings=%i employers=%i page=%i -> %s', (activeJobs, distinctEmployers, page, expected) => {
     expect(shouldIndexLocalListingPage({ activeJobs, distinctEmployers, page })).toBe(expected);
   });
 
   it('page defaults to 1', () => {
-    expect(shouldIndexLocalListingPage({ activeJobs: 3, distinctEmployers: 2 })).toBe(true);
+    expect(shouldIndexLocalListingPage({ activeJobs: 5, distinctEmployers: 3 })).toBe(true);
   });
 });
 
-describe('shouldIndexStateHub', () => {
+describe('shouldIndexStateHub (CQ-07)', () => {
   it.each([
-    [2, 4, 1, false],
-    [3, 3, 1, false],
-    [3, 4, 1, true],
-    [3, 7, 1, true],
-    [100, 4, 1, true],
-    [100, 3, 1, false],
-    [3, 4, 2, false],
-  ])('jobs=%i sections=%i page=%i -> %s', (activeJobs, liveDataSections, page, expected) => {
-    expect(shouldIndexStateHub({ activeJobs, liveDataSections, page })).toBe(expected);
+    [4, 3, 4, 1, false],
+    [5, 2, 4, 1, false],
+    [5, 3, 3, 1, false],
+    [5, 3, 4, 1, true],
+    [42, 9, 7, 1, true],
+    [42, 9, 4, 2, false],
+  ])('postings=%i employers=%i sections=%i page=%i -> %s', (activeJobs, distinctEmployers, liveDataSections, page, expected) => {
+    expect(shouldIndexStateHub({ activeJobs, distinctEmployers, liveDataSections, page })).toBe(expected);
   });
 
   it('page defaults to 1', () => {
-    expect(shouldIndexStateHub({ activeJobs: 3, liveDataSections: 4 })).toBe(true);
+    expect(shouldIndexStateHub({ activeJobs: 5, distinctEmployers: 3, liveDataSections: 4 })).toBe(true);
+  });
+
+  it('an absent employer count gates closed, so a caller that omits it can only under-list', () => {
+    expect(shouldIndexStateHub({ activeJobs: 42, liveDataSections: 7 })).toBe(false);
   });
 });
 
-describe('shouldIndexStateCityDirectory', () => {
+describe('shouldIndexStateCityDirectory (FB-1, M-05)', () => {
   it.each([
     [0, false],
-    [2, false],
-    [3, true],
+    [3, false],
+    [4, false],
+    [5, true],
     [12, true],
   ])('linkableCities=%i -> %s', (linkableCities, expected) => {
     expect(shouldIndexStateCityDirectory({ linkableCities })).toBe(expected);
   });
 });
 
-describe('shouldIndexMetro', () => {
+describe('shouldIndexMetro (CQ-08 recency)', () => {
   it.each([
-    [0, false],
-    [2, false],
-    [3, true],
-    [40, true],
-  ])('activeJobs=%i -> %s', (activeJobs, expected) => {
-    expect(shouldIndexMetro({ activeJobs })).toBe(expected);
+    [0, 0, false],
+    [2, 2, false],
+    [3, 0, false],
+    [3, 1, true],
+    [40, 12, true],
+  ])('postings=%i postedLast30Days=%i -> %s', (activeJobs, postedLast30Days, expected) => {
+    expect(shouldIndexMetro({ activeJobs, postedLast30Days })).toBe(expected);
+  });
+
+  it('an absent recency count gates closed', () => {
+    expect(shouldIndexMetro({ activeJobs: 40 })).toBe(false);
   });
 });
 

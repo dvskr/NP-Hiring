@@ -297,7 +297,7 @@ export default function TakeHomeCalculatorPage() {
               { href: '/tools/salary-benchmark', title: 'Salary benchmark', blurb: 'Median posted pay by state, straight from live listings on this board.' },
               { href: '/jobs/1099', title: '1099 roles', blurb: 'Open contractor postings across every specialty.' },
               { href: '/jobs/locum-tenens', title: 'Locum tenens roles', blurb: 'Assignment work with agency-covered malpractice and travel.' },
-              { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'State-by-state pay, updated from live postings.' },
+              { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'The national median, and a state median wherever enough postings support one.' },
             ].map((l) => (
               <Link key={l.href} href={l.href} className="tool-card" style={{ ...clayCard, padding: '20px 20px 18px', textDecoration: 'none', display: 'block' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>

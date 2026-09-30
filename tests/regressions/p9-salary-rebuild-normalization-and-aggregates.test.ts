@@ -139,10 +139,26 @@ describe('P9 #2b — annual cap applies after every conversion', () => {
     ];
     for (const { min, period } of cases) {
       const normalized = normalizeSalary({ minSalary: min, maxSalary: min, salaryPeriod: period });
-      expect(normalized.normalizedMinSalary ?? 0).toBeLessThanOrEqual(550_000);
-      // A clamp is an approximation — it must carry a below-threshold confidence.
-      expect(normalized.salaryConfidence ?? 1).toBeLessThan(SALARY_ANALYTICS_MIN_CONFIDENCE);
+      // Since 2026-09-28 (indexing audit CQ-02) an over-cap figure is
+      // WITHHELD rather than clamped to the cap: no stored annual above the
+      // cap, and nothing a published aggregate could pick up.
+      expect(normalized.normalizedMinSalary).toBeNull();
+      expect(normalized.normalizedMaxSalary).toBeNull();
     }
+  });
+
+  it('a real figure under the band floor is kept as stated, flagged out of analytics', () => {
+    // The clamp used to publish a $40k to $44k posting as $48k. The figure is
+    // the employer's own, so it stays, at a below-threshold confidence.
+    const normalized = normalizeSalary({ minSalary: 40_000, maxSalary: 44_000, salaryPeriod: 'annual' });
+    expect(normalized.normalizedMinSalary).toBe(40_000);
+    expect(normalized.normalizedMaxSalary).toBe(44_000);
+    expect(normalized.salaryConfidence ?? 1).toBeLessThan(SALARY_ANALYTICS_MIN_CONFIDENCE);
+  });
+
+  it('a figure no salary could be is withheld', () => {
+    expect(normalizeSalary({ minSalary: 1_500, maxSalary: 1_500, salaryPeriod: 'annual' }).normalizedMinSalary).toBeNull();
+    expect(normalizeSalary({ minSalary: 500, maxSalary: 500, salaryPeriod: 'hourly' }).normalizedMinSalary).toBeNull();
   });
 
   it('contract-cadence periods are excluded from the analytics predicate outright', () => {
@@ -290,7 +306,9 @@ describe('P9 #2d — publishing gate and median', () => {
     const hub = read('app/salary-guide/page.tsx');
     expect(hub).toContain('npSalaryAnalyticsWhere');
     expect(hub).toContain('filterNpEligibleRows');
-    expect(hub).toContain('summarizeBenchmarks');
+    // CQ-15: the benchmark gate now runs under the employer-share cap
+    // (lib/salary-guide-gate.ts, pinned onto summarizeBenchmarks below).
+    expect(hub).toContain('summarizeCappedBenchmarks(npRows)');
     expect(hub).toContain('BENCHMARK_MIN_POSTINGS');
     // Gold top-3 medal treatment is gone…
     expect(hub).not.toContain('rgba(251,191,36');
@@ -355,8 +373,19 @@ describe('P9 #2d — publishing gate and median', () => {
       'export function summarizeGatedSalary(',
       'export async function getGatedLocationSalary(',
     );
-    expect(gatedSummary).toContain('summarizeBenchmarks(');
-    expect(gatedSummary).toContain('if (!national) return { postings, employers, ...BELOW_GATE };');
+    // CQ-15: the pooled summary is the benchmark gate plus the employer-share
+    // cap, and the capped helpers are pinned onto summarizeBenchmarks in the
+    // gate module, so the gate cannot be dropped one level down either.
+    expect(gatedSummary).toContain('summarizeCappedPool(rows)');
+    expect(gatedSummary).toContain('if (!national) return { postings, employers, ...BELOW_GATE, ...split };');
+    const gate = read('lib/salary-guide-gate.ts');
+    const cappedFrom = gate.indexOf('export function summarizeCappedBenchmarks(');
+    expect(cappedFrom).toBeGreaterThan(-1);
+    expect(gate.slice(cappedFrom, gate.indexOf('export function summarizeCappedPool(', cappedFrom)))
+      .toContain('return applyEmployerShareCap(summarizeBenchmarks(rows), rows);');
+    const poolFrom = gate.indexOf('export function summarizeCappedPool(');
+    expect(gate.slice(poolFrom, gate.indexOf('export function summarizeCappedBenchmarkPool(', poolFrom)))
+      .toContain('summarizeCappedBenchmarks(');
 
     // ...and the entry point the state page imports is wired to both of them.
     const locationHelper = analyticsFn(
@@ -375,12 +404,23 @@ describe('P9 #2d — publishing gate and median', () => {
     // pages published mean-of-min/max over every isPublished row (psych-
     // tagged psychiatrist rows fed the PMHNP page directly) with a ranked
     // top-paying-states list.
+    //
+    // WHY THESE PINS MOVED (indexing audit CQ-09): the specialty loaders left
+    // the page for lib/salary-guide-specialty.ts, so the page's robots meta
+    // and the sitemap read one verdict over one pool. Same approach as the
+    // state page above: the page is pinned onto the module, and the module
+    // onto fetchNpAnalyticsRows (stages 1 and 2, pinned above) and the capped
+    // benchmark gate (stage 3).
     const specialtyPage = read('app/salary-guide/specialty/[specialty]/page.tsx');
-    expect(specialtyPage).toContain('npSalaryAnalyticsWhere');
-    expect(specialtyPage).toContain('filterNpEligibleRows');
-    expect(specialtyPage).toContain('summarizeBenchmarks');
+    expect(specialtyPage).toContain("from '@/lib/salary-guide-specialty'");
+    expect(specialtyPage).toContain('getSpecialtyLiveStats(page.slug)');
     expect(specialtyPage).toContain('BENCHMARK_MIN_POSTINGS');
     expect(specialtyPage).not.toContain('_avg');
+    const specialtyLib = read('lib/salary-guide-specialty.ts');
+    expect(specialtyLib).toContain('return fetchNpAnalyticsRows(scope);');
+    expect(specialtyLib).toContain('summarizeCappedPool(npRows)');
+    expect(specialtyLib).toContain('summarizeCappedBenchmarks(npRows).states');
+    expect(specialtyLib).not.toContain('_avg');
   });
 
   it('sitemap gate and /salary-guide/[state] 404 gate read the same predicate', () => {

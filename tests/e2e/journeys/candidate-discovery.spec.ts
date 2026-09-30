@@ -702,13 +702,17 @@ test.describe('candidate discovery (anonymous)', () => {
     expect(await clickAndWaitForList(page, facet(page, /^Remote\b/))).toBe(200);
     await expect(page).not.toHaveURL(/page=2/);
 
-    // Garbage / out-of-range values must not blank the board or 500.
-    for (const p of ['/jobs?page=999', '/jobs?page=0', '/jobs?page=-1', '/jobs?page=abc']) {
+    // Garbage values must not blank the board or 500: they read as page 1.
+    for (const p of ['/jobs?page=0', '/jobs?page=-1', '/jobs?page=abc']) {
       const resp = await page.goto(p);
       expect(resp?.status(), p).toBe(200);
       await expect(page.locator('h1'), p).toContainText(/APRN Jobs/);
       await expect(cards(page).first().or(noJobs(page)), p).toBeVisible();
     }
+    // TECH-09: a page past the last one is a 404, never an empty 200 that
+    // claims "Browse N Jobs (Page 999)".
+    const pastEnd = await page.goto('/jobs?page=999');
+    expect(pastEnd?.status(), '/jobs?page=999').toBe(404);
     });
   });
 
@@ -787,8 +791,10 @@ test.describe('candidate discovery (anonymous)', () => {
     const posting = ld.find((x) => x['@type'] === 'JobPosting') as Record<string, unknown> | undefined;
     expect(posting, 'JobPosting schema present').toBeTruthy();
     expect(posting!.occupationalCategory).toBe(NP_SOC);
-    // Visible titles swap a spaced hyphen separator for a middle dot (copy rule); structured data keeps the stored title.
-    const sep = (t: string) => t.replace(/\s[·-]\s/g, ' | ');
+    // Visible titles swap a spaced hyphen separator for a middle dot (copy rule); JobPosting.title is the
+    // clean role title (indexing audit GFJ-15), whose kept segments are joined with ", ". The seeded
+    // fixture title carries no pay, place or mode segment, so only the separators differ.
+    const sep = (t: string) => t.replace(/\s[·-]\s|,\s/g, ' | ');
     expect(sep(String(posting!.title))).toBe(sep(cardTitle));
     expect((posting!.hiringOrganization as { name: string }).name).toBe(TEST_EMPLOYER);
     const base = posting!.baseSalary as { value: { minValue: number; maxValue: number; unitText: string } };

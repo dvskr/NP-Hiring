@@ -20,12 +20,22 @@
  * specialtyNounPlural, and every mention of the cited median goes through
  * medianSentence. Both branch on `page.isNicheRole`, so a non-niche APRN
  * role (CRNA, CNM) can never be labelled with the niche token, and the
- * all-<niche> median can never be presented as that role's own pay.
+ * all-<niche> median can never be presented as that role's own pay: a
+ * non-niche page cites its own occupation's BLS median instead
+ * (citedMedian, indexing audit CQ-09).
+ *
+ * INDEX RULE (CQ-09, plan FB-2): a specialty page is indexable only when it
+ * publishes pay it can back, either a gated posted median or its own cited
+ * occupation median (specialtyIndexBasis). The all-<niche> median and the
+ * editorial premium estimate do not count, and the title claims only what
+ * the page renders (buildSpecialtyTitle).
  */
 import { brand } from '@/config/brand';
-import { STAT_SOURCES } from '@/lib/stats-sources';
+import { STAT_SOURCES, type StatSource } from '@/lib/stats-sources';
 import type { WorkModeMix } from '@/lib/pseo/listing-facts';
-import { buildSpecialtyFaqAdditions } from '@/lib/pseo/listing-narrative';
+import { buildSpecialtyFaqAdditions, formatDollars } from '@/lib/pseo/listing-narrative';
+import { formatCount } from '@/lib/display-text';
+import { formatStatVintage } from '@/components/SalaryProvenance';
 import type { SpecialtySalaryPage, SpecialtyPremium } from './specialty-config';
 
 // ─── Live-data shapes (filled by the page's DB queries) ─────────────────────
@@ -153,35 +163,119 @@ export function specialtyNounPlural(page: SpecialtySalaryPage): string {
 }
 
 /**
+ * The cited national median a page leads with: the all-<niche> BLS median
+ * on a niche page (its cohort figure), and the role's own occupation median
+ * on a non-niche APRN page, which the all-<niche> median does not include.
+ */
+export function citedMedian(page: SpecialtySalaryPage): StatSource {
+    return page.isNicheRole ? STAT_SOURCES.averageSalary : page.occupationWage;
+}
+
+/**
  * The sentence that carries the cited national median, split so surfaces
  * can emphasise the value while sharing one wording.
  *
- * On a niche-role page the median IS that page's cohort figure. On a
- * non-niche APRN page it is a neighbouring-market benchmark that EXCLUDES
- * the role, and must say so — otherwise the page (and its Article/FAQ
- * JSON-LD) reads as "a CRNA earns the all-NP median".
+ * On a niche-role page the all-<niche> median IS that page's cohort figure.
+ * A non-niche APRN page cites its own occupation's median and says why:
+ * the all-<niche> median excludes the role, so quoting it would read as "a
+ * CRNA earns the all-NP median".
  */
 export function medianSentenceParts(page: SpecialtySalaryPage): { lead: string; tail: string } {
     const short = brand.niche.short;
-    const source = STAT_SOURCES.averageSalary.source;
     if (page.isNicheRole) {
         return {
             lead: `The national median across all ${short}s is `,
-            tail: ` per year (${source}).`,
+            tail: ` per year (${STAT_SOURCES.averageSalary.source}).`,
         };
     }
     return {
-        lead: `${specialtyNounPlural(page)} are a distinct APRN role: the all-${short} median of `,
+        lead: `The national median wage for ${page.occupationWage.occupation} is `,
         tail:
-            ` per year (${source}) does not include them, and is shown here only as a benchmark ` +
-            `for the wider advanced-practice market.`,
+            ` per year (${page.occupationWage.source}). ${specialtyNounPlural(page)} are a distinct APRN role, ` +
+            `so this guide cites their own occupation rather than the all-${short} median, which does not include them.`,
     };
 }
 
 /** {@link medianSentenceParts} rendered as one plain string. */
 export function medianSentence(page: SpecialtySalaryPage): string {
     const { lead, tail } = medianSentenceParts(page);
-    return `${lead}${STAT_SOURCES.averageSalary.formatted}${tail}`;
+    return `${lead}${citedMedian(page).formatted}${tail}`;
+}
+
+// ─── Index rule and title claims (indexing audit CQ-09, plan FB-2) ──────────
+
+/** Why a specialty page may be indexed: pay it publishes and can back. */
+export type SpecialtyIndexBasis = 'posted-median' | 'occupation-wage';
+
+/**
+ * The index verdict for a specialty page, or null for `noindex, follow`.
+ * A gated posted median (the benchmark gate plus the employer-share cap)
+ * qualifies any page; a non-niche page also qualifies on its own cited
+ * occupation median. The all-<niche> median and the premium estimate never
+ * do: neither is pay data for the specialty itself.
+ */
+export function specialtyIndexBasis(
+    page: SpecialtySalaryPage,
+    live: Pick<SpecialtyLiveStats, 'gatePassed' | 'medianSalary'>,
+): SpecialtyIndexBasis | null {
+    if (live.gatePassed && live.medianSalary > 0) return 'posted-median';
+    if (!page.isNicheRole) return 'occupation-wage';
+    return null;
+}
+
+/** What a specialty page actually renders, for the claims its title may make. */
+export interface SpecialtyTitleClaims {
+    /** The page publishes pay of its own (a non-null specialtyIndexBasis). */
+    hasPay: boolean;
+    /** The top-paying-states table renders (3 or more gated state medians). */
+    hasTopStates: boolean;
+}
+
+/** Minimum gated state rows before the top-paying-states section renders. */
+export const MIN_TOP_STATES = 3;
+
+/**
+ * <title> for a specialty page. "Pay and Top States" is claimed only when
+ * both sections render; a page with neither carries the bare guide name.
+ */
+export function buildSpecialtyTitle(page: SpecialtySalaryPage, year: number, claims: SpecialtyTitleClaims): string {
+    const base = `${page.shortTitle} Salary Guide ${year}`;
+    if (claims.hasPay && claims.hasTopStates) return `${base}: Pay and Top States`;
+    if (claims.hasPay) return `${base}: Median Pay`;
+    if (claims.hasTopStates) return `${base}: Top-Paying States`;
+    return base;
+}
+
+/**
+ * Meta description for a non-niche page: its own cited occupation median
+ * first (the one national figure it can back), then the live count and,
+ * when gated, the posted median. Null on a niche page, which keeps the
+ * shared buildSpecialtyDescription. The caller truncates to its budget.
+ */
+export function buildOccupationWageDescription(
+    page: SpecialtySalaryPage,
+    input: { total: number; posted: { median: number; postings: number } | null },
+): string | null {
+    if (page.isNicheRole) return null;
+    const wage = page.occupationWage;
+    const posted = input.posted
+        ? `, posted median ${formatDollars(input.posted.median)} from ${formatCount(input.posted.postings, 'posting')}`
+        : '';
+    return `${page.credential} salary: national median ${wage.formatted} (BLS OEWS, ${formatStatVintage(wage.asOf)}). `
+        + `${formatCount(input.total, 'open role')} on ${brand.name}${posted}.`;
+}
+
+/** Article JSON-LD headline, naming only the sections the page renders. */
+export function buildSpecialtyHeadline(page: SpecialtySalaryPage, claims: SpecialtyTitleClaims): string {
+    const parts = [
+        claims.hasPay ? 'Pay' : null,
+        page.premium ? 'Premium Estimate' : null,
+        claims.hasTopStates ? 'Top States' : null,
+    ].filter((part): part is string => part !== null);
+    const base = `${page.role} Salary Guide`;
+    if (parts.length === 0) return base;
+    if (parts.length === 1) return `${base}: ${parts[0]}`;
+    return `${base}: ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 // ─── FAQ builder (feeds visible accordion AND FAQPage JSON-LD) ──────────────
@@ -228,19 +322,17 @@ export function buildSpecialtyFaqs(
     const faqs: SpecialtyFaq[] = [];
 
     // 1. Headline pay question — cited median + premium-derived range + live
-    //    data. On a non-niche APRN page medianSentence says outright that the
-    //    median excludes the role, and the only dollar figures that can
-    //    follow are live board aggregates.
+    //    data. On a non-niche APRN page medianSentence cites the role's own
+    //    occupation median and says why the all-niche median is not used;
+    //    the only other dollar figures that can follow are live board
+    //    aggregates.
     const payParts: string[] = [medianSentence(page)];
     if (page.premium) {
         const r = premiumEstimateRange(page.premium);
+        // The premium is the hub's editorial table, not survey data, so the
+        // answer says so rather than stating it as what the role earns.
         payParts.push(
-            `${page.label} roles typically carry a ${page.premium.minPct} to ${page.premium.maxPct}% premium over that median, an estimated ${bandText(r)}.`,
-        );
-    }
-    if (!page.isNicheRole) {
-        payParts.push(
-            `${brand.name} publishes ${noun} pay only from live ${noun} postings that disclose salary. No national ${noun} wage figure is cited on this board.`,
+            `This guide applies an editorial premium of ${page.premium.minPct} to ${page.premium.maxPct}% to that median for ${page.label.toLowerCase()} roles, an estimated ${bandText(r)} that is not survey data.`,
         );
     }
     // P9 #2d: only a GATED median may be quoted (benchmark policy — n ≥ 5
@@ -258,18 +350,22 @@ export function buildSpecialtyFaqs(
     }
     faqs.push({ q: `How much does ${indefiniteArticle(page.role)} ${page.role} make?`, a: payParts.join(' ') });
 
-    // 2. Premium driver (premium specialties only).
+    // 2. Premium driver (premium specialties only). The premium is the
+    //    hub's editorial estimate, not survey data, so the question asks what
+    //    the guide estimates rather than asserting that the role earns one:
+    //    it ships into FAQPage JSON-LD, where a presupposed premium would
+    //    read as a sourced fact.
     if (page.premium) {
         faqs.push({
-            q: `Why do ${specialtyNounPlural(page)} earn a premium?`,
-            a: `The ${page.premium.minPct} to ${page.premium.maxPct}% premium reflects ${page.premium.driver}. Typical practice settings include ${settingsList(page.settings)}.`,
+            q: `What premium does this guide estimate for ${specialtyNounPlural(page)}?`,
+            a: `This guide's editorial estimate is ${page.premium.minPct} to ${page.premium.maxPct}% over the all-${brand.niche.short} median, reflecting ${page.premium.driver}. It is not survey data. Typical practice settings include ${settingsList(page.settings)}.`,
         });
     }
 
     // 3. Top-paying states — only when live data supports it. Each row is a
     //    gated per-state MEDIAN (benchmark policy), so the sample counts
     //    quoted here are always ≥ the publishing minimum.
-    if (topStates.length >= 3) {
+    if (topStates.length >= MIN_TOP_STATES) {
         const top3 = topStates
             .slice(0, 3)
             .map((s) => `${s.state} (${formatSalary(s.medianSalary)} median across ${s.jobCount} ${s.jobCount === 1 ? 'posting' : 'postings'})`)

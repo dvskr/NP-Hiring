@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import SalaryGuideForm from '@/components/SalaryGuideForm';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
+import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 import SalaryCalculator from '@/components/SalaryCalculator';
 import SalaryProvenance from '@/components/SalaryProvenance';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -19,12 +20,16 @@ import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 import { SALARY_SPECIALTY_PAGES } from '@/app/salary-guide/specialty/specialty-config';
 // Review P9 #2c/#2d: published aggregates run on the gated NP-eligible
 // pool and adopt the benchmark widget's policy (median, n ≥ 5 postings,
-// ≥ 3 employers) — the one salary surface the live review found correct.
+// ≥ 3 employers) — the one salary surface the live review found correct —
+// plus the indexing audit's CQ-15 employer-share cap
+// (summarizeCappedBenchmarks: summarizeBenchmarks, then no employer above
+// MAX_EMPLOYER_SHARE_PERCENT of a published median's postings).
 import {
-  summarizeBenchmarks,
   BENCHMARK_MIN_POSTINGS,
   BENCHMARK_MIN_EMPLOYERS,
 } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT, summarizeCappedBenchmarks } from '@/lib/salary-guide-gate';
+import { formatStatVintage } from '@/components/SalaryProvenance';
 import {
   npSalaryAnalyticsWhere,
   NP_SALARY_ANALYTICS_SELECT,
@@ -46,8 +51,18 @@ const LAST_REVIEWED_DATE = '2026-07-28';
 // contradicted the cited figure; a drift test
 // (tests/regressions/aeo-content-citation-stats.test.ts) now blocks
 // re-hardcoding a national salary here.
-const NATIONAL_SALARY = STAT_SOURCES.averageSalary; // '$129,210' (BLS OEWS May 2024 median)
-const NATIONAL_SALARY_K = Math.round(Number(NATIONAL_SALARY.value) / 1000); // 129
+const NATIONAL_SALARY = STAT_SOURCES.averageSalary; // '$132,300' (BLS OEWS May 2025 median)
+const NATIONAL_SALARY_K = Math.round(Number(NATIONAL_SALARY.value) / 1000); // 132
+// "May 2025" from the entry's own asOf, so the inline cite follows a
+// vintage refresh of lib/stats-sources.ts instead of going stale.
+const NATIONAL_SALARY_VINTAGE = formatStatVintage(NATIONAL_SALARY.asOf);
+// The percentile pills cite the same OEWS release (HANDOFFS 181): nothing
+// here is typed by hand. Rounded toward the claim ("under" rounds up,
+// "over" rounds down), so the compact $K figure stays true.
+const NATIONAL_P10 = STAT_SOURCES.salaryPercentile10; // '$101,340' (BLS OEWS May 2025)
+const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90; // '$174,420' (BLS OEWS May 2025)
+const P10_UNDER_K = Math.ceil(Number(NATIONAL_P10.value) / 1000); // 102
+const P90_OVER_K = Math.floor(Number(NATIONAL_P90.value) / 1000); // 174
 const NP_GROWTH = STAT_SOURCES.blsGrowth2034; // '40%'
 const FPA_STATES = STAT_SOURCES.fullPracticeStates; // '27 states + DC' (AANP)
 const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation; // '90 million+' (HRSA, primary care)
@@ -100,6 +115,22 @@ interface SmallSampleState {
   slug: string;
 }
 
+/**
+ * A state whose sample clears the benchmark gate but not the CQ-15
+ * employer-share cap: named with its counts, never with a figure or the
+ * employer (a figure dominated by one named employer is that employer's pay
+ * band, which benchmark-model's public-safety rule 2 forbids publishing).
+ */
+interface EmployerHeldState {
+  state: string;
+  stateCode: string;
+  /** Postings in the benchmark sample. */
+  jobCount: number;
+  /** Postings from the single largest employer. */
+  topEmployerPostings: number;
+  slug: string;
+}
+
 const stateSlug = (name: string) => name.toLowerCase().replace(/\s+/g, '-');
 
 /**
@@ -127,7 +158,7 @@ async function getSalaryAnalytics() {
   });
 
   const npRows = filterNpEligibleRows(rows);
-  const { national, states } = summarizeBenchmarks(npRows);
+  const { national, states, heldStates } = summarizeCappedBenchmarks(npRows);
 
   const gatedStates: StateSalary[] = states
     .map((s) => ({
@@ -142,13 +173,23 @@ async function getSalaryAnalytics() {
     }))
     .sort((a, b) => b.medianSalary - a.medianSalary);
 
-  const gatedNames = new Set(gatedStates.map((s) => s.state));
+  const employerHeldStates: EmployerHeldState[] = heldStates
+    .map(({ scope, concentration }) => ({
+      state: scope,
+      stateCode: STATE_CODES[scope] || '',
+      jobCount: concentration.postings,
+      topEmployerPostings: concentration.topEmployerPostings,
+      slug: stateSlug(scope),
+    }))
+    .sort((a, b) => a.state.localeCompare(b.state));
+
+  const listedNames = new Set([...gatedStates, ...employerHeldStates].map((s) => s.state));
   const countsByState = new Map<string, number>();
   for (const row of npRows) {
     if (row.state) countsByState.set(row.state, (countsByState.get(row.state) ?? 0) + 1);
   }
   const smallSampleStates: SmallSampleState[] = [...countsByState.entries()]
-    .filter(([name]) => !gatedNames.has(name))
+    .filter(([name]) => !listedNames.has(name))
     .map(([name, count]) => ({
       state: name,
       stateCode: STATE_CODES[name] || '',
@@ -160,6 +201,7 @@ async function getSalaryAnalytics() {
   return {
     stateSalaries: gatedStates,
     smallSampleStates,
+    employerHeldStates,
     national,
     overallStats: {
       // Size of the gated analytics pool — the honest "postings analyzed"
@@ -327,7 +369,7 @@ const faqData = [
 ];
 
 export default async function SalaryGuidePage() {
-  const { stateSalaries, smallSampleStates, national, overallStats } = await getSalaryAnalytics();
+  const { stateSalaries, smallSampleStates, employerHeldStates, national, overallStats } = await getSalaryAnalytics();
 
   // Calculator base: the gated national median of NP-eligible postings
   // when it exists; otherwise fall back to the cited BLS OEWS national
@@ -359,6 +401,9 @@ export default async function SalaryGuidePage() {
     "datePublished": "2026-01-01T00:00:00Z",
     "dateModified": `${LAST_REVIEWED_DATE}T00:00:00Z`,
     "author": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
+    // CQ-12: a configured named author replaces the Organization author, and
+    // a configured reviewer adds reviewedBy; {} while neither is set.
+    ...editorialSchemaFields(),
     // B56: publisher logo previously referenced an SVG path that does not
     // exist in public/ — /logo.png is the real asset.
     "publisher": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
@@ -404,8 +449,14 @@ export default async function SalaryGuidePage() {
               {brand.niche.short} Salary Guide
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-              National median <strong>{NATIONAL_SALARY.formatted}</strong> per year (BLS OEWS, May 2024). State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
+              National median <strong>{NATIONAL_SALARY.formatted}</strong> per year (BLS OEWS, {NATIONAL_SALARY_VINTAGE}). State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
             </p>
+            {/* CQ-12: the visible authorship line, matching the Article
+                JSON-LD below (the editorial team until a named author or
+                reviewer is configured in brand.editorial). */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <EditorialByline variant="hero" />
+            </div>
           </div>
 
           {/* ─── Bento Grid ───
@@ -435,8 +486,8 @@ export default async function SalaryGuidePage() {
                 <h3 style={{ fontSize: '13px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Key Numbers</h3>
                 {[
                   { value: `$${NATIONAL_SALARY_K}K`, label: 'National Median', bg: '#D4F5E9', color: '#065F46' },
-                  { value: '$95K', label: 'Entry Level', bg: '#E0E7FF', color: '#3730A3' },
-                  { value: '$165K+', label: 'Top 10%', bg: '#FEF3C7', color: '#92400E' },
+                  { value: `$${P10_UNDER_K}K`, label: 'Lowest 10% earn under', bg: '#E0E7FF', color: '#3730A3' },
+                  { value: `$${P90_OVER_K}K`, label: 'Top 10% earn over', bg: '#FEF3C7', color: '#92400E' },
                   { value: NP_GROWTH.formatted, label: 'Job Growth', bg: '#FFE0D3', color: '#7C2D12' },
                 ].map(s => (
                   <div key={s.label} className="sal-stat-pill" style={{
@@ -509,7 +560,7 @@ export default async function SalaryGuidePage() {
                       already ran, review date a literal (never render
                       time; P0 #23). */}
                   <SalaryProvenance
-                    cited={[NATIONAL_SALARY]}
+                    cited={[NATIONAL_SALARY, NATIONAL_P10, NATIONAL_P90]}
                     live={{ count: overallStats.jobsWithSalary, minimum: 1 }}
                     reviewedOn={LAST_REVIEWED_DATE}
                     style={{ fontSize: '11px', color: '#64748B', marginTop: '6px' }}
@@ -522,7 +573,7 @@ export default async function SalaryGuidePage() {
               }} className="sal-quick-stats">
                 {[
                   { value: NATIONAL_SALARY.formatted, label: 'National Median (BLS)', color: '#BE185D' },
-                  { value: '$165,000+', label: 'Top 10% Earn', color: '#BE185D' },
+                  { value: NATIONAL_P90.formatted, label: 'Top 10% earn over (BLS)', color: '#BE185D' },
                   { value: NP_GROWTH.formatted, label: 'Job Growth by 2034', color: '#B45309' },
                   { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings Analyzed', color: '#B45309' },
                 ].map(s => (
@@ -541,7 +592,7 @@ export default async function SalaryGuidePage() {
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 3: STATE SALARY TABLE (slate bg)
           ═══════════════════════════════════════════════════════════════ */}
-      {stateSalaries.length > 0 && (
+      {(stateSalaries.length > 0 || employerHeldStates.length > 0) && (
         <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
@@ -569,7 +620,7 @@ export default async function SalaryGuidePage() {
                     readers here. */}
                 <strong>Note:</strong> Each figure is the <strong>median</strong> of that state&apos;s active {brand.niche.short}-eligible postings with disclosed,
                 non-estimated salary (screened by job title), recomputed daily. A state appears with a figure only when it has at least {BENCHMARK_MIN_POSTINGS} such
-                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers; states below that sample are listed separately without a figure.
+                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers, with no single employer contributing more than {MAX_EMPLOYER_SHARE_PERCENT}% of them; states that miss either condition are listed separately without a figure.
                 {' '}Each state name links to a detailed page with pay by setting and top employers.
               </p>
               {/* A4: the table's own snapshot basis — the same national
@@ -582,7 +633,8 @@ export default async function SalaryGuidePage() {
               />
             </div>
 
-            {/* Table */}
+            {/* Table (omitted when every sizable state is held by the cap) */}
+            {stateSalaries.length > 0 && (
             <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
               <table role="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                 <thead>
@@ -633,6 +685,7 @@ export default async function SalaryGuidePage() {
                 </tbody>
               </table>
             </div>
+            )}
 
             {/* Review P9 #2d: states with postings but below the publishing
                 gate are named WITHOUT a figure — the honest replacement for
@@ -649,6 +702,28 @@ export default async function SalaryGuidePage() {
                   {smallSampleStates.map((s) => (
                     <Link key={s.state} href={`/salary-guide/${s.slug}`} className="sal-state-link" style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
                       {s.state} <span style={{ color: '#64748B', fontWeight: 500 }}>({s.jobCount})</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CQ-15: states whose sample is large enough but where one
+                employer posts more than the cap allows. Named with the
+                sample's own counts, so a 26 posting state is never called
+                "too small", and never with a figure or the employer. */}
+            {employerHeldStates.length > 0 && (
+              <div style={{ ...clayCard, marginTop: '20px', padding: '18px 24px' }}>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
+                  States where one employer posts more than {MAX_EMPLOYER_SHARE_PERCENT}% of the pay data
+                </p>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 10px', lineHeight: 1.5 }}>
+                  Each of these states has at least {BENCHMARK_MIN_POSTINGS} qualifying postings from {BENCHMARK_MIN_EMPLOYERS}+ employers, but a single employer accounts for more than {MAX_EMPLOYER_SHARE_PERCENT}% of them, so a median would lean heavily on that one employer&apos;s pay scale. No figure is published until the mix broadens:
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
+                  {employerHeldStates.map((s) => (
+                    <Link key={s.state} href={`/salary-guide/${s.slug}`} className="sal-state-link" style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
+                      {s.state} <span style={{ color: '#64748B', fontWeight: 500 }}>({s.topEmployerPostings} of {s.jobCount} from one employer)</span>
                     </Link>
                   ))}
                 </div>
@@ -888,6 +963,13 @@ export default async function SalaryGuidePage() {
                 </div>
             ))}
           </div>
+          {/* CQ-13: the long-form companion to these cards. */}
+          <p style={{ fontSize: '14px', color: '#5A4A42', textAlign: 'center', margin: '24px 0 0' }}>
+            How each factor shows up in a real offer:{' '}
+            <Link href="/blog/np-salary-guide" style={{ color: '#BE185D', fontWeight: 600 }}>
+              What moves NP pay
+            </Link>
+          </p>
         </div>
       </div>
 
@@ -938,7 +1020,7 @@ export default async function SalaryGuidePage() {
           {/* Data Sources */}
           <div style={{ ...clayCard, padding: '16px 24px', background: 'rgba(0,0,0,0.02)', marginBottom: '24px', textAlign: 'center' }}>
             <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
-              <strong>Data Sources & Methodology:</strong> Bureau of Labor Statistics (BLS OEWS, May 2024), HRSA, AANP, and analysis of {overallStats.jobsWithSalary.toLocaleString('en-US')} active {brand.niche.short} job postings with disclosed salary on this board. Job posting data updates daily.
+              <strong>Data Sources & Methodology:</strong> Bureau of Labor Statistics (BLS OEWS, {NATIONAL_SALARY_VINTAGE}), HRSA, AANP, and analysis of {overallStats.jobsWithSalary.toLocaleString('en-US')} active {brand.niche.short} job postings with disclosed salary on this board. Job posting data updates daily.
             </p>
           </div>
 

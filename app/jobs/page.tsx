@@ -1,6 +1,7 @@
 import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
 import { buildJobsOrderBy, type JobSort } from '@/lib/utils/job-sort';
@@ -9,6 +10,14 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobsPageClient from './JobsPageClient';
 import { Job } from '@/lib/types';
 import { JobsBoardListViewTracker } from '@/components/analytics/ViewTrackers';
+import { cardSummary } from '@/lib/pseo/job-listing-omit';
+import { loadIndexableLandingSlugs } from '@/lib/pseo/landing-verdicts';
+import { parseListingPage } from '@/lib/pseo/listing-pagination';
+import {
+  buildHubCategoryFaqAnswer,
+  selectHubCategoryGroups,
+  type HubCategoryGroup,
+} from '@/lib/pseo/hub-category-links';
 
 
 // Nav-only params do not constitute a user filter — paginated and sorted
@@ -19,6 +28,30 @@ const NAV_ONLY_PARAMS = new Set(['page', 'sort']);
 // ISR: Revalidate every 60 seconds
 export const revalidate = 60;
 
+/**
+ * Jobs per server-rendered page. JobsPageClient pages with the same size
+ * (tests/regressions/ga-list-clicks.test.ts pins the pair), and the metadata
+ * reads it too, so an out-of-range page 404s by the same arithmetic the
+ * listing uses (TECH-09).
+ */
+const limit = 50;
+
+/**
+ * The 1-based page from ?page: anything unparsable is page 1, anything above
+ * MAX_LISTING_PAGE is MAX_LISTING_PAGE (the shared listing rule). Without the
+ * cap, ?page=1000000000000000000 gave a skip past Prisma's 64-bit range, the
+ * fetch threw, and the catch below rendered the empty fallback board at 200
+ * instead of the TECH-09 404.
+ */
+function boardPage(raw: string | string[] | undefined): number {
+  return parseListingPage(raw);
+}
+
+/** TECH-09: a page past the last one is a 404 (a 0-result search stays a 200, noindex). */
+function isBoardPageOutOfRange(page: number, total: number): boolean {
+  return page > 1 && page > Math.ceil(total / limit);
+}
+
 // ─── /jobs hub editorial + citable FAQ (P1 #17) ─────────────────────────────
 // TRUTH RULE: every figure below derives from lib/stats-sources.ts or the
 // live DB count passed in — never an invented statistic. The FAQPage schema
@@ -26,7 +59,7 @@ export const revalidate = 60;
 
 interface HubFaq { question: string; answer: string; }
 
-function buildJobsHubFaqs(totalJobs: number): HubFaq[] {
+function buildJobsHubFaqs(totalJobs: number, categoryGroups: readonly HubCategoryGroup[]): HubFaq[] {
   const median = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source})`;
   return [
     {
@@ -34,7 +67,8 @@ function buildJobsHubFaqs(totalJobs: number): HubFaq[] {
       answer: `There are currently ${totalJobs.toLocaleString()} ${brand.niche.descriptor} and APRN jobs listed, spanning states, specialties, and work settings. Listings are refreshed daily as new roles are ingested and stale postings are retired.`,
     },
     {
-      question: `What is the average ${brand.niche.descriptor} salary?`,
+      // House style: median, never average (the answer cites the BLS median).
+      question: `What is the median ${brand.niche.descriptor} salary?`,
       answer: `${brand.niche.long}s earn a median annual wage of ${median}. Actual pay varies with specialty, practice setting, experience, and state. Many listings include posted salary ranges, and the salary guide breaks pay down state by state.`,
     },
     {
@@ -54,7 +88,10 @@ function buildJobsHubFaqs(totalJobs: number): HubFaq[] {
     },
     {
       question: `Which specialties and job types can I browse?`,
-      answer: `Dedicated hubs cover the major NP specialties, including family practice, adult-gerontology, pediatric, acute care, and emergency, as well as APRN roles (CRNA, CNM, CNS), work settings such as remote, telehealth, and travel, and job types from full-time to per-diem, contract, and 1099.`,
+      // M-07: names only the categories whose landing is indexable now, the
+      // same set the editorial block links, so the answer never promises a
+      // page that answers noindex or 404.
+      answer: buildHubCategoryFaqAnswer(categoryGroups),
     },
     {
       question: `Can I get new ${brand.niche.descriptor} jobs by email?`,
@@ -134,7 +171,10 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   //  - Page 1, no filters, totalJobs > 0 → index normally with canonical to /jobs
   const userFilterKeys = Object.keys(params).filter((k) => !NAV_ONLY_PARAMS.has(k));
   const hasUserFilters = userFilterKeys.length > 0;
-  const pageNum = Math.max(1, parseInt((params.page as string) || '1'));
+  const pageNum = boardPage(params.page);
+  // TECH-09: /jobs?page=999 used to answer 200 with an empty list and the
+  // title "Browse 638 NP Jobs Near Me (Page 999)".
+  if (isBoardPageOutOfRange(pageNum, totalJobs)) notFound();
   const isPaginated = pageNum > 1;
   const isEmpty = totalJobs === 0;
   const shouldNoindex = hasUserFilters || isPaginated || isEmpty;
@@ -200,9 +240,8 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   const where = buildWhereClause(filters);
 
   // Get page and sort from params
-  const page = parseInt((params.page as string) || '1');
+  const page = boardPage(params.page);
   const sort = (params.sort as string) || 'best';
-  const limit = 50;
   const skip = (page - 1) * limit;
 
   // Build orderBy via the single source of truth (lib/utils/job-sort). This is
@@ -244,7 +283,10 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           normalizedMinSalary: true,
           normalizedMaxSalary: true,
           salaryPeriod: true,
-          description: true,
+          // L-06: never the full description. Every prop JobsPageClient gets
+          // lands in the RSC payload (52 descriptions made a 404 KB payload);
+          // the card reads at most a short summary, cut to 200 characters
+          // below.
           descriptionSummary: true,
           createdAt: true,
           isFeatured: true,
@@ -264,7 +306,12 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     ]);
 
     // Map employer logo onto job objects
-    jobs = rawJobs.map(j => ({ ...j, companyLogoUrl: j.employerJobs?.companyLogoUrl || null, employerJobs: undefined })) as unknown as Job[];
+    jobs = rawJobs.map(j => ({
+      ...j,
+      descriptionSummary: cardSummary(j.descriptionSummary),
+      companyLogoUrl: j.employerJobs?.companyLogoUrl || null,
+      employerJobs: undefined,
+    })) as unknown as Job[];
     total = jobCount;
   } catch (error) {
     console.error('Error fetching jobs on server:', error);
@@ -282,11 +329,22 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     );
   }
 
+  // TECH-09: a page past the last one is a 404 (outside the try above, so
+  // the not-found signal is never swallowed as a fetch error).
+  if (isBoardPageOutOfRange(page, total)) notFound();
+
   // Hub editorial + FAQ render only on the canonical unfiltered first page —
   // filtered and paginated views are noindexed and stay listing-only.
   const userFilterKeys = Object.keys(params).filter((k) => !NAV_ONLY_PARAMS.has(k));
   const showHubEditorial = userFilterKeys.length === 0 && page === 1 && total > 0;
-  const hubFaqs = showHubEditorial ? buildJobsHubFaqs(total) : [];
+  // M-07: the category links come from the landing index verdicts (the rule
+  // the primary sitemap submits landings on), never a fixed list, so the hub
+  // links every indexable landing and none that answers noindex or 404. An
+  // unreadable verdict links none.
+  const hubCategoryGroups = showHubEditorial
+    ? selectHubCategoryGroups((await loadIndexableLandingSlugs('jobs-hub')) ?? new Set<string>())
+    : [];
+  const hubFaqs = showHubEditorial ? buildJobsHubFaqs(total, hubCategoryGroups) : [];
   const hubFaqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -379,15 +437,38 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
               Explore {brand.niche.descriptor} jobs by specialty, setting, and state
             </h2>
             <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: '0 0 14px' }}>
-              {brand.legal.brandDisplayName} lists {brand.niche.descriptor} and APRN roles across every major
-              specialty, from <Link href="/jobs/family-practice" style={{ color: '#BE185D', fontWeight: 600 }}>family practice</Link> and{' '}
-              <Link href="/jobs/acute-care" style={{ color: '#BE185D', fontWeight: 600 }}>acute care</Link> to{' '}
-              <Link href="/jobs/anesthesia" style={{ color: '#BE185D', fontWeight: 600 }}>nurse anesthesia (CRNA)</Link> and{' '}
-              <Link href="/jobs/midwifery" style={{ color: '#BE185D', fontWeight: 600 }}>nurse midwifery (CNM)</Link>, plus dedicated
-              hubs for <Link href="/jobs/remote" style={{ color: '#BE185D', fontWeight: 600 }}>remote</Link>,{' '}
-              <Link href="/jobs/telehealth" style={{ color: '#BE185D', fontWeight: 600 }}>telehealth</Link>, and{' '}
-              <Link href="/jobs/travel" style={{ color: '#BE185D', fontWeight: 600 }}>travel</Link> work.
+              {brand.legal.brandDisplayName} lists {brand.niche.descriptor} and APRN roles by specialty, work
+              setting, job type and location.
+              {hubCategoryGroups.length > 0 && ' Each category below has its own page of current openings.'}
             </p>
+            {/* M-07: every indexable category landing, grouped by axis, built
+                from the landing index verdicts (lib/pseo/hub-category-links.ts). */}
+            {hubCategoryGroups.length > 0 && (
+              <nav
+                aria-label="Job categories"
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '18px 28px', margin: '4px 0 22px' }}
+              >
+                {hubCategoryGroups.map((group) => (
+                  <div key={group.axis}>
+                    <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
+                      {group.title}
+                    </h3>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {group.links.map((link) => (
+                        <li key={link.slug}>
+                          <Link
+                            href={link.href}
+                            style={{ display: 'inline-block', padding: '6px 12px', borderRadius: '999px', background: '#FFFFFF', border: '1px solid rgba(190,24,93,0.2)', color: '#BE185D', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            {link.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </nav>
+            )}
             <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: '0 0 14px' }}>
               Salary transparency matters here: listings surface posted pay ranges wherever the employer provides
               them, and the <Link href="/salary-guide" style={{ color: '#BE185D', fontWeight: 600 }}>salary guide</Link> tracks

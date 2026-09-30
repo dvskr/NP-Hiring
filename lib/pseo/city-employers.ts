@@ -76,6 +76,19 @@ function employerIdentity(raw: string, canonical: string | null): string {
 }
 
 /**
+ * The same identity for a raw employer string, for callers that count
+ * employers outside a groupBy (the posting and role-cluster counts in
+ * lib/pseo/posting-clusters.ts), so "LifeStance" and "LifeStance Health" are
+ * one employer there exactly as they are one row here. Empty input has no
+ * identity.
+ */
+export function employerIdentityKey(raw: string | null | undefined): string | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  return employerIdentity(trimmed, findCanonicalName(trimmed));
+}
+
+/**
  * Merge raw groupBy rows into display-ready employers.
  *
  * Pure (no DB) so the gating rules are unit-testable without a database.

@@ -544,6 +544,12 @@ test.describe('easy apply', () => {
 
   test('anonymous visitor is gated; sign-in returns to the job with the modal auto-opened', async ({ page, guard }) => {
     void guard;
+    // The job page mounts a desktop and a mobile ApplyButton and CSS hides
+    // one. Only the visible one may act on ?apply=1: one modal, one click.
+    const trackApplyPosts: string[] = [];
+    page.on('request', (req) => {
+      if (req.method() === 'POST' && /\/api\/jobs\/[^/]+\/track-apply/.test(req.url())) trackApplyPosts.push(req.url());
+    });
     await page.goto(jobPath());
     await easyApplyButton(page).click();
     await expect(page.getByRole('heading', { name: /sign in to apply/i })).toBeVisible();
@@ -556,6 +562,10 @@ test.describe('easy apply', () => {
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(/apply=1/);
     await expect(applyDialog(page)).toBeVisible();
+    await expect(applyDialog(page), 'the hidden ApplyButton must not open a second modal').toHaveCount(1);
+    // The signed-out click only opened the gate; the return trip counts it.
+    await expect.poll(() => trackApplyPosts.length).toBeGreaterThan(0);
+    expect(trackApplyPosts, 'the apply click is counted once, by the visible ApplyButton').toHaveLength(1);
   });
 
   test('modal is focus-trapped, Escape closes it and focus returns to the trigger', async ({ page, guard }) => {
@@ -684,14 +694,18 @@ test.describe('easy apply', () => {
 
     await gotoJob(page, `${jobPath()}?apply=1`);
     await expect(applyDialog(page)).toBeVisible();
+    await expect(applyDialog(page), 'only the visible ApplyButton opens the modal').toHaveCount(1);
     await page.keyboard.press('Escape');
     await expect(applyDialog(page)).toBeHidden();
 
+    // The page strips ?apply=1 once it has acted on it, so Back returns to
+    // the plain job page: the form stays closed and no second click counts.
     await page.goto('/my-applications');
     await page.goBack();
-    await expect(page).toHaveURL(/apply=1/);
+    await expect(page).not.toHaveURL(/apply=1/);
     await expect(page.locator('h1').first()).toBeVisible();
     await expect(easyApplyButton(page)).toBeVisible();
+    await expect(applyDialog(page)).toHaveCount(0);
   });
 
   test('withdraw via confirm dialog (Escape cancels, Enter confirms); re-apply restores an active status', async ({ page, guard }) => {

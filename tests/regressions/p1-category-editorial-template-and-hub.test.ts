@@ -216,8 +216,10 @@ describe('W2-LANDING (thin-spec-1 section 5, PLAN C.4 item 8): the landing templ
 
     it('every count comes from getListingFacts over the canonical predicate (LAND-T3)', () => {
         expect(src).toContain("import { getListingFacts, type ListingFacts, type StateCount } from '@/lib/pseo/listing-facts'");
-        expect(src).toContain('getListingFacts(`category-landing:${slug}`, categoryWhere(slug))');
-        expect(src).toContain('where: canonicalBucketWhere(categoryWhere(slug))');
+        // The bucket is the shared landingBucketWhere (lib/pseo/landing-where.ts),
+        // the clause the cron's landing verdict also counts.
+        expect(src).toContain('getListingFacts(`category-landing:${slug}`, landingBucketWhere(slug))');
+        expect(src).toContain('where: canonicalBucketWhere(landingBucketWhere(slug))');
         expect(src).toContain('numberOfItems: facts.total');
         // The posting mean and its consumers are gone (T0-3, T14).
         expect(src).not.toContain('avgSalary:');
@@ -229,8 +231,10 @@ describe('W2-LANDING (thin-spec-1 section 5, PLAN C.4 item 8): the landing templ
     it('titles, descriptions and robots go through the shared helpers', () => {
         expect(src).toContain('buildCategoryLandingTitle({ role, totalJobs })');
         expect(src).toContain('buildCategoryLandingDescription({');
-        expect(src).toContain("import { MIN_JOBS_FOR_INDEX, shouldIndexListingPage } from '@/lib/pseo/render-gate'");
-        expect(src).toContain('...(!shouldIndexListingPage(totalJobs, page) && { robots: { index: false, follow: true } })');
+        // TECH-06 adds shouldRenderCategoryLanding to the same import.
+        expect(src).toMatch(/import \{[^}]*\bMIN_JOBS_FOR_INDEX\b[^}]*\} from '@\/lib\/pseo\/render-gate'/);
+        // Robots at the listing floor (fixSoon 1), through category-metadata.
+        expect(src).toContain('...(!shouldIndexCategoryLanding(facts, page) && { robots: { index: false, follow: true } })');
         expect(src).not.toContain('keywords:');
     });
 
@@ -297,8 +301,14 @@ describe('P1 #17: /jobs hub editorial + citable FAQ', () => {
     });
 
     it('editorial block links the category, salary, and location hubs', () => {
-        for (const href of ['/jobs/family-practice', '/jobs/acute-care', '/jobs/anesthesia', '/salary-guide', '/jobs/locations', '/job-alerts']) {
+        for (const href of ['/salary-guide', '/jobs/locations', '/job-alerts']) {
             expect(src, `missing hub link ${href}`).toContain(`href="${href}"`);
         }
+        // M-07: the category links come from the landing index verdicts, not a
+        // fixed list that can point at a noindexed or 404 landing
+        // (tests/regressions/jobs-hub-category-links.test.ts covers the rule).
+        expect(src).toContain("selectHubCategoryGroups((await loadIndexableLandingSlugs('jobs-hub'))");
+        expect(src).toContain('{group.links.map((link) => (');
+        expect(src).not.toMatch(/href="\/jobs\/(family-practice|acute-care|anesthesia|midwifery|remote|telehealth|travel)"/);
     });
 });

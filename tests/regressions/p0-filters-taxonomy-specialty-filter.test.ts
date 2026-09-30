@@ -113,10 +113,11 @@ describe('P0 #11 — buildWhereClause wires specialty slugs through categoryTags
     expect(whereJson({ category: 'anesthesia' })).toContain(
       '"categoryTags":{"has":"anesthesia"}',
     );
-    // 'remote' has a deliberately empty keyword entry — it must use the tag
-    // fallback rather than a match-nothing `OR: []`.
+    // 'remote' is the fully remote work mode (CQ-05, one predicate per
+    // category): never a description keyword and never a match-nothing
+    // `OR: []`.
     const remote = whereJson({ category: 'remote' });
-    expect(remote).toContain('"categoryTags":{"has":"remote"}');
+    expect(remote).toContain('"isRemote":true,"isHybrid":false');
     expect(remote).not.toContain('"OR":[]');
   });
 

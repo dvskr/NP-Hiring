@@ -49,11 +49,13 @@ import {
     NLC_ROSTER_VERIFIED_AT,
     getAllLicenseGuideSlugs,
     getLicenseGuidePost,
+    getLicenseGuideFactRows,
     getLicenseGuideNearbyStates,
     buildLicenseGuideRuleText,
     buildLicenseGuideSteps,
     buildLicenseGuideFaq,
     buildLicenseGuideHowTo,
+    licenseGuideFactsHeading,
     nlcTableLabel,
     AANP_TIER_MEANING,
     LICENSE_GUIDE_PHYSICIAN_VERDICTS,
@@ -68,6 +70,7 @@ import {
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 import { emptyListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import { summarizeGatedSalary, type GatedSalary } from '@/lib/salary-analytics';
 import { getAllMdxPosts, getMdxPost, parseMdxFrontmatter } from '@/lib/blog-mdx-posts';
@@ -91,10 +94,42 @@ const STICKER_RULE = /stk-|@\/components\/sticker/;
 /** Visible text of rendered markup, for copy assertions that must ignore inline CSS. */
 const textOf = (html: string): string => html.replace(/<[^>]+>/g, ' ');
 
+/**
+ * The guide's own prose: the content with every cited fact it renders
+ * removed (the value and the source name, both quoted verbatim from the
+ * board), so copy rules scan what the template writes, not what a board
+ * states.
+ */
+const generatedProseOf = (stateCode: string, content: string): string =>
+    getLicenseGuideFactRows(stateCode).reduce(
+        (text, { fact }) => text.split(fact.value.trim()).join('').split(fact.sourceName.trim()).join(''),
+        content,
+    );
+
 const allPosts = LICENSE_GUIDE_STATES.map((s) => ({
     state: s,
     post: getLicenseGuidePost(s.stateSlug)!,
 }));
+
+/**
+ * The cited licensing facts section (lib/license-guide-facts.ts), or ''
+ * when the state has none. Its figures are the ONLY fees, CE hours, renewal
+ * cycles and processing times a guide may print, each beside its source
+ * link and check date (pinned in license-guide-facts.test.ts), so the
+ * truth rules below run on the rest of the guide.
+ */
+function factsSectionOf(content: string, state: LicenseGuideState): string {
+    const start = content.indexOf(`## ${licenseGuideFactsHeading(state)}`);
+    if (start === -1) return '';
+    const end = content.indexOf('\n## ', start + 3);
+    return content.slice(start, end === -1 ? undefined : end);
+}
+
+/** The guide without its cited facts section. */
+function outsideFacts(content: string, state: LicenseGuideState): string {
+    const facts = factsSectionOf(content, state);
+    return facts ? content.replace(facts, '') : content;
+}
 
 /** NCSBN member-detail slugs that are NOT the state name minus spaces. */
 const NCSBN_URL_SLUG_EXCEPTIONS: Record<string, string> = {
@@ -159,17 +194,23 @@ describe('all-or-nothing gate', () => {
 describe('truth rules', () => {
     it('the only dollar figure in any guide is the cited BLS median', () => {
         for (const { state, post } of allPosts) {
-            const dollars = post.content.match(/\$[\d,.]+[KkMm+]*/g) ?? [];
+            const dollars = outsideFacts(post.content, state).match(/\$[\d,.]+[KkMm+]*/g) ?? [];
             for (const d of dollars) {
                 expect(d, `${state.name}: uncited dollar figure ${d}`)
                     .toBe(STAT_SOURCES.averageSalary.formatted);
+            }
+            // A figure inside the facts section sits in a row that names its
+            // source and the date it was checked.
+            for (const row of factsSectionOf(post.content, state).split('\n').filter((l) => /\$\d/.test(l))) {
+                expect(row, `${state.name}: facts row without a source link and check date`)
+                    .toMatch(/^\| .+ \| .+ \| \[.+\]\(https:\/\/[^)]+\) \| [A-Z][a-z]+ \d{1,2}, \d{4} \|$/);
             }
         }
     });
 
     it('no invented fees, CE hours, renewal cycles, or processing times', () => {
         for (const { state, post } of allPosts) {
-            const c = post.content;
+            const c = outsideFacts(post.content, state);
             expect(c, `${state.name}: quotes a fee amount`).not.toMatch(/fee of \$|\$\d+\s*(application|renewal|licensing)/i);
             expect(c, `${state.name}: quotes CE hours`).not.toMatch(/\b\d+\s*(contact hours|CE hours|CEUs|continuing.education hours)/i);
             expect(c, `${state.name}: quotes a processing time`).not.toMatch(/\b\d+\s*[–-]\s*\d+\s*(weeks|business days)\b/i);
@@ -275,7 +316,10 @@ describe('truth rules', () => {
             expect(payFaq.text).toContain(STAT_SOURCES.averageSalary.formatted);
             expect(payFaq.text).toContain(`at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers`);
             expect(payFaq.text).not.toMatch(/averages?|ranges/i);
-            expect(post.content, `${state.name}: calls a median an average`).not.toMatch(/\baverages?\b/i);
+            // A cited fact quotes its board verbatim ("The Board reports an
+            // average of 1.55 calendar days" is a processing time, not pay),
+            // so the scan covers the generated prose only.
+            expect(generatedProseOf(state.code, post.content), `${state.name}: calls a median an average`).not.toMatch(/\baverages?\b/i);
         }
     });
 
@@ -302,11 +346,13 @@ describe('truth rules', () => {
     it('generated content is niche-token clean (no donor reference-niche terms)', () => {
         // The Minnesota guide quotes its dataset entry verbatim, and that
         // statute's setting rule names "primary care or mental health
-        // services". Strip that one exact sentence; everything else stays
+        // services". Strip that one exact sentence, and every cited fact a
+        // guide quotes from its board (Connecticut's CE rule names "mental
+        // health conditions common to veterans"); everything else stays
         // under the scan.
         const MN_RULE = STATE_PRACTICE_AUTHORITY['Minnesota'].details;
-        for (const { post } of allPosts) {
-            expect(post.content.split(MN_RULE).join('')).not.toMatch(/pmhnp|psychiatric|mental health/i);
+        for (const { state, post } of allPosts) {
+            expect(generatedProseOf(state.code, post.content).split(MN_RULE).join('')).not.toMatch(/pmhnp|psychiatric|mental health/i);
         }
     });
 });
@@ -850,7 +896,8 @@ describe('LIC-L3: market snapshot (components/blog/LicenseGuideMarketSnapshot.ts
         expect(hrefs(html)).toContain('/jobs/state/texas');
         expect(hrefs(html)).not.toContain('/salary-guide/texas');
         expect(html).not.toContain('$');
-        expect(html).toContain(`fewer than ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} employers`);
+        // Names the whole gate, the CQ-15 employer-share cap included.
+        expect(html).toContain(`at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them`);
         // Clay stat pills split the figure and the label into two spans.
         expect(html).toMatch(/>4<\/span><span[^>]*>open roles</);
         expect(html).toMatch(/>2<\/span><span[^>]*>employers</);

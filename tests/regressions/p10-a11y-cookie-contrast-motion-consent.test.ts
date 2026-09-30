@@ -64,10 +64,11 @@ describe('P10 a11y-cookie: colour contrast on the axe-flagged nodes', () => {
         expect(contrast(c, '#FFFFFF')).toBeGreaterThanOrEqual(AA);
     });
 
-    it('site chrome: active desktop nav pill on the mint nav bar', () => {
+    it('site chrome: active desktop nav pill on the soft blush nav bar', () => {
         const c = ruleColor(read('components/Header.tsx'), '.nav-pill-floating[aria-current="page"]');
-        // #D3DFE2 is the composited pill tint measured by axe.
-        expect(contrast(c, '#D3DFE2')).toBeGreaterThanOrEqual(AA);
+        // #F5D4DE is the current-page tint rgba(190,24,93,0.12) composited over
+        // the #FCEEF0 bar (owner decision 5, option B; was mint, measured #D3DFE2).
+        expect(contrast(c, '#F5D4DE')).toBeGreaterThanOrEqual(AA);
     });
 
     it('1099 tool: hints, suffixes, muted figures and footnotes no longer use #94A3B8 (2.56:1)', () => {

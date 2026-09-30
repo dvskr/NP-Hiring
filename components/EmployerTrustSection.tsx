@@ -1,71 +1,125 @@
 import { prisma } from '@/lib/prisma';
 import { getSiteStats } from '@/lib/site-stats';
-import ClayDoughStrip from '@/components/ClayDoughStrip';
-import { findCanonicalName, normalizeCompanyName } from '@/lib/company-normalizer';
+import ClayDoughStrip, { type EmployerChip } from '@/components/ClayDoughStrip';
+import { canonicalBucketWhere } from '@/lib/canonical-counts';
+import { companyProfilePath, type CompanySlugSource } from '@/lib/company-slug';
+import { displayText } from '@/lib/display-text';
+import { shouldIndexCompanyProfile } from '@/lib/pseo/render-gate';
 // FALLBACK_EMPLOYERS pads the strip with fabricated chips whenever the DB
 // has <10 employers — see the FORK WARNING on its export before shipping.
 import { FALLBACK_EMPLOYERS } from '@/config/niche/stats';
 
+/** Chips the strip renders. */
+const STRIP_SIZE = 25;
+
+/**
+ * Companies fetched per render. Wider than the strip so the rows the chip
+ * rules drop (over-long names, two spellings of one employer sharing a
+ * profile URL) never shrink the visible set.
+ */
+const CANDIDATE_POOL = 40;
+
+/** Longest display name a chip carries before the tape layout breaks. */
+const MAX_CHIP_NAME_LENGTH = 40;
+
+/** Below this many real employers the (policy-empty) fallback list pads the strip. */
+const MIN_REAL_EMPLOYERS = 10;
+const MAX_WITH_FALLBACK = 18;
+
+/** One company's live job count, as grouped from the canonical job pool. */
+export interface CompanyJobCount {
+    companyId: string;
+    activeJobs: number;
+}
+
+/** The Company columns a chip needs. */
+export interface ChipCompany extends CompanySlugSource {
+    id: string;
+}
+
+/** Keyword search for an employer (the fallback link target; noindex, follow). */
+function employerSearchHref(name: string): string {
+    return `/jobs?q=${encodeURIComponent(name)}`;
+}
+
+/**
+ * Employer chips for the homepage strip (indexing audit H-04 and L-03).
+ *
+ * - The count is the company's canonical live job count, the same pool its
+ *   profile page counts, so a chip can no longer say "LifeStance Health 138"
+ *   over a profile that says 105 open roles.
+ * - A chip links the company profile whenever that profile passes its index
+ *   gate (shouldIndexCompanyProfile), and a keyword search only otherwise.
+ *   Every search URL is noindex with a canonical to /jobs; the profiles are
+ *   the indexable pages that should rank for "{employer} NP jobs".
+ * - Order follows `counts` (most live jobs first). Two rows that share one
+ *   profile URL (the same employer spelled two ways) collapse to the first.
+ */
+export function buildEmployerChips(
+    counts: readonly CompanyJobCount[],
+    companies: readonly ChipCompany[],
+    limit: number = STRIP_SIZE,
+): EmployerChip[] {
+    const byId = new Map(companies.map((company) => [company.id, company]));
+    const seenHrefs = new Set<string>();
+    const chips: EmployerChip[] = [];
+    for (const { companyId, activeJobs } of counts) {
+        if (chips.length >= limit) break;
+        const company = byId.get(companyId);
+        if (!company || activeJobs <= 0) continue;
+        const name = displayText(company.name).trim();
+        if (name.length === 0 || name.length > MAX_CHIP_NAME_LENGTH) continue;
+        const href = shouldIndexCompanyProfile(activeJobs)
+            ? companyProfilePath(company)
+            : employerSearchHref(company.name);
+        if (seenHrefs.has(href)) continue;
+        seenHrefs.add(href);
+        chips.push({ name, count: activeJobs, href });
+    }
+    return chips;
+}
+
 /**
  * EmployerTrustSection (Server Component)
  *
- * Fetches top employers with job counts from the database
- * and renders the clay dough strip.
+ * Fetches the employers with the most live jobs and renders the clay dough
+ * strip. Grouped by Company row (not by the raw employer string), because the
+ * profile a chip links to is a Company row.
  */
 export default async function EmployerTrustSection() {
-    let employers: { name: string; count: number }[] = [];
+    let employers: EmployerChip[] = [];
 
     try {
-        // Pull more rows than we render so we can collapse variants
-        // ("Lifestance" + "LifeStance Health") into one chip without
-        // shrinking the final visible set.
-        const topEmployers = await prisma.job.groupBy({
-            by: ['employer'],
-            where: { isPublished: true },
-            _count: { employer: true },
-            orderBy: { _count: { employer: 'desc' } },
-            take: 80,
+        const now = new Date();
+        const grouped = await prisma.job.groupBy({
+            by: ['companyId'],
+            where: canonicalBucketWhere({ companyId: { not: null } }, now),
+            _count: { companyId: true },
+            orderBy: { _count: { companyId: 'desc' } },
+            take: CANDIDATE_POOL,
         });
-
-        // Collapse by canonical name. Falls back to normalizedName when
-        // the company isn't in the KNOWN_COMPANIES table so unknown
-        // variants ("Acme Health" vs "Acme Health LLC") still merge.
-        const buckets = new Map<string, { name: string; count: number; rawCount: number }>();
-        for (const e of topEmployers) {
-            if (!e.employer || e.employer.length === 0 || e.employer.length > 40) continue;
-            const canonical = findCanonicalName(e.employer);
-            const key = canonical ?? normalizeCompanyName(e.employer);
-            if (!key) continue;
-            const display = canonical ?? e.employer;
-            const existing = buckets.get(key);
-            if (existing) {
-                existing.count += e._count.employer;
-                // Prefer the longer display string when no canonical is
-                // known — "Acme Health" reads better than "Acme".
-                if (!canonical && e.employer.length > existing.name.length) {
-                    existing.name = e.employer;
-                }
-            } else {
-                buckets.set(key, { name: display, count: e._count.employer, rawCount: e._count.employer });
-            }
-        }
-
-        employers = Array.from(buckets.values())
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 25)
-            .map(({ name, count }) => ({ name, count }));
+        const counts: CompanyJobCount[] = grouped.flatMap((row) =>
+            row.companyId ? [{ companyId: row.companyId, activeJobs: row._count.companyId }] : [],
+        );
+        const companies = counts.length === 0
+            ? []
+            : await prisma.company.findMany({
+                where: { id: { in: counts.map((row) => row.companyId) } },
+                select: { id: true, name: true, normalizedName: true },
+            });
+        employers = buildEmployerChips(counts, companies);
     } catch (error) {
         console.error('Error fetching employer data:', error);
     }
 
     // Use fallbacks if insufficient data
-    if (employers.length < 10) {
+    if (employers.length < MIN_REAL_EMPLOYERS) {
         const existing = new Set(employers.map((e) => e.name.toLowerCase()));
         for (const fallback of FALLBACK_EMPLOYERS) {
             if (!existing.has(fallback.name.toLowerCase())) {
-                employers.push(fallback);
+                employers.push({ ...fallback, href: employerSearchHref(fallback.name) });
             }
-            if (employers.length >= 18) break;
+            if (employers.length >= MAX_WITH_FALLBACK) break;
         }
     }
 

@@ -41,6 +41,9 @@
  *  - Anything older than MAX_LOOKBACK_MS. After an outage longer than that, the
  *    run starts at the floor and reports how many expiries it passed over.
  *  - Anything updated within the last SETTLE_MS, which the next run picks up.
+ *  - A job check-dead-links unpublished before presence counted it gone, since
+ *    fp-recovery may still put it back (expiredJobFilter explains). It answers
+ *    410, and its validThrough is its expiresAt.
  *
  * WHAT "ONCE" MEANS. Once per update, not once per job. Every write to an
  * expired job after it was sent moves its updatedAt past the cursor, so the next
@@ -51,9 +54,63 @@
  * untouched: its age cap skips the write when the row is already unpublished,
  * and it never revives a job past its own expiresAt. Without those two guards
  * the job would be offered again after every such ingest run.
+ *
+ * JOBS GONE AT THEIR SOURCE (CS-06). The cron also removes jobs whose source
+ * stopped listing them. Source presence (lib/health/source-presence.ts) counts
+ * the ingest runs in a row whose feed missed a published job
+ * (health_consecutive_missing), and two kinds of row come out of that count:
+ *
+ *  - Presence closed: app/api/cron/source-presence-unpublish unpublishes an
+ *    'external' row, unless an admin hid it, once the count reaches
+ *    JOB_HEALTH_MIN_PRESENCE_MISSES (default 3). Presence counts published
+ *    rows only, so the count stops at the flip, normally at 3 or 4 (ingest runs
+ *    twice a day and the unpublish once), below DEAD_LINK_MISS_THRESHOLD. The
+ *    job closed before its expiresAt, so expiredJobFilter misses it while its
+ *    updatedAt is inside the lookback, and nothing writes it when its
+ *    expiresAt passes. presenceClosedJobFilter matches it on its own.
+ *  - Dead link: health_consecutive_missing at or above DEAD_LINK_MISS_THRESHOLD,
+ *    published or not. In practice a published one is a row the unpublish cron
+ *    never takes down (a sourceType other than 'external'), or one it has not
+ *    reached yet.
+ *
+ * The middleware job gate answers both with 410 (an unpublished row, or the
+ * dead-link half of the gate) and the sitemaps drop them, so Google must hear
+ * that the posting closed. They ride the same cursor, in the same (updatedAt,
+ * id) order.
+ *
+ * A presence closed row is not written again after the flip: presence counts
+ * published rows only, and renewal touches a row only when its source lists it
+ * again. So the cursor alone sends it once. If its source does list it again,
+ * renewJob publishes it and stamps contentChangedAt, so index-urls sends
+ * URL_UPDATED for it, and a later closure is a new flip with a new updatedAt
+ * and a new removal.
+ *
+ * A published dead-link job, unlike an expired job, keeps being written:
+ * source presence increments its counter on every ingest run of its source,
+ * and each write moves updatedAt past the cursor. On the cursor alone it would
+ * be sent again after every ingest run, twice a day, and a few dozen such rows
+ * would crowd expiries out of the lane. So each run also records the ids of the
+ * dead-link jobs it moved past (removedDeadLinks, in the same metrics), and
+ * later runs leave those ids out. An id leaves the list when its row stops
+ * qualifying (the source lists it again, so the counter resets and a later
+ * death is a new removal) or falls behind the lookback floor (no run could
+ * offer it again unless another write brings it back, and then it is sent once
+ * more). MAX_REMEMBERED_DEAD_LINKS bounds the list. Presence closed rows below
+ * the dead-link threshold are not remembered: nothing rewrites them.
+ *
+ * LANE VOLUME. Every aggregated job leaves the board once, so over time
+ * expiries, presence closures and dead links together match the rate new jobs
+ * arrive: about 27 a day in the 2026-09 indexing audit, against the lane's 60 a
+ * day (30 per run). A busier day (the audit saw expiry peaks of 61 to 65)
+ * carries over to the next runs through the cursor, inside the lookback. Each
+ * run reports how many jobs it offered (expiredCount), how many of those were
+ * gone at their source (deadLinkCount, presenceClosedCount), its backlog, and
+ * anything the lookback passed over.
  */
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
+import { presenceUnpublishMinMisses } from '@/lib/health/presence-unpublish-threshold';
 import {
     googleWasNotAsked,
     isGooglePolicyRefusal,
@@ -109,20 +166,49 @@ export function cursorFromMetrics(metrics: unknown): DeindexCursor | null {
 }
 
 /**
- * The cursor of the newest successful run, or null on the first run.
+ * Most dead-link ids a run carries forward. Only published dead-link rows need
+ * remembering for long (unpublished ones stop being written and fall behind
+ * the floor within a week), and production holds a few dozen of those. The cap
+ * keeps cron_runs.metrics small if that ever changes; an id pushed out is at
+ * worst sent once more.
+ */
+export const MAX_REMEMBERED_DEAD_LINKS = 500;
+
+/** The dead-link ids a run recorded in its metrics; empty when it recorded none. */
+export function removedDeadLinksFromMetrics(metrics: unknown): string[] {
+    if (typeof metrics !== 'object' || metrics === null || Array.isArray(metrics)) return [];
+    const value = (metrics as Record<string, unknown>).removedDeadLinks;
+    if (!Array.isArray(value)) return [];
+    const ids = value.filter((id): id is string => typeof id === 'string' && id.length > 0);
+    return [...new Set(ids)].slice(-MAX_REMEMBERED_DEAD_LINKS);
+}
+
+/** What the newest successful run left for the next one. */
+export interface DeindexResumeState {
+    readonly cursor: DeindexCursor | null;
+    /** Dead-link jobs already sent, so later runs leave them out. */
+    readonly removedDeadLinks: readonly string[];
+}
+
+/**
+ * The resume state of the newest successful run, or an empty one on the first
+ * run.
  *
  * The row withCronTracking opened for the current run is still marked
  * unsuccessful, so it is never its own predecessor. A read that fails throws on
  * purpose: falling back to the lookback floor would send up to a week of
  * removals a second time, while failing the run only defers them.
  */
-export async function readLastCursor(): Promise<DeindexCursor | null> {
+export async function readLastRun(): Promise<DeindexResumeState> {
     const lastSuccess = await prisma.cronRun.findFirst({
         where: { name: DEINDEX_EXPIRED_CRON, success: true },
         orderBy: { startedAt: 'desc' },
         select: { metrics: true },
     });
-    return lastSuccess ? cursorFromMetrics(lastSuccess.metrics) : null;
+    return {
+        cursor: lastSuccess ? cursorFromMetrics(lastSuccess.metrics) : null,
+        removedDeadLinks: lastSuccess ? removedDeadLinksFromMetrics(lastSuccess.metrics) : [],
+    };
 }
 
 export interface DeindexWindow {
@@ -150,14 +236,21 @@ export function planWindow(cursor: DeindexCursor | null, now: Date): DeindexWind
 }
 
 /**
- * The jobs whose removal this cron owns.
+ * The expired jobs whose removal this cron owns (deadLinkJobFilter below adds
+ * the jobs gone at their source).
  *
  * Only aggregated jobs (a sourceProvider), because an employer posted job may be
  * published again. Only jobs that had a public URL (a slug). And only jobs whose
- * expiry has passed (Audit 25 M-2): the dead link and source presence crons
- * unpublish too, and fire their own job.health.flipped events for de-indexing,
- * so without this gate their jobs would be submitted twice from the same Google
- * quota. A passed expiresAt narrows the set to expiry driven unpublishes.
+ * expiry has passed (Audit 25 M-2): other paths unpublish too, and the passed
+ * expiresAt narrows this branch to expiry driven unpublishes. A job the HTTP
+ * dead-link cron (check-dead-links) unpublishes is re-probed for 72 hours by
+ * fp-recovery and put back if it answers again, so this cron does not treat
+ * that flip as a removal: such a job is sent only if presence had already
+ * counted it gone when it was flipped (presenceClosedJobFilter). Nothing writes
+ * it when its expiresAt later passes, and by then the cursor has normally moved
+ * past its updatedAt, so its expiry does not bring it in either. A job
+ * source-presence-unpublish took down is a removal, and comes in through
+ * deadLinkJobFilter (presenceClosedJobFilter).
  */
 export function expiredJobFilter(now: Date): Prisma.JobWhereInput {
     return {
@@ -168,6 +261,90 @@ export function expiredJobFilter(now: Date): Prisma.JobWhereInput {
     };
 }
 
+/**
+ * The miss count at which app/api/cron/source-presence-unpublish takes a job
+ * down, and its default. Both crons read the one helper in
+ * lib/health/presence-unpublish-threshold.ts, so they cannot disagree; the
+ * names stay exported here for this module's callers and tests.
+ */
+export {
+    DEFAULT_PRESENCE_UNPUBLISH_MIN_MISSES,
+    presenceUnpublishMinMisses,
+} from '@/lib/health/presence-unpublish-threshold';
+
+/**
+ * Rows source-presence-unpublish took down: the same guards its sweep applies
+ * (sourceType 'external', never a row an admin hid), unpublished, at or above
+ * its threshold. Presence counts published rows only, so a row reaches this
+ * count while published and is that cron's next candidate. Another path that
+ * unpublishes it first (an HTTP dead-link flip, an expiry) takes down a job its
+ * source has stopped listing too, so it is a removal either way.
+ */
+export function presenceClosedJobFilter(
+    minMisses: number = presenceUnpublishMinMisses(),
+): Prisma.JobWhereInput {
+    return {
+        isPublished: false,
+        isManuallyUnpublished: false,
+        sourceType: 'external',
+        healthConsecutiveMissing: { gte: minMisses },
+    };
+}
+
+/**
+ * Aggregated jobs whose source stopped listing them (CS-06): presence closed
+ * (presenceClosedJobFilter), or at or past DEAD_LINK_MISS_THRESHOLD, published
+ * or not. Middleware answers every one of them with 410 (an unpublished row, or
+ * the dead-link half of its job gate), so each is a removal. Only source
+ * presence moves the counter, and only for aggregated rows; the sourceProvider
+ * and slug clauses match expiredJobFilter's for the same reasons.
+ */
+export function deadLinkJobFilter(): Prisma.JobWhereInput {
+    return {
+        slug: { not: null },
+        sourceProvider: { not: null },
+        OR: [
+            { healthConsecutiveMissing: { gte: DEAD_LINK_MISS_THRESHOLD } },
+            presenceClosedJobFilter(),
+        ],
+    };
+}
+
+/** Every job this cron removes: expired, or gone at its source. */
+export function removalCandidateWhere(now: Date): Prisma.JobWhereInput {
+    return { OR: [expiredJobFilter(now), deadLinkJobFilter()] };
+}
+
+/**
+ * True for a removal candidate at or past the dead-link threshold. These are
+ * the rows a run remembers in removedDeadLinks, because presence may keep
+ * writing them.
+ */
+export function isDeadLinkJob(job: { readonly healthConsecutiveMissing: number }): boolean {
+    return job.healthConsecutiveMissing >= DEAD_LINK_MISS_THRESHOLD;
+}
+
+/** The columns isPresenceClosedJob reads. */
+export interface PresenceClosedFields {
+    readonly isPublished: boolean;
+    readonly isManuallyUnpublished: boolean;
+    readonly sourceType: string | null;
+    readonly healthConsecutiveMissing: number;
+}
+
+/** The in-memory twin of presenceClosedJobFilter, for a run's report. */
+export function isPresenceClosedJob(
+    job: PresenceClosedFields,
+    minMisses: number = presenceUnpublishMinMisses(),
+): boolean {
+    return (
+        !job.isPublished &&
+        !job.isManuallyUnpublished &&
+        job.sourceType === 'external' &&
+        job.healthConsecutiveMissing >= minMisses
+    );
+}
+
 /** Strictly after the cursor in (updatedAt, id) order. */
 function strictlyAfter(cursor: DeindexCursor): Prisma.JobWhereInput {
     const at = new Date(cursor.updatedAt);
@@ -176,33 +353,83 @@ function strictlyAfter(cursor: DeindexCursor): Prisma.JobWhereInput {
     };
 }
 
-/** Expired jobs this run may send: after the resume point, inside the window. */
-export function pendingJobsWhere(window: DeindexWindow, now: Date): Prisma.JobWhereInput {
+function notAlreadyRemoved(removedDeadLinks: readonly string[]): Prisma.JobWhereInput[] {
+    return removedDeadLinks.length > 0 ? [{ id: { notIn: [...removedDeadLinks] } }] : [];
+}
+
+/**
+ * Jobs this run may send: expired or gone at their source, after the resume
+ * point, inside the window, and not a dead-link job an earlier run already
+ * sent.
+ */
+export function pendingJobsWhere(
+    window: DeindexWindow,
+    now: Date,
+    removedDeadLinks: readonly string[] = [],
+): Prisma.JobWhereInput {
     return {
         AND: [
-            expiredJobFilter(now),
+            removalCandidateWhere(now),
             { updatedAt: { gte: window.floor, lte: window.ceiling } },
             ...(window.resumeAfter ? [strictlyAfter(window.resumeAfter)] : []),
+            ...notAlreadyRemoved(removedDeadLinks),
         ],
     };
 }
 
 /**
- * Expired jobs a stale cursor never reached before they fell behind the floor.
- * The run cannot send them any more, so it counts them for its report.
+ * Jobs a stale cursor never reached before they fell behind the floor. The run
+ * cannot send them any more, so it counts them for its report.
  */
 export function passedOverWhere(
     staleCursor: DeindexCursor,
     window: DeindexWindow,
     now: Date,
+    removedDeadLinks: readonly string[] = [],
 ): Prisma.JobWhereInput {
     return {
         AND: [
-            expiredJobFilter(now),
+            removalCandidateWhere(now),
             strictlyAfter(staleCursor),
             { updatedAt: { lt: window.floor } },
+            ...notAlreadyRemoved(removedDeadLinks),
         ],
     };
+}
+
+/**
+ * The remembered dead-link ids that can still matter: rows that still qualify
+ * and sit inside the lookback window. Order is kept, oldest first.
+ */
+export async function stillRemovedDeadLinks(
+    removedDeadLinks: readonly string[],
+    window: DeindexWindow,
+): Promise<string[]> {
+    if (removedDeadLinks.length === 0) return [];
+    const rows = await prisma.job.findMany({
+        where: {
+            AND: [
+                { id: { in: [...removedDeadLinks] } },
+                deadLinkJobFilter(),
+                { updatedAt: { gte: window.floor } },
+            ],
+        },
+        select: { id: true },
+    });
+    const kept = new Set(rows.map((row) => row.id));
+    return removedDeadLinks.filter((id) => kept.has(id));
+}
+
+/**
+ * The list to carry forward: the still-relevant ids, then the dead-link jobs
+ * this run moved past, without repeats, capped at MAX_REMEMBERED_DEAD_LINKS
+ * from the newest end.
+ */
+export function rememberRemovedDeadLinks(
+    kept: readonly string[],
+    removedThisRun: readonly string[],
+): string[] {
+    return [...new Set([...kept, ...removedThisRun])].slice(-MAX_REMEMBERED_DEAD_LINKS);
 }
 
 /** One job as it was offered to the search engines. */

@@ -29,7 +29,9 @@ import { revalidateCompanySurfaces } from '../../_lib/public-revalidation';
  *   - touch `isVerified` (ingest pipeline's column) or `claimVerifiedAt`
  *     (claim queue's column). Three trust signals, three writers.
  *   - accept name/website/description edits — this is the classification
- *     control, not a profile editor.
+ *     control, not a profile editor. Website and logo (the JobPosting
+ *     hiringOrganization sameAs and logo, GFJ-08) are edited through
+ *     PATCH ./profile, which never writes recruitmentType.
  */
 const patchSchema = z.object({
     recruitmentType: z.enum(['direct_hire', 'staffing_agency']).nullable(),

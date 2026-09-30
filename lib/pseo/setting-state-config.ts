@@ -105,11 +105,13 @@ export interface SettingConfig {
 /**
  * Build a state-scoped where clause for a given canonical category tag.
  *
- * P9: queries `categoryTags has '<tag>'` for backfilled rows, with the
- * legacy keyword OR matcher as fallback for rows whose categoryTags is
- * still empty (deploy → backfill window). See `withTagFallback` in
- * lib/pseo/category-tagger.ts. Once backfill is complete the fallback
- * is dead code and can be removed.
+ * Every config composes the category's ONE predicate (categoryPredicate,
+ * reached through its historical name withTagFallback in
+ * lib/pseo/category-tagger.ts): the same clause the /jobs/{category}
+ * landing, the category x city pages and the aggregate-pseo verdicts count
+ * with (CQ-14). Remote is the fully remote work mode, the job types read
+ * jobType, new grad the structured signals, and the rest the stored tag
+ * with a legacy keyword fallback for untagged rows.
  *
  * The legacy `keywords` parameter is preserved as a positional `_legacy`
  * for call-site compatibility; it is no longer consulted at query time
@@ -471,6 +473,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     fullLabel: 'Remote NP',
     heroSubtitle: 'Work from home nurse practitioner positions',
     faqCategory: 'remote',
+    // Fully remote work mode only (CQ-05): hybrid roles never list here.
     buildWhere: (stateName: string) => ({
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
@@ -565,19 +568,16 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: 'travel',
     label: 'Travel',
     fullLabel: 'Travel NP',
-    heroSubtitle: 'Locum tenens & travel assignment positions',
+    heroSubtitle: 'Short-term travel assignment positions with a stated length',
     faqCategory: 'travel',
+    // One predicate per category (CQ-14): /jobs/travel/{state} counts the
+    // travel category only, exactly as /jobs/travel does. Locum tenens has
+    // its own /jobs/locum-tenens/{state} pages; OR-ing it in here made the
+    // travel spokes count jobs their landing never listed.
     buildWhere: (stateName: string) => ({
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
-      // Travel and locum-tenens are distinct canonical tags but the
-      // /jobs/travel/{state} page semantically covers both. The two
-      // withTagFallback(...) calls each return { OR: [...] }; we lift
-      // them into a single OR via spread + flat-map.
-      OR: [
-        ...((withTagFallback('travel').OR as Record<string, unknown>[]) ?? []),
-        ...((withTagFallback('locum-tenens').OR as Record<string, unknown>[]) ?? []),
-      ],
+      ...withTagFallback('travel'),
     }),
     benefits: [
       { title: 'Packaged Pay', description: 'Travel packages combine an hourly rate with housing and travel stipends; compare the full package, not the rate alone.', iconName: 'DollarSign' },

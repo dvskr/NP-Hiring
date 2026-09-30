@@ -302,7 +302,7 @@ async function getAiRecommendedJobs(userId: string, appliedJobIds: ReadonlyArray
     if (recs.length === 0) return null;
 
     // Hydrate the Job rows AND attach the persisted tier so the dashboard
-    // can render the Easy Apply / Direct Apply / Open badge per card.
+    // can render the Easy Apply, employer site or Open badge per card.
     const hydrated = hydrateForDashboard(recs.map((r) => r.job));
     return hydrated.map((j, i) => ({ ...j, recommendationTier: recs[i].tier as 'easy_apply' | 'direct_apply' | 'external' }));
 }

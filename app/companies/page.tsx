@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { canonicalActiveJobWhere, canonicalEmployerWhere } from '@/lib/canonical-counts';
+import { companyProfilePath } from '@/lib/company-slug';
 import {
   COMPANIES_PER_PAGE,
   buildCompaniesPath,
@@ -87,7 +88,9 @@ const COMPANIES_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`
  * live-review count unification (2026-08-17 item #4c); the only remaining
  * difference is the snapshot's hourly cache lag.
  *
- * P2 #11: paged views self-canonicalize (`?page=N`) and stay indexable; page 1
+ * P2 #11, TECH-08: paged views self-canonicalize (`?page=N`) and answer
+ * `noindex, follow`, the same verdict the middleware sends as X-Robots-Tag
+ * for any ?page >= 2, so the employers they link are still followed. Page 1
  * always canonicalizes to the bare path so `?page=1` can't fork the hub.
  */
 export async function generateMetadata({ searchParams }: CompaniesPageProps): Promise<Metadata> {
@@ -106,7 +109,7 @@ export async function generateMetadata({ searchParams }: CompaniesPageProps): Pr
   return {
     title: `${brand.niche.short} Employers: Companies Hiring ${brand.niche.long}s${pageSuffix}`,
     description:
-      `Browse companies actively hiring ${brand.niche.short}s. See open positions, salary data, and apply directly. Updated daily with ${companyCountDisplay} employers nationwide.`,
+      `Browse companies actively hiring ${brand.niche.short}s. See open positions and salary data, and apply with one free account. Updated daily with ${companyCountDisplay} employers nationwide.`,
     openGraph: {
       title: `Companies Hiring ${brand.niche.short}s | ${brand.name}`,
       description: `Explore employers with open ${brand.niche.descriptor} positions.`,
@@ -129,6 +132,7 @@ export async function generateMetadata({ searchParams }: CompaniesPageProps): Pr
     alternates: {
       canonical: `${brand.baseUrl}${buildCompaniesPath(currentPage)}`,
     },
+    ...(currentPage > 1 && { robots: { index: false, follow: true } }),
   };
 }
 
@@ -191,12 +195,10 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
   const toEntry = (company: DirectoryRow): DirectoryEntry => ({
     id: company.id,
     name: company.name,
-    // B30 inverse (app/sitemap.ts): rows inserted before the normalizer
-    // changed still store the space form ("life stance"), which interpolates
-    // to a %20 URL that mismatches the canonical kebab URL the sitemap emits.
-    // Single-space→hyphen is the exact inverse of the profile resolver's
-    // legacy fallback, so the link round-trips.
-    href: `/companies/${company.normalizedName.replace(/ /g, '-')}`,
+    // L-01: the display-name slug (/companies/one-medical), the one form the
+    // profile route serves without a redirect. The normalizedName form it
+    // replaced (/companies/one) still resolves, through a 308.
+    href: companyProfilePath(company),
     logoUrl: company.logoUrl,
     isVerified: company.isVerified,
     isClaimed: company.claimVerifiedAt !== null,

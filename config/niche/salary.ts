@@ -1,16 +1,16 @@
 /**
  * Niche salary configuration — the single source of truth for every
- * salary validation, clamping, and period-inference band in the pipeline.
+ * salary validation and period-inference band in the pipeline.
  *
  * WHY THIS FILE EXISTS
  * Salary bounds were historically hardcoded in FOUR independent places
  * (lib/salary-normalizer.ts, lib/salary-utils.ts, lib/job-normalizer.ts,
  * lib/llm-enrichment.ts) with DIFFERENT values, each tuned by separate
- * production audits. Because the pipeline CLAMPS out-of-range values
- * rather than dropping them, a fork that changes only some of these
- * bands silently FABRICATES wrong salaries (e.g. a real $38k/yr job on a
- * lower-paying niche gets displayed as $64k). Forks must retune every
- * section below for their niche's real pay distribution.
+ * production audits. Since 2026-09-28 out-of-range values are DROPPED by
+ * lib/job-normalizer.ts and WITHHELD or flagged by lib/salary-normalizer.ts;
+ * these bands decide what counts as plausible pay. A fork that changes only
+ * some of them hides or keeps the wrong salaries, so forks must retune
+ * every section below for their niche's real pay distribution.
  *
  * ── NP HIRING (board #2) ─────────────────────────────────────────────
  * Retuned 2026-07-02 for the ALL-NP + APRN cohort (donor: the NP fork's
@@ -41,7 +41,8 @@ export const salaryConfig = {
     hoursPerYear: 2080,
 
     /**
-     * lib/salary-normalizer.ts — ingest-time normalization + clamping.
+     * lib/salary-normalizer.ts — ingest-time normalization and plausibility
+     * checks (out-of-range values are withheld or flagged, never clamped).
      * Values = donor NP_SALARY_RANGES verbatim (donor
      * lib/salary-normalizer.ts:34-47) plus the donor's confidence
      * scaling (donor:136-148).
@@ -97,10 +98,8 @@ export const salaryConfig = {
     },
 
     /**
-     * lib/job-normalizer.ts — per-period clamp bounds (clamp-not-drop,
-     * changed 2026-05-05) and period inference cutoffs. Clamp bounds are
-     * intentionally WIDER than the normalizer's validation band (they
-     * rescue sloppy source data rather than judge it).
+     * lib/job-normalizer.ts — per-period plausibility bounds (drop, changed
+     * 2026-09-28) and period inference cutoffs.
      */
     jobNormalizer: {
         periodBounds: {

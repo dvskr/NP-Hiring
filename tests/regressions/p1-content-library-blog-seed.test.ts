@@ -149,9 +149,12 @@ describe('truth rules', () => {
 
     it('cited statistics match lib/stats-sources.ts exactly', () => {
         for (const { slug, body } of allBodies) {
-            if (body.includes('$129,210')) {
-                expect(STAT_SOURCES.averageSalary.formatted).toBe('$129,210');
+            // The retired May 2024 median may not linger once the entry moves on.
+            expect(body, `${slug}: cites the retired May 2024 median`).not.toContain('$129,210');
+            if (body.includes('$132,300')) {
+                expect(STAT_SOURCES.averageSalary.formatted).toBe('$132,300');
                 expect(body, `${slug}: median cited without BLS attribution`).toMatch(/BLS/);
+                expect(body, `${slug}: median cited without its vintage`).toContain('May 2025');
             }
             if (/40%/.test(body)) {
                 expect(STAT_SOURCES.blsGrowth2034.formatted).toBe('40%');

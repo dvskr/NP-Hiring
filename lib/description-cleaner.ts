@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { contentChangeStamp } from './job-content-change';
 
 // Helper to escape regex special characters
 function escapeRegExp(string: string) {
@@ -153,9 +154,11 @@ export async function cleanAllJobDescriptions(): Promise<{
       // email previews).
       if (job.sourceType === 'employer') {
         const cleanedSummary = summarizeForMeta(job.description || '');
+        const summaryUpdate = { descriptionSummary: cleanedSummary };
         await prisma.job.update({
           where: { id: job.id },
-          data: { descriptionSummary: cleanedSummary },
+          // contentChangedAt moves only when the rendered text changed.
+          data: { ...summaryUpdate, ...contentChangeStamp(job, summaryUpdate) },
         });
         cleaned++;
         continue;
@@ -165,12 +168,14 @@ export async function cleanAllJobDescriptions(): Promise<{
       const cleanedDescription = cleanDescription(job.description || '');
       const cleanedSummary = cleanedDescription.slice(0, 300) + (cleanedDescription.length > 300 ? '...' : '');
 
+      const textUpdate = {
+        description: cleanedDescription,
+        descriptionSummary: cleanedSummary,
+      };
       await prisma.job.update({
         where: { id: job.id },
-        data: {
-          description: cleanedDescription,
-          descriptionSummary: cleanedSummary,
-        },
+        // contentChangedAt moves only when the rendered text changed.
+        data: { ...textUpdate, ...contentChangeStamp(job, textUpdate) },
       });
 
       cleaned++;

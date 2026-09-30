@@ -14,6 +14,7 @@
  * These read the real source so a future edit can't silently undo the fix.
  */
 import { describe, it, expect } from 'vitest';
+import { extractSalary } from '@/lib/job-normalizer';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -33,10 +34,12 @@ describe('P2 #2 — job-detail sidebar is not desktop-only', () => {
     // Each of these used to sit inside a `hidden lg:block` wrapper. Assert on
     // the wrapper immediately preceding each component rather than on a global
     // count, so a re-introduction is pinned to the exact card.
+    // '<CareerPulseCard' left this list on purpose: indexing audit CQ-11
+    // removed that site-wide stats card from the job page
+    // (tests/unit/job-detail-page-content.test.ts pins its absence).
     for (const component of [
       '<AboutEmployer',
       '<ApplicationTipsCard',
-      '<CareerPulseCard',
       '<RelatedBlogPosts',
       '<InternalLinks',
     ]) {
@@ -258,10 +261,11 @@ describe('P2 #3 — the salary field does not claim parity with the /jobs filter
   it('pins the normalizer behaviour the floor-only disclosure depends on', () => {
     // If the ANNUAL branch ever starts inferring a max, the disclosure above
     // becomes stale and should be revisited.
-    const normalizer = read('lib/job-normalizer.ts');
-    expect(normalizer).toMatch(
-      /max:\s*match\[2\]\s*\?\s*parseDollar\(match\[2\]\)\s*:\s*null,\s*period:\s*'year'/,
-    );
+    // Behavioural since the 2026-09-28 extractor rewrite (indexing audit
+    // CQ-02) folded the period branches into one table: a single annual
+    // figure still yields NO max.
+    expect(extractSalary('Salary: $120,000 per year')).toMatchObject({ min: 120000, max: null, period: 'year' });
+    expect(extractSalary('$120,000 annually')).toMatchObject({ min: 120000, max: null, period: 'year' });
   });
 
   it('pins the known divergence — if these are aligned, update the copy above', () => {

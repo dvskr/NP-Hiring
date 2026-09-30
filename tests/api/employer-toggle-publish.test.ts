@@ -82,9 +82,10 @@ describe('republish of a paused post by paymentStatus', () => {
 
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ success: true, isPublished: true });
+        // A republish is a revival, so it stamps contentChangedAt (fixSoon 5).
         expect(prisma.job.update).toHaveBeenCalledWith({
             where: { id: JOB_ID },
-            data: { isPublished: true, isManuallyUnpublished: false },
+            data: { isPublished: true, isManuallyUnpublished: false, contentChangedAt: expect.any(Date) },
         });
         expect(mocks.republishPlanPost).not.toHaveBeenCalled();
         expect(mocks.inngestSend).toHaveBeenCalledWith({ name: 'embedding.refresh.job', data: { jobId: JOB_ID } });
@@ -166,7 +167,7 @@ describe("republish of a paused 'plan' post goes through the Employer plan gate"
 
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ success: true, isPublished: true, message: 'Job is now live' });
-        expect(mocks.republishPlanPost).toHaveBeenCalledWith(USER_ID, JOB_ID, { isPublished: true, isManuallyUnpublished: false });
+        expect(mocks.republishPlanPost).toHaveBeenCalledWith(USER_ID, JOB_ID, { isPublished: true, isManuallyUnpublished: false, contentChangedAt: expect.any(Date) });
         // The only write is the one inside the plan transaction.
         expect(prisma.job.update).not.toHaveBeenCalled();
         expect(mocks.inngestSend).toHaveBeenCalledWith({ name: 'embedding.refresh.job', data: { jobId: JOB_ID } });

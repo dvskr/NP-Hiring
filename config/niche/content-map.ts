@@ -230,10 +230,13 @@ export interface FeaturedBlogPost {
  * prod before deploying, or these become live internal 404s.
  */
 export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [
+    // CQ-13: /salary-guide is the primary page for NP pay figures, so this
+    // card names the post for its own intent (what moves pay), with the
+    // post's own title.
     {
         category: 'Salary',
-        title: 'Nurse Practitioner Salary Guide: How NP Pay Really Works',
-        description: 'The national median, the ranges behind it, and the five factors that move NP pay most.',
+        title: 'What Moves Nurse Practitioner Pay: Five Factors Behind an Offer',
+        description: 'How state, setting, specialty, employment structure and practice authority move NP pay, and how to spot each one in a posting.',
         href: '/blog/np-salary-guide',
     },
     {
@@ -257,13 +260,16 @@ export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [
     {
         category: 'Career Paths',
         title: 'FNP vs PMHNP vs AGACNP: Choosing Your NP Specialty',
-        description: 'Patient populations, settings, certification paths, and pay for the three biggest NP tracks.',
+        description: 'Patient populations, settings, certification paths, and pay for three common NP tracks.',
         href: '/blog/fnp-vs-pmhnp-vs-agacnp',
     },
+    // CQ-13: /resources/1099-vs-w2 is the primary comparison page, so this
+    // card names the post for its own intent (the contract terms), with the
+    // post's own title.
     {
         category: 'Contracts',
-        title: '1099 vs W-2 for Nurse Practitioners',
-        description: 'The real take-home math once taxes, malpractice, benefits, and retirement are priced in.',
+        title: 'Negotiating a 1099 NP Contract: The Terms to Check Before You Sign',
+        description: 'Pay structure, guaranteed volume, malpractice tail, payment terms, termination and restrictive covenants.',
         href: '/blog/np-1099-vs-w2',
     },
 ];

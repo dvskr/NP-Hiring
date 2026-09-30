@@ -26,8 +26,11 @@ import { isMemoryEvaluable, matchesWhere, type MemoryRow } from './where-evaluat
  * sidebar refresh. Now:
  *   1. ONE query fetches the facet-free result set (search, location,
  *      category, employer, exclusions) with only the columns the facets read.
- *   2. Any facet or badge clause that reads a column outside that set (the
- *      Telehealth description keywords) resolves with ONE id-only query each.
+ *   2. Any facet or badge clause that reads a column outside that set (a
+ *      clinical specialty's legacy fallback for untagged rows reads the
+ *      description) resolves with ONE id-only query each. The Telehealth and
+ *      Travel badges are category predicates over title, tags, jobType and
+ *      the work mode (CQ-05), so they tally in memory.
  *   3. Every badge is tallied in a single in-memory pass, evaluating the SAME
  *      clause objects buildWhereClause composes (lib/filters.ts facet
  *      builders), so counts cannot drift from the filters they preview.

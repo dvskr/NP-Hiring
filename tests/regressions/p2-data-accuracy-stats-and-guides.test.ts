@@ -250,10 +250,39 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
         }
     });
 
-    it('the OEWS vintage was left at the newest release the repo holds', () => {
-        // Documented, not silently bumped to an invented newer vintage.
-        expect(STAT_SOURCES.averageSalary.asOf).toBe('2024-05');
-        expect(STAT_SOURCES.averageSalary.source).toContain('May 2024');
+    it('the OEWS vintage is the May 2025 release, and its note names where it was read', () => {
+        // Bumped 2026-09-30 only after reading the May 2025 figure at BLS
+        // (public data API series OEUN000000000000029117113), never guessed.
+        expect(STAT_SOURCES.averageSalary.asOf).toBe('2025-05');
+        expect(STAT_SOURCES.averageSalary.source).toContain('May 2025');
+        expect(STAT_SOURCES.averageSalary.value).toBe('132300');
+        expect(STAT_SOURCES.averageSalary.formatted).toBe('$132,300');
+        expect(STAT_SOURCES.averageSalary.range).toBe(STAT_SOURCES.averageSalary.formatted);
+        expect(STAT_SOURCES.averageSalary.vintageNote).toContain('OEUN000000000000029117113');
+    });
+
+    it('the salary guide percentile figures are cited entries of the same OEWS release (HANDOFFS 181)', () => {
+        const { averageSalary, salaryPercentile10, salaryPercentile90 } = STAT_SOURCES;
+        for (const stat of [salaryPercentile10, salaryPercentile90]) {
+            expect(stat.asOf).toBe(averageSalary.asOf);
+            expect(stat.sourceUrl).toBe(averageSalary.sourceUrl);
+            expect(stat.source).toContain('29-1171');
+            expect(stat.formatted).toBe(`$${Number(stat.value).toLocaleString('en-US')}`);
+        }
+        expect(Number(salaryPercentile10.value)).toBeLessThan(Number(averageSalary.value));
+        expect(Number(salaryPercentile90.value)).toBeGreaterThan(Number(averageSalary.value));
+        expect(salaryPercentile10.vintageNote).toContain('OEUN000000000000029117111');
+        expect(salaryPercentile90.vintageNote).toContain('OEUN000000000000029117115');
+
+        // The hub renders them from the entries; no hand-typed percentile claim is left.
+        const hub = read('app/salary-guide/page.tsx');
+        expect(hub).toContain('const NATIONAL_P10 = STAT_SOURCES.salaryPercentile10;');
+        expect(hub).toContain('const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90;');
+        expect(hub).toContain("label: 'Lowest 10% earn under'");
+        expect(hub).toContain("label: 'Top 10% earn over'");
+        for (const literal of ["'$95K'", "'$165K+'", "'$165,000+'", "'Entry Level'", "'Top 10% Earn'"]) {
+            expect(hub, literal).not.toContain(literal);
+        }
     });
 
     it('every stat whose sourceUrl is a moving "current" link documents the drift', () => {

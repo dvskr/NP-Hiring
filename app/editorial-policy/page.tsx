@@ -28,6 +28,14 @@
  *     states pay (postedPaySentence in components/seo/pseo/PostedPay.tsx
  *     returns null). The paragraph names the national reference only for
  *     the middle branch.
+ *   - The license guide paragraph is a promise about lib/license-guide-facts.ts
+ *     as lib/blog-license-guides.ts renders it. It branches on
+ *     getLicenseGuideStatesWithFacts() and counts guides with
+ *     getIndexableLicenseGuideSlugs(), the predicate the guide robots tag
+ *     and the sitemap read. It never says every figure shown was checked by
+ *     a second reviewer: facts render for unverified entries too, and only
+ *     indexing waits for that check. tests/regressions/
+ *     editorial-policy-license-facts.test.ts holds each clause to the data.
  */
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -42,6 +50,12 @@ import {
 } from 'lucide-react';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES, STATS_LAST_REVIEWED } from '@/lib/stats-sources';
+import { authorDisplayName } from '@/components/EditorialByline';
+import {
+    getAllLicenseGuideSlugs,
+    getIndexableLicenseGuideSlugs,
+    getLicenseGuideStatesWithFacts,
+} from '@/lib/blog-license-guides';
 
 export const metadata: Metadata = {
     title: 'Editorial Policy',
@@ -103,6 +117,14 @@ const linkStyle: React.CSSProperties = { color: '#BE185D', textDecoration: 'unde
 
 export default function EditorialPolicyPage() {
     const reviewer = brand.editorial.reviewer;
+    const author = brand.editorial.author;
+
+    // The license guide paragraph describes lib/license-guide-facts.ts as the
+    // guides render it, through the same predicates the guide pages and the
+    // sitemap read, so neither the branch nor the counts can drift from them.
+    const guidesWithFacts = getLicenseGuideStatesWithFacts().length;
+    const indexableGuides = getIndexableLicenseGuideSlugs().length;
+    const allGuides = getAllLicenseGuideSlugs().length;
 
     // Every row renders straight from lib/stats-sources.ts — the single
     // source of truth the rest of the site cites. Update protocol lives
@@ -179,10 +201,10 @@ export default function EditorialPolicyPage() {
                         Blog articles are editorial content written and maintained by the {brand.name}{' '}
                         team from the cited sources below. Our <strong>state license guide series</strong>{' '}
                         is different, and its pages say so: one guide per state is generated
-                        programmatically from the structured practice-authority, compact-membership, and
-                        board-directory data in this repository. That is why those guides state only what
-                        the dataset actually holds and link out for everything else. They carry a
-                        generated-content byline, not a review byline.
+                        programmatically from the structured practice-authority, compact-membership,
+                        board-directory, and sourced licensing facts data in this repository. That is why
+                        those guides state only what the dataset actually holds and link out for
+                        everything else. They carry a generated-content byline, not a review byline.
                     </p>
                     <p>
                         Structured data (schema.org markup) is generated from the same underlying values
@@ -228,17 +250,39 @@ export default function EditorialPolicyPage() {
                             </tbody>
                         </table>
                     </div>
-                    <p style={{ marginTop: '12px' }}>
-                        State practice-authority classifications derive from the AANP State Practice
-                        Environment dataset. We do <em>not</em> hold verified per-state data for
-                        application fees, CE hours, renewal cycles, or board processing times, so our{' '}
-                        <strong>state license guide series never quotes them</strong>. Each of those
-                        questions is answered with a link to that state&apos;s board of nursing, because
-                        boards change the details without notice.
-                    </p>
+                    {guidesWithFacts > 0 ? (
+                        <p style={{ marginTop: '12px' }}>
+                            State practice-authority classifications derive from the AANP State Practice
+                            Environment dataset. Our <strong>state license guide series quotes application
+                            fees, the continuing education required for renewal, renewal cycles and
+                            processing times only in a cited licensing facts section</strong>. We read each
+                            figure at its source: the state board of nursing&apos;s or licensing
+                            agency&apos;s own publications, or the text of the statute or rule that sets it.
+                            The section prints each figure beside a link to that source and the date we
+                            checked it. A guide shows a processing time only where the board or its licensing
+                            agency publishes one, on its own pages or in its rules; otherwise the guide leaves
+                            that row out rather than estimate it. A guide can appear in search results only
+                            once it lists the application fee, renewal cycle and continuing education
+                            requirement and a second reviewer has re-read every figure in its licensing facts
+                            section at its source; until then it stays readable but asks search engines not
+                            to index it. Today,{' '}
+                            {indexableGuides} of our {allGuides} guides meet that bar. Anything a guide does
+                            not list is answered with a link to that state&apos;s board of nursing, because
+                            boards change the details without notice.
+                        </p>
+                    ) : (
+                        <p style={{ marginTop: '12px' }}>
+                            State practice-authority classifications derive from the AANP State Practice
+                            Environment dataset. We do <em>not</em> hold verified per-state data for
+                            application fees, CE hours, renewal cycles, or board processing times, so our{' '}
+                            <strong>state license guide series never quotes them</strong>. Each of those
+                            questions is answered with a link to that state&apos;s board of nursing, because
+                            boards change the details without notice.
+                        </p>
+                    )}
                     <p style={{ marginTop: '10px' }}>
-                        Our licensure checker follows the same rule. For certification-exam and DEA
-                        registration fees, license fees and renewal cycles, CE hours, and processing
+                        Our licensure checker quotes none of these figures. For certification-exam and
+                        DEA registration fees, license fees and renewal cycles, CE hours, and processing
                         times, it names the body that sets each one instead of quoting a figure, because
                         those figures change. Confirm any number you plan to budget or schedule around
                         with that body before you rely on it.
@@ -270,9 +314,26 @@ export default function EditorialPolicyPage() {
                 </Section>
 
                 <Section icon={<Stethoscope size={20} />} title="Review status: the honest version">
+                    {author ? (
+                        <p style={{ marginBottom: '10px' }}>
+                            Our hand-written articles and guides are written by{' '}
+                            <strong>{authorDisplayName(author)}</strong>
+                            {author.title ? <> ({author.title})</> : null}
+                            {author.profileUrl ? (
+                                <>
+                                    {' '}(
+                                    <a href={author.profileUrl} rel="noopener noreferrer" style={linkStyle}>
+                                        bio
+                                    </a>
+                                    )
+                                </>
+                            ) : null}
+                            . Their byline and structured data name the author from the same record.
+                        </p>
+                    ) : null}
                     {reviewer ? (
                         <p>
-                            Clinical review of our career and licensure content is performed by{' '}
+                            Clinical review of our hand-written career and licensure content is performed by{' '}
                             <strong>
                                 {reviewer.name}, {reviewer.credentials}
                             </strong>
@@ -300,6 +361,11 @@ export default function EditorialPolicyPage() {
                             reviewed, and we do not invent reviewer identities.
                         </p>
                     )}
+                    <p style={{ marginTop: '10px' }}>
+                        Our generated state license guides never carry a named author or clinical
+                        reviewer, in their byline or their structured data; the byline says the guide is
+                        generated from data.
+                    </p>
                     <p style={{ marginTop: '10px' }}>
                         Where certification is discussed, we attribute it to the correct certifying body
                         per specialty: AANP or ANCC for {brand.niche.short} certification, NBCRNA for

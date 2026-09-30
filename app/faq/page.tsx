@@ -9,11 +9,23 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import { Mail, HelpCircle } from 'lucide-react';
 import { config } from '@/lib/config';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { CEU_GUIDE_SLUG, CEU_GUIDE_TITLE } from '@/lib/blog-ceu-guide';
 
 // Edge-generated OG card — no dependency on storage assets that don't
 // exist on this board (the old pmhnp-*.webp URL 400s). Same pattern as
 // app/for-employers/page.tsx.
 const FAQ_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.name} FAQ`)}&type=page`;
+
+/**
+ * Evergreen guides linked under the job seeker answers (indexing audit M-07):
+ * sitemap pages that otherwise had no crawlable link from an indexable page.
+ * The CEU guide's slug and title come from its own module, so a rename there
+ * cannot leave a dead link here.
+ */
+const SEEKER_GUIDE_LINKS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: '/for-job-seekers', label: `How ${brand.name} works for job seekers` },
+  { href: `/blog/${CEU_GUIDE_SLUG}`, label: CEU_GUIDE_TITLE },
+];
 
 export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so we don't end up
@@ -57,8 +69,12 @@ export default function FAQPage() {
       answer: `We aggregate jobs from multiple sources, including job boards, company career pages, and direct employer postings, so you can search ${brand.niche.short} openings from all of them in one place.`
     },
     {
+      // Owner decision (2026-09): applying requires an account. Every Apply
+      // click by a signed-out visitor opens the sign-up or log-in gate
+      // (lib/apply-intent.ts), and Easy Apply jobs never leave the job page.
+      // This answer is also in the FAQPage JSON-LD, so it must match the flow.
       question: "How do I apply to a job?",
-      answer: "Click 'Apply Now' on any job listing. You will be directed to the employer's application page, where you can submit your resume and information directly to them."
+      answer: `Open the job and click its Apply button. Applying takes a free ${brand.name} account: create one or sign in, and we bring you straight back to the job. On an Easy Apply job you send your ${brand.name} profile and resume from the job page; on any other job you continue to the employer's application in a new tab.`
     },
     {
       question: "Can I track my applications?",
@@ -319,6 +335,22 @@ export default function FAQPage() {
               For Job Seekers
             </h2>
             <FAQAccordion items={jobSeekerFaqs} />
+            {/* Indexing audit M-07: both guides are in the sitemap, and until
+                now neither had a crawlable link from an indexable page. */}
+            <nav aria-label="Guides for job seekers" className="mt-6 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
+              <p className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                Guides for job seekers
+              </p>
+              <ul className="space-y-1 text-sm">
+                {SEEKER_GUIDE_LINKS.map((guide) => (
+                  <li key={guide.href}>
+                    <Link href={guide.href} className="underline underline-offset-2 text-pink-700 hover:text-pink-800">
+                      {guide.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </Card>
         </section>
 

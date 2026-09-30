@@ -15,9 +15,26 @@
  * hand-forked NP donor board (nphiring.com fork of pmhnphiring.com).
  * Where the donor's own fork was incomplete (it left PMHNP leftovers in
  * email/OG chrome), the strings were re-authored to the donor's clear
- * NP-wide editorial direction (see its about/faq/feed pages: "The #1
- * Nurse Practitioner Job Board").
+ * NP-wide editorial direction.
+ *
+ * RULE: no ranking or superlative claim (first place, largest, leading,
+ * best). Nothing in the repo measures one, and these strings ship to
+ * search results, share cards, structured data and inboxes (indexing audit
+ * M-08). Describe what the board is and where its listings come from.
  */
+
+/**
+ * The board in one factual sentence. Renders as the Organization
+ * `description` in the site-wide JSON-LD and the default og:description
+ * (app/layout.tsx), in the /about metadata, and in the blog RSS channel
+ * description (app/blog/feed.xml/route.ts). It is the sentence that replaced
+ * the old first-place job board claim everywhere.
+ *
+ * FORK NOTE: re-author per board. Keep it verifiable: say what is listed,
+ * where the listings come from, and how often they refresh.
+ */
+export const BOARD_DESCRIPTION =
+    "A job board for nurse practitioners, with listings from employers' own career sites and direct employer posts, updated daily.";
 
 /**
  * Uppercase micro-tagline rendered under the brand name in the email
@@ -37,13 +54,13 @@ export const EMAIL_HEADER_TAGLINE = 'Nurse Practitioner Careers';
  * show next to the subject. Used by lib/email-templates-v2.ts
  * (emailShellV2) whenever a template doesn't pass its own preheader.
  *
- * FORK NOTE: embeds the brand name and the niche's long descriptor, and
- * makes a '#1 job board' claim — re-author the whole sentence per board.
- * (Donor shape: 'NP Hiring — The #1 job board for …'; its descriptor was
- * an unforked PMHNP leftover, corrected here to the NP cohort.)
+ * FORK NOTE: embeds the brand name and the niche's long descriptor, so
+ * re-author the whole sentence per board. The donor sentence made a
+ * first-place ranking claim; it was replaced with what the board actually
+ * does (see the RULE in the header).
  */
 export const EMAIL_DEFAULT_PREHEADER =
-    'NP Hiring: The #1 job board for Nurse Practitioners';
+    "NP Hiring: nurse practitioner jobs from employers' own career sites, updated daily";
 
 /**
  * Curated niche hashtag set appended to every Facebook/Instagram caption
@@ -71,12 +88,12 @@ export const SOCIAL_HASHTAGS = [
  * Renders twice: as the big homepage-card headline and as the small
  * bottom-bar tagline on page/category OG cards.
  *
- * FORK NOTE: this is a '#1' MARKETING CLAIM. It MUST be re-authored per
- * board — do not ship an unsubstantiated superlative for a new niche.
- * (Wording mirrors the donor board's NP-wide title decision used across
- * its about page, FAQ, and RSS feeds.)
+ * FORK NOTE: re-author per board, and keep it a description rather than a
+ * ranking. The donor headline claimed first place among nurse practitioner
+ * job boards, an unsubstantiated superlative on every homepage share card
+ * (indexing audit M-08).
  */
-export const OG_HOMEPAGE_HEADLINE = 'The #1 Nurse Practitioner Job Board';
+export const OG_HOMEPAGE_HEADLINE = 'Nurse Practitioner Jobs, Updated Daily';
 
 /**
  * Supporting sentence under the homepage OG headline
@@ -96,11 +113,19 @@ export const OG_HOMEPAGE_SUBHEADLINE =
  * RULE: NO inventory counts here. OG images are CDN-cached for 30 days,
  * so a hardcoded job count goes stale immediately (this file said '335+'
  * while the DB held 900+ within days of ingestion starting). Evergreen
- * claims only (coverage, cadence, price); for live counts, wire
+ * claims only (price, cadence, configured sources); for live counts, wire
  * lib/site-stats.ts cached counters into the OG route instead.
+ *
+ * State coverage is an inventory count, not an evergreen claim: this row
+ * said '50 States Covered' while the live board listed jobs in 44 states
+ * (indexing audit M-08). /about and /for-programs render the measured
+ * figure from lib/states-covered.ts instead.
+ *
+ * '8 ATS Sources' is the scheduled source count in config/cron-schedule.ts
+ * (every registry source not in DISABLED_SOURCES). Change it with that file.
  */
 export const OG_HOMEPAGE_STATS = [
-    { number: '50', label: 'States Covered' },
+    { number: 'Free', label: 'For Job Seekers' },
     { number: '8', label: 'ATS Sources' },
     { number: 'Daily', label: 'Job Updates' },
 ] as const;

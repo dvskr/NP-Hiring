@@ -180,6 +180,29 @@ describe('POST /api/admin/jobs/bulk', () => {
         expect(db.job.updateMany.mock.calls[0][0].data).toMatchObject({ isPublished: true, isManuallyUnpublished: false });
     });
 
+    it('publish stamps contentChangedAt only on the rows it revives (INGEST handoff 28)', async () => {
+        db.job.findMany.mockResolvedValue(jobs);
+        const res = await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'publish', jobIds: ['a', 'b'] }));
+        expect((await res.json()).affected).toBe(2);
+        const calls = db.job.updateMany.mock.calls.map((c) => c[0] as { where: Record<string, unknown>; data: Record<string, unknown> });
+        expect(calls).toHaveLength(2);
+        // Already published: republished state, no new stamp.
+        expect(calls[0].where).toEqual({ id: { in: ['a', 'b'] }, isPublished: true });
+        expect(calls[0].data).toEqual({ isPublished: true, isManuallyUnpublished: false });
+        // Unpublished: revived, so the content changed now.
+        expect(calls[1].where).toEqual({ id: { in: ['a', 'b'] }, isPublished: false });
+        expect(calls[1].data).toMatchObject({ isPublished: true, isManuallyUnpublished: false });
+        expect(calls[1].data.contentChangedAt).toBeInstanceOf(Date);
+        expect(logAudit.mock.calls.map((c) => c[0].action)).toEqual(['admin.job.bulk_publish', 'admin.job.bulk_publish']);
+    });
+
+    it.each(['unpublish', 'feature', 'unfeature'])('%s never stamps contentChangedAt', async (action) => {
+        db.job.findMany.mockResolvedValue(jobs);
+        await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action, jobIds: ['a', 'b'] }));
+        expect(db.job.updateMany).toHaveBeenCalledTimes(1);
+        expect(db.job.updateMany.mock.calls[0][0].data).not.toHaveProperty('contentChangedAt');
+    });
+
     it('rejects an unknown action and non-string ids before touching the database', async () => {
         expect((await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'nuke', jobIds: ['a'] }))).status).toBe(400);
         expect((await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'publish', jobIds: [{}] }))).status).toBe(400);

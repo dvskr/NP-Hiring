@@ -436,11 +436,11 @@ test.describe('crawl files', () => {
         expect(body).toMatch(/User-Agent:\s*\*/i);
         expect(body, 'must not disallow the whole site for *').not.toMatch(/User-Agent:\s*\*\s*\nDisallow:\s*\/\s*$/im);
         const sitemapLines = [...body.matchAll(/^Sitemap:\s*(\S+)/gim)].map((m) => m[1]);
-        expect(sitemapLines.length, 'Sitemap: directives').toBeGreaterThanOrEqual(2);
         const sitemapPaths = sitemapLines.map((u) => new URL(u).pathname);
-        for (const required of ['/sitemap.xml', '/api/sitemaps/index', '/image-sitemap.xml', '/video-sitemap.xml']) {
-            expect(sitemapPaths, `robots.txt advertises ${required}`).toContain(required);
-        }
+        // One entry point (indexing audit FB-4, CS-08, TECH-11): the index,
+        // which lists /sitemap.xml and every batch. No duplicate
+        // /sitemap.xml, no retired image sitemap, no empty video sitemap.
+        expect(sitemapPaths, 'Sitemap: directives').toEqual(['/api/sitemaps/index']);
         for (const p of sitemapPaths) {
             const r = await request.get(p);
             expect(r.status(), `robots-advertised sitemap ${p}`).toBe(200);
@@ -572,7 +572,7 @@ test.describe('crawl files', () => {
         }
         test.fixme(
             noindexed.length > 0,
-            `DEFECT: /api/sitemaps/cities/[batch] advertises setting×state URLs at pseoStats.totalJobs >= 1, but lib/pseo/setting-state-template.tsx noindexes pages with < 3 jobs (MIN_JOBS_FOR_INDEX) — GSC "Submitted URL marked noindex": ${noindexed.join(', ')}`,
+            `DEFECT: /api/sitemaps/cities/[batch] advertises a setting×state URL whose page renders noindex. Both must read one gate: the setting x state index switch and the stored PseoStats verdict (isSettingStateIndexable in lib/pseo/render-gate.ts). GSC reports this as "Submitted URL marked noindex": ${noindexed.join(', ')}`,
         );
         expect(noindexed).toEqual([]);
     });
@@ -701,23 +701,24 @@ test.describe('crawl files', () => {
         expect(check.rootName).toBe('rss');
     });
 
-    test('image-sitemap.xml is well-formed and its pages + images resolve', async ({ request }) => {
-        const res = await request.get('/image-sitemap.xml');
+    test('the retired image sitemap answers 404; the gated state entries carry their images', async ({ request }) => {
+        // FB-4: the standalone file offered noindex and 404 pages; it is gone,
+        // and a 404 is what makes Google drop a sitemap it already knows.
+        expect((await request.get('/image-sitemap.xml')).status()).toBe(404);
+        const res = await request.get('/sitemap.xml');
         expect(res.status()).toBe(200);
-        expect(res.headers()['content-type']).toMatch(/xml/);
         const xml = await res.text();
-        const check = checkXml(xml);
-        expect(check.errors).toEqual([]);
-        expect(check.rootName).toBe('urlset');
-        expect(xml).toContain('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');
-        const pageLocs = parseLocs(xml.replace(/<image:image>[\s\S]*?<\/image:image>/g, ''));
-        const imageLocs = [...xml.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map((m) => m[1].replace(/&amp;/g, '&'));
-        expect(pageLocs.length).toBeGreaterThan(0);
-        expect(imageLocs.length).toBe(pageLocs.length);
-        expect(duplicates(pageLocs), 'duplicate page locs').toEqual([]);
-        for (const l of pageLocs.slice(0, 8)) {
-            const r = await request.get(new URL(l).pathname);
-            expect(r.status(), `image-sitemap page ${l}`).toBe(200);
+        expect(checkXml(xml).errors).toEqual([]);
+        // Every <url> that carries an image is a state hub or salary guide
+        // entry, which the sitemap lists only when the page indexes.
+        const withImages = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)]
+            .map((m) => m[1])
+            .filter((entry) => entry.includes('<image:image>'));
+        const imageLocs: string[] = [];
+        for (const entry of withImages) {
+            const loc = entry.match(/<loc>([^<]+)<\/loc>/)?.[1] ?? '';
+            expect(new URL(loc).pathname, `image attached to ${loc}`).toMatch(/^\/(jobs\/state|salary-guide)\/[a-z-]+$/);
+            imageLocs.push(...[...entry.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map((m) => m[1]));
         }
         for (const i of imageLocs.slice(0, 6)) {
             const u = new URL(i);
@@ -919,32 +920,49 @@ test.describe('JSON-LD on every page class', () => {
             if (uuid && p.startsWith('/jobs/')) byUuid.set(uuid, p);
         }
         const remote = jobs.find((j) => j.isRemote && !j.isHybrid && byUuid.has(j.id.toLowerCase()));
-        const onsite = jobs.find((j) => !j.isRemote && !j.isHybrid && (j.city || j.state) && byUuid.has(j.id.toLowerCase()));
-        const hybrid = jobs.find((j) => j.isHybrid && (j.city || j.state) && byUuid.has(j.id.toLowerCase()));
+        const onsite = jobs.find((j) => !j.isRemote && !j.isHybrid && j.state && byUuid.has(j.id.toLowerCase()));
+        const hybrid = jobs.find((j) => j.isHybrid && !j.isRemote && j.state && byUuid.has(j.id.toLowerCase()));
         test.skip(!remote || !onsite, 'need one fully-remote and one on-site job in the newest 100');
 
-        const check = async (label: string, id: string, expectTelecommute: boolean) => {
+        // Indexing audit GFJ-01: the isRemote flag alone no longer earns TELECOMMUTE. A remote-flagged job
+        // is TELECOMMUTE only when its mode, location string and description all agree
+        // (isVerifiedFullyRemote); otherwise it carries its physical place, or no JobPosting at all.
+        // Remote jobs restricted to states name them (GFJ-07), so the requirement is Country or State.
+        const checkRemote = async (id: string) => {
+            const path = byUuid.get(id.toLowerCase())!;
+            await gotoAndSettle(page, path);
+            const nodes = await jsonLdFromPage(page);
+            const posting = nodes.find((n) => typesOf(n).includes('JobPosting'));
+            if (!posting) return;
+            if (posting.jobLocationType === 'TELECOMMUTE') {
+                expect(posting.jobLocation, `remote ${path}: no physical jobLocation`).toBeUndefined();
+                const alr = posting.applicantLocationRequirements as JsonObject | JsonObject[] | undefined;
+                const types = (Array.isArray(alr) ? alr : alr ? [alr] : []).map((r) => r['@type']);
+                expect(types.length, `remote ${path}: applicantLocationRequirements`).toBeGreaterThan(0);
+                for (const t of types) expect(['Country', 'State']).toContain(t);
+            } else {
+                expect(posting.jobLocation, `remote-flagged ${path} without TELECOMMUTE: physical jobLocation`).toBeTruthy();
+            }
+        };
+
+        // On-site and hybrid jobs carry a physical jobLocation (an array for a multi-location job), never TELECOMMUTE.
+        const checkPhysical = async (label: string, id: string) => {
             const path = byUuid.get(id.toLowerCase())!;
             await gotoAndSettle(page, path);
             const nodes = await jsonLdFromPage(page);
             const posting = nodes.find((n) => typesOf(n).includes('JobPosting'));
             expect(posting, `${label} ${path}: JobPosting`).toBeTruthy();
-            if (expectTelecommute) {
-                expect(posting!.jobLocationType, `${label} ${path}`).toBe('TELECOMMUTE');
-                expect(posting!.jobLocation, `${label} ${path}: no physical jobLocation`).toBeUndefined();
-                expect((posting!.applicantLocationRequirements as JsonObject | undefined)?.['@type']).toBe('Country');
-            } else {
-                expect(posting!.jobLocationType, `${label} ${path}: must not be TELECOMMUTE`).toBeUndefined();
-                const loc = posting!.jobLocation as JsonObject | undefined;
-                expect(loc?.['@type'], `${label} ${path}: jobLocation`).toBe('Place');
-                const addr = loc?.address as JsonObject | undefined;
-                expect(addr?.addressCountry).toBe('US');
-                expect(addr?.addressLocality || addr?.addressRegion, `${label} ${path}: locality/region`).toBeTruthy();
-            }
+            expect(posting!.jobLocationType, `${label} ${path}: must not be TELECOMMUTE`).toBeUndefined();
+            const raw = posting!.jobLocation as JsonObject | JsonObject[] | undefined;
+            const loc = Array.isArray(raw) ? raw[0] : raw;
+            expect(loc?.['@type'], `${label} ${path}: jobLocation`).toBe('Place');
+            const addr = loc?.address as JsonObject | undefined;
+            expect(addr?.addressCountry).toBe('US');
+            expect(addr?.addressLocality || addr?.addressRegion, `${label} ${path}: locality/region`).toBeTruthy();
         };
-        await check('remote', remote!.id, true);
-        await check('on-site', onsite!.id, false);
-        if (hybrid) await check('hybrid', hybrid.id, false);
+        await checkRemote(remote!.id);
+        await checkPhysical('on-site', onsite!.id);
+        if (hybrid) await checkPhysical('hybrid', hybrid.id);
         void guard;
     });
 });
@@ -1010,8 +1028,11 @@ test.describe('count parity', () => {
         expect(homeHero, 'home hero quotes a count ("N roles from teams like these")').toBeTruthy();
         snapshot(toNumber(homeHero!), 'home hero');
         const homeTitle = titleOf(home.html) ?? '';
-        const homeTitleCount = homeTitle.match(/^(\d[\d,]*)\+? /)?.[1];
-        expect(homeTitleCount, `home <title> "${homeTitle}" leads with the count`).toBeTruthy();
+        // Indexing audit L-03: the brand now leads the homepage title
+        // ("NP Hiring: 638 Nurse Practitioner Jobs, Updated Daily"), and the
+        // count follows it.
+        const homeTitleCount = homeTitle.match(/^[^:]+: (\d[\d,]*)\+? /)?.[1];
+        expect(homeTitleCount, `home <title> "${homeTitle}" quotes the count after the brand`).toBeTruthy();
         snapshot(toNumber(homeTitleCount!), 'home <title>');
 
         const jobs = await getHtml(request, '/jobs');
@@ -1656,7 +1677,7 @@ test.describe('malformed input', () => {
             if (/noindex/i.test(metaRobotsOf(html) ?? '')) failures.push(`?page=${q}: noindexed although it renders page 1`);
             if (LEAKED_PLACEHOLDER_RE.test(htmlToText(html))) failures.push(`?page=${q}: leaked placeholder`);
         }
-        for (const q of ['2', '99999']) {
+        for (const q of ['2']) {
             const { status, html } = await getHtml(request, `/jobs?page=${q}`);
             if (status !== 200) failures.push(`?page=${q}: HTTP ${status}`);
             if (!/noindex/i.test(metaRobotsOf(html) ?? '')) failures.push(`?page=${q}: paginated view must be noindex`);
@@ -1664,11 +1685,18 @@ test.describe('malformed input', () => {
             if (!canonical.endsWith(`/jobs?page=${q}`)) failures.push(`?page=${q}: canonical ${canonical} (expected self)`);
             if (LEAKED_PLACEHOLDER_RE.test(htmlToText(html))) failures.push(`?page=${q}: leaked placeholder`);
         }
-        // pSEO pagination: page 2 is crawlable-but-noindexed and canonicals to the hub.
+        // TECH-09: a page past the last one is a 404, never an empty 200.
+        const pastEnd = await getHtml(request, '/jobs?page=99999');
+        if (pastEnd.status !== 404) failures.push(`?page=99999: HTTP ${pastEnd.status} (expected 404)`);
+        // pSEO pagination (TECH-08): page 2 is crawlable-but-noindexed and is
+        // its own canonical, never page 1 (Google: "Don't use the first page of
+        // a paginated sequence as the canonical page").
         const remote2 = await getHtml(request, '/jobs/remote?page=2');
         expect(remote2.status).toBe(200);
         expect(metaRobotsOf(remote2.html) ?? '', '/jobs/remote?page=2 robots').toMatch(/noindex/i);
-        expect(new URL(canonicalOf(remote2.html)!).pathname).toBe('/jobs/remote');
+        const remote2Canonical = new URL(canonicalOf(remote2.html)!);
+        expect(remote2Canonical.pathname).toBe('/jobs/remote');
+        expect(remote2Canonical.search).toBe('?page=2');
         expect(failures).toEqual([]);
     });
 

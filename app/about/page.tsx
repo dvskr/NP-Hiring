@@ -1,11 +1,13 @@
 import { brand } from '@/config/brand';
+import { BOARD_DESCRIPTION } from '@/config/niche/copy';
 import { Metadata } from 'next';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import { prisma } from '@/lib/prisma';
 import { getSiteStats } from '@/lib/site-stats';
 import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
-import { buildCategoryWhereClause, newGradWhereClause } from '@/lib/filters';
+import { landingBucketWhere } from '@/lib/pseo/landing-where';
+import { getStatesCovered } from '@/lib/states-covered';
 import AboutClient from './AboutClient';
 
 export const revalidate = 3600;
@@ -18,16 +20,22 @@ const ABOUT_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Abou
 // Live review 2026-08-17 item #4c: the previous description claimed "thousands
 // of companies" against a directory of ~100 — metadata is a count surface too,
 // so it stays count-free rather than quoting a number that drifts.
+//
+// Indexing audit M-08: the title, description and share card no longer claim
+// first place among job boards, or "all 50 states" coverage. Nothing measures
+// either. They carry the one factual board description instead
+// (config/niche/copy.ts BOARD_DESCRIPTION). The title leaves the brand to the
+// root layout template, which appends it once.
 export const metadata: Metadata = {
-  title: `About Us: The #1 Job Board for ${brand.niche.medium}s`,
-  description: `Learn about ${brand.name}, the #1 dedicated job board for ${brand.niche.long}s. Active ${brand.niche.short} listings from employers across all 50 states.`,
+  title: `About Us: A Job Board for ${brand.niche.long}s`,
+  description: `About ${brand.name}: ${BOARD_DESCRIPTION} Free for job seekers.`,
   openGraph: {
     // OG block was previously images-only — when a non-overriding child page
     // inherits this layout's defaults the social card pulled the wrong title
     // and description (audit 09 M-22). Spelled-out fields ensure the share
     // card matches the page identity.
-    title: `About ${brand.name}: The #1 ${brand.niche.medium} Job Board`,
-    description: `Built for the ${brand.niche.short} community: ${brand.niche.descriptor} jobs across all 50 states, free for job seekers and transparent for employers.`,
+    title: `About ${brand.name}: A ${brand.niche.long} Job Board`,
+    description: `Built for the ${brand.niche.short} community: ${brand.niche.descriptor} jobs from employers' own career sites, free for job seekers and transparent for employers.`,
     type: 'website',
     url: `${brand.baseUrl}/about`,
     siteName: brand.name,
@@ -59,20 +67,29 @@ export default async function AboutPage() {
   // thin beats fabricated; a fabricated 50 is what this replaced.
   const gateCount = (n: number): number | null => (n >= COUNT_DISPLAY_FLOOR ? n : null);
 
+  //
+  // Indexing audit M-08: the "States Covered" tile was a hardcoded 50 while
+  // the board listed jobs in 44 states. It is measured now, with the helper
+  // /for-programs uses, and the tile is omitted when the count is unavailable.
   const [
     { totalJobs, totalCompanies },
     newGradCount,
     inpatientCount,
     remoteCount,
     outpatientCount,
+    statesCovered,
   ] = await Promise.all([
     getSiteStats(),
-    prisma.job.count({ where: canonicalBucketWhere(newGradWhereClause()) }),
-    prisma.job.count({ where: canonicalBucketWhere(buildCategoryWhereClause('inpatient', { isRemote: { not: true } })) }),
+    // CQ-14: the new grad, inpatient and outpatient buckets are the one
+    // landing bucket each /jobs/{category} landing, its state pages and its
+    // index verdict count with (lib/pseo/landing-where.ts).
+    prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere('new-grad')) }),
+    prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere('inpatient')) }),
     // "Remote practice" bucket = the same structured signal the Work Mode
     // facet filters on — not a telehealth text-substring heuristic.
     prisma.job.count({ where: canonicalBucketWhere({ isRemote: true }) }),
-    prisma.job.count({ where: canonicalBucketWhere(buildCategoryWhereClause('outpatient')) }),
+    prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere('outpatient')) }),
+    getStatesCovered(),
   ]);
 
   return (
@@ -85,6 +102,7 @@ export default async function AboutPage() {
       <AboutClient
         totalJobs={totalJobs}
         totalEmployers={totalCompanies}
+        statesCovered={statesCovered}
         dioramaCounts={{
           newGrad: gateCount(newGradCount),
           inpatient: gateCount(inpatientCount),

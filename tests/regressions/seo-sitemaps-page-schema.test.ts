@@ -44,7 +44,13 @@ describe('B31 — page mirrors the middleware expired predicate', () => {
   it('getJob selects expiresAt and classifies date-expired jobs as expired', () => {
     expect(page).toMatch(/select: \{ id: true, isPublished: true, expiresAt: true/);
     expect(page).toMatch(/anyJob\.expiresAt\.getTime\(\) < Date\.now\(\)/);
-    expect(page).toMatch(/if \(!anyJob\.isPublished \|\| dateExpired\)/);
+    expect(page).toMatch(/if \(!anyJob\.isPublished \|\| dateExpired \|\| deadLink\)/);
+  });
+
+  it('classifies a dead-link job (at DEAD_LINK_MISS_THRESHOLD) as closed, like the middleware 410 (CS-06)', () => {
+    expect(page).toContain("import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';");
+    expect(page).toMatch(/select: \{[^}]*healthConsecutiveMissing: true/);
+    expect(page).toContain('const deadLink = anyJob.healthConsecutiveMissing >= DEAD_LINK_MISS_THRESHOLD;');
   });
 });
 
@@ -77,7 +83,11 @@ describe('B34 — one canonical URL form per job page', () => {
 
   it('BreadcrumbSchema no longer falls back to the bare-id URL form', () => {
     expect(page).not.toContain('/jobs/${job.slug || job.id}`');
-    expect(page).toMatch(/name: job\.title, url: canonicalJobUrl/);
+    // Indexing audit L-04 / GFJ-14: the page emits ONE BreadcrumbList, the
+    // one components/Breadcrumbs builds from the visible trail (whose current
+    // crumb carries no URL), so the second BreadcrumbSchema trail is gone.
+    expect(page).not.toContain('<BreadcrumbSchema');
+    expect(page).toContain('<Breadcrumbs items={breadcrumbItems} />');
   });
 });
 

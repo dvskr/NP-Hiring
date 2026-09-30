@@ -18,9 +18,15 @@ import {
   buildStateCityDirectory,
   cityLinkResolves,
   countJobsByJurisdiction,
+  foldDirectoryCityRows,
   shouldRenderStateCityDirectory,
   MIN_CITY_JOBS_FOR_LINK,
 } from './[state]/directory';
+// L-05: a curated metro's city slug only redirects to its metro guide, so
+// the tile links the guide directly.
+import { localJobsPath } from '@/lib/city-link-path';
+import { landingBucketWhere } from '@/lib/pseo/landing-where';
+import { isTallyCity } from '@/lib/pseo/city-tally';
 
 
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
@@ -45,6 +51,16 @@ const US_STATES: ReadonlySet<string> = new Set(Object.keys(STATE_CODES));
  * "51 US states" once every jurisdiction is hiring.
  */
 const DISTRICT_OF_COLUMBIA = 'District of Columbia';
+
+/** Top-city tiles the hub links. */
+const TOP_CITY_TILES = 12;
+
+/**
+ * City groups read for those tiles: three times the tile count, so groups
+ * the tiles drop (below the link floor, a name whose slug cannot round-trip,
+ * or a stored value that is not a town, CQ-02) cannot leave the row short.
+ */
+const TOP_CITY_CANDIDATES = TOP_CITY_TILES * 3;
 
 // Type definitions for Prisma groupBy results
 interface CityGroupResult {
@@ -99,8 +115,10 @@ async function getLocationStats() {
       where: canonicalBucketWhere({ OR: [{ state: { not: null } }, { stateCode: { not: null } }] }),
       _count: { _all: true },
     }),
-    // The remote banner: the same { isRemote: true } bucket /jobs/remote counts.
-    prisma.job.count({ where: canonicalBucketWhere({ isRemote: true }) }),
+    // The remote banner: the bucket /jobs/remote itself counts (fully remote,
+    // not hybrid: landingBucketWhere('remote')), so the two numbers agree
+    // whatever the stored flags say.
+    prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere('remote')) }),
     // Top cities. Every tile links a /jobs/city page whose own gate counts
     // canonical inventory, so a city that clears MIN_CITY_JOBS_FOR_LINK here
     // clears it there too.
@@ -115,7 +133,7 @@ async function getLocationStats() {
           city: 'desc',
         },
       },
-      take: 12,
+      take: TOP_CITY_CANDIDATES,
     }),
     // The hero total: the whole canonical pool, the site-wide count
     // lib/canonical-counts.ts defines (never more than /jobs lists).
@@ -164,10 +182,13 @@ async function getLocationStats() {
   // here rather than at the render site so the CollectionPage description's city
   // count describes what the page actually links. The count gate is the same
   // MIN_CITY_JOBS_FOR_LINK the directories use: a city page 404s below it.
+  // cityLinkResolves also vetoes a stored value that is not a town (CQ-02:
+  // "Remote", a street number, a facility name).
   const processedCities = topCities
     .filter((c: CityGroupResult) => c.city !== null && c.state !== null && c.stateCode !== null)
     .filter((c: CityGroupResult) => c._count.city >= MIN_CITY_JOBS_FOR_LINK)
     .filter((c: CityGroupResult) => cityLinkResolves(c.city!, c.stateCode || ''))
+    .slice(0, TOP_CITY_TILES)
     .map((c: CityGroupResult) => ({
       name: c.city!,
       state: c.state!,
@@ -182,7 +203,8 @@ async function getLocationStats() {
       // for itself, never the DB `stateCode` column (null or blank on rows
       // that predate the normalizer). Same input, same verdict on both sides.
       const stateCode = s.code;
-      const directory = buildStateCityDirectory(cityRowsByState.get(s.name) ?? [], {
+      // Folded the way the directory page folds (CQ-08), so both read one verdict.
+      const directory = buildStateCityDirectory(foldDirectoryCityRows(cityRowsByState.get(s.name) ?? [], stateCode), {
         // Identical veto to the directory page's own build. Without it a state
         // whose only ≥3 city is something like "St. Louis" would pass here and
         // 404 there: the hub would link its own dead end.
@@ -209,9 +231,12 @@ async function getLocationStats() {
      * Distinct US cities carrying at least one active, indexable role. Counted
      * off the same US_STATES whitelist the state grid uses: the raw groupBy
      * also carries non-US locations ("British Columbia"), which this hero stat
-     * previously folded into a headline "Cities Hiring" number.
+     * previously folded into a headline "Cities Hiring" number. A stored city
+     * value that is not a town (CQ-02, isTallyCity) is not a city hiring.
      */
-    citiesHiring: directoryCityRows.filter((r) => r.city && r.state && US_STATES.has(r.state)).length,
+    citiesHiring: directoryCityRows.filter(
+      (r) => r.city && r.state && US_STATES.has(r.state) && isTallyCity(r.city, STATE_CODES[r.state]),
+    ).length,
   };
 }
 
@@ -344,7 +369,7 @@ export default async function LocationsPage() {
       {/* SEO Fix #15: CollectionPage + ItemList for the state directory */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') }}
       />
       {/* ═══ HERO ═══
           Hero art and its ground come from the one asset registry (A.4.4),
@@ -678,7 +703,7 @@ export default async function LocationsPage() {
                 {stats.topCities.map((city: ProcessedCity) => (
                   <Link
                     key={`${city.slug}-${city.state}`}
-                    href={`/jobs/city/${city.slug}`}
+                    href={localJobsPath(city.slug)}
                     className="group"
                     style={{ textDecoration: 'none' }}
                   >

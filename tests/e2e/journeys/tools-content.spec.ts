@@ -1100,7 +1100,7 @@ test.describe('/tools/private-practice-revenue-calculator', () => {
 
 /**
  * WORKED EXAMPLE — from cost-per-hire-model.ts with lib/config pricing on this
- * HEAD and STAT_SOURCES.averageSalary $129,210.
+ * HEAD and STAT_SOURCES.averageSalary $132,300 (BLS OEWS, May 2025).
  *
  * Our side has three ways to buy, and the widget's #cph-flat-mode select is the
  * observable authority on which one it opens with (DEFAULT_FLAT_FEE_MODE is
@@ -1118,9 +1118,9 @@ test.describe('/tools/private-practice-revenue-calculator', () => {
  *   intro 199 + featured 2 × 299 = 797; renewals 3 × 179 = 537; total 1,334
  *   per hire 1,334/3 = 444.67 → $445; per applicant 1,334/75 = 17.79 → $18
  * CPC $600/role, 20 applicants/role: spend 1,800; 60 applicants; $30/applicant; $600/hire
- * Agency 20% × 129,210 = 25,842/role: spend 77,526; per hire $25,842; applicants n/a
+ * Agency 20% × 132,300 = 26,460/role: spend 79,380; per hire $26,460; applicants n/a
  * Vacancy $500/day × 60 days × 3 roles = 90,000 on every channel:
- *   flat (1,334+90,000)/3 = 30,444.67 → $30,445; cpc 91,800/3 = $30,600; agency 167,526/3 = $55,842
+ *   flat (1,334+90,000)/3 = 30,444.67 → $30,445; cpc 91,800/3 = $30,600; agency 169,380/3 = $56,460
  * Intro price off, 1 role, 0 renewals → 1 featured post → $299.
  * Plan, 3 roles, 2 months: ceil(3/5) = 1 plan × 2 × 399 = $798 → $266 per hire.
  * Promo default (1 role, 0 renewals) → $0, "the launch promo doing the work".
@@ -1136,7 +1136,7 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await expect(page.locator('#cph-hires')).toHaveValue('1');
         await expect(page.locator('#cph-renewals')).toHaveValue('0');
         await expect(page.locator('#cph-flat-applicants')).toHaveValue('25');
-        await expect(page.locator('#cph-base')).toHaveValue('129210');
+        await expect(page.locator('#cph-base')).toHaveValue('132300');
         // DEFAULT_FLAT_FEE_MODE opens on the launch promo while it runs and on the
         // per-post ladder once it has ended. Read the control, never the calendar.
         const mode = await page.locator('#cph-flat-mode').inputValue();
@@ -1204,16 +1204,16 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await expect(cpc.locator('td').nth(3)).toHaveText('$600');
 
         const agency = rows.filter({ hasText: 'Agency / contingency search' });
-        await expect(agency.locator('td').nth(0)).toHaveText('$77,526');
+        await expect(agency.locator('td').nth(0)).toHaveText('$79,380');
         await expect(agency.locator('td').nth(1)).toHaveText('n/a');
         await expect(agency.locator('td').nth(2)).toHaveText('n/a');
-        await expect(agency.locator('td').nth(3)).toHaveText('$25,842');
+        await expect(agency.locator('td').nth(3)).toHaveText('$26,460');
 
         const verdict = page.getByText(/On the numbers you entered,/);
         await expect(verdict).toContainText('flat-fee posting');
         await expect(verdict).toContainText('$445');
         await expect(verdict).toContainText('agency / contingency search');
-        await expect(verdict).toContainText('$25,842');
+        await expect(verdict).toContainText('$26,460');
 
         // Vacancy overlay: $500/day × the shared 60-day default × 3 roles on every channel.
         await fillNumber(page, '#cph-vacancy-cost', '500');
@@ -1221,7 +1221,7 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await expect(page.locator('table thead')).toContainText('Per hire + vacancy');
         await expect(flat.locator('td').nth(4)).toHaveText('$30,445');
         await expect(cpc.locator('td').nth(4)).toHaveText('$30,600');
-        await expect(agency.locator('td').nth(4)).toHaveText('$55,842');
+        await expect(agency.locator('td').nth(4)).toHaveText('$56,460');
         await expectNoNaN(page);
         await expectNoRenderedDashes(page, `${PATH} (worked example)`);
 

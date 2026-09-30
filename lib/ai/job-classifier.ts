@@ -44,8 +44,8 @@ export type JobTier = 'easy_apply' | 'direct_apply' | 'external';
  * can replicate the filter without having to inline the list. Substring match
  * is sufficient because applyLink hosts are known origins, not arbitrary text.
  *
- * Mirrors the detection in components/JobCard.tsx so the server-side classifier
- * and the client-side "Direct Apply" badge agree on what counts.
+ * Mirrors lib/direct-apply.ts (ATS_PATTERNS) so the server-side classifier
+ * and the "Apply on employer site" label agree on what counts.
  */
 export const ATS_HOST_SUBSTRINGS: ReadonlyArray<string> = [
     '.myworkdayjobs.com',

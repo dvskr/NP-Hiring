@@ -13,6 +13,7 @@
  * app/for-employers/page.tsx employerFaqs).
  */
 import { brand } from '@/config/brand';
+import { indefiniteArticle } from '@/lib/display-text';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -29,7 +30,8 @@ const HUB_URL = `${brand.baseUrl}/for-employers/resources`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Employer Hiring Resources: Hire ${brand.niche.short}s`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `Employer Hiring Resources | Guides & ${brand.niche.short} Job Description Templates | ${brand.name}`,
+  // L-02: brand suffix comes from the root layout title template, once.
+  title: `Employer Hiring Guides and ${brand.niche.short} Job Description Templates`,
   description: `Free hiring resources for teams recruiting ${brand.niche.descriptor}s: a step-by-step hiring guide, a job-description writing guide, and ${JD_TEMPLATES.length} setting-specific ${brand.niche.short} job description templates.`,
   openGraph: {
     title: `Employer Hiring Resources | ${brand.name}`,
@@ -52,7 +54,7 @@ const HUB_RESOURCES = [
   },
   {
     href: '/for-employers/resources/job-description-guide',
-    title: `Writing a ${brand.niche.short} Job Description`,
+    title: `Writing ${indefiniteArticle(brand.niche.short)} ${brand.niche.short} Job Description`,
     description: `The anatomy of a job description that qualified ${brand.niche.descriptor}s actually respond to, section by section, with the mistakes to avoid.`,
     icon: PenLine,
     tag: 'Guide',

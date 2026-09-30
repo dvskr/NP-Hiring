@@ -25,6 +25,19 @@ import { slugify } from '@/lib/utils';
 import { brand } from '@/config/brand';
 import { pingAllSearchEnginesBatch } from '@/lib/search-indexing';
 
+// Local prisma mock: the route now reads its resume point from cron_runs
+// (app/api/cron/index-urls/window.ts), and the shared tests/setup.ts mock has
+// no cronRun.findFirst. No previous run: the first-run window applies.
+vi.mock('@/lib/prisma', () => ({
+    prisma: {
+        job: { findMany: vi.fn() },
+        cronRun: {
+            create: vi.fn().mockResolvedValue({ id: 'cron-run-test' }),
+            update: vi.fn(),
+            findFirst: vi.fn().mockResolvedValue(null),
+        },
+    },
+}));
 vi.mock('@/lib/auth/verify-cron-or-admin', () => ({
     verifyCronOrAdmin: vi.fn().mockResolvedValue(null), // authorized
 }));
@@ -87,7 +100,23 @@ describe('P0 #3 static — index-urls derives the page-canonical slug', () => {
 
 describe('P0 #3 behavioral — submitted URLs equal the page canonical', () => {
     it('hands pingAllSearchEnginesBatch job.slug || slugify(title, id) URLs', async () => {
-        const rows = TRICKY_JOBS.map((j) => ({ ...j }));
+        // Each row also carries a physical place and a real description, so
+        // the route's JobPosting eligibility filter (app/api/cron/index-urls/
+        // window.ts: a place, and no stub description, GFJ-04) keeps it and
+        // the URL form alone is under test.
+        const rows = TRICKY_JOBS.map((j) => ({
+            ...j,
+            description:
+                'Provide outpatient care to adult patients. You will evaluate new patients, manage medications and work closely with therapists.',
+            city: 'Austin',
+            state: 'Texas',
+            stateCode: 'TX',
+            location: 'Austin, TX',
+            country: 'US',
+            mode: 'In-Person',
+            isRemote: false,
+            isHybrid: false,
+        }));
         vi.mocked(prisma.job.findMany).mockResolvedValue(rows as never);
 
         const { GET } = await import('@/app/api/cron/index-urls/route');

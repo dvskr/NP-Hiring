@@ -79,6 +79,9 @@ describe('P1 #4 — generator figures trace to sanctioned sources only', () => {
         // The OEWS median must never be re-hardcoded in the generator.
         expect(src).not.toContain('129,210');
         expect(src).not.toContain('129210');
+        // Nor the current vintage (May 2025).
+        expect(src).not.toContain('132,300');
+        expect(src).not.toContain('132300');
     });
 
     it('live posting counts use the hub page’s disclosed-salary filter, so they agree', () => {

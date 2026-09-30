@@ -1,6 +1,6 @@
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
@@ -9,6 +9,7 @@ import type { Prisma } from '@prisma/client';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { categoryPredicateWhere, type CategoryTag } from '@/lib/pseo/category-tagger';
 import { categorySlugLabel } from '@/lib/pseo/category-landing-template';
 import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
@@ -37,6 +38,13 @@ import {
 } from '@/lib/pseo/listing-narrative';
 import ClaimProfileCta from './ClaimProfileCta';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
+import {
+    companyProfilePath,
+    companySlugFor,
+    pickCompanyForSlug,
+    type CompanySlugSource,
+} from '@/lib/company-slug';
+import { localJobsPath } from '@/lib/city-link-path';
 // Company names, job titles and locations are employer-authored and often
 // carry dashes as separators. They stay raw in the DB lookups and in both
 // JSON-LD blocks; visible render points go through lib/display-text.ts.
@@ -61,26 +69,75 @@ interface Props {
 }
 
 /**
- * Resolve a /companies/{slug} URL to a Company.normalizedName value present
- * in the DB. The normalizer was changed to emit kebab-case ("life-stance"),
- * but rows inserted before that change still hold the legacy space-form
- * ("life stance"). Prefer the kebab match; fall through to the legacy form
- * so old rows still resolve via clean URLs during the transition window.
- * Returns the matched normalizedName, or null if neither form exists.
+ * Find a company by the slug form the profile route used before display-name
+ * slugs: its normalizedName. The normalizer was changed to emit kebab-case
+ * ("life-stance"), but rows inserted before that change still hold the legacy
+ * space-form ("life stance"). Prefer the kebab match; fall through to the
+ * legacy form so every URL ever published still resolves.
  */
-async function resolveCompanyNormalizedName(slug: string): Promise<string | null> {
+async function findCompanyByLegacySlug(slug: string): Promise<CompanySlugSource | null> {
+    const select = { name: true, normalizedName: true } as const;
     const exists = await prisma.company.findUnique({
         where: { normalizedName: slug },
-        select: { normalizedName: true },
+        select,
     });
-    if (exists) return exists.normalizedName;
+    if (exists) return exists;
     if (!slug.includes('-')) return null;
     const legacy = slug.replace(/-/g, ' ');
-    const legacyMatch = await prisma.company.findUnique({
+    return prisma.company.findUnique({
         where: { normalizedName: legacy },
-        select: { normalizedName: true },
+        select,
     });
-    return legacyMatch?.normalizedName ?? null;
+}
+
+/** What a /companies/{slug} request resolves to. */
+type CompanyRoute =
+    | { kind: 'profile'; normalizedName: string }
+    | { kind: 'redirect'; slug: string };
+
+/**
+ * Resolve a /companies/{slug} URL (indexing audit L-01).
+ *
+ * 1. The canonical form is the display-name slug (lib/company-slug.ts), matched
+ *    against every company that has a live profile, meaning at least one job
+ *    under the same predicate the loader below reads. Ties between two
+ *    spellings of one employer go to the row with more live jobs.
+ * 2. Otherwise the slug may be one this route published before: a
+ *    normalizedName in kebab or space form (/companies/one,
+ *    /companies/life-stance). A live company found that way answers a
+ *    permanent redirect to its display-name slug, so every old URL keeps its
+ *    signals. A company with no live jobs is not redirected: its profile
+ *    404s either way, and a redirect into a 404 only adds a hop.
+ *
+ * Returns null when the slug matches nothing. A database error throws (5xx),
+ * never a cached 404 on a live profile.
+ */
+async function resolveCompanyRoute(slug: string, now: Date): Promise<CompanyRoute | null> {
+    const liveWhere = activeIndexableJobWhere(now);
+    const liveCompanies = await prisma.company.findMany({
+        where: { jobs: { some: liveWhere } },
+        select: {
+            name: true,
+            normalizedName: true,
+            _count: { select: { jobs: { where: liveWhere } } },
+        },
+    });
+    const candidates = liveCompanies.map((row) => ({
+        name: row.name,
+        normalizedName: row.normalizedName,
+        activeJobs: row._count.jobs,
+    }));
+    const match = pickCompanyForSlug(slug, candidates);
+    if (match) return { kind: 'profile', normalizedName: match.normalizedName };
+
+    const legacy = await findCompanyByLegacySlug(slug);
+    if (!legacy) return null;
+    const isLive = candidates.some((row) => row.normalizedName === legacy.normalizedName);
+    const canonicalSlug = companySlugFor(legacy);
+    if (!isLive || canonicalSlug === slug) {
+        return { kind: 'profile', normalizedName: legacy.normalizedName };
+    }
+    return { kind: 'redirect', slug: canonicalSlug };
 }
 
 // ─── P1 #12 enrichment helpers ──────────────────────────────────────────────
@@ -254,13 +311,18 @@ function tallyTop(values: readonly string[], limit: number): TallyEntry[] {
  * for an hour on a company whose profile was perfectly alive, which is the
  * same "Submitted URL returns 404" class the middleware gate above exists
  * to remove. Crawlers retry a 5xx and de-index on a 404.
+ *
+ * An old-form slug resolves to `{ kind: 'redirect' }` instead of a company, so
+ * both callers see the same verdict: the page answers it with a permanent
+ * redirect and the metadata never describes it as a profile.
  */
 const loadCompanyProfile = cache(async (slug: string) => {
     const now = new Date();
-    const resolvedName = await resolveCompanyNormalizedName(slug);
-    if (!resolvedName) return null;
-    return prisma.company.findUnique({
-        where: { normalizedName: resolvedName },
+    const route = await resolveCompanyRoute(slug, now);
+    if (!route) return null;
+    if (route.kind === 'redirect') return route;
+    const company = await prisma.company.findUnique({
+        where: { normalizedName: route.normalizedName },
         include: {
             jobs: {
                 // Shared single source of truth (lib/active-job-filter.ts).
@@ -314,6 +376,7 @@ const loadCompanyProfile = cache(async (slug: string) => {
             },
         },
     });
+    return company ? { kind: 'profile' as const, company } : null;
 });
 
 // Generate dynamic metadata
@@ -321,8 +384,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
 
     try {
-        const company = await loadCompanyProfile(slug);
-        if (!company) return { title: 'Company Not Found' };
+        const loaded = await loadCompanyProfile(slug);
+        if (!loaded) return { title: 'Company Not Found' };
+        // The page component answers this request with a permanent redirect;
+        // point the canonical at the same target in case metadata streams.
+        if (loaded.kind === 'redirect') {
+            return { alternates: { canonical: `${brand.baseUrl}/companies/${loaded.slug}` } };
+        }
+        const { company } = loaded;
         const companyName = displayText(company.name);
 
         // The robots decision reads the SAME rows as the render path's 404
@@ -339,7 +408,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             states: facts.states,
             allRemote: facts.allRemote,
         });
-        const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${companyName} ${brand.niche.short} Jobs`)}&type=page&subtitle=${encodeURIComponent(`${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'}: salary data, locations, direct apply`)}`;
+        const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${companyName} ${brand.niche.short} Jobs`)}&type=page&subtitle=${encodeURIComponent(`${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'}: salary data and locations`)}`;
 
         // CO-meta: the blurb still leads when the employer wrote one, but the
         // cut lands on a word boundary and the whole string stays inside the
@@ -420,12 +489,20 @@ export default async function CompanyPage({ params }: Props) {
     const { slug } = await params;
     const now = new Date();
 
-    const company = await loadCompanyProfile(slug);
+    const loaded = await loadCompanyProfile(slug);
 
-    if (!company) {
+    if (!loaded) {
         notFound();
     }
 
+    // L-01: an old-form slug (/companies/one, /companies/life-stance) moves
+    // to the display-name slug with a 308, so its signals consolidate on the
+    // one URL the sitemap and every internal link now use.
+    if (loaded.kind === 'redirect') {
+        permanentRedirect(`/companies/${loaded.slug}`);
+    }
+
+    const { company } = loaded;
     const activeJobCount = company.jobs.length;
     // Visible-text form of the name. BreadcrumbSchema, both JSON-LD blocks and
     // the avatar initial keep reading the raw company.name.
@@ -524,10 +601,14 @@ export default async function CompanyPage({ params }: Props) {
     // first (lib/company-profile-facts.ts), never from the employment-type
     // tags where "Full Time" used to win on nearly every profile and made
     // the same three large employers "similar" to everyone.
+    //
+    // CQ-14: the category match is the category's one predicate
+    // (categoryPredicateWhere), the clause its landing and state pages count
+    // with, not a bare stored-tag test.
     const dominantCategory = facts.dominantCategory;
     const dominantState = stateTally[0]?.value ?? null;
     const similarityOr: Prisma.JobWhereInput[] = [
-        ...(dominantCategory ? [{ categoryTags: { has: dominantCategory } }] : []),
+        ...(dominantCategory ? [categoryPredicateWhere(dominantCategory as CategoryTag)] : []),
         ...(dominantState
             ? [{ state: dominantState }, { stateCode: STATE_CODES[dominantState] }]
             : []),
@@ -959,7 +1040,10 @@ export default async function CompanyPage({ params }: Props) {
                                     return city.slug ? (
                                         <Link
                                             key={key}
-                                            href={`/jobs/city/${city.slug}`}
+                                            // L-05: a curated metro (Chicago, Boston, Dallas) is
+                                            // linked at /jobs/metro/{slug}; its /jobs/city twin
+                                            // only 308s there.
+                                            href={localJobsPath(city.slug)}
                                             className="ce-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
                                             style={{
                                                 backgroundColor: 'var(--bg-primary)',
@@ -1087,11 +1171,11 @@ export default async function CompanyPage({ params }: Props) {
                                 {similarEmployers.map((employer) => (
                                     <Link
                                         key={employer.normalizedName}
-                                        // B30 inverse (app/sitemap.ts): legacy rows store space-form
-                                        // normalizedName ("life stance"); the resolver never decodes
-                                        // %20 and only falls back kebab→space, so emit canonical
-                                        // kebab form or the link 404s.
-                                        href={`/companies/${employer.normalizedName.replace(/ /g, '-')}`}
+                                        // L-01: the display-name slug the resolver above treats
+                                        // as canonical. The old normalizedName form still
+                                        // resolves, but only through a 308, and an internal
+                                        // link must point at the destination.
+                                        href={companyProfilePath(employer)}
                                         className="flex items-center gap-3 rounded-lg p-4 transition-all hover:shadow-md group"
                                         style={{
                                             backgroundColor: 'var(--bg-secondary)',

@@ -1,8 +1,18 @@
 import { brand } from '@/config/brand';
 import { NextResponse } from 'next/server';
 import { getPublishedPosts } from '@/lib/blog';
+import { isBlogSlugIndexable } from '@/lib/blog-license-guides';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
+
+/** Items the feed carries. */
+const FEED_ITEM_LIMIT = 20;
+/**
+ * Posts read before filtering: the 51 license guides share one publish
+ * date, so a page of 20 could be all guides. Enough to cover the series
+ * plus a full feed of authored posts.
+ */
+const FEED_CANDIDATE_LIMIT = 100;
 
 /**
  * Blog RSS feed — /blog/feed.xml
@@ -21,7 +31,12 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
  */
 export async function GET() {
     try {
-        const posts = await getPublishedPosts(1, 20);
+        // Audit CQ-03: a license guide renders "noindex, follow" until its
+        // state's facts are verified, so the feed carries only the posts the
+        // site offers for indexing (the robots tag's own predicate).
+        const posts = (await getPublishedPosts(1, FEED_CANDIDATE_LIMIT))
+            .filter((post) => isBlogSlugIndexable(post.slug))
+            .slice(0, FEED_ITEM_LIMIT);
 
         const escape = (s: string) =>
             s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -50,9 +65,9 @@ ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>${brand.name} — Career Blog &amp; Industry Insights</title>
+    <title>${brand.name}: Career Blog &amp; Industry Insights</title>
     <link>${BASE_URL}/blog</link>
-    <description>${brand.niche.short} career guides, salary trends, licensure changes, and industry analysis from the #1 ${brand.niche.descriptor} job board.</description>
+    <description>${brand.niche.short} career guides, salary insights, and licensure guidance from ${brand.name}, a job board for ${brand.niche.descriptor}s.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/blog/feed.xml" rel="self" type="application/rss+xml"/>

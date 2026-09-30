@@ -13,18 +13,20 @@
  *        which module it imported. lib/indexnow.ts is now the only
  *        implementation and search-indexing delegates to it.
  *
- * #21  — the image sitemap was a hand-maintained list. It now derives the
+ * #21  — the image sitemap was a hand-maintained list. It derived the
  *        state-diorama entries from the same helpers the state and
- *        salary-guide pages render, and the sitemap budget guard pages the
- *        team channel instead of only writing a log line nobody reads.
+ *        salary-guide pages render; since the indexing audit (FB-4) those
+ *        images ride on the gated state entries of /sitemap.xml instead and
+ *        the standalone image sitemap is retired. The sitemap budget guard
+ *        pages the team channel instead of only writing a log line nobody
+ *        reads.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { brand } from '@/config/brand';
-import { getAllPageImages, getStateDioramaImages } from '@/lib/image-seo';
-import { GET as imageSitemapGET } from '@/app/image-sitemap.xml/route';
+import { stateDioramaSitemapImages } from '@/lib/image-seo';
 import { STATE_DIORAMA_SLUGS } from '@/components/StateImage';
 import { URL_TO_STATE } from '@/lib/pseo/setting-state-config';
 import { pingIndexNow as searchIndexingPingIndexNow } from '@/lib/search-indexing';
@@ -223,64 +225,44 @@ describe('P2 #20 — the delegating adapter preserves the IndexResult contract',
   });
 });
 
-// ─── #21 — data-driven image sitemap ─────────────────────────────────────────
+// ─── #21 — state dioramas ride on the gated sitemap entries (FB-4) ──────────
 
-describe('P2 #21 — image sitemap derives state dioramas from the render source', () => {
+describe('P2 #21 / FB-4 — the state dioramas ride on the gated state entries', () => {
   const routableWithArt = Object.keys(URL_TO_STATE)
     .filter((slug) => STATE_DIORAMA_SLUGS.includes(slug))
     .sort();
 
-  it('covers every routable jurisdiction that ships artwork, on both surfaces', () => {
+  it('every routable jurisdiction that ships artwork gets exactly its own diorama', () => {
     expect(routableWithArt.length).toBeGreaterThanOrEqual(50);
-
-    const derived = getStateDioramaImages();
-    const urls = new Set(derived.map((e) => e.url));
     for (const slug of routableWithArt) {
-      expect(urls.has(`/jobs/state/${slug}`), `missing /jobs/state/${slug}`).toBe(true);
-      expect(urls.has(`/salary-guide/${slug}`), `missing /salary-guide/${slug}`).toBe(true);
-    }
-    expect(derived).toHaveLength(routableWithArt.length * 2);
-  });
-
-  it('never advertises art for a slug that does not route', () => {
-    for (const entry of getStateDioramaImages()) {
-      const slug = entry.url.replace(/^\/(jobs\/state|salary-guide)\//, '');
-      expect(URL_TO_STATE[slug], `${entry.url} is not a routable state slug`).toBeTruthy();
+      expect(stateDioramaSitemapImages(slug, brand.baseUrl)).toEqual([`${brand.baseUrl}/images/states/${slug}.png`]);
     }
   });
 
-  it('every local image the sitemap advertises exists on disk', () => {
-    const missing = getAllPageImages()
-      .filter((e) => e.image.startsWith('/images/'))
-      .map((e) => e.image)
+  it('offers no image for a slug without artwork', () => {
+    expect(stateDioramaSitemapImages('not-a-state', brand.baseUrl)).toEqual([]);
+  });
+
+  it('every image a sitemap entry can carry exists on disk', () => {
+    const missing = routableWithArt
+      .flatMap((slug) => stateDioramaSitemapImages(slug, brand.baseUrl))
+      .map((url) => url.slice(brand.baseUrl.length))
       .filter((image) => !fs.existsSync(path.join(ROOT, 'public', image)));
-    expect(missing, `image sitemap advertises missing files: ${missing.join(', ')}`).toEqual([]);
+    expect(missing, `sitemap images missing on disk: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('keeps every derived entry captioned and titled', () => {
-    for (const entry of getStateDioramaImages()) {
-      expect(entry.alt.length).toBeGreaterThan(0);
-      expect(entry.caption.length).toBeGreaterThan(0);
-      expect(entry.title.length).toBeGreaterThan(0);
-      // Niche wording comes from brand tokens, not hardcoded strings.
-      expect(entry.caption).toContain(brand.niche.short);
-    }
+  it('only app/sitemap.ts attaches them, and only to the gated state hub and salary guide entries', () => {
+    const sitemap = src('app/sitemap.ts');
+    expect(sitemap.match(/images: stateDioramaSitemapImages\(state, baseUrl\)/g) ?? []).toHaveLength(2);
+    const hubBlock = sitemap.slice(sitemap.indexOf('statePages = US_STATES.filter((state) => indexableHubSlugs.has(state))'));
+    expect(hubBlock.indexOf('images: stateDioramaSitemapImages(state, baseUrl)')).toBeGreaterThan(0);
+    const salaryBlock = sitemap.slice(sitemap.indexOf('salaryGuideStatePages = US_STATES.filter'));
+    expect(salaryBlock.indexOf('images: stateDioramaSitemapImages(state, baseUrl)')).toBeGreaterThan(0);
   });
 
-  it('emits the derived entries as well-formed, escaped XML', async () => {
-    const xml = await imageSitemapGET().text();
-    expect(xml).not.toContain('supabase');
-    expect((xml.match(/&(?!(amp|lt|gt|quot|apos|#\d+);)/g) ?? []).length).toBe(0);
-    expect(xml).toContain(`<image:loc>${brand.baseUrl}/images/states/california.png</image:loc>`);
-    expect(xml).toContain(`<loc>${brand.baseUrl}/salary-guide/california</loc>`);
-  });
-
-  it('stays a synchronous handler (no DB/fs at ISR revalidation time)', () => {
-    // A lambda revalidating this route has no `public/` on disk and the
-    // existing P0 pin calls GET() synchronously — keep it that way.
-    const returned = imageSitemapGET() as unknown;
-    expect(returned).not.toBeInstanceOf(Promise);
-    expect(src('app/image-sitemap.xml/route.ts')).not.toMatch(/\basync\b/);
+  it('the standalone image sitemap is retired (its URL answers 404)', () => {
+    expect(fs.existsSync(path.join(ROOT, 'app', 'image-sitemap.xml'))).toBe(false);
+    expect(src('app/robots.ts')).not.toContain("'/image-sitemap.xml'");
   });
 });
 

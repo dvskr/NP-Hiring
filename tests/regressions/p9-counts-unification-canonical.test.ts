@@ -144,17 +144,24 @@ describe('/about — canonical totals, filter-page-parity buckets (item #4a/#4b/
     });
 
     it('new-grad renders the SAME clause the /jobs/new-grad filter uses — the inflated description heuristic stays dead', () => {
-        expect(page).toContain('newGradWhereClause()');
+        // CQ-14: the one landing bucket, which for new grad is the /jobs
+        // "Open to new grads" clause (categoryPredicate('new-grad')).
+        expect(page).toContain("canonicalBucketWhere(landingBucketWhere('new-grad'))");
+        expect(read('app/jobs/new-grad/page.tsx')).toContain('landingBucketWhere(SLUG)');
+        expect(read('lib/pseo/category-tagger.ts')).toContain("if (tag === 'new-grad') return { OR: [newGradWhereClause()] };");
         expect(page).not.toMatch(/contains:\s*'new graduate'/);
     });
 
-    it('inpatient/outpatient buckets reuse the registry clauses their filter pages count with', () => {
-        expect(page).toContain("buildCategoryWhereClause('inpatient', { isRemote: { not: true } })");
-        expect(page).toContain("buildCategoryWhereClause('outpatient')");
-        // parity anchor: the filter page uses the identical clause.
-        expect(read('app/jobs/inpatient/page.tsx')).toContain(
-            "buildCategoryWhereClause('inpatient', { isRemote: { not: true } })",
-        );
+    it('inpatient/outpatient buckets reuse the one landing bucket their landing pages count with', () => {
+        // CQ-14: one predicate per category. /about, the landing, its state
+        // pages and its index verdict all read landingBucketWhere, which is
+        // the category predicate, never the legacy title-sweep clause.
+        expect(page).toContain("canonicalBucketWhere(landingBucketWhere('inpatient'))");
+        expect(page).toContain("canonicalBucketWhere(landingBucketWhere('outpatient'))");
+        expect(page).not.toContain('buildCategoryWhereClause(');
+        expect(read('lib/pseo/landing-where.ts')).toContain('categoryPredicate(slug)');
+        expect(read('app/jobs/inpatient/page.tsx')).toContain('landingBucketWhere(SLUG)');
+        expect(read('app/jobs/outpatient/page.tsx')).toContain('landingBucketWhere(SLUG)');
     });
 
     it('sub-floor buckets are floor-gated, and the client never fabricates proportional fallbacks', () => {
@@ -194,7 +201,10 @@ describe('/for-programs — omit, never zero-fill or pad (item #4d)', () => {
 
     it('stats come from the canonical snapshot with a null (omit) failure path', () => {
         expect(page).toMatch(/import\s*\{[^}]*\bgetSiteStatsOrNull\b[^}]*\}\s*from\s*'@\/lib\/site-stats'/);
-        expect(page).toContain('canonicalActiveJobWhere()');
+        // States covered: the shared helper /about also reads (indexing audit
+        // M-08), which counts under the canonical predicate.
+        expect(page).toContain("import { getStatesCovered } from '@/lib/states-covered'");
+        expect(read('lib/states-covered.ts')).toContain('canonicalBucketWhere(');
         // The old catch returned zero-filled stats that rendered "0+".
         expect(page).not.toMatch(/totalJobs:\s*0\s*,\s*statesCovered:\s*0\s*,\s*subscribers:\s*0/);
         expect(page).toMatch(/return null/);

@@ -5,24 +5,25 @@ import { formatSalary, slugify, getJobFreshness, getExpiryStatus, expandInlineBu
 import { sanitizeHtmlContent } from '@/lib/sanitize';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
 import StickyApplyBar from './StickyApplyBar';
-import { MapPin, Briefcase, Monitor, BadgeCheck, ArrowRight, Search, Laptop, Video, Plane, Building2, BedDouble, DollarSign, type LucideIcon } from 'lucide-react';
+import { MapPin, Briefcase, Monitor, BadgeCheck, Laptop, Video, Plane, Building2, BedDouble, DollarSign, type LucideIcon } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { Job, Company } from '@/lib/types';
 import SaveJobButton from '@/components/SaveJobButton';
-import ApplyButton from '@/components/ApplyButton';
+// Indexing audit GFJ-03, owner decision 2026-09: applying requires an
+// account. ApplyButtonPlaceholder is the server-rendered stand-in: a GET
+// form to /signup that returns here with the apply intent, never a link to
+// the employer (the page is ISR and cannot know who is signed in).
+import ApplyButton, { ApplyButtonPlaceholder } from '@/components/ApplyButton';
 import { effectiveExperienceLabel, effectiveNewGradFriendly } from '@/lib/experience-label';
 import ReportJobButton from '@/components/ReportJobButton';
 import MessageEmployerButton from '@/components/jobs/MessageEmployerButton';
 
 import ShareButtons from '@/components/ShareButtons';
 import AnimatedContainer from '@/components/ui/AnimatedContainer';
-import JobNotFound from '@/components/JobNotFound';
 import JobStructuredData from '@/components/JobStructuredData';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import RelatedJobs from '@/components/RelatedJobs';
 import AboutEmployer from '@/components/AboutEmployer';
-import SalaryInsights from '@/components/SalaryInsights';
 import { JobViewTracker } from '@/components/analytics/ViewTrackers';
 import SalaryComparisonWidget from '@/components/SalaryComparisonWidget';
 import RelatedBlogPosts, { getRelevantBlogSlugs } from '@/components/RelatedBlogPosts';
@@ -36,13 +37,35 @@ import JobLocationContext, {
 // Live-review fix #1: render-time profession fallback for rows the
 // backfill has not stamped yet — deterministic rules, no network.
 import { classifyProfession, type ProfessionClass } from '@/lib/profession-classifier';
-import { CareerPulseCard, ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
+import { ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
 import { prisma } from '@/lib/prisma';
 import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
-// P3 #9: the city breadcrumb is both an internal link and a BreadcrumbList
-// ListItem, so it must not carry a URL the city route cannot resolve.
-import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
+// Indexing audit 2026-09: one module decides what the markup AND the page
+// may claim (verified remote, places, role title, posted date), one builds
+// the gated breadcrumb trail, one the <title> and description, one the
+// employer facts card.
+import {
+  cleanRoleTitle,
+  employmentTypeLabel,
+  isEstimatedSalary,
+  isVerifiedFullyRemote,
+  jobPostedAt,
+  resolveEmploymentTypes,
+  resolveRemoteApplicantStates,
+  resolveWorkModeLabel,
+} from './job-posting-facts';
+import { buildJobBreadcrumbs } from './job-breadcrumbs';
+import {
+  buildJobMetaDescription,
+  buildJobPageTitle,
+  jobPageRobots,
+  jobPageTitleMetadata,
+  resolveHeroLocation,
+  resolveTitleLocation,
+} from './job-page-meta';
+import { getEmployerFacts, type EmployerFacts } from './employer-facts';
 import { getPostBySlug } from '@/lib/blog';
 // Employer-authored title / employer / location strings often carry dashes as
 // separators. They stay raw in the row, in every DB query and in JSON-LD
@@ -87,9 +110,16 @@ interface JobPageProps {
   params: { slug: string };
 }
 
+/**
+ * Why a closed job is closed. 'unlisted': the employer's feed no longer
+ * lists it (DEAD_LINK_MISS_THRESHOLD consecutive misses), so "filled" would
+ * overstate what we know.
+ */
+type ClosedReason = 'expired' | 'unlisted';
+
 type JobResult =
   | { status: 'found'; job: Job }
-  | { status: 'expired'; employer?: string; title?: string }
+  | { status: 'expired'; employer?: string; title?: string; reason: ClosedReason }
   | { status: 'gone' }
   | { status: 'quarantined' };
 
@@ -98,7 +128,7 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
     // First check if job exists at all (any status)
     const anyJob = await prisma.job.findUnique({
       where: { id },
-      select: { id: true, isPublished: true, expiresAt: true, employer: true, title: true },
+      select: { id: true, isPublished: true, expiresAt: true, healthConsecutiveMissing: true, employer: true, title: true },
     });
 
     if (!anyJob) {
@@ -119,10 +149,18 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
     //      fully live, indexable page whenever middleware couldn't run —
     //      the two layers disagreed depending on env config.
     // If you change this predicate, change the middleware gate in the same
-    // commit (tests/regressions/seo-sitemaps-expired-mirror.test.ts pins both).
+    // commit (tests/regressions/seo-sitemaps-page-schema.test.ts and
+    // seo-sitemaps-middleware.test.ts pin the two halves).
+    //
+    // Dead link (indexing audit CS-06): at DEAD_LINK_MISS_THRESHOLD
+    // consecutive source misses the sitemaps already drop the job
+    // (activeIndexableJobWhere) and middleware answers 410. This fallback
+    // presents it as closed too: noindexed, no JobPosting, no apply button.
     const dateExpired = !!anyJob.expiresAt && anyJob.expiresAt.getTime() < Date.now();
-    if (!anyJob.isPublished || dateExpired) {
-      return { status: 'expired', employer: anyJob.employer, title: anyJob.title };
+    const deadLink = anyJob.healthConsecutiveMissing >= DEAD_LINK_MISS_THRESHOLD;
+    if (!anyJob.isPublished || dateExpired || deadLink) {
+      const reason: ClosedReason = anyJob.isPublished && !dateExpired ? 'unlisted' : 'expired';
+      return { status: 'expired', employer: anyJob.employer, title: anyJob.title, reason };
     }
 
     // Job is published — fetch full data with employer info
@@ -352,17 +390,19 @@ async function getCompanyInfo(companyId: string | null, employerName: string, jo
 }
 
 /**
- * Get count of other jobs from the same employer
+ * Employer facts for the About card (CQ-11). A failure omits the card's
+ * facts rather than failing the page.
  */
-async function getEmployerJobCount(employerName: string, currentJobId: string) {
-  const count = await prisma.job.count({
-    where: {
-      employer: { equals: employerName, mode: 'insensitive' },
-      ...PUBLISHED_LISTING_WHERE,
-      id: { not: currentJobId },
-    },
-  });
-  return count;
+async function getEmployerFactsSafe(
+  job: Job,
+  company: Awaited<ReturnType<typeof getCompanyInfo>>,
+): Promise<EmployerFacts | null> {
+  try {
+    return await getEmployerFacts(job, company);
+  } catch (error) {
+    console.error('[job-page] employer facts failed; the About card omits them', error);
+    return null;
+  }
 }
 
 /**
@@ -390,7 +430,7 @@ async function getStateSalaryMedianK(stateName: string | null, stateCode: string
  */
 async function getRelevantBlogPosts(job: Job) {
   const slugs = getRelevantBlogSlugs({
-    isRemote: job.isRemote,
+    isRemote: isVerifiedFullyRemote(job),
     isTelehealth: job.mode?.toLowerCase().includes('telehealth') ||
       job.title.toLowerCase().includes('telehealth') ||
       job.description.toLowerCase().includes('telehealth'),
@@ -455,9 +495,12 @@ export async function generateMetadata({ params }: JobPageProps) {
   if (result.status === 'expired') {
     const expiredTitle = displayText(result.title) || `${brand.niche.short} Position`;
     const expiredEmployer = displayText(result.employer) || 'Employer';
+    const unlisted = result.reason === 'unlisted';
     return {
-      title: `${expiredTitle}: Position Filled`,
-      description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar ${brand.niche.short} jobs on ${brand.name}.`,
+      title: `${expiredTitle}: ${unlisted ? 'Position Closed' : 'Position Filled'}`,
+      description: unlisted
+        ? `This ${expiredTitle} position at ${expiredEmployer} is no longer listed. Browse similar ${brand.niche.short} jobs on ${brand.name}.`
+        : `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar ${brand.niche.short} jobs on ${brand.name}.`,
       robots: {
         index: false,
         follow: true,
@@ -468,15 +511,34 @@ export async function generateMetadata({ params }: JobPageProps) {
   const job = result.job;
   const displayTitle = displayText(job.title);
   const displayEmployer = displayText(job.employer);
+  const postedAt = jobPostedAt(job);
+  const workModeLabel = resolveWorkModeLabel(job);
+  const titleLocation = resolveTitleLocation(job);
+  const roleTitle = cleanRoleTitle(job.title, job);
+  // H-03: the types the chip shows and employmentType emits.
+  const jobTypeLabel = employmentTypeLabel(resolveEmploymentTypes(job));
 
-  // Strip HTML tags before slicing — Quill-edited employer postings and many
-  // scraped descriptions arrive as HTML, and slicing raw HTML stuffs <p>/<ul>
-  // tags into the meta description, which Google then renders as literal
-  // text in SERP snippets. descriptionSummary (when present) is plain text,
-  // but we apply the stripper unconditionally so a future raw value can't leak.
-  const stripHtmlForMeta = (s: string): string =>
-    s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const description = stripHtmlForMeta(job.descriptionSummary || job.description).slice(0, 158);
+  // M-09: the description is assembled from the job's own facts in whole
+  // sentences (role, employer, place, type, stated pay, posted date, one
+  // summary sentence), never a raw cut of the posting's opening paragraph.
+  const description = buildJobMetaDescription({
+    roleTitle,
+    employer: job.employer,
+    // A verified remote job's place ("Remote, OR") is in the lead sentence's
+    // states, so it is not repeated as a town.
+    location: workModeLabel === 'Remote' ? '' : titleLocation,
+    workMode: workModeLabel,
+    remoteStates: workModeLabel === 'Remote' ? resolveRemoteApplicantStates(job) : [],
+    jobType: jobTypeLabel,
+    // CQ-02: an estimated or conflicting figure is not quoted, the same rule
+    // that keeps it out of JobPosting.baseSalary.
+    payLabel: isEstimatedSalary(job)
+      ? null
+      : normalizeDisplaySalary(formatSalary(job.minSalary, job.maxSalary, job.salaryPeriod)) || null,
+    postedAt,
+    applyOnPlatform: job.applyOnPlatform,
+    summary: job.descriptionSummary,
+  });
 
   // Format salary for OG image - DON'T include if $0k or empty
   const formatOGSalary = (): string | null => {
@@ -494,19 +556,9 @@ export async function generateMetadata({ params }: JobPageProps) {
     return null; // Return null, NOT empty string
   };
 
-  // Format location for OG image
-  const formatOGLocation = () => {
-    if (job.isRemote) return 'Remote';
-    if (job.city && job.state) return `${job.city}, ${job.state}`;
-    if (job.state) return job.state;
-    if (job.location) return job.location;
-    return '';
-  };
-
-  // Check if job is new (less than 7 days old)
-  const isNew = job.createdAt
-    ? (Date.now() - new Date(job.createdAt).getTime()) < 7 * 24 * 60 * 60 * 1000
-    : false;
+  // Check if job is new (less than 7 days old), from the same posted date
+  // the page and datePosted show (GFJ-16).
+  const isNew = (Date.now() - postedAt.getTime()) < 7 * 24 * 60 * 60 * 1000;
 
   // Build dynamic OG image URL
   const ogImageUrl = new URL('/api/og', BASE_URL);
@@ -519,10 +571,12 @@ export async function generateMetadata({ params }: JobPageProps) {
     ogImageUrl.searchParams.set('salary', salary);
   }
 
-  const location = displayText(formatOGLocation());
-  if (location) ogImageUrl.searchParams.set('location', location);
+  // OG location: "Remote" only for a verified fully remote job (GFJ-01),
+  // never for a job whose location is merely unknown (CS-03).
+  if (titleLocation) ogImageUrl.searchParams.set('location', titleLocation);
 
-  if (job.jobType) ogImageUrl.searchParams.set('jobType', job.jobType);
+  // The same type label the page's chip shows (H-03).
+  if (jobTypeLabel) ogImageUrl.searchParams.set('jobType', jobTypeLabel);
   if (isNew) ogImageUrl.searchParams.set('isNew', 'true');
   // Phase 1 #19 — surface experience label in social previews so the
   // "New grad welcome" / "5+ yrs" chip is visible at share time. Read
@@ -545,21 +599,17 @@ export async function generateMetadata({ params }: JobPageProps) {
   const canonicalSlug = job.slug || slugify(job.title, job.id);
   const canonicalUrl = `${brand.baseUrl}/jobs/${canonicalSlug}`;
 
-  // Title includes location when available so SERP listings differentiate
-  // identical job titles posted in multiple cities. Capped at ~60 chars so
-  // Google doesn't truncate; falls back to "{title} at {employer}" only.
-  const titleLocation = displayText(job.isRemote
-    ? 'Remote'
-    : (job.city && job.stateCode ? `${job.city}, ${job.stateCode}` : (job.state || '')));
-  const fullTitle = titleLocation
-    ? `${displayTitle} at ${displayEmployer} (${titleLocation})`
-    : `${displayTitle} at ${displayEmployer}`;
-  const titleWithLocation = fullTitle.length > 65
-    ? `${displayTitle}, ${titleLocation || displayEmployer}`.slice(0, 65)
-    : fullTitle;
+  // M-04: "{Role} at {Employer} ({Place})". The employer and the place are
+  // always kept, so one employer's postings of the same role in different
+  // towns (or, remote, in different states: "Remote, OR") never share a
+  // title. The brand suffix gives way first, then trailing role units, cut
+  // only between whole units that still name the job, never mid-word. The
+  // place reads "Remote" only for a verified remote job.
+  const titleWithLocation = buildJobPageTitle({ roleTitle, employer: job.employer, location: titleLocation });
+  const robots = jobPageRobots(job);
 
   return {
-    title: titleWithLocation,
+    title: jobPageTitleMetadata(titleWithLocation),
     description,
     openGraph: {
       title: titleWithLocation,
@@ -586,19 +636,20 @@ export async function generateMetadata({ params }: JobPageProps) {
     alternates: {
       canonical: canonicalUrl,
     },
+    // GFJ-04: a synthesized stub description is not a complete posting. The
+    // page stays reachable for anyone who follows a link, but it is kept out
+    // of the index (jobPageRobots) and emits no JobPosting until the adapter
+    // stores the employer's full description (isJobPostingEligible reads the
+    // same rule, so index-urls never submits it either).
+    ...(robots && { robots }),
   };
 }
 
 /**
- * Render a "410 Gone" page for jobs that have been permanently removed.
- * Google honors the noindex meta tag set in generateMetadata() and the
- * X-Robots-Tag header set in middleware. The rich content with internal
- * links preserves link equity while signaling permanent removal.
+ * The noindexed shell for a closed job (expired, unpublished or no longer
+ * listed at its source). A deleted job is a real 404 instead (notFound()).
+ * The internal links keep a visitor on the board.
  */
-function renderGonePage() {
-  return renderRemovedPage({ badge: 'Position Removed', badgeGradient: 'linear-gradient(135deg, #6b7280, #4b5563)', heading: 'This Position Is No Longer Available', subtext: 'This job listing has been permanently removed.' });
-}
-
 function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, employer }: { badge: string; badgeGradient: string; heading: string; subtext: string; title?: string; employer?: string }) {
   const clayCard: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '20px',
@@ -656,7 +707,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
           <p style={{ fontSize: '15px', color: '#7A6A62', marginBottom: '0', lineHeight: 1.6 }}>
             {subtext}
           </p>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Hundreds of similar {brand.niche.short} positions are available right now.</p>
+          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Browse the {brand.niche.short} positions open now.</p>
         </div>
 
         {/* Action Cards — 3×2 Grid */}
@@ -744,6 +795,19 @@ export default async function JobPage({ params }: JobPageProps) {
     const expiredTitle = displayText(result.title) || `${brand.niche.short} Position`;
     const expiredEmployer = displayText(result.employer) || 'an employer';
 
+    // CS-06: a job the employer's feed stopped listing is closed, not
+    // necessarily filled; the copy says only what we know.
+    if (result.reason === 'unlisted') {
+      return renderRemovedPage({
+        badge: 'Position Closed',
+        badgeGradient: 'linear-gradient(135deg, #6b7280, #4b5563)',
+        heading: 'This Position Is No Longer Listed',
+        subtext: 'The source that listed this job no longer carries it.',
+        title: expiredTitle,
+        employer: expiredEmployer,
+      });
+    }
+
     return renderRemovedPage({
       badge: 'Position Filled',
       badgeGradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
@@ -759,7 +823,9 @@ export default async function JobPage({ params }: JobPageProps) {
   // JSON-LD block and analytics call below keeps reading the raw job.* values.
   const displayTitle = displayText(job.title);
   const displayEmployer = displayText(job.employer);
-  const displayLocation = displayText(job.location);
+  // GFJ-01: the stored location string, except that "Remote" is shown only
+  // for a verified remote job (else the resolved place, as in the title).
+  const heroLocation = resolveHeroLocation(job);
 
   // B34: single canonical URL for every surface on this page. Must match
   // generateMetadata's alternates.canonical and JobStructuredData's `url`
@@ -769,6 +835,8 @@ export default async function JobPage({ params }: JobPageProps) {
   // BreadcrumbSchema fell back to the bare id — three different URL forms
   // for the same job splinter shares and schema signals across variants.
   const canonicalJobUrl = `${brand.baseUrl}/jobs/${job.slug || slugify(job.title, job.id)}`;
+  // The same URL as a site path: where the sign-up-first apply link returns.
+  const canonicalJobPath = new URL(canonicalJobUrl).pathname;
 
   // H9 fix: previously `getRelevantBlogPosts` was awaited AFTER this
   // Promise.all, adding 50-100ms of pure serial latency to every cache
@@ -787,10 +855,14 @@ export default async function JobPage({ params }: JobPageProps) {
   // module renders nothing.
   const locationCityRecord = resolveJobCityRecord(job.city, job.stateCode, job.state);
 
+  // The company lookup starts first because the employer facts need its
+  // Company row; everything else fans out beside it.
+  const companyInfoPromise = getCompanyInfo(job.companyId, job.employer, job.id);
   const [
     relatedJobs,
     companyInfo,
-    employerJobCount,
+    employerFacts,
+    breadcrumbItems,
     stateMedianSalaryK,
     relevantBlogPosts,
     internalLinkBuckets,
@@ -804,8 +876,11 @@ export default async function JobPage({ params }: JobPageProps) {
       mode: job.mode,
       limit: 5, // Increased from 4 to 5 for more related content
     }),
-    getCompanyInfo(job.companyId, job.employer, job.id),
-    getEmployerJobCount(job.employer, job.id),
+    companyInfoPromise,
+    companyInfoPromise.then((company) => getEmployerFactsSafe(job, company)),
+    // H-02 / L-04 / GFJ-14: the one trail, each crumb gated on its target
+    // page's own index verdict.
+    buildJobBreadcrumbs(job, `${displayTitle} at ${displayEmployer}`),
     getStateSalaryMedianK(job.state, job.stateCode),
     getRelevantBlogPosts(job),
     getInternalLinkBuckets({
@@ -863,76 +938,50 @@ export default async function JobPage({ params }: JobPageProps) {
   // normalizeDisplaySalary is idempotent on formatSalary's " to " output; it
   // is the render-point guard that keeps any dashed range off the hero badge.
   const salary = normalizeDisplaySalary(formatSalary(job.minSalary, job.maxSalary, job.salaryPeriod)) ?? '';
-  const freshness = getJobFreshness(job.createdAt);
+  // GFJ-16: the visible posted date and JobPosting.datePosted read the same
+  // field (the employer's original date, else the row's creation).
+  const freshness = getJobFreshness(jobPostedAt(job));
   const expiryStatus = getExpiryStatus(job.expiresAt);
+  // "Last updated" is when the posting's content last changed
+  // (Job.contentChangedAt), never a write timestamp moved by view counts,
+  // link checks or renewals, which is what updatedAt tracks.
+  const contentChangedAt = job.contentChangedAt ?? null;
+
+  // GFJ-01: one verified work mode for the chip, the tips and the links, the
+  // same predicate the JobPosting markup reads.
+  const workModeLabel = resolveWorkModeLabel(job);
+  const isVerifiedRemote = workModeLabel === 'Remote';
+  const remoteStates = isVerifiedRemote ? resolveRemoteApplicantStates(job) : [];
+  // H-03: the chip names every type the posting offers ("Full-Time or
+  // Part-Time"), the same types JobPosting.employmentType emits. The tips
+  // and the internal links read the primary one of those, never the raw
+  // column (a stored Contract on a W-2 posting is not shown anywhere).
+  const employmentTypes = resolveEmploymentTypes(job);
+  const jobTypeLabel = employmentTypeLabel(employmentTypes);
+  const primaryJobType = employmentTypes[0] ?? null;
 
   // Determine if job is telehealth/remote for internal linking
   const isTelehealth = job.mode?.toLowerCase().includes('telehealth') ||
     job.title.toLowerCase().includes('telehealth') ||
     job.description.toLowerCase().includes('telehealth');
 
-  // Build breadcrumb items
-  const breadcrumbItems = [
-    { label: 'Home', href: '/' },
-    { label: 'Jobs', href: '/jobs' },
-  ];
-
-  // Add state if available
-  if (job.state) {
-    breadcrumbItems.push({
-      label: displayText(job.state),
-      href: `/jobs/state/${job.state.toLowerCase().replace(/\s+/g, '-')}`,
-    });
-  }
-
-  // Add city if available (with state code for proper routing).
-  //
-  // P3 #9: /jobs/city/[slug] never looks a slug up — it rebuilds a city NAME out
-  // of it and matches that against the DB `city` column. The builder collapses
-  // every non-alphanumeric run to a hyphen and the parser turns hyphens back into
-  // spaces, so a stored "St. Louis" / "Lee's Summit" / "Winston-Salem" round-trips
-  // to a DIFFERENT string, matches zero rows and hard-404s. This crumb is also a
-  // BreadcrumbList ListItem, so the dead URL was handed to Google as structured
-  // data too. Emit it only when the round-trip resolves; otherwise drop the crumb
-  // (Home › Jobs › State › this job) rather than publish a link to a known 404.
-  if (job.city && job.stateCode) {
-    if (cityLinkResolves(job.city, job.stateCode)) {
-      breadcrumbItems.push({
-        label: displayText(job.city),
-        href: `/jobs/city/${buildCitySlug(job.city, job.stateCode)}`,
-      });
-    }
-  } else if (job.city && cityLinkResolves(job.city, 'xx')) {
-    // Fallback: no state code, use resolveAmbiguousSlug-compatible format (no
-    // -{state} suffix — the route resolves it against the DB instead). 'xx' is a
-    // stand-in code so cityLinkResolves judges the CITY half only, which is the
-    // half this URL has; that ambiguous lookup de-slugifies exactly as lossily,
-    // so a name failing the round-trip 404s there as well. Same stand-in idiom as
-    // the dataset-wide assertion in
-    // tests/regressions/p2-mesh-directories-state-cities.test.ts.
-    breadcrumbItems.push({
-      label: displayText(job.city),
-      href: `/jobs/city/${job.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}`,
-    });
-  }
-
-  // Current page (no link)
-  breadcrumbItems.push({
-    label: `${displayTitle} at ${displayEmployer}`,
-    href: '',
-  });
+  // GFJ-08: hiringOrganization logo and sameAs come from the employer's own
+  // posting first, else the matched Company row. Only the markup reads the
+  // merged values; the hero avatar keeps the employer-uploaded logo, which
+  // is the one host next/image is configured for.
+  const schemaJob = {
+    ...job,
+    companyWebsite: job.companyWebsite || companyInfo?.website || null,
+    companyLogoUrl: job.companyLogoUrl || companyInfo?.logoUrl || null,
+  };
+  const otherJobsCount = employerFacts ? Math.max(0, employerFacts.openRoles - 1) : 0;
+  const companyPath = employerFacts?.companyPath ?? null;
 
   return (
     <>
       <JobStructuredData
-        job={job}
+        job={schemaJob}
       />
-      <BreadcrumbSchema items={[
-        { name: 'Home', url: brand.baseUrl },
-        { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
-        ...(job.state ? [{ name: job.state, url: `${brand.baseUrl}/jobs/state/${job.state.toLowerCase().replace(/\s+/g, '-')}` }] : []),
-        { name: job.title, url: canonicalJobUrl },
-      ]} />
       <JobViewTracker job={{ id: job.id, title: job.title, employer: job.employer, jobType: job.jobType || undefined, stateCode: job.stateCode || undefined, sourceProvider: job.sourceProvider || undefined, normalizedMinSalary: job.normalizedMinSalary }} />
       <div style={{ backgroundColor: '#F5F0EB', minHeight: '100vh', paddingTop: '1px', paddingBottom: '40px' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-24 lg:pb-8">
@@ -1036,17 +1085,21 @@ export default async function JobPage({ params }: JobPageProps) {
                       Mirrors the LinkedIn / Indeed identity puck style:
                       avatar on the left, two-line text to the right. */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                    {companyInfo ? (
-                      <Link href={`/companies/${companyInfo.normalizedName}`} className="text-lg sm:text-xl font-semibold hover:text-pink-600 transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                    {companyPath ? (
+                      // Linked only when the company profile exists (a real
+                      // Company row with a live job); it answers 410 at zero.
+                      <Link href={companyPath} className="text-lg sm:text-xl font-semibold hover:text-pink-600 transition-colors" style={{ color: 'var(--text-secondary)' }}>
                         {displayEmployer}
                       </Link>
                     ) : (
                       <span className="text-lg sm:text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>{displayEmployer}</span>
                     )}
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                      <MapPin size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
-                      {displayLocation}
-                    </span>
+                    {heroLocation && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                        <MapPin size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                        {heroLocation}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1058,14 +1111,16 @@ export default async function JobPage({ params }: JobPageProps) {
                   {salary && (
                     <Badge variant="salary" size="md">{salary}</Badge>
                   )}
-                  {job.jobType && (
+                  {jobTypeLabel && (
                     <Badge variant="outline" size="md">
-                      <Briefcase size={12} /> {job.jobType}
+                      <Briefcase size={12} /> {jobTypeLabel}
                     </Badge>
                   )}
-                  {job.mode && (
+                  {/* GFJ-01: "Remote" only when the job is verified fully
+                      remote, so the chip and the JobPosting markup agree. */}
+                  {workModeLabel && (
                     <Badge variant="outline" size="md">
-                      <Monitor size={12} /> {job.mode}
+                      <Monitor size={12} /> {workModeLabel}
                     </Badge>
                   )}
                   {(() => {
@@ -1230,9 +1285,9 @@ export default async function JobPage({ params }: JobPageProps) {
             {/* Footer Info */}
             <div className="text-sm px-1 mt-6" style={{ color: 'var(--text-tertiary)' }}>
               <p>{freshness}</p>
-              {job.updatedAt && (
+              {contentChangedAt && (
                 <p className="mt-1">
-                  Last updated: {new Date(job.updatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  Last updated: {new Date(contentChangedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                 </p>
               )}
               {job.sourceType === 'external' && job.sourceProvider && (
@@ -1258,7 +1313,11 @@ export default async function JobPage({ params }: JobPageProps) {
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                  <Suspense fallback={<ApplyButtonPlaceholder />}>
+                  {/* ApplyButton reads useSearchParams() (the ?apply=1 intent);
+                      unwrapped, that read bails this ISR page out to client
+                      rendering and the SSR HTML loses its H1 and JobPosting.
+                      The boundary confines it to the button. */}
+                  <Suspense fallback={<ApplyButtonPlaceholder jobPath={canonicalJobPath} applyLink={job.applyLink} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />}>
                     <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
                   </Suspense>
                   <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
@@ -1314,27 +1373,32 @@ export default async function JobPage({ params }: JobPageProps) {
                   internal link simply never rendered. They are now part of the
                   normal flow at every breakpoint — the column stacks under the
                   description below `lg` because the parent grid is `lg:grid`. */}
-              <div className="mt-4">
+              {/* CQ-11: real employer facts (open roles, states, posted pay,
+                  the profile link) instead of boilerplate; the card renders
+                  nothing when there are none, and `empty:hidden` drops its
+                  spacing with it. */}
+              <div className="mt-4 empty:hidden">
                 <AboutEmployer
                   employerName={job.employer}
                   company={companyInfo}
-                  otherJobsCount={employerJobCount}
+                  otherJobsCount={otherJobsCount}
                   companyWebsite={job.companyWebsite ?? undefined}
+                  facts={employerFacts}
                 />
               </div>
 
-              {/* 3D Visual Cards */}
-              <div className="mt-4">
+              {/* CQ-11: tips drawn from this posting's facts only. The
+                  site-wide "Career Pulse" stats card was removed: it was
+                  identical on every job page. */}
+              <div className="mt-4 empty:hidden">
                 <ApplicationTipsCard
-                  isRemote={job.isRemote ?? false}
+                  workMode={workModeLabel}
                   isTelehealth={job.mode?.toLowerCase().includes('telehealth')}
-                  jobType={job.jobType}
-                  mode={job.mode}
+                  jobType={primaryJobType}
+                  newGradFriendly={effectiveNewGradFriendly(job)}
+                  minYearsExperience={job.minYearsExperience}
+                  remoteStates={remoteStates}
                 />
-              </div>
-
-              <div className="mt-4">
-                <CareerPulseCard />
               </div>
 
               {/* Career Resources — separate card */}
@@ -1354,10 +1418,10 @@ export default async function JobPage({ params }: JobPageProps) {
                   state={job.state}
                   stateCode={job.stateCode}
                   city={job.city}
-                  isRemote={job.isRemote}
+                  isRemote={isVerifiedRemote}
                   isTelehealth={isTelehealth}
-                  jobType={job.jobType}
-                  mode={job.mode}
+                  jobType={primaryJobType}
+                  mode={workModeLabel}
                 />
               </div>
             </div>
@@ -1406,7 +1470,7 @@ export default async function JobPage({ params }: JobPageProps) {
       <StickyApplyBar>
         <div className="px-4 py-2 pb-safe">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Suspense fallback={<ApplyButtonPlaceholder />}>
+            <Suspense fallback={<ApplyButtonPlaceholder jobPath={canonicalJobPath} applyLink={job.applyLink} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />}>
               <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
             </Suspense>
             <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
@@ -1427,17 +1491,5 @@ export default async function JobPage({ params }: JobPageProps) {
       </StickyApplyBar>
     </>
   );
-}
-
-/**
- * Server-rendered stand-in for ApplyButton while its Suspense boundary is
- * pending. ApplyButton reads useSearchParams() (the ?apply=1 auto-open), and
- * on this ISR route an unwrapped search-param read bails the WHOLE page out
- * to client rendering: the SSR HTML then carries no H1 and no JobPosting
- * JSON-LD. The boundary confines the bailout to the button; the placeholder
- * reserves the button's 52px min-height so hydration causes no layout shift.
- */
-function ApplyButtonPlaceholder() {
-  return <div aria-hidden="true" style={{ minHeight: '52px', width: '100%' }} />;
 }
 

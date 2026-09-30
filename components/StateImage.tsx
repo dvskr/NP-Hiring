@@ -24,8 +24,10 @@ import Image from 'next/image';
  * scripts/image-manifest.json, every one of which is a diorama path under
  * /images/states (it is legacy migration output pointing at a retired Supabase
  * bucket, so deleting it may beat renaming its keys; either way do not leave
- * 4 of 5 behind). And 102 of these exact URLs are already
- * advertised to Google Images from app/image-sitemap.xml. Renaming to the
+ * 4 of 5 behind). The diorama URL is advertised to Google Images on the
+ * gated /jobs/state/{slug} and /salary-guide/{slug} entries of /sitemap.xml
+ * (lib/image-seo.ts stateDioramaSitemapImages); the standalone image sitemap
+ * is retired (indexing audit FB-4). Renaming to the
  * truthful `.webp` is one coordinated change across those files, not a
  * component-local edit; `node scripts/optimize-state-images.mjs
  * --measure-webp` prices it (a further ~1.3 MB) and prints the current

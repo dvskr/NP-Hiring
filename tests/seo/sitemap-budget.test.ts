@@ -5,11 +5,14 @@
  *  - The primary sitemap stays within Google's 50k cap (with 5k headroom)
  *  - Each section's URL count is within an expected range
  *  - All static-pattern URLs in the sitemap conform to canonical shape
- *  - The robots.txt declares the expected sitemap entrypoints
+ *  - The robots.txt declares the one sitemap entry point (the index) and
+ *    leaves the noindexed account pages crawlable (TECH-05)
  *
  * Mocked Prisma — runs against in-memory fixtures, no DB required.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // This file executes the REAL production sitemap over a 2000-city fixture,
 // importing the full sitemap module graph (tools/compare/reports registries,
@@ -67,6 +70,8 @@ describe('P4.1: sitemap budget guard', () => {
         // ~30 companies with ≥8 jobs
         vi.mocked(prisma.company.findMany).mockResolvedValue(
             Array.from({ length: 30 }, (_, i) => ({
+                id: `c${i}`,
+                name: `Company ${i}`,
                 normalizedName: `company-${i}`,
                 _count: { jobs: 10 + i },
             })) as never
@@ -88,8 +93,12 @@ describe('P4.1: sitemap budget guard', () => {
         // /post-job is noindex and out of the sitemap (thin plan O1).
         expect(urls).not.toContain(`${baseUrl}/post-job`);
 
-        // Total count should be substantial but well under cap
-        expect(sitemap.length).toBeGreaterThan(100);
+        // Total count should be substantial but well under cap. (The floor was
+        // 100 while every salary specialty page was listed unconditionally;
+        // FB-2 lists only the ones whose page indexes, and this fixture gives
+        // the specialty verdicts no postings, so only the cited-median pages
+        // remain.)
+        expect(sitemap.length).toBeGreaterThan(80);
         expect(sitemap.length).toBeLessThan(45_000);
 
         // Every URL must be HTTPS + canonical-shaped (no query strings).
@@ -122,14 +131,15 @@ describe('P4.1: sitemap budget guard', () => {
         expect(urls.some((u) => u === BASE_URL || u === `${BASE_URL}/`)).toBe(true);
     });
 
-    it('robots.txt declares the expected sitemap entrypoints', () => {
+    it('robots.txt names one sitemap entry point: the index (FB-4, CS-08, TECH-11)', () => {
         const robots = robotsHandler();
 
-        // Sitemap declarations
-        expect(robots.sitemap).toBeDefined();
-        const sitemaps = Array.isArray(robots.sitemap) ? robots.sitemap : [robots.sitemap!];
-        expect(sitemaps.some((s) => s?.includes('/api/sitemaps/index'))).toBe(true);
-        expect(sitemaps.some((s) => s?.includes('/sitemap.xml'))).toBe(true);
+        // The index lists /sitemap.xml and every batch, so it is the only
+        // Sitemap line: no duplicate /sitemap.xml, no retired image sitemap,
+        // no empty video sitemap (Search Console counts every listed one as
+        // submitted).
+        const sitemaps = ([] as string[]).concat(robots.sitemap ?? []);
+        expect(sitemaps).toEqual([`${process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl}/api/sitemaps/index`]);
 
         // Catch-all rule must exist
         const catchAll = robots.rules instanceof Array
@@ -139,62 +149,49 @@ describe('P4.1: sitemap budget guard', () => {
         expect(catchAll?.disallow).toBeDefined();
     });
 
-    it('robots.txt does NOT block /signup, /login, /messages during the P2.3 unblock window', () => {
-        // S3 fix (2026-06-01): gate on the live deadline. Pre-deadline the
-        // paths must stay crawlable (Googlebot needs to read X-Robots-Tag:
-        // noindex). Post-deadline the next test in this suite enforces the
-        // opposite (paths must be back in disallow). Without this gate the
-        // suite was structurally guaranteed to fail one of the two asserts
-        // forever — exactly what runbook T1 flagged as "CI is red right now."
-        const AUTH_REBLOCK_DATE = '2026-05-19';
-        const today = new Date().toISOString().slice(0, 10);
-        if (today > AUTH_REBLOCK_DATE) {
-            // Window has expired — the sibling test below is the active guard.
-            return;
-        }
-
+    it('TECH-05: search and AI crawlers may fetch the account pages, so they can read the noindex', () => {
+        // Each of these answers noindex (metadata robots plus the middleware
+        // X-Robots-Tag), and /saved and /messages are linked from every page.
+        // A robots.txt block hides that noindex, which is how these URLs
+        // reached "Indexed, though blocked by robots.txt". The dated re-block
+        // (AUTH_REBLOCK_DATE) is gone for good.
+        const ACCOUNT_PAGES = ['/signup', '/login', '/messages', '/saved', '/job-alerts/manage', '/employer/login'];
         const robots = robotsHandler();
         const rules = Array.isArray(robots.rules) ? robots.rules : [robots.rules];
-        const catchAll = rules.find((r) => r.userAgent === '*');
-        expect(catchAll).toBeDefined();
-        const disallow = (catchAll!.disallow ?? []) as string[];
-        // These paths must remain crawlable until AUTH_REBLOCK_DATE so Google
-        // can re-crawl, see X-Robots-Tag: noindex, and de-index.
-        expect(disallow).not.toContain('/login');
-        expect(disallow).not.toContain('/signup');
-        expect(disallow).not.toContain('/messages');
-        expect(disallow).not.toContain('/saved');
-        expect(disallow).not.toContain('/job-alerts/manage');
+        const asArray = (v: string | string[] | undefined): string[] => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
+        for (const agent of ['*', 'GPTBot', 'AhrefsBot', 'ClaudeBot']) {
+            const rule = rules.find((r) => asArray(r.userAgent).includes(agent));
+            expect(rule, `no rule block for ${agent}`).toBeDefined();
+            const disallow = asArray(rule!.disallow);
+            for (const page of ACCOUNT_PAGES) {
+                expect(disallow.some((prefix) => page.startsWith(prefix)), `${agent} is blocked from ${page}`).toBe(false);
+            }
+        }
+        // Social preview bots ignore X-Robots-Tag and would render a login
+        // shell, so they still skip all six.
+        const social = rules.find((r) => asArray(r.userAgent).includes('Twitterbot'));
+        for (const page of ACCOUNT_PAGES) expect(asArray(social!.disallow)).toContain(page);
+        expect(fs.readFileSync(path.join(process.cwd(), 'app', 'robots.ts'), 'utf8')).not.toMatch(/AUTH_REBLOCK_DATE\s*=|POST_DEADLINE_AUTH_REBLOCK\s*=/);
     });
 
-    it('SEO Fix #21: AUTH_REBLOCK_DATE deadline is enforced — once the date passes, those paths MUST be back in FULL_DISALLOW', () => {
-        // Mirror the source-of-truth in app/robots.ts. Update both together
-        // when the unblock window is extended.
-        const AUTH_REBLOCK_DATE = '2026-05-19';
-
-        const today = new Date().toISOString().slice(0, 10);
-        if (today < AUTH_REBLOCK_DATE) {
-            // Still inside the window — the previous test is the active guard.
-            return;
+    it('the account pages really do answer noindex, so unblocking them is safe', () => {
+        // Metadata robots on each page or layout…
+        for (const rel of [
+            'app/signup/page.tsx',
+            'app/login/page.tsx',
+            'app/messages/layout.tsx',
+            'app/saved/layout.tsx',
+            'app/job-alerts/manage/layout.tsx',
+            'app/employer/layout.tsx',
+        ]) {
+            expect(fs.readFileSync(path.join(process.cwd(), ...rel.split('/')), 'utf8'), rel).toMatch(/robots:\s*\{\s*index:\s*false/);
         }
-
-        // Window has expired. The auth paths MUST be re-added to the
-        // catch-all disallow, and the previous "must NOT contain" test
-        // becomes invalid (it's a forward-looking marker; remove it when
-        // closing this gate). Failing here forces a human to verify GSC's
-        // "Indexed, though blocked by robots.txt" is at zero before merging.
-        const robots = robotsHandler();
-        const rules = Array.isArray(robots.rules) ? robots.rules : [robots.rules];
-        const catchAll = rules.find((r) => r.userAgent === '*');
-        const disallow = (catchAll!.disallow ?? []) as string[];
-        const required = ['/login', '/signup', '/messages', '/saved', '/job-alerts/manage'];
-        for (const path of required) {
-            expect(
-                disallow,
-                `AUTH_REBLOCK_DATE (${AUTH_REBLOCK_DATE}) has passed but ${path} is not back in FULL_DISALLOW. ` +
-                `Verify GSC "Indexed, though blocked by robots.txt" is at 0, then re-add to app/robots.ts FULL_DISALLOW.`,
-            ).toContain(path);
+        // …and the middleware header for every one of them.
+        const middleware = fs.readFileSync(path.join(process.cwd(), 'middleware.ts'), 'utf8');
+        for (const page of ['/login', '/signup', '/saved', '/messages', '/job-alerts/manage']) {
+            expect(middleware).toContain(`'${page}'`);
         }
+        expect(middleware).toContain("hasNoindexPrefix('/employer')");
     });
 
     it('robots.txt still blocks token-bearing and admin surfaces', () => {

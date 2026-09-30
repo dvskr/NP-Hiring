@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { brand } from '@/config/brand';
+import { BOARD_DESCRIPTION } from '@/config/niche/copy';
 // Newsreader is loaded only in app/blog/layout.tsx (scoped to /blog/*) so
 // non-blog pages don't pay the cost of a font that's only used by editorial
 // body typography.
 import { Inter, Lora } from "next/font/google";
 import "./globals.css";
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import SiteFooter from '@/components/SiteFooter';
 import dynamic from 'next/dynamic';
 // BottomNav was previously dynamic() with no SSR, which meant the 56px
 // fixed bar was injected after hydration -- causing a CLS spike on every
@@ -59,7 +60,9 @@ export const metadata: Metadata = {
     template: `%s | ${brand.name}`,
   },
 
-  description: `Browse thousands of ${brand.niche.short} jobs updated daily. Remote, telehealth, and in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
+  // No inventory adjective ("thousands of"): the board lists hundreds, and the
+  // live count belongs to pages that read it (app/page.tsx).
+  description: `Browse ${brand.niche.short} jobs updated daily. Remote, telehealth, and in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
 
   keywords: [
     `${brand.niche.short} jobs`,
@@ -86,7 +89,8 @@ export const metadata: Metadata = {
     url: brand.baseUrl,
     siteName: brand.name,
     title: `${brand.name}: Find ${brand.niche.long} Positions`,
-    description: `The #1 job board for ${brand.niche.short}s. Browse remote and in-person ${brand.niche.descriptor} jobs across all 50 states.`,
+    // Indexing audit M-08: the factual board description, not a ranking claim.
+    description: BOARD_DESCRIPTION,
     images: [
       {
         url: '/api/og',
@@ -100,7 +104,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: `${brand.name} | ${brand.niche.long} Job Board`,
-    description: `Find your next ${brand.niche.short} position. Remote and in-person jobs across 50 states, updated daily.`,
+    description: `Find your next ${brand.niche.short} position. Remote and in-person jobs, updated daily.`,
     images: ['/api/og'],
   },
 
@@ -212,7 +216,8 @@ export default function RootLayout({
                   "url": brand.baseUrl,
                   "logo": `${brand.baseUrl}/logo.png`,
                   "image": `${brand.baseUrl}/logo.png`,
-                  "description": `The #1 job board for ${brand.niche.long}s`,
+                  // M-08: on every page, so it must be a fact, not a ranking.
+                  "description": BOARD_DESCRIPTION,
                   "foundingDate": brand.legal.foundingYear,
                   // Per attribution rules: do NOT emit a `founder` Person on
                   // the public Organization schema. The legal LLC member is
@@ -301,7 +306,7 @@ export default function RootLayout({
               <MainContent>{children}</MainContent>
               <LayoutShell>
                 <MobileHideOnAppRoutes>
-                  <Footer />
+                  <SiteFooter />
                 </MobileHideOnAppRoutes>
                 <BottomNav />
                 <ScrollIndicator />

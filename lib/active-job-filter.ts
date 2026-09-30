@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
+import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/dead-link-threshold';
 
 /**
  * Dead-link gate (S6, audit 2026-05-31).
@@ -12,8 +13,12 @@ import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
  * a soft-404 / low-quality signal. We exclude jobs at or above this many
  * consecutive misses from indexable surfaces (sitemaps), without unpublishing
  * them outright (a separate decision owned by the health pipeline).
+ *
+ * The constant lives in lib/dead-link-threshold.ts (a leaf, so lib/filters.ts
+ * can read it without an import cycle) and is re-exported here for existing
+ * callers.
  */
-export const DEAD_LINK_MISS_THRESHOLD = 5;
+export { DEAD_LINK_MISS_THRESHOLD };
 
 /**
  * Prisma `where` for jobs that should appear in indexable surfaces (sitemaps):

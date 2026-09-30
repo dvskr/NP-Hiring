@@ -993,12 +993,16 @@ describe('index-pseo never publishes to Google', () => {
     const ROUTE = 'app/api/cron/index-pseo/route.ts';
     const PSEO_BASE = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
     const LANDING_ROWS = [
-        { categorySlug: 'remote', locationSlug: 'large-city-tx', totalJobs: 12, distinctEmployers: 5 },
-        { categorySlug: 'telehealth', locationSlug: 'mid-city-oh', totalJobs: 6, distinctEmployers: 3 },
+        { categorySlug: 'remote', locationSlug: 'large-city-tx', totalJobs: 12, distinctEmployers: 5, indexable: true },
+        { categorySlug: 'telehealth', locationSlug: 'mid-city-oh', totalJobs: 6, distinctEmployers: 3, indexable: true },
         // Fails the sitemap gate: a single employer.
-        { categorySlug: 'travel', locationSlug: 'large-city-tx', totalJobs: 9, distinctEmployers: 1 },
+        { categorySlug: 'travel', locationSlug: 'large-city-tx', totalJobs: 9, distinctEmployers: 1, indexable: true },
         // Fails the population floor.
-        { categorySlug: 'remote', locationSlug: 'hamlet-vt', totalJobs: 9, distinctEmployers: 4 },
+        { categorySlug: 'remote', locationSlug: 'hamlet-vt', totalJobs: 9, distinctEmployers: 4, indexable: true },
+        // Passes every count and would score highest, but the cron's stored
+        // verdict says no (its duplicates hold it under the floor), so the
+        // city sitemap omits it and the cron must not submit it either.
+        { categorySlug: 'travel', locationSlug: 'mid-city-oh', totalJobs: 20, distinctEmployers: 6, indexable: false },
     ];
     // Highest score first: 24 for the jobs plus 20 for the city beats 12 plus 15.
     const EXPECTED_URLS = [

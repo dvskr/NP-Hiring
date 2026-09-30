@@ -22,13 +22,12 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { isProfileSearchable } from '@/lib/profile-searchable';
-import { brand } from '@/config/brand';
 import OnboardingProfessionalForm from './OnboardingProfessionalForm';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-    title: `Complete your profile | ${brand.name}`,
+    title: 'Complete your profile',
     description: 'Add a few details so employers can find you in AI Match.',
     robots: { index: false, follow: false },
 };

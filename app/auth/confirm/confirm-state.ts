@@ -2,8 +2,39 @@
  * Pure helpers for /auth/confirm, kept out of the page so they can be unit
  * tested.
  */
+import { authGateHref, signupReturnPath, type SignupReturnUser } from '@/lib/apply-intent'
 
 export type ConfirmStatus = 'loading' | 'success' | 'error' | 'expired'
+
+/**
+ * Where a failed or unusable confirmation link sends the visitor to log in.
+ * An explicit ?next= (for example the job being applied for,
+ * /jobs/x?apply=1) rides along, so logging in still lands on that job with
+ * the apply intent; otherwise it is plain /login.
+ */
+export function confirmLoginHref(nextPath: string, hasExplicitNext: boolean): string {
+  return hasExplicitNext ? authGateHref('login', nextPath) : '/login'
+}
+
+/**
+ * Where a just-confirmed account goes next.
+ *
+ * An explicit ?next= on the confirmation link always wins. Without one (a
+ * link minted by "Resend", or a redirect that dropped its query string), the
+ * return path SignUpForm stashed in the auth metadata is used, so a
+ * candidate who signed up from a job's Apply button still lands back on
+ * that job with the apply intent. Otherwise `nextPath` (the onboarding
+ * interstitial) stands.
+ */
+export function confirmDestination(
+  nextPath: string,
+  hasExplicitNext: boolean,
+  user: SignupReturnUser | null | undefined,
+  now: number,
+): string {
+  if (hasExplicitNext) return nextPath
+  return signupReturnPath(user, now) ?? nextPath
+}
 
 /** Supabase PKCE auth codes are v4 UUIDs (GoTrue flow_state.auth_code). */
 const AUTH_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

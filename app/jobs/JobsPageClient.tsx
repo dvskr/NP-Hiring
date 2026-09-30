@@ -238,7 +238,8 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     const filters = parseFiltersFromParams(params);
-    const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1'));
+    // ?page=abc is page 1, never NaN (Math.max(1, NaN) is NaN).
+    const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
     setCurrentFilters(filters);
 
     // Skip fetch on initial load - we already have server-rendered data

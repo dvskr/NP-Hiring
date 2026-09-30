@@ -4,15 +4,16 @@
  * ~70 pages referenced dead Supabase `site-assets` page-screenshots in
  * their openGraph/twitter metadata (the bucket is unpopulated — every URL
  * 400s), and lib/image-seo.ts fed the same dead URLs into
- * image-sitemap.xml. The fix routes every metadata/sitemap image through
- * the board's own edge OG renderer (/api/og — working pattern:
- * app/for-employers/page.tsx).
+ * image-sitemap.xml. The fix routes every metadata image through the
+ * board's own edge OG renderer (/api/og — working pattern:
+ * app/for-employers/page.tsx). The image sitemap itself is retired
+ * (indexing audit FB-4); its only images, the state dioramas, now ride on
+ * the gated state entries of /sitemap.xml.
  *
  * These tests pin:
- *   1. lib/image-seo.ts only maps board-resolvable images (/api/og or
- *      local /images/**) — never a remote storage bucket.
- *   2. image-sitemap.xml emits well-formed XML (escaped ampersands in
- *      /api/og query strings) with zero supabase URLs.
+ *   1. lib/image-seo.ts only emits board-resolvable images (local
+ *      /images/**) — never a remote storage bucket.
+ *   2. The retired image sitemap stays retired.
  *   3. Swept page files contain no site-assets metadata references.
  *   4. Spot-pins on 5 representative pages' OG config.
  *   5. Files that legitimately keep STORAGE_BASE for visible art
@@ -22,8 +23,8 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { getAllPageImages } from '@/lib/image-seo';
-import { GET as imageSitemapGET } from '@/app/image-sitemap.xml/route';
+import { stateDioramaSitemapImages } from '@/lib/image-seo';
+import { STATE_DIORAMA_SLUGS } from '@/components/StateImage';
 import robots from '@/app/robots';
 import { brand } from '@/config/brand';
 
@@ -55,55 +56,24 @@ const FULLY_SWEPT_FILES = [
 const VISIBLE_ART_HOLDOUTS = ['app/privacy/page.tsx', 'app/resources/page.tsx'];
 
 describe('P0 OG sweep — lib/image-seo.ts', () => {
-    it('every mapped image is board-resolvable (/api/og or local /images/**)', () => {
-        const entries = getAllPageImages();
-        expect(entries.length).toBeGreaterThan(0);
-        for (const entry of entries) {
-            expect(
-                entry.image.startsWith('/api/og') || entry.image.startsWith('/images/'),
-                `${entry.url} maps to non-resolvable image: ${entry.image}`,
-            ).toBe(true);
-            expect(entry.image).not.toContain('supabase');
-            // Sitemap text fields stay populated.
-            expect(entry.alt.length).toBeGreaterThan(0);
-            expect(entry.title.length).toBeGreaterThan(0);
-            expect(entry.caption.length).toBeGreaterThan(0);
+    it('every sitemap image is a board-local /images/** file, never a storage bucket', () => {
+        const images = STATE_DIORAMA_SLUGS.flatMap((slug) => stateDioramaSitemapImages(slug, brand.baseUrl));
+        expect(images.length).toBeGreaterThan(0);
+        for (const image of images) {
+            expect(image.startsWith(`${brand.baseUrl}/images/`), `non-resolvable image: ${image}`).toBe(true);
+            expect(image).not.toContain('supabase');
         }
-    });
-
-    it('homepage entry uses the bare /api/og homepage card', () => {
-        const home = getAllPageImages().find((e) => e.url === '/');
-        expect(home?.image).toBe('/api/og');
     });
 });
 
-describe('P0 OG sweep — image-sitemap.xml', () => {
-    it('emits no supabase URLs and only /api/og or local image locs', async () => {
-        const res = imageSitemapGET();
-        const xml = await res.text();
-        expect(xml).not.toContain('supabase');
-        const locs = [...xml.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map(
-            (m) => m[1],
-        );
-        expect(locs.length).toBeGreaterThan(0);
-        for (const loc of locs) {
-            expect(
-                loc.startsWith(`${brand.baseUrl}/api/og`) ||
-                loc.startsWith(`${brand.baseUrl}/images/`),
-                `image sitemap emits non-resolvable loc: ${loc}`,
-            ).toBe(true);
-        }
+describe('P0 OG sweep — the retired image sitemap stays retired (FB-4)', () => {
+    it('has no route, so /image-sitemap.xml answers 404', () => {
+        expect(fs.existsSync(path.join(ROOT, 'app', 'image-sitemap.xml'))).toBe(false);
     });
 
-    it('is well-formed XML — every ampersand is an entity (escaped /api/og params)', async () => {
-        const res = imageSitemapGET();
-        const xml = await res.text();
-        // /api/og?title=...&type=page URLs carry raw `&` — the route must
-        // escape them or the sitemap is invalid XML and Google drops it.
-        const rawAmps = xml.match(/&(?!(amp|lt|gt|quot|apos|#\d+);)/g) ?? [];
-        expect(rawAmps.length, 'unescaped & in image-sitemap XML').toBe(0);
-        // And the escaping actually happened (multi-param OG URLs exist).
-        expect(xml).toContain('&amp;type=page');
+    it('robots.txt does not advertise it', () => {
+        const sitemaps = ([] as string[]).concat(robots().sitemap ?? []);
+        expect(sitemaps.some((url) => url.includes('image-sitemap'))).toBe(false);
     });
 });
 

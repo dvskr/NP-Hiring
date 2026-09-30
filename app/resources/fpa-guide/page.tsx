@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Shield, MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import { STATE_PRACTICE_AUTHORITY, getStatesByAuthority, getAuthorityColor, getAuthorityLabel, type PracticeAuthority } from '@/lib/state-practice-authority';
+import { getStatesByAuthority, type PracticeAuthority } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 // P6 #10: this guide carried Article JSON-LD + a review stamp but no
 // E-E-A-T byline. Visible byline and schema both derive from
@@ -16,7 +16,22 @@ import EditorialByline, { editorialSchemaFields } from '@/components/EditorialBy
 // Update at least quarterly; sooner if NLC membership or state authority
 // classifications change.
 const PUBLISHED_AT = '2026-03-19';
-const LAST_REVIEWED = '2026-09-25';
+const LAST_REVIEWED = '2026-09-28';
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * INDEXING AUDIT CQ-13 (2026-09-28): ONE PAGE PER INTENT
+ * ─────────────────────────────────────────────────────────────────────────
+ * This guide and /scope-of-practice both printed every state's
+ * classification and rule (41 to 46% of their text was shared), so two URLs
+ * competed for one "practice authority by state" query. /scope-of-practice
+ * is now the one state-by-state reference: the sortable explorer and a
+ * section per state. This page answers the other question, what full
+ * practice authority means and what it changes about how an NP works and
+ * gets paid, and sends every "what is the rule in my state" reader to the
+ * explorer (SCOPE_EXPLORER_PATH) instead of repeating the state table.
+ * Tier counts stay in the hero because they come from the same dataset.
+ */
+const SCOPE_EXPLORER_PATH = '/scope-of-practice';
 
 /* ─────────────────────────────────────────────────────────────────────────
  * P2 #22 — UNSOURCED CLAIMS REMOVED FROM THIS PAGE
@@ -73,8 +88,9 @@ const NP = brand.niche.short;
 /* ─────────────────────────────────────────────────────────────────────────
  * TIER COPY RULE (2026-09 practice-authority accuracy pass)
  * ─────────────────────────────────────────────────────────────────────────
- * The table on this page prints each state's verified `details` string from
- * lib/state-practice-authority.ts. The explainer copy around it used to turn
+ * This page used to print each state's verified `details` string from
+ * lib/state-practice-authority.ts in a table (now on /scope-of-practice,
+ * audit CQ-13). The explainer copy around it used to turn
  * the TIER into a per-state rule ("without physician oversight", "the
  * physician does not need to be on-site", "requires physician supervision",
  * "you need a collaborating or supervising physician in place first"), and
@@ -136,19 +152,22 @@ const WITHIN_TIER_NOTE = `States in the same tier do not share one rule. Several
 // Absolute URL because it also feeds Article JSON-LD `image`.
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Full Practice Authority Guide`)}&type=page`;
 
+const PAGE_TITLE = `What Full Practice Authority Means for ${brand.niche.short}s`;
+const PAGE_DESCRIPTION = `What full practice authority (FPA) means for ${brand.niche.descriptor}s: AANP's three practice environments, why states in one tier set different rules, and what practice authority changes about prescribing, telehealth, contract work and pay.`;
+
 export const metadata: Metadata = {
-  title: `${brand.niche.short} Full Practice Authority Guide 2026: All 50 States`,
-  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.descriptor}s. See how AANP classifies each state, what each state's rules say about collaboration, supervision and transition periods, Nurse Licensure Compact membership, and what practice authority changes about how you can work and get paid.`,
-  keywords: [`${brand.niche.short} full practice authority`, 'nurse practitioner independent practice states', 'FPA states 2026', `${brand.niche.short} prescriptive authority by state`, `${brand.niche.short} scope of practice`, 'NLC compact states for NP'],
+  title: PAGE_TITLE,
+  description: `${PAGE_DESCRIPTION} Each state's own rule is in the scope of practice explorer.`,
+  keywords: [`${brand.niche.short} full practice authority`, 'what is full practice authority', `${brand.niche.short} practice environment`, `${brand.niche.short} prescriptive authority`, `${brand.niche.short} transition to practice`, 'reduced and restricted practice'],
   openGraph: {
-    title: `Full Practice Authority Guide for ${brand.niche.short}s (2026)`,
-    description: `State-by-state FPA classifications, and what each state's rules require of ${brand.niche.descriptor}s.`,
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
     type: 'article',
-    images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} Full Practice Authority Guide 2026` }],
+    images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} Full Practice Authority Guide` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${brand.niche.short} Full Practice Authority Guide 2026`,
+    title: PAGE_TITLE,
     images: [HERO_IMAGE],
   },
   alternates: { canonical: `${brand.baseUrl}/resources/fpa-guide` },
@@ -158,8 +177,6 @@ export default function FPAGuidePage() {
   const fullStates = getStatesByAuthority('full');
   const reducedStates = getStatesByAuthority('reduced');
   const restrictedStates = getStatesByAuthority('restricted');
-
-  const allStates = Object.entries(STATE_PRACTICE_AUTHORITY).sort(([a], [b]) => a.localeCompare(b));
 
   // D.C. is a jurisdiction in the dataset, not a state, so `fullStates` already
   // counts it. Both places below render "<n> states + DC", which double-counted
@@ -171,7 +188,7 @@ export default function FPAGuidePage() {
   const fpaFaqs = [
     {
       question: `What is Full Practice Authority for ${brand.niche.short}s?`,
-      answer: `Full Practice Authority (FPA) is one of the three practice environments AANP uses to classify state law. AANP classifies a state as Full Practice when ${AANP_TIER_MEANING.full}. The classification describes the state's law, not every ${NP} in it. ${TIER_VARIATION.full} Check your state's entry in the table on this page before assuming independent practice from your first day.`
+      answer: `Full Practice Authority (FPA) is one of the three practice environments AANP uses to classify state law. AANP classifies a state as Full Practice when ${AANP_TIER_MEANING.full}. The classification describes the state's law, not every ${NP} in it. ${TIER_VARIATION.full} Check your state's entry in the ${brand.name} scope of practice explorer before assuming independent practice from your first day.`
     },
     {
       question: "How many states have Full Practice Authority for nurse practitioners?",
@@ -179,11 +196,11 @@ export default function FPAGuidePage() {
     },
     {
       question: `Does Full Practice Authority affect ${brand.niche.short} pay?`,
-      answer: `It changes what you are able to do, which in turn shapes what you can be paid for. This board does not publish a national premium figure, because no verifiable one exists in our data. A state's practice rules decide whether, and after how much experience, you can practice without a collaborative or supervisory agreement, whether independent contract or telehealth work there means arranging one, and whether a collaborator's fee comes out of your revenue. Those rules differ within each tier, so read your state's entry rather than relying on its classification. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which compute averages from live postings in that state.`
+      answer: `It changes what you are able to do, which in turn shapes what you can be paid for. This board does not publish a national premium figure, because no verifiable one exists in our data. A state's practice rules decide whether, and after how much experience, you can practice without a collaborative or supervisory agreement, whether independent contract or telehealth work there means arranging one, and whether a collaborator's fee comes out of your revenue. Those rules differ within each tier, so read your state's entry rather than relying on its classification. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which publish a median computed from live postings in that state once enough employers disclose pay.`
     },
     {
       question: `Can ${brand.niche.short}s prescribe controlled substances in all states?`,
-      answer: `${brand.niche.short}s can prescribe controlled substances in all 50 states, but each state sets its own conditions, and they do not follow the three tiers neatly. Some Full Practice states limit prescribing for newer ${NP}s, for example through provisional prescriptive authority, a physician-approved protocol for Schedule II drugs, or supervised prescribing. In some Reduced and Restricted states the rules for controlled substances are stricter than for other prescription drugs. Check your state's entry in the table on this page. Prescribing controlled substances also requires a DEA registration.`
+      answer: `${brand.niche.short}s can prescribe controlled substances in all 50 states, but each state sets its own conditions, and they do not follow the three tiers neatly. Some Full Practice states limit prescribing for newer ${NP}s, for example through provisional prescriptive authority, a physician-approved protocol for Schedule II drugs, or supervised prescribing. In some Reduced and Restricted states the rules for controlled substances are stricter than for other prescription drugs. Check your state's entry in the ${brand.name} scope of practice explorer. Prescribing controlled substances also requires a DEA registration.`
     },
     {
       question: `What is the Nurse Licensure Compact (NLC) and how does it help ${brand.niche.short}s?`,
@@ -218,8 +235,8 @@ export default function FPAGuidePage() {
           __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: `${brand.niche.short} Full Practice Authority Guide 2026: All 50 States`,
-            description: `Complete state-by-state guide to Full Practice Authority for ${brand.niche.descriptor}s.`,
+            headline: PAGE_TITLE,
+            description: PAGE_DESCRIPTION,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
@@ -240,7 +257,7 @@ export default function FPAGuidePage() {
               <Shield className="w-8 h-8" />
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              {brand.niche.short} Full Practice Authority Guide 2026
+              {PAGE_TITLE}
             </h1>
             <p className="text-sm text-pink-200 text-center mt-2 mb-4">
               {/* Audit P0 #23: render the real review date (same constant the
@@ -249,7 +266,7 @@ export default function FPAGuidePage() {
               Last Updated: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
             </p>
             <p className="text-lg md:text-xl text-pink-100 mb-6">
-              State-by-state practice authority classifications for {brand.niche.descriptor}s
+              AANP&apos;s three practice environments, and what each one changes about how {brand.niche.descriptor}s work and get paid
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               {/* fullStates includes D.C. as a jurisdiction; the hero used
@@ -293,7 +310,7 @@ export default function FPAGuidePage() {
                 Full Practice Authority is one of three practice environments AANP uses to classify state law for {brand.niche.short}s ({brand.niche.descriptor}s). The cards below give AANP&apos;s meaning for each environment.
               </p>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                {WITHIN_TIER_NOTE} <strong>Read your state&apos;s entry in the table below</strong> before deciding how you can practice there.
+                {WITHIN_TIER_NOTE} <strong>Read your state&apos;s entry in the <Link href={SCOPE_EXPLORER_PATH} className="hover:underline" style={{ color: 'var(--color-primary)' }}>scope of practice explorer</Link></strong> before deciding how you can practice there.
               </p>
               {/* Each card: AANP's meaning for the tier, then how states inside
                   it differ. Never a per-state rule (see TIER COPY RULE). */}
@@ -329,58 +346,31 @@ export default function FPAGuidePage() {
             </div>
           </div>
 
-          {/* State-by-State Table */}
+          {/* How to read a state's rule (CQ-13). The per-state table lives
+              on /scope-of-practice; this section says what to look for in a
+              state's entry instead of repeating the 51 rows here. */}
           <div className="mb-8 md:mb-12">
             <div className="rounded-xl p-6 md:p-8" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-              <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
-                All 50 States + DC: Practice Authority Classification
+              <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+                How to Read Your State&apos;s Practice Rule
               </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                      <th className="text-left py-3 pr-4 font-semibold" style={{ color: 'var(--text-primary)' }}>State</th>
-                      <th className="text-left py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>AANP Classification</th>
-                      <th className="text-left py-3 pl-4 font-semibold hidden md:table-cell" style={{ color: 'var(--text-primary)' }}>Details</th>
-                      <th className="text-right py-3 pl-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Jobs</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allStates.map(([stateName, info]) => {
-                      const colors = getAuthorityColor(info.authority);
-                      const stateSlug = stateName.toLowerCase().replace(/\s+/g, '-');
-                      return (
-                        <tr key={stateName} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td className="py-3 pr-4">
-                            <Link href={`/jobs/state/${stateSlug}`} className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
-                              {stateName}
-                            </Link>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>
-                              {getAuthorityLabel(info.authority)}
-                            </span>
-                            {/* The Details column is hidden below md, and the
-                                copy on this page sends every reader to their
-                                state's entry, so phones get it here. */}
-                            <p className="md:hidden mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                              {info.details}
-                            </p>
-                          </td>
-                          <td className="py-3 pl-4 hidden md:table-cell text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {info.details}
-                          </td>
-                          <td className="py-3 pl-4 text-right">
-                            <Link href={`/jobs/state/${stateSlug}`} className="text-xs font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
-                              View →
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
+                The tier is a starting point, not the rule. The rule that governs your practice is your state&apos;s own, and the{' '}
+                <Link href={SCOPE_EXPLORER_PATH} className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>scope of practice explorer</Link>{' '}
+                prints it for every state and DC, beside a link to that state&apos;s board of nursing. When you read your state&apos;s entry, look for four things:
+              </p>
+              <ul className="space-y-3 text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>A transition period.</strong> Whether a newly licensed {NP} first practices for a set number of hours or years under a collaborative or supervised arrangement, and how that time has to be documented.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Who may be the other party.</strong> Whether an agreement can be with an experienced {NP} or another advanced practice registered nurse, or only with a physician, and whether that person must hold a license in the same state.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Prescribing conditions.</strong> Whether controlled substances, or particular schedules of them, carry their own protocol, mentorship or delegation.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>A route out.</strong> Whether experience, a board application or a license designation removes the agreement, or part of it.</span></li>
+              </ul>
+              <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                Then confirm the current rule with the state board of nursing before you plan a practice, a contract or a move around it.
+              </p>
+              <Link href={SCOPE_EXPLORER_PATH} className="inline-block bg-pink-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-pink-800 transition-colors">
+                Find your state in the scope of practice explorer
+              </Link>
             </div>
           </div>
 
@@ -397,10 +387,10 @@ export default function FPAGuidePage() {
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you need an agreement to practice on your own.</strong> That turns on your state&apos;s own rules, not only its tier. Many Full Practice states allow independent practice once you are licensed, but several first require a transition period of collaborative or supervised practice. Most Reduced and Restricted states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience.</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether a collaboration fee comes out of your revenue.</strong> Where an agreement is required, the collaborator is typically compensated for it, an ongoing cost against your income that a colleague practicing without an agreement does not carry. Fees are negotiated privately and vary widely, so treat any quoted figure with caution.</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>How easily you can take contract and telehealth work.</strong> Independent 1099 and telehealth arrangements are simplest where no supervisory relationship has to be arranged and maintained in each state you cover.</span></li>
-                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Check your state&apos;s entry, whatever its tier.</strong> Transition periods, prescribing limits and routes out of an agreement are set state by state, so read your state&apos;s entry in the table above before planning how you will practice there.</span></li>
+                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Check your state&apos;s entry, whatever its tier.</strong> Transition periods, prescribing limits and routes out of an agreement are set state by state, so read your state&apos;s entry in the <Link href={SCOPE_EXPLORER_PATH} className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>scope of practice explorer</Link> before planning how you will practice there.</span></li>
               </ul>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                For actual pay rather than classification, the <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</Link> computes state-level averages from live postings. If independent practice is the goal, the <Link href="/resources/private-practice-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>private practice startup guide</Link> covers entity formation, credentialing, and a revenue model, and the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> shows what a contract has to pay to beat a salaried package.
+                For actual pay rather than classification, the <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</Link> computes state medians from live postings once enough employers disclose pay. If independent practice is the goal, the <Link href="/resources/private-practice-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>private practice startup guide</Link> covers entity formation, credentialing, and a revenue model, and the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> shows what a contract has to pay to beat a salaried package.
               </p>
             </div>
           </div>
@@ -446,7 +436,11 @@ export default function FPAGuidePage() {
 
           {/* Related Resources — P2 #22: the /resources guide cluster now
               cross-links in all directions from every member page. */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <Link href={SCOPE_EXPLORER_PATH} className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Scope of practice by state</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Every state&apos;s classification and its own rule, with board of nursing links.</p>
+            </Link>
             <Link href="/resources/1099-vs-w2" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</h3>
               <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>How self-employment tax works and what a contract must pay to match a salary.</p>
@@ -467,7 +461,7 @@ export default function FPAGuidePage() {
               Find {brand.niche.short} Jobs in Your State
             </h2>
             <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Browse thousands of {brand.niche.descriptor} positions updated daily.
+              Browse open {brand.niche.descriptor} positions in every practice environment.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/jobs" className="inline-block bg-pink-700 text-white px-8 py-3 rounded-lg font-medium hover:bg-pink-800 transition-colors">Browse All Jobs</Link>

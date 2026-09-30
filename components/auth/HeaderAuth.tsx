@@ -21,63 +21,80 @@ interface HeaderAuthProps {
   onRoleChange?: (role: string | null) => void;
 }
 
-/* ── Clay button styles ── */
-const clayNavPill: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '0 18px',
-  height: '38px',
-  borderRadius: '14px',
-  fontSize: '14px',
-  fontWeight: 500,
-  color: '#374151',
-  backgroundColor: '#EDF2EE',
-  border: '1px solid rgba(255,255,255,0.5)',
-  boxShadow: '4px 4px 10px rgba(0,0,0,0.06), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)',
-  textDecoration: 'none',
-  transition: 'all 0.2s ease',
-  cursor: 'pointer',
+/*
+ * Signed-out Log in / Sign up pills in the soft blush header (owner decision
+ * 5, option B, 2026-09-29): Log in is white with #3D2A2E text and a berry
+ * hairline; Sign up is solid #9D174D with white text. The neumorphic white
+ * inset highlights went with the mint bar.
+ *
+ * Every state lives in this stylesheet, never in inline styles or mouse
+ * handlers. The old handlers wrote an inline box-shadow, which beats the
+ * global :focus-visible ring (so keyboard focus showed nothing), and their
+ * primary check compared the inline background colour to an rgb() string
+ * written without spaces, a form browsers never produce, so one hover left
+ * Sign up pale pink until reload.
+ *
+ * React 19 hoists the <style> into <head> and keeps one copy however many
+ * HeaderAuth instances render (desktop bar, compact bar, mobile menu). The
+ * string is static: a plain style element with no interpolation, not
+ * styled-jsx.
+ */
+const HEADER_AUTH_CSS = `
+.header-auth-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
-
-const clayPrimaryPill: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '0 20px',
-  height: '40px',
-  borderRadius: '14px',
-  fontSize: '15px',
-  fontWeight: 600,
-  backgroundColor: '#BE185D',
-  color: '#FFFFFF',
-  border: '1px solid rgba(255,255,255,0.3)',
-  boxShadow: '5px 5px 14px rgba(190,24,93,0.25), -3px -3px 8px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.06)',
-  textDecoration: 'none',
-  transition: 'all 0.2s ease',
-  cursor: 'pointer',
+.header-auth-login {
+  padding: 0 18px;
+  height: 38px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3D2A2E;
+  background-color: #FFFFFF;
+  border: 1px solid rgba(122,28,43,0.14);
 }
-
-const handleHoverIn = (e: React.MouseEvent<HTMLElement>) => {
-  e.currentTarget.style.transform = 'translateY(-2px)';
-  const isTeal = e.currentTarget.style.backgroundColor === 'rgb(190,24,93)';
-  if (!isTeal) {
-    e.currentTarget.style.backgroundColor = '#FDF2F8';
-    e.currentTarget.style.color = '#BE185D';
-    e.currentTarget.style.boxShadow = '5px 5px 14px rgba(190,24,93,0.12), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)';
-  }
+.header-auth-login:hover {
+  color: #7A1C2B;
+  background-color: #FFF7F9;
+  border-color: rgba(122,28,43,0.28);
 }
-const handleHoverOut = (e: React.MouseEvent<HTMLElement>) => {
-  e.currentTarget.style.transform = 'translateY(0)';
-  const isTeal = e.currentTarget.dataset.variant === 'primary';
-  if (!isTeal) {
-    e.currentTarget.style.backgroundColor = '#EDF2EE';
-    e.currentTarget.style.color = '#374151';
-    e.currentTarget.style.boxShadow = clayNavPill.boxShadow as string;
-  } else {
-    e.currentTarget.style.boxShadow = clayPrimaryPill.boxShadow as string;
-  }
+.header-auth-signup {
+  padding: 0 20px;
+  height: 40px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background-color: #9D174D;
+  border: 1px solid #9D174D;
+  box-shadow: 0 4px 12px rgba(157,23,77,0.25);
 }
+.header-auth-signup:hover {
+  background-color: #831843;
+  border-color: #831843;
+  box-shadow: 0 6px 16px rgba(157,23,77,0.30);
+}
+.header-auth-pill:hover {
+  transform: translateY(-1px);
+}
+.header-auth-pill:active {
+  transform: scale(0.98);
+}
+.header-auth-pill:focus-visible {
+  outline: 2px solid #BE185D;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .header-auth-pill { transition: none; }
+  .header-auth-pill:hover,
+  .header-auth-pill:active { transform: none; }
+}
+`
 
 export default function HeaderAuth({ onNavigate, onRoleChange }: HeaderAuthProps) {
   const [user, setUser] = useState<User | null>(null)
@@ -153,8 +170,7 @@ export default function HeaderAuth({ onNavigate, onRoleChange }: HeaderAuthProps
     return (
       <div className="flex items-center gap-3">
         <div className="w-16 h-8 motion-safe:animate-pulse rounded-xl" style={{
-          backgroundColor: '#EDF2EE',
-          boxShadow: '4px 4px 10px rgba(0,0,0,0.04), inset 2px 2px 4px rgba(255,255,255,0.7)',
+          backgroundColor: 'rgba(122,28,43,0.08)',
         }} />
       </div>
     )
@@ -188,23 +204,13 @@ export default function HeaderAuth({ onNavigate, onRoleChange }: HeaderAuthProps
 
   return (
     <div className="flex items-center gap-3">
-      <Link
-        href="/login"
-        onClick={onNavigate}
-        style={clayNavPill}
-        onMouseEnter={handleHoverIn}
-        onMouseLeave={handleHoverOut}
-      >
+      <style href="header-auth-pills" precedence="default">
+        {HEADER_AUTH_CSS}
+      </style>
+      <Link href="/login" onClick={onNavigate} className="header-auth-pill header-auth-login">
         Log in
       </Link>
-      <Link
-        href="/signup"
-        onClick={onNavigate}
-        style={clayPrimaryPill}
-        data-variant="primary"
-        onMouseEnter={handleHoverIn}
-        onMouseLeave={handleHoverOut}
-      >
+      <Link href="/signup" onClick={onNavigate} className="header-auth-pill header-auth-signup">
         Sign up
       </Link>
     </div>

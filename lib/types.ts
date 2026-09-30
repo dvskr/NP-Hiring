@@ -57,6 +57,10 @@ export interface Job {
   // Phase 3 #21 — employer-controlled refresh timestamp. Null = use
   // createdAt as the freshness anchor.
   lastRenewedAt?: Date | null;
+  // When the posting's rendered content last changed (indexing audit
+  // fixSoon 5): the page's "Last updated" line and the sitemap lastmod.
+  // Unlike updatedAt, view counts, link checks and renewals never move it.
+  contentChangedAt?: Date | null;
   companyId: string | null;
   companyLogoUrl?: string | null;
   // Attached at fetch time via the employerJobs join (see app/jobs/[slug]/page.tsx).

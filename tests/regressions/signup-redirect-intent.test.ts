@@ -84,8 +84,11 @@ describe('F26 — /auth/confirm honors ?next= via safeInternalPath', () => {
     const src = read(CONFIRM_PAGE);
     expect(src).toMatch(/import\s*\{[^}]*safeInternalPath[^}]*\}\s*from\s*'@\/lib\/auth\/safe-redirect'/);
     expect(src).toMatch(/safeInternalPath\(urlParams\.get\('next'\),\s*'\/dashboard'\)/);
-    // Both the PKCE and implicit-flow confirmation paths push the validated target.
-    const pushes = src.match(/router\.push\(nextPath\)/g) ?? [];
+    // Both the PKCE and implicit-flow confirmation paths push the validated
+    // target, through confirmDestination (explicit ?next= wins; see
+    // tests/unit/apply-intent.test.ts for the stored-path fallback).
+    expect(src.match(/const destination = confirmDestination\(nextPath, hasExplicitNext,/g) ?? []).toHaveLength(2);
+    const pushes = src.match(/router\.push\(destination\)/g) ?? [];
     expect(pushes.length).toBeGreaterThanOrEqual(2);
     // The hardcoded dashboard push on confirmation success must stay dead.
     expect(src).not.toMatch(/router\.push\('\/dashboard'\)/);
@@ -102,13 +105,17 @@ describe('F26 — /auth/confirm honors ?next= via safeInternalPath', () => {
 });
 
 describe('F26 — ApplyButton returnUrl keeps the query string', () => {
-  it('builds returnUrl from pathname + search and forces apply=1 for platform jobs', () => {
+  it('builds returnUrl from pathname + search and forces apply=1 for every job', () => {
     const src = read(APPLY_BUTTON);
-    expect(src).toMatch(/const buildReturnUrl = /);
-    expect(src).toMatch(/new URLSearchParams\(window\.location\.search\)/);
-    expect(src).toMatch(/if \(applyOnPlatform\) params\.set\('apply', '1'\)/);
-    expect(src).toMatch(/\/login\?redirectTo=\$\{encodeURIComponent\(buildReturnUrl\(\)\)\}/);
-    expect(src).toMatch(/\/signup\?redirectTo=\$\{encodeURIComponent\(buildReturnUrl\(\)\)\}/);
+    // Owner decision 2026-09: external jobs need an account too, so the
+    // return trip carries ?apply=1 for them as well (it used to be set for
+    // Easy Apply only, and an external applicant had to click Apply again).
+    expect(src).toMatch(
+      /const buildReturnUrl = \(\): string =>\s*withApplyIntent\(window\.location\.pathname, window\.location\.search\)/,
+    );
+    expect(src).not.toMatch(/if \(applyOnPlatform\) params\.set\('apply', '1'\)/);
+    expect(src).toContain("authGateHref('login', buildReturnUrl())");
+    expect(src).toContain("authGateHref('signup', buildReturnUrl())");
     // The pathname-only returnUrl (drops ?apply=1) must not come back.
     expect(src).not.toMatch(/returnUrl = window\.location\.pathname;/);
   });
@@ -124,7 +131,7 @@ describe('F26 — ApplyButton auto-open waits for auth resolution', () => {
     // The auto-open effect must bail on unresolved auth BEFORE latching
     // autoOpened — otherwise it fires once on the provisional authed=false
     // and shows the auth gate to a freshly-authenticated user.
-    const applyGuard = src.indexOf("if (searchParams?.get('apply') !== '1') return;");
+    const applyGuard = src.indexOf('if (!hasApplyIntent(searchParams)) return;');
     const resolvedGuard = src.indexOf('if (!authResolved) return;');
     const latch = src.indexOf('autoOpened.current = true;');
     expect(applyGuard).toBeGreaterThan(-1);

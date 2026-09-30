@@ -80,15 +80,15 @@ describe('A4 — formatStatVintage renders STAT_SOURCES asOf shapes without Date
 
 describe('A4 — buildProvenanceSentences claims exactly what its inputs support', () => {
     it('does not repeat a vintage the source string already names (OEWS)', () => {
-        // Arrange: the OEWS entry's source ends in "May 2024" already.
+        // Arrange: the OEWS entry's source ends in "May 2025" already.
         const stat = STAT_SOURCES.averageSalary;
 
         // Act
         const [sentence] = buildProvenanceSentences({ cited: [stat] });
 
-        // Assert: one "May 2024", not "…May 2024 (May 2024)".
+        // Assert: one "May 2025", not "…May 2025 (May 2025)".
         expect(sentence).toContain(stat.source);
-        expect(sentence.match(/May 2024/g)).toHaveLength(1);
+        expect(sentence.match(/May 2025/g)).toHaveLength(1);
     });
 
     it('appends the vintage when the source string does not name it (AANP)', () => {
@@ -153,7 +153,8 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
     it('the hub stamps the Quick Answer with cited vintage + live basis + review literal', () => {
         const src = read(HUB);
         expect(src).toContain("import SalaryProvenance from '@/components/SalaryProvenance'");
-        expect(src).toContain('cited={[NATIONAL_SALARY]}');
+        // The percentile figures in the hero cite the same OEWS release (HANDOFFS 181).
+        expect(src).toContain('cited={[NATIONAL_SALARY, NATIONAL_P10, NATIONAL_P90]}');
         expect(src).toContain('live={{ count: overallStats.jobsWithSalary, minimum: 1 }}');
         // The review date is the SAME literal the Article dateModified uses,
         // so the visible stamp and the schema cannot disagree.
@@ -200,7 +201,11 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
     it('the specialty detail template gates its live basis on the benchmark policy', () => {
         const src = read(SPECIALTY_DETAIL);
         expect(src).toContain("import SalaryProvenance from '@/components/SalaryProvenance'");
-        expect(src).toContain('cited={[median]}');
+        // CQ-09: the cited stat is the page's own lead median, the all-NP
+        // entry on a niche page and the role's own BLS occupation median on
+        // a CRNA or CNM page, still a StatSource with source and vintage.
+        expect(src).toContain('const cited = citedMedian(page);');
+        expect(src).toContain('cited={[cited]}');
         // P9 #2d: the published-figure gate is the benchmark widget's
         // n ≥ BENCHMARK_MIN_POSTINGS policy, so the provenance minimum
         // quotes the same constant the figures are gated by.
@@ -211,7 +216,9 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
 
     it('the specialty index cites the benchmark median’s source + vintage', () => {
         const src = read(SPECIALTY_INDEX);
-        expect(src).toContain("import SalaryProvenance from '@/components/SalaryProvenance'");
+        // The index also imports the vintage formatter for the CRNA and CNM
+        // cards' own BLS citations (CQ-09).
+        expect(src).toMatch(/import SalaryProvenance(, \{ formatStatVintage \})? from '@\/components\/SalaryProvenance'/);
         expect(src).toContain('cited={[median]}');
     });
 

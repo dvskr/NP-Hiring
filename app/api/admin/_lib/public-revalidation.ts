@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { companyProfilePath, type CompanySlugSource } from '@/lib/company-slug';
 
 /**
  * Cache invalidation for public ISR pages that render admin moderation
@@ -28,25 +29,20 @@ export const TESTIMONIAL_PUBLIC_PATHS: readonly string[] = [
 ];
 
 /**
- * Public URL segment for a company profile. Mirrors the link builder in
- * app/companies/page.tsx: legacy rows store the space form of normalizedName,
- * and single space to hyphen is the inverse of the profile resolver's
- * legacy fallback.
- */
-export function companyProfileSlug(normalizedName: string): string {
-    return normalizedName.replace(/ /g, '-');
-}
-
-/**
  * Every public path that renders a company's trust signals
  * (claimVerifiedAt, recruitmentType): the A to Z hub, the profile, and each
  * job page (AboutEmployer badge). Pure, so it is unit-testable.
+ *
+ * The profile path is the one the page serves: the display-name slug from
+ * companyProfilePath (indexing audit L-01), the builder every company link
+ * uses. The old normalizedName slug only 308s there, so refreshing it would
+ * leave the served profile stale after a claim approval.
  */
 export function companyPublicPaths(
-    normalizedName: string,
+    company: CompanySlugSource,
     jobSlugs: readonly (string | null | undefined)[],
 ): string[] {
-    const paths = ['/companies', `/companies/${companyProfileSlug(normalizedName)}`];
+    const paths = ['/companies', companyProfilePath(company)];
     for (const slug of jobSlugs) {
         if (typeof slug === 'string' && slug.trim() !== '') {
             paths.push(`/jobs/${slug}`);
@@ -79,6 +75,7 @@ export async function revalidateCompanySurfaces(companyId: string, context: stri
         const company = await prisma.company.findUnique({
             where: { id: companyId },
             select: {
+                name: true,
                 normalizedName: true,
                 jobs: { where: { slug: { not: null } }, select: { slug: true } },
             },
@@ -89,7 +86,7 @@ export async function revalidateCompanySurfaces(companyId: string, context: stri
             return;
         }
         revalidatePublicPaths(
-            companyPublicPaths(company.normalizedName, company.jobs.map((job) => job.slug)),
+            companyPublicPaths(company, company.jobs.map((job) => job.slug)),
             context,
         );
     } catch (error) {

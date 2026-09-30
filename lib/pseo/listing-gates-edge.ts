@@ -30,6 +30,7 @@
  * @prisma/client through type-only imports, which the compiler erases.
  */
 import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
+import { LIVE_LINK_REST_FILTER } from '@/lib/dead-link-threshold';
 import { CODE_TO_STATE } from '@/lib/pseo/setting-state-config';
 import { isMemoryEvaluable, matchesWhere } from '@/app/api/jobs/filter-counts/where-evaluator';
 
@@ -130,7 +131,10 @@ export function cityGateLookup(slug: string, isMetroSlug: (s: string) => boolean
     if (isMetroSlug(slug)) return null;
     if (!PLAIN_CITY_SLUG.test(slug)) return null;
 
-    const base = `is_published=eq.true&select=${LISTING_GATE_SELECT}&limit=${CITY_GATE_FETCH_LIMIT}`;
+    // The page counts with the dead-link gate (canonicalBucketWhere, and
+    // PUBLISHED_LISTING_WHERE for the ambiguous redirect), so the REST read
+    // drops those rows too: a hub of dead links 404s here as it does there.
+    const base = `is_published=eq.true&${LIVE_LINK_REST_FILTER}&select=${LISTING_GATE_SELECT}&limit=${CITY_GATE_FETCH_LIMIT}`;
     const parsed = parseCityHubSlug(slug);
     if (parsed) {
         const city = encodeURIComponent(parsed.cityName);

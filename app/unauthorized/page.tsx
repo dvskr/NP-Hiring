@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { ShieldAlert, Home, ArrowLeft } from 'lucide-react';
-import { brand } from '@/config/brand';
 
 /* ═══ Clay Tokens ═══ */
 const clayShadow = '8px 8px 20px rgba(0,0,0,0.07), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)';
@@ -13,7 +12,7 @@ const clayCard = {
 };
 
 export const metadata = {
-  title: `Unauthorized Access | ${brand.name}`,
+  title: 'Unauthorized Access',
 };
 
 export default function UnauthorizedPage() {

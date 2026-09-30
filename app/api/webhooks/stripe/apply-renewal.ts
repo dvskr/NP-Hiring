@@ -38,7 +38,7 @@ import { config, type PricingTier } from '@/lib/config';
 import { renewalExpiresAt } from '@/lib/expires-at';
 import { logger } from '@/lib/logger';
 import { sendRenewalConfirmationEmail } from '@/lib/email-service';
-import { pingAllSearchEngines } from '@/lib/search-indexing';
+import { JOB_POSTING_ELIGIBILITY_SELECT, pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
 import { fetchInvoiceData, sendPurchaseEvent, type StripeInvoiceData } from './activate-paid-job';
 import { claimEmailSend, prismaErrorCode, releaseEmailClaim } from './webhook-support';
 
@@ -114,7 +114,8 @@ export async function applyRenewalCheckout(
 
   const existingJob = await prisma.job.findUnique({
     where: { id: jobId },
-    select: { expiresAt: true, createdAt: true, title: true, slug: true },
+    // The eligibility columns decide whether Google hears about the renewal.
+    select: { ...JOB_POSTING_ELIGIBILITY_SELECT, expiresAt: true, createdAt: true, slug: true },
   });
   if (!existingJob) throw new Error(`Renewal: Job ${jobId} not found`);
 
@@ -144,6 +145,10 @@ export async function applyRenewalCheckout(
           expiresAt: newExpiresAt,
           isPublished: true,
           isVerifiedEmployer: true,
+          // The renewal re-publishes the row and moves expiresAt, a rendered
+          // field (lib/job-content-change.ts RENDERED_JOB_FIELDS), so the
+          // posting's content changed now (indexing audit fixSoon 5).
+          contentChangedAt: new Date(),
           ...(config.isFeaturedTier(renewalTier) && { isFeatured: true }),
         },
       });
@@ -181,7 +186,8 @@ export async function applyRenewalCheckout(
       jobId,
     });
     if (existingJob.slug) {
-      pingAllSearchEngines(`${brand.baseUrl}/jobs/${existingJob.slug}`).catch((err) =>
+      // Google only when the page carries a JobPosting (lib/job-page-indexing.ts).
+      pingSearchEnginesForJobPage(`${brand.baseUrl}/jobs/${existingJob.slug}`, existingJob).catch((err) =>
         logger.error('[Stripe] Background indexing ping failed (renewal)', err),
       );
     }

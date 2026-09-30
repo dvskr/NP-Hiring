@@ -21,6 +21,7 @@ import { WORKABLE_TENANTS } from './tenants/workable';
 import type { Aggregator, RawJobData } from './types';
 import { checkJobHealth, type HealthDecision } from '@/lib/health/check-job-health';
 import { htmlToReadableText } from '@/lib/sanitize';
+import { resolveCountryValue } from '@/lib/location-parser';
 
 interface WorkableLocation {
     country?: string;
@@ -62,8 +63,20 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildLocation(job: WorkableJob): string {
-    const loc = job.location ?? job.locations?.[0];
+/** A place whose country resolves to the United States, or has no country. */
+function isUsOrUnknownPlace(loc: WorkableLocation): boolean {
+    const country = resolveCountryValue(loc.countryCode ?? loc.country ?? null);
+    return country === null || country === 'US';
+}
+
+/**
+ * Where a Workable posting is. When it lists several places the first US
+ * one is used, so a posting open in Canada and the United States is filed
+ * under its US place, not the Canadian one.
+ */
+export function workableLocation(job: Pick<WorkableJob, 'location' | 'locations' | 'remote'>): string {
+    const places = [job.location, ...(job.locations ?? [])].filter((l): l is WorkableLocation => !!l);
+    const loc = places.find(isUsOrUnknownPlace) ?? places[0];
     if (loc) {
         if (loc.city && loc.region) return `${loc.city}, ${loc.region}`;
         if (loc.region) return loc.region;
@@ -71,6 +84,22 @@ function buildLocation(job: WorkableJob): string {
     }
     if (job.remote) return 'Remote';
     return 'United States';
+}
+
+/**
+ * Every country a Workable posting lists (its location plus each entry of
+ * its locations list, ISO code preferred over the name), for the
+ * normalizer's non-US gate, or undefined when none is given. A posting that
+ * lists the United States among other countries is a US job (owner
+ * decision), so the whole list is passed, not only the first entry.
+ */
+export function workableCountries(job: Pick<WorkableJob, 'location' | 'locations'>): string[] | undefined {
+    const places = [job.location, ...(job.locations ?? [])].filter((l): l is WorkableLocation => !!l);
+    const codes = places
+        .map((l) => (l.countryCode ?? l.country ?? '').trim())
+        .filter(Boolean);
+    const unique = [...new Set(codes)];
+    return unique.length > 0 ? unique : undefined;
 }
 
 function mapWorkplace(job: WorkableJob): string | null {
@@ -159,7 +188,7 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
                     title: j.title,
                     company: tenant.name,
                     employer: tenant.name,
-                    location: buildLocation(j),
+                    location: workableLocation(j),
                     description,
                     applyLink,
                     postedDate: j.published,
@@ -168,6 +197,8 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
                     sourceProvider: 'workable',
                     sourceSite: 'workable',
                     isRemote: mapWorkplace(j) === 'Remote' || undefined,
+                    // For the non-US gate (owner decision: US jobs only).
+                    country: workableCountries(j),
                 } as RawJobData);
 
                 await sleep(DETAIL_FETCH_GAP_MS);

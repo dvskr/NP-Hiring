@@ -401,7 +401,11 @@ export default async function PressPage() {
                     <p style={{ marginTop: '12px', fontSize: '13px', color: MUTED_TEXT }}>
                         The full-practice count includes the District of Columbia, which is why it reads one higher
                         than the &quot;{STAT_SOURCES.fullPracticeStates.formatted}&quot; phrasing in the table above.
-                        Per-state detail, including what each classification means in practice, is on our{' '}
+                        Each state&apos;s rule is in our{' '}
+                        <Link href="/scope-of-practice" style={linkStyle}>
+                            scope of practice explorer
+                        </Link>
+                        , and what each classification means is explained in our{' '}
                         <Link href="/resources/fpa-guide" style={linkStyle}>
                             practice-authority guide
                         </Link>

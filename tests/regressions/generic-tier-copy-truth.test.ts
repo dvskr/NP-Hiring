@@ -94,10 +94,15 @@ describe('generic tier copy: the replacement says what AANP means and that state
         expect(src).toContain(STAT_SOURCES.fullPracticeStates.sourceUrl);
     });
 
-    it('the FPA guide shows each state entry at phone width, since the copy sends readers there', () => {
+    it('the state entries the FPA guide sends readers to are visible at phone width', () => {
+        // Audit CQ-13: the FPA guide no longer prints the 51 entries. Its copy
+        // sends readers to /scope-of-practice, whose per-state sections print
+        // every state's details with no breakpoint class hiding them.
         const src = read(FPA_GUIDE);
-        expect(src).toContain('<p className="md:hidden mt-2 text-xs"');
-        expect(src.match(/\{info\.details\}/g)).toHaveLength(2);
+        expect(src).not.toContain('{info.details}');
+        expect(src).toContain("const SCOPE_EXPLORER_PATH = '/scope-of-practice';");
+        const scope = read('app/scope-of-practice/page.tsx');
+        expect(scope).toMatch(/<p className="text-sm mb-3"[^>]*>\s*\{row\.details\}/);
     });
 
     it('the category practice-authority answer cites AANP and warns that states differ', () => {

@@ -15,7 +15,7 @@
  * roughly q95 — 500-860 KB each, 32.03 MB for the set. Every byte is repo and
  * deploy-artifact weight, every byte is what Vercel's image optimiser has to
  * read per variant, and 102 of these URLs are advertised raw to Google Images
- * from app/image-sitemap.xml (lib/image-seo.ts `getStateDioramaImages`), so
+ * on the gated state entries of /sitemap.xml (lib/image-seo.ts `stateDioramaSitemapImages`), so
  * the raw file is genuinely fetched. Re-encoding at q88 with mozjpeg's
  * trellis quantisation is visually transparent at these display sizes and
  * cuts the set by ~80%.
@@ -304,7 +304,7 @@ async function measureWebp() {
     console.log('  components/StateImage.tsx                                    6 literal `.png`: 1 in stateDioramaSrc -> `${slug}.webp`, 5 in comments (the rename-rationale block goes away entirely)');
     console.log('  tests/regressions/p2-state-imagery-diorama-wiring.test.ts    6 literal `.png` -> `.webp`  (readdir filter + slug strip, 2 path joins, hawaii, texas src)');
     console.log('  tests/regressions/p2-metro-editorial-depth.test.ts           2 literal `.png` -> `.webp`  (1 existsSync path + 1 in its failure message)');
-    console.log('  tests/regressions/p2-seo-ops-indexnow-sitemap.test.ts        1 literal `.png` -> `.webp`  (image-sitemap <image:loc>)');
+    console.log('  tests/regressions/p2-seo-ops-indexnow-sitemap.test.ts        1 literal `.png` -> `.webp`  (sitemap diorama images test)');
     console.log('  tests/regressions/p3-image-optimization-state-dioramas.test.ts  2 literal `.png` -> `.webp`  (1 stateDioramaSrc assertion + 1 header comment)');
     console.log('  scripts/image-manifest.json                                 ALL 5 keys `.png` -> `.webp` — every key in the file is /images/states/*.png');
     console.log('');

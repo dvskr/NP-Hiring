@@ -30,10 +30,11 @@ import { buildCityFacts, getTaxonomyLead } from '@/lib/pseo/city-narrative';
 import { CITIES } from '@/lib/pseo/city-data/cities';
 import {
   shouldRenderCategoryCity,
-  shouldIndexListingPage,
+  MIN_EMPLOYERS_FOR_LISTING_INDEX,
   MIN_JOBS_FOR_CATEGORY_CITY,
-  MIN_JOBS_FOR_INDEX,
+  MIN_POSTINGS_FOR_LISTING_INDEX,
 } from '@/lib/pseo/render-gate';
+import { shouldIndexCategoryLanding } from '@/lib/pseo/category-metadata';
 
 const ROOT = path.resolve(__dirname, '../..');
 const JOBS_DIR = path.join(ROOT, 'app', 'jobs');
@@ -96,26 +97,28 @@ describe('P1 #15 — new vertical slugs are first-class registry citizens', () =
   it('landing metadata noindexes thin categories (shared gate, wiring check)', () => {
     /*
      * thin-spec-1 8.3 / PLAN C.2: the landing robots moved from a local
-     * zero-inventory check to shouldIndexListingPage, the same function
-     * app/sitemap.ts calls for the category-landing PseoStats row. The new
-     * gate is STRICTER (noindex below MIN_JOBS_FOR_INDEX, not only at 0),
-     * so the original intent survives intact: a zero-inventory vertical
-     * still never ships as an indexable thin shell, and a 1-job or 2-job
-     * one no longer does either. Pinned on the gate plus the wiring rather
-     * than on the retired literal, so the pin also fails if the floor moves.
+     * zero-inventory check to a shared gate, and the indexing audit
+     * (fixSoon 1, CQ-06) raised it to the listing floor: 5 or more distinct
+     * postings from 3 or more employers, the verdict the aggregate-pseo cron
+     * stores on the category-landing PseoStats row. The gate stays STRICTER
+     * than the old zero check, so the original intent survives intact: a
+     * zero-inventory vertical never ships as an indexable thin shell. Pinned
+     * on the gate plus the wiring rather than on a literal, so the pin also
+     * fails if the floor moves.
      */
-    expect(shouldIndexListingPage(0, 1)).toBe(false);
-    expect(shouldIndexListingPage(MIN_JOBS_FOR_INDEX - 1, 1)).toBe(false);
-    expect(shouldIndexListingPage(MIN_JOBS_FOR_INDEX, 1)).toBe(true);
+    const atFloor = { distinctPostings: MIN_POSTINGS_FOR_LISTING_INDEX, distinctEmployers: MIN_EMPLOYERS_FOR_LISTING_INDEX };
+    expect(shouldIndexCategoryLanding({ distinctPostings: 0, distinctEmployers: 0 }, 1)).toBe(false);
+    expect(shouldIndexCategoryLanding({ ...atFloor, distinctPostings: MIN_POSTINGS_FOR_LISTING_INDEX - 1 }, 1)).toBe(false);
+    expect(shouldIndexCategoryLanding(atFloor, 1)).toBe(true);
     // Paginated views stay noindex, follow, exactly as before.
-    expect(shouldIndexListingPage(MIN_JOBS_FOR_INDEX, 2)).toBe(false);
+    expect(shouldIndexCategoryLanding(atFloor, 2)).toBe(false);
 
     const src = fs.readFileSync(
       path.join(ROOT, 'lib', 'pseo', 'category-landing-template.tsx'),
       'utf-8',
     );
     expect(src).toContain("from '@/lib/pseo/render-gate'");
-    expect(src).toContain('!shouldIndexListingPage(totalJobs, page) && { robots: { index: false, follow: true } }');
+    expect(src).toContain('!shouldIndexCategoryLanding(facts, page) && { robots: { index: false, follow: true } }');
     // The retired local zero check must not come back beside the shared gate.
     expect(src).not.toContain('totalJobs === 0');
   });

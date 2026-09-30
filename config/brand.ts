@@ -33,6 +33,32 @@ export interface EditorialReviewer {
     npi?: string;
 }
 
+/**
+ * Named author of the hand-written editorial content: the authored blog
+ * posts, the /resources guides, the scope-of-practice hub and the
+ * /salary-guide hub (audit CQ-12).
+ * Consumed by components/EditorialByline.tsx, which renders the visible
+ * "Written by" line and emits the schema.org Person `author` from this same
+ * object. The generated license guides never carry it.
+ *
+ * TRUTH RULE: populate ONLY with the real person who writes and maintains
+ * that content, under the name they publish with. Never a pen name, never
+ * a team member who did not write it.
+ */
+export interface EditorialAuthor {
+    /** Full display name, e.g. 'Jane Doe'. */
+    name: string;
+    /** Post-nominal credentials, only if the author holds them, e.g. 'MSN, APRN, FNP-C'. */
+    credentials?: string;
+    /** Optional role label, e.g. 'Editor'. */
+    title?: string;
+    /**
+     * Short bio page for Person.url: a path on this site (e.g. '/about#editor')
+     * or a public professional profile URL.
+     */
+    profileUrl?: string;
+}
+
 export const brand = {
     /** Display name used in copy, OG titles, email subjects. */
     name: 'NP Hiring',
@@ -142,19 +168,36 @@ export const brand = {
     },
 
     /**
-     * Editorial / clinical-review configuration (E-E-A-T, P1 #8).
+     * Editorial / clinical-review configuration (E-E-A-T, P1 #8, audit CQ-12).
      * Read by components/EditorialByline.tsx, app/blog/[slug]/page.tsx
-     * (schema wiring), and app/editorial-policy/page.tsx.
+     * (schema wiring), the /resources guides, /scope-of-practice, the
+     * /salary-guide hub, and app/editorial-policy/page.tsx.
+     *
+     * OWNER FILLS THESE TWO FIELDS. Each goes live on the next deploy with
+     * no other code change: the visible byline on every hand-written post
+     * and guide switches to "Written by {author}" and "Clinically reviewed
+     * by {reviewer}", and the Article/BlogPosting JSON-LD switches to a
+     * schema.org Person `author` and a Person `reviewedBy`, both built from
+     * these same objects. Example shape (NOT real people, do not ship):
+     *   author: { name: 'Jane Doe', credentials: 'MSN, APRN, FNP-C', title: 'Editor', profileUrl: '/about#editor' },
+     *   reviewer: { name: 'John Roe', credentials: 'DNP, APRN, FNP-BC', title: 'Clinical Reviewer', profileUrl: 'https://example.com/jroe', npi: '0000000000' },
      */
     editorial: {
         /** Public route of the editorial-policy page. */
         policyPath: '/editorial-policy',
         /**
-         * DEFAULTS TO NULL. While null, bylines render "Reviewed by the
-         * {brand} editorial team" linking to the editorial policy, and
-         * article schema stays Organization-only (the honest current
+         * DEFAULTS TO NULL. While null, bylines render "Written and
+         * maintained by the {brand} editorial team" and article schema
+         * keeps the Organization as author. Set this ONLY to the real
+         * person who writes the content (see EditorialAuthor).
+         */
+        author: null as EditorialAuthor | null,
+        /**
+         * DEFAULTS TO NULL. While null, no byline claims clinical review,
+         * and article schema carries no reviewedBy (the honest current
          * state). Set this ONLY when a real credentialed reviewer is
-         * contracted — never invent a person (see EditorialReviewer).
+         * contracted and has reviewed the content — never invent a person
+         * (see EditorialReviewer).
          */
         reviewer: null as EditorialReviewer | null,
     },

@@ -78,8 +78,11 @@ describe('F6 static — one slugify to rule all job URLs', () => {
         // The divergent local helper and its regex must stay dead.
         expect(src).not.toContain('function jobSlug');
         expect(src).not.toContain('[^a-z0-9]+');
-        // The batch query must actually fetch the stored slug column.
-        expect(src).toMatch(/select:\s*\{[^}]*\bslug:\s*true\b/);
+        // The batch query must actually fetch the stored slug column. It
+        // lives in the shared batch reader (GFJ-04: the route and the index
+        // read one batch definition), which the route calls.
+        expect(src).toContain('readJobSitemapBatch(');
+        expect(read('app/api/sitemaps/job-batches.ts')).toMatch(/JOB_SITEMAP_ROW_SELECT = \{[^}]*\bslug:\s*true\b/);
     });
 
     it('feed.xml imports slugify from @/lib/utils, selects slug, and emits job.slug || slugify(...)', () => {
@@ -101,7 +104,14 @@ describe('F6 behavioral — sitemap batch URLs equal the page canonical', () => 
     it('emits job.slug || slugify(title, id) for tricky titles and stored slugs', async () => {
         const rows = TRICKY_JOBS.map(j => ({ ...j, updatedAt: new Date('2026-07-01T00:00:00Z') }));
         vi.mocked(prisma.job.count).mockResolvedValue(rows.length as never);
-        vi.mocked(prisma.job.findMany).mockResolvedValue(rows as never);
+        // The batch then screens its rows for stub descriptions (GFJ-04) in
+        // a read that selects the description; these jobs all carry a real one.
+        const description = 'Provide psychiatric evaluation and medication management for adult outpatients, '
+            + 'coordinate care with therapists and primary care, and document every visit in the clinic record.';
+        vi.mocked(prisma.job.findMany).mockImplementation((async (args: { select?: Record<string, boolean> }) =>
+            args.select?.description
+                ? rows.map((row) => ({ id: row.id, title: row.title, description }))
+                : rows) as never);
 
         const { GET } = await import('@/app/api/sitemaps/jobs/[batch]/route');
         const res = await GET(

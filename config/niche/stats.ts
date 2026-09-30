@@ -33,8 +33,8 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
  * ── Derived national-average salary (single source of truth) ─────────
  *
  * All UI salary constants below derive from STAT_SOURCES.averageSalary
- * (BLS OEWS, Nurse Practitioners 29-1171 — median annual wage, May 2024,
- * $129,210). The prior 126K-era hardcodes (an earlier OEWS vintage) were
+ * (BLS OEWS, Nurse Practitioners 29-1171 — median annual wage, May 2025,
+ * $132,300). The prior 126K-era hardcodes (an earlier OEWS vintage) were
  * reconciled 2026-07-18 (citation-trust sweep B4/B51): the homepage FAQ,
  * salary guide, job-page widgets, and state FAQs now all quote the same
  * cited figure. Do NOT re-hardcode a salary anywhere — update
@@ -47,14 +47,16 @@ export const NATIONAL_AVG_SALARY_K = Math.round(
 );
 
 /* ══════════════════════════════════════════════════════════════════════
- * components/jobs/SidebarVisualCards.tsx (CareerPulseCard) — "NP Career
- * Pulse" stat pebbles in the job-detail sidebar
- * (app/jobs/[slug]/page.tsx). This card IS live on every job page.
+ * CAREER_PULSE_STATS: the "NP Career Pulse" stat pebbles. Indexing audit
+ * CQ-11 removed the card (CareerPulseCard) from the job page, so no page
+ * renders these today. The export is read only by
+ * tests/regressions/aeo-content-citation-stats.test.ts and
+ * aeo-content-inventory-claims.test.ts, which keep the values cited.
  *
  * NP HIRING:
  *   - growth derives from STAT_SOURCES.blsGrowth2034 (BLS Employment
  *     Projections, NP-specific 2024–2034);
- *   - salary derives from STAT_SOURCES.averageSalary (BLS OEWS May 2024);
+ *   - salary derives from STAT_SOURCES.averageSalary (BLS OEWS May 2025);
  *   - the former hardcoded 'openings on this board' count pebble was
  *     replaced with an evergreen cadence claim (citation-trust sweep
  *     B5). Hardcoded inventory counts go stale immediately — the board
@@ -121,11 +123,14 @@ export const DASHBOARD_PROFILE_NUDGE_CLAIM =
  * Replaced with a structurally true statement about this board's own
  * ingestion cadence (scheduled crons ingest from employer ATS feeds
  * daily). Wire to real analytics before making any market-growth claim.
+ * Indexing audit M-08: no inventory coverage claim either ("across all 50
+ * states" was not true of the listings); coverage is measured where it is
+ * shown (lib/states-covered.ts).
  */
 export const DASHBOARD_MARKET_PULSE = {
     lead: 'New NP roles are added ',
     metric: 'daily',
-    tail: ' from employer ATS feeds across all 50 states.',
+    tail: ' from employer ATS feeds.',
 } as const;
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -136,8 +141,8 @@ export const DASHBOARD_MARKET_PULSE = {
  *   1. config/niche/salary.ts — pipeline validation/clamp/period bands
  *      (out of scope for this pass — do not retune casually; the bands
  *      decide which salaries survive ingestion);
- *   2. lib/stats-sources.ts — CITATION-BACKED figures ($129,210 BLS OEWS
- *      May 2024 median). The UI constants below DERIVE from that file
+ *   2. lib/stats-sources.ts — CITATION-BACKED figures ($132,300 BLS OEWS
+ *      May 2025 median). The UI constants below DERIVE from that file
  *      (citation-trust sweep B4/B51, 2026-07-18) so a job-detail page,
  *      the homepage FAQ, and the salary guide all quote one figure.
  * The pipeline bands still gate which salaries exist — retune them
@@ -160,7 +165,7 @@ export const DASHBOARD_MARKET_PULSE = {
  * count bucket in the filter-counts API or its badge renders 0.
  *
  * NP HIRING: thresholds kept from the donor ($100k/$150k/$200k). With an
- * NP national median around $129k the $100k+ bucket captures the bulk
+ * NP national median around $132k the $100k+ bucket captures the bulk
  * of listings, $150k+ captures the premium tier (CRNA, senior, high-COL),
  * and $200k+ the top slice — still a meaningful spread for this niche.
  * ══════════════════════════════════════════════════════════════════════ */
@@ -187,8 +192,8 @@ export const SALARY_FILTER_BUCKETS: readonly SalaryFilterBucket[] = [
  * ±N% above/below the national average" comparison line, so changing it
  * silently changes every state-vs-national percentage.
  *
- * NP HIRING: derives from STAT_SOURCES.averageSalary (BLS OEWS May 2024
- * median, $129,210 → 129). Consistent by construction with
+ * NP HIRING: derives from STAT_SOURCES.averageSalary (BLS OEWS May 2025
+ * median, $132,300 → 132). Consistent by construction with
  * SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K, STATE_FAQ_NATIONAL_AVG_SALARY_TEXT,
  * and CAREER_PULSE_STATS.
  * ══════════════════════════════════════════════════════════════════════ */
@@ -197,7 +202,7 @@ export const SALARY_COMPARISON_NATIONAL_AVG_K = NATIONAL_AVG_SALARY_K;
 
 /* ══════════════════════════════════════════════════════════════════════
  * components/SalaryInsights.tsx — default for the optional
- * `nationalAvgSalary` prop (in $k): the "National average: $129k"
+ * `nationalAvgSalary` prop (in $k): the "National average: $132k"
  * footnote under the state-average card. The component is imported by
  * app/jobs/[slug]/page.tsx but NOT currently rendered on any route, so
  * this default is LATENT — it applies the moment a call site mounts the
@@ -220,7 +225,7 @@ export const SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K = NATIONAL_AVG_SALARY_K;
  * to reassemble byte-identically.
  *
  * NP HIRING: derives from STAT_SOURCES.averageSalary.formatted
- * ('$129,210' — BLS OEWS May 2024 median).
+ * ('$132,300' — BLS OEWS May 2025 median).
  * ══════════════════════════════════════════════════════════════════════ */
 
 export const STATE_FAQ_NATIONAL_AVG_SALARY_TEXT = STAT_SOURCES.averageSalary.formatted;

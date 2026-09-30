@@ -579,7 +579,9 @@ async function handleDisputeClosed(event: Stripe.Event, dispute: Stripe.Dispute,
     if (restored.count > 0) {
       const job = await prisma.job.findUnique({ where: { id: employerJob.jobId }, select: { expiresAt: true, archivedAt: true } });
       if (job && !job.archivedAt && job.expiresAt && job.expiresAt.getTime() > Date.now()) {
-        await prisma.job.update({ where: { id: employerJob.jobId }, data: { isPublished: true } });
+        // A revival: the posting is public again, so contentChangedAt moves
+        // (sitemap lastmod; indexing audit fixSoon 5).
+        await prisma.job.update({ where: { id: employerJob.jobId }, data: { isPublished: true, contentChangedAt: new Date() } });
         republished = true;
       }
     }

@@ -577,11 +577,28 @@ export default function CompensationGuidePage() {
 
           {/* Related Resources — P2 #22: all three /resources guides now
               cross-link each other plus the salary guide, so the cluster is
-              navigable from any entry point instead of being a dead end. */}
+              navigable from any entry point instead of being a dead end.
+              CQ-13: this page is the primary 1099 vs W-2 comparison, so it
+              leads with the two other URLs of the cluster: the calculator
+              for a specific offer, and the blog post, which now covers
+              negotiating the contract itself. The FPA guide explains the
+              concept; the state rule is on /scope-of-practice. */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <Link href="/tools/1099-vs-w2-calculator" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Take-home calculator</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Run a specific contract rate against a specific salary: self-employment tax, federal bracket, expenses and the benefits a contractor funds.</p>
+            </Link>
+            <Link href="/blog/np-1099-vs-w2" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Negotiating a 1099 {brand.niche.short} contract</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>The terms to check before you sign: pay structure, guaranteed volume, malpractice tail, termination and restrictive covenants.</p>
+            </Link>
             <Link href="/resources/fpa-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Full Practice Authority guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Whether you can contract independently depends on your state, so check its classification first.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>What full practice authority means, and how the three AANP classifications differ.</p>
+            </Link>
+            <Link href="/scope-of-practice" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Scope of practice by state</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Your state&apos;s practice rule, checked before you contract independently.</p>
             </Link>
             <Link href="/resources/private-practice-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Private practice startup guide</h3>

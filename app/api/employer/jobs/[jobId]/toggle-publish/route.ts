@@ -205,6 +205,7 @@ export async function PATCH(
           unpublishReason?: string | null;
           unpublishReasonNote?: string | null;
           unpublishedAt?: Date | null;
+          contentChangedAt?: Date;
         } = { isPublished: newPublishedState };
 
         if (!newPublishedState) {
@@ -221,6 +222,10 @@ export async function PATCH(
             // Republish — clear the manual flag so the cron lifecycle treats
             // this row as freshly active again. Reason stays as historical record.
             updateData.isManuallyUnpublished = false;
+            // A revival: the posting is public again, so its content counts
+            // as changed now (sitemap lastmod, "Last updated"; indexing
+            // audit fixSoon 5).
+            updateData.contentChangedAt = new Date();
         }
 
         if (newPublishedState && employerJob?.paymentStatus === 'plan') {

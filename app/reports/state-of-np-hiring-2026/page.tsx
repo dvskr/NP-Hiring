@@ -53,6 +53,7 @@ import {
     BENCHMARK_MIN_POSTINGS,
     BENCHMARK_MIN_EMPLOYERS,
 } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 
 /** Live aggregates refresh hourly — same cadence as /press. */
 export const revalidate = 3600;
@@ -145,6 +146,29 @@ function Section({ icon, title, id, children }: SectionProps) {
                 <div style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.7 }}>{children}</div>
             </div>
         </section>
+    );
+}
+
+/**
+ * The employer-share cap hold (indexing audit CQ-15): the national pay row
+ * cleared the size gate, but one employer holds more than the cap allows.
+ * It says so plainly, so "sample too small" never labels a cap hold.
+ */
+function EmployerShareHoldNote() {
+    return (
+        <p
+            style={{
+                ...clayCard,
+                padding: '14px 18px',
+                marginTop: '10px',
+                fontSize: '13.5px',
+                color: MUTED_TEXT,
+            }}
+        >
+            Not published: one employer accounts for more than {MAX_EMPLOYER_SHARE_PERCENT}% of the
+            postings that state pay, and this report publishes a pay figure only when no single
+            employer does.
+        </p>
     );
 }
 
@@ -512,7 +536,8 @@ export default async function StateOfHiring2026Page() {
                             What employers advertise, from postings that state a real pay range.
                             Figures our pipeline estimated are excluded, and a state publishes only
                             with at least {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
-                            {BENCHMARK_MIN_EMPLOYERS} distinct employers (the same gates as our{' '}
+                            {BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more
+                            than {MAX_EMPLOYER_SHARE_PERCENT}% of them (the same gates as our{' '}
                             <Link href="/tools/salary-benchmark" style={linkStyle}>
                                 salary benchmark tool
                             </Link>
@@ -559,6 +584,8 @@ export default async function StateOfHiring2026Page() {
                                     </tbody>
                                 </table>
                             </div>
+                        ) : snapshot.salary.nationalHeldByEmployerShare ? (
+                            <EmployerShareHoldNote />
                         ) : (
                             <SampleTooSmallNote what="an advertised-pay distribution" />
                         )}
@@ -645,8 +672,10 @@ export default async function StateOfHiring2026Page() {
                             {REPORT_MIN_SHARE_SAMPLE} postings; a distribution row shows individually
                             only with at least {REPORT_MIN_GROUP_COUNT} postings; pay rows require at
                             least {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
-                            {BENCHMARK_MIN_EMPLOYERS} distinct employers. Below a gate, the section says
-                            &quot;sample too small&quot;; it never renders a padded number.
+                            {BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer above{' '}
+                            {MAX_EMPLOYER_SHARE_PERCENT}% of them. Below a size gate the section says
+                            &quot;sample too small&quot;, and a state held by the employer share cap is left out
+                            of the pay table; neither ever renders a padded number.
                         </li>
                         <li>
                             <strong>National context is republished, not produced.</strong> Those

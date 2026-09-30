@@ -43,6 +43,16 @@
  * full practice states require a transition period") are not per-state
  * claims, so the requirement checks skip them; the absence check never does.
  *
+ * The license guide's cited "licensing facts, with sources" table (owner
+ * decision 4) is the one exception, and it is checked separately: its rows
+ * quote a state board's own text (Maine's fee to register a supervisory
+ * relationship, Vermont's collaborative provider agreement) beside the source
+ * link and check date, so each row must be,
+ * exactly, a well-formed fact of that state's verified LICENSE_GUIDE_FACTS
+ * entry, and nothing unverified can enter it. The table's heading and intro,
+ * and every other part of the guide, keep the audit above. Section 3's tier
+ * label check still reads the whole guide, table included.
+ *
  * Structured data must say what the visible text says: the license guide's
  * faq_json and HowTo steps are the visible markdown's own strings, and the
  * setting-by-state physician FAQ is the license guide's answer.
@@ -96,9 +106,14 @@ import {
     buildLicenseGuideFaq,
     buildLicenseGuideHowTo,
     buildLicenseGuideSteps,
+    getLicenseGuideFactRows,
     getLicenseGuidePost,
+    isWellFormedLicenseGuideFact,
+    licenseGuideFactsHeading,
+    type LicenseGuideFactsTable,
     type LicenseGuideState,
 } from '@/lib/blog-license-guides';
+import { LICENSE_GUIDE_FACTS, type LicenseGuideStateFacts } from '@/lib/license-guide-facts';
 import { buildLicensureSteps, tierAttributionNote } from '@/components/LicensureChecker';
 import { AANP_TIER_LEGEND, TIER_VARIATION_NOTE, plannerPracticeRequirement } from '@/components/tools/MultiStatePlanner';
 import PracticeCard, { type PracticeCardVariant } from '@/components/seo/pseo/PracticeCard';
@@ -257,6 +272,91 @@ function audit(text: string, stateName: string, info: StatePracticeInfo): string
     return found;
 }
 
+// ─── The license guide's cited licensing facts table ───────────────────────
+
+/** A facts table field: every LicenseGuideStateFacts key that holds a fact. */
+type FactField = Exclude<keyof LicenseGuideStateFacts, 'stateCode' | 'verified'>;
+
+/** Each facts table topic, and the LICENSE_GUIDE_FACTS field its row prints. */
+const FACT_ROW_FIELD: Readonly<Record<string, FactField>> = {
+    'How to apply': 'applicationRoute',
+    'Initial application fee': 'initialFee',
+    'Processing time': 'processingTime',
+    'Renewal cycle': 'renewalCycle',
+    'Continuing education for renewal': 'ceRequirement',
+};
+
+/** The name surfacesFor gives the guide's visible markdown. */
+const LICENSE_GUIDE_MARKDOWN = 'license guide markdown';
+
+/** A data row of the facts table ("| Topic | value | [source](url) | date |"); the header row is not one. */
+const isFactTableRow = (line: string): boolean => line.startsWith('| ') && !line.startsWith('| Topic |');
+
+/**
+ * The guide markdown split in two: the facts table's data rows, and the rest
+ * of the guide with only those rows taken out (the section heading, its
+ * intro and the table header stay). Each removed row leaves a line break.
+ */
+function splitCitedFacts(markdown: string, guide: LicenseGuideState): { rest: string; rows: string[] } {
+    const heading = `## ${licenseGuideFactsHeading(guide)}\n`;
+    const start = markdown.indexOf(heading);
+    if (start < 0) return { rest: markdown, rows: [] };
+    const next = markdown.indexOf('\n## ', start + heading.length);
+    const end = next < 0 ? markdown.length : next;
+    const lines = markdown.slice(start, end).split('\n');
+    return {
+        rest: `${markdown.slice(0, start)}${lines.filter((line) => !isFactTableRow(line)).join('\n')}${markdown.slice(end)}`,
+        rows: lines.filter(isFactTableRow),
+    };
+}
+
+/** "September 28, 2026" for a YYYY-MM-DD check date, as the table prints it. */
+const checkedLabel = (day: string): string => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+});
+
+/**
+ * Every facts table row that is not, cell for cell, a well-formed fact of the
+ * state's own verified entry: its value, its source link and its check date.
+ */
+function citedFactProblems(
+    guide: LicenseGuideState,
+    rows: readonly string[],
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): string[] {
+    const entry = facts[guide.code];
+    return rows.flatMap((row) => {
+        const cells = row.replace(/^\|\s|\s\|$/g, '').split(' | ');
+        if (cells.length !== 4) return [`facts row is not four cells: "${row}"`];
+        const [label, value, source, checked] = cells;
+        const field = FACT_ROW_FIELD[label];
+        if (!field) return [`facts row with an unknown topic: "${row}"`];
+        if (!entry || entry.stateCode !== guide.code || entry.verified !== true) {
+            return [`facts row from an entry that is not verified: "${row}"`];
+        }
+        const fact = entry[field];
+        if (!isWellFormedLicenseGuideFact(fact)) return [`facts row whose ${guide.code}.${field} is not well formed: "${row}"`];
+        const matches = value === fact.value.trim()
+            && source === `[${fact.sourceName.trim()}](${fact.sourceUrl})`
+            && checked === checkedLabel(fact.checkedOn);
+        return matches ? [] : [`facts row is not the verified ${guide.code}.${field}: "${row}"`];
+    });
+}
+
+/**
+ * Section 1 for the guide markdown: the facts table rows must be the state's
+ * verified facts, and everything else in the guide is audited as template copy.
+ */
+function licenseGuideMarkdownProblems(
+    stateName: string,
+    markdown: string,
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): string[] {
+    const guide = guideStateOf(stateName);
+    const { rest, rows } = splitCitedFacts(markdown, guide);
+    return [...audit(rest, stateName, STATE_PRACTICE_AUTHORITY[stateName]), ...citedFactProblems(guide, rows, facts)];
+}
+
 // ─── Every per-state consumer, rendered ─────────────────────────────────────
 
 interface Surface { name: string; text: string }
@@ -367,7 +467,7 @@ function surfacesFor(stateName: string): Surface[] {
 
     // License guide: the visible markdown, its FAQ and HowTo data, the meta.
     expect(post, `${stateName}: no license guide post`).not.toBeNull();
-    add('license guide markdown', post!.content);
+    add(LICENSE_GUIDE_MARKDOWN, post!.content);
     add('license guide meta description', post!.meta_description);
     for (const faq of buildLicenseGuideFaq(guide)) add(`license guide FAQ "${faq.name}"`, faq.text);
     for (const step of steps) add(`license guide step "${step.name}"`, `${step.name}. ${step.text}`);
@@ -439,8 +539,11 @@ describe('1. every per-state consumer, for every jurisdiction, states only what 
 
     it.each(JURISDICTIONS)('%s', (stateName) => {
         const info = STATE_PRACTICE_AUTHORITY[stateName];
+        // The guide markdown's cited facts table is checked against the
+        // verified facts; every other line of every surface is audited.
         const violations = surfacesFor(stateName).flatMap(({ name, text }) =>
-            audit(text, stateName, info).map((v) => `${name}: ${v}`));
+            (name === LICENSE_GUIDE_MARKDOWN ? licenseGuideMarkdownProblems(stateName, text) : audit(text, stateName, info))
+                .map((v) => `${name}: ${v}`));
         expect(violations).toEqual([]);
     });
 
@@ -472,6 +575,114 @@ describe('1. every per-state consumer, for every jurisdiction, states only what 
     ])('passes what the details support or what is not a per-state claim, for %s: %s', (stateName, copy) => {
         const info = STATE_PRACTICE_AUTHORITY[stateName];
         expect(audit(`${copy} ${info.details}`, stateName, info)).toEqual([]);
+    });
+});
+
+// ─── 1b. The cited facts table holds verified facts, and only it leaves the audit ──
+
+describe('1b. the license guide facts table is checked against the verified facts', () => {
+    const TX_FACTS = LICENSE_GUIDE_FACTS.TX!;
+    const TEXAS_GUIDE = () => guideStateOf('Texas');
+    const texasMarkdown = (facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS): string =>
+        getLicenseGuidePost('texas', facts)!.content;
+    const rowOf = (markdown: string, label: string): string => {
+        const row = markdown.split('\n').find((line) => line.startsWith(`| ${label} | `));
+        expect(row, `no "${label}" row`).toBeDefined();
+        return row!;
+    };
+
+    it.each(LICENSE_GUIDE_STATES.map((s) => [s.name, s] as const))(
+        '%s: exactly the rendered fact rows leave the audit, and each is a verified fact',
+        (_name, guide) => {
+            const markdown = getLicenseGuidePost(guide.stateSlug)!.content;
+            const { rest, rows } = splitCitedFacts(markdown, guide);
+            expect(rows).toHaveLength(getLicenseGuideFactRows(guide.code).length);
+            expect(citedFactProblems(guide, rows)).toEqual([]);
+            // Every other line of the guide stays in the audited text, in order.
+            expect(rest.split('\n')).toEqual(markdown.split('\n').filter((line) => !rows.includes(line)));
+            if (rows.length > 0) {
+                expect(rest).toContain(`## ${licenseGuideFactsHeading(guide)}`);
+                expect(rest).toContain('Each entry below is quoted from the source named beside it');
+                expect(rest).toContain('| Topic | What the source states | Source | Checked |');
+            }
+        },
+    );
+
+    it('the rows are what the plain audit read as requirements, for the states whose board text states one', () => {
+        for (const stateName of ['Maine', 'Vermont', 'Alabama', 'Indiana', 'New Jersey', 'Georgia', 'Oklahoma', 'Texas']) {
+            const markdown = getLicenseGuidePost(guideStateOf(stateName).stateSlug)!.content;
+            expect(audit(markdown, stateName, STATE_PRACTICE_AUTHORITY[stateName]), stateName).not.toEqual([]);
+            expect(licenseGuideMarkdownProblems(stateName, markdown), stateName).toEqual([]);
+        }
+    });
+
+    it('flags a row whose value, source or date is not the verified fact', () => {
+        const markdown = texasMarkdown();
+        const renewal = rowOf(markdown, 'Renewal cycle');
+        const forged = [
+            renewal.replace(TX_FACTS.renewalCycle!.value, 'Texas requires a collaborative agreement with a physician.'),
+            renewal.replace(TX_FACTS.renewalCycle!.sourceUrl, 'https://example.org/not-the-board'),
+            renewal.replace(checkedLabel(TX_FACTS.renewalCycle!.checkedOn), 'October 1, 2026'),
+        ];
+        for (const row of forged) {
+            expect(row).not.toBe(renewal);
+            expect(licenseGuideMarkdownProblems('Texas', markdown.replace(renewal, row)), row)
+                .toContainEqual(expect.stringContaining('facts row is not the verified TX.renewalCycle'));
+        }
+    });
+
+    it('flags a fact taken from another state\'s entry', () => {
+        const borrowed = { ...LICENSE_GUIDE_FACTS, TX: { ...TX_FACTS, renewalCycle: LICENSE_GUIDE_FACTS.ME!.renewalCycle } };
+        expect(licenseGuideMarkdownProblems('Texas', texasMarkdown(borrowed)))
+            .toContainEqual(expect.stringContaining('facts row is not the verified TX.renewalCycle'));
+    });
+
+    it('flags a row from an entry that is not verified, so nothing unverified can enter the table', () => {
+        const unverified = { ...LICENSE_GUIDE_FACTS, TX: { ...TX_FACTS, verified: false } };
+        const markdown = texasMarkdown(unverified);
+        expect(splitCitedFacts(markdown, TEXAS_GUIDE()).rows.length).toBeGreaterThan(0);
+        expect(licenseGuideMarkdownProblems('Texas', markdown, unverified))
+            .toContainEqual(expect.stringContaining('facts row from an entry that is not verified'));
+    });
+
+    it('flags a row with an unknown topic or an extra cell', () => {
+        const markdown = texasMarkdown();
+        const renewal = rowOf(markdown, 'Renewal cycle');
+        const source = `[${TX_FACTS.renewalCycle!.sourceName}](${TX_FACTS.renewalCycle!.sourceUrl})`;
+        const date = checkedLabel(TX_FACTS.renewalCycle!.checkedOn);
+        const unknownTopic = `| Supervision | Texas requires physician supervision. | ${source} | ${date} |`;
+        const extraCell = `| Renewal cycle | ${TX_FACTS.renewalCycle!.value} | Texas requires physician supervision. | ${source} | ${date} |`;
+        expect(licenseGuideMarkdownProblems('Texas', markdown.replace(renewal, `${renewal}\n${unknownTopic}`)))
+            .toContainEqual(expect.stringContaining('facts row with an unknown topic'));
+        expect(licenseGuideMarkdownProblems('Texas', markdown.replace(renewal, extraCell)))
+            .toContainEqual(expect.stringContaining('facts row is not four cells'));
+    });
+
+    it('still audits requirement copy anywhere else in the facts section or the guide', () => {
+        const markdown = texasMarkdown();
+        const claim = 'Texas requires a collaborative agreement with a physician.';
+        const renewal = rowOf(markdown, 'Renewal cycle');
+        const placements = [
+            markdown.replace('Each entry below is quoted', `${claim} Each entry below is quoted`),
+            markdown.replace(renewal, `${renewal}\n${claim}`),
+            markdown.replace(`## ${licenseGuideFactsHeading(TEXAS_GUIDE())}`, `## ${licenseGuideFactsHeading(TEXAS_GUIDE())}\n\n${claim}`),
+            markdown.replace('## Renewing your Texas license', `${claim}\n\n## Renewing your Texas license`),
+        ];
+        for (const text of placements) {
+            expect(text).not.toBe(markdown);
+            expect(licenseGuideMarkdownProblems('Texas', text)).toContainEqual(expect.stringContaining('requirement stated outside the details'));
+        }
+    });
+
+    it('section 3 reads the facts table: its source names sit in the markdown the tier label check reads', () => {
+        const markdown = surfacesFor('Illinois').find((s) => s.name === LICENSE_GUIDE_MARKDOWN)!.text;
+        for (const { fact } of getLicenseGuideFactRows('IL')) expect(markdown).toContain(`[${fact.sourceName}](${fact.sourceUrl})`);
+        // The Illinois source name used to print a tier label beside a
+        // reduced practice state; the tier label check reads it there.
+        const IL = LICENSE_GUIDE_FACTS.IL!;
+        const labelled = { ...LICENSE_GUIDE_FACTS, IL: { ...IL, applicationRoute: { ...IL.applicationRoute!, sourceName: 'IDFPR Nurses page, APRN and APRN Full Practice Authority Applications' } } };
+        expect(getLicenseGuidePost('illinois', labelled)!.content).toContain('Full Practice Authority');
+        expect(markdown).not.toContain('Full Practice Authority');
     });
 });
 
@@ -701,8 +912,12 @@ describe('6. source guards', () => {
         const code = (file: string) => sources.find(([f]) => f === file)?.[1] ?? '';
         expect(code('app/jobs/state/[state]/page.tsx')).toContain('AANP classification: {getAuthorityLabel(practiceAuthority.authority)}');
         expect(code('app/jobs/locations/[state]/page.tsx')).toContain('AANP classifies {stateName} as a <strong>{getAuthorityLabel(authority.authority)}</strong>');
-        expect(code('app/resources/fpa-guide/page.tsx')).toContain('{getAuthorityLabel(info.authority)}');
-        expect(code('app/resources/fpa-guide/page.tsx')).toContain('>AANP Classification</th>');
+        // CQ-13: the FPA guide no longer prints per-state tier chips or
+        // details at all; /scope-of-practice is the one state-by-state
+        // table, and it prints AANP's tier name on every row.
+        expect(code('app/resources/fpa-guide/page.tsx')).not.toContain('info.details');
+        expect(code('app/resources/fpa-guide/page.tsx')).not.toContain('getAuthorityLabel(');
+        expect(code('app/scope-of-practice/page.tsx')).toContain('{row.authorityLabel}');
         expect(code('components/LicensureChecker.tsx')).not.toContain('Full Practice Authority');
         expect(code('components/tools/MultiStatePlanner.tsx')).not.toMatch(/Full practice authority/i);
     });

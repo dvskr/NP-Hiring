@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
-import { brand } from '@/config/brand'
 
 export const metadata = {
-  title: `Employer Login | ${brand.name}`,
+  title: 'Employer Login',
   description: 'Log in to your employer dashboard to manage your job postings.',
 }
 

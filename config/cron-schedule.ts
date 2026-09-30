@@ -233,6 +233,10 @@ export const CRON_BATCHES: readonly CronBatch[] = [
             { path: '/api/cron/health-anomaly-check' },    // was 0 13
             // Wednesday + Saturday only — cadence preserved via gate.
             { path: '/api/cron/saved-job-reminder', utcDaysOfWeek: [3, 6] }, // was 0 13 * * 3,6
+            // Read-only check (indexing audit GFJ-01, GFJ-04, CS-03): stub
+            // descriptions, work-mode drift and jobs with no JobPosting
+            // location; alerts on Discord. Runs before index-urls.
+            { path: '/api/cron/job-posting-integrity' },
             { path: '/api/cron/index-urls' },              // was 15 13
             { path: '/api/cron/send-alerts' },             // was 30 13
             { path: '/api/cron/index-pseo' },              // was 45 13

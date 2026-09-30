@@ -1,8 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, Globe, Briefcase, ExternalLink, BadgeCheck } from 'lucide-react';
+import { Building2, Globe, Briefcase, ExternalLink, BadgeCheck, MapPin, DollarSign } from 'lucide-react';
 import { brand } from '@/config/brand';
+import { joinWithAnd } from '@/lib/display-text';
+import { safeExternalHref } from '@/components/jobs/safe-external-href';
+import type { EmployerFacts } from '@/app/jobs/[slug]/employer-facts';
+
+// The guard lives in a dependency-free module so the server page and the
+// JobPosting builder share it; re-exported here for existing importers.
+export { safeExternalHref };
 
 interface Company {
     id: string;
@@ -27,26 +34,13 @@ interface AboutEmployerProps {
     company?: Company | null;
     otherJobsCount?: number;
     companyWebsite?: string | null;
-}
-
-/**
- * Returns the value only when it parses as an absolute http: or https: URL
- * with a host; otherwise null. Fails closed on anything unparseable.
- */
-export function safeExternalHref(raw: string | null | undefined): string | null {
-    if (typeof raw !== 'string') return null;
-    const trimmed = raw.trim();
-    if (!trimmed || /[\u0000-\u001F\u007F\s]/.test(trimmed) || trimmed.startsWith('//')) return null;
-    // A bare host ("www.example.com") is a common legacy value; give it
-    // https:// rather than rendering it as a broken relative link.
-    const candidate = /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i.test(trimmed) ? `https://${trimmed}` : trimmed;
-    try {
-        const parsed = new URL(candidate);
-        if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.hostname.includes('.')) return null;
-        return parsed.toString();
-    } catch {
-        return null;
-    }
+    /**
+     * What this board holds for the employer (app/jobs/[slug]/employer-facts.ts):
+     * open roles, their states, posted pay and the company profile path.
+     * Indexing audit CQ-11: these replace the boilerplate paragraph every job
+     * page used to carry.
+     */
+    facts?: EmployerFacts | null;
 }
 
 /* ═══ Clay card tokens ═══ */
@@ -67,6 +61,55 @@ const iconContainer: React.CSSProperties = {
     backgroundColor: '#E0F2F1',
     boxShadow: '2px 2px 5px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.7)',
 };
+
+const factRow: React.CSSProperties = {
+    display: 'flex', alignItems: 'flex-start', gap: '8px',
+    fontSize: '14px', lineHeight: 1.6, color: 'var(--text-secondary)', margin: '0 0 8px',
+};
+
+const factIcon: React.CSSProperties = { width: '14px', height: '14px', marginTop: '4px', flexShrink: 0 };
+
+const linkStyle: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: '6px',
+    fontSize: '13px', fontWeight: 600, color: '#BE185D',
+    textDecoration: 'none',
+};
+
+/** "$120k" from an annualized figure. */
+function formatAnnualK(value: number): string {
+    return `$${Math.round(value / 1000)}k`;
+}
+
+export interface EmployerFactSentences {
+    roles: string | null;
+    states: string | null;
+    pay: string | null;
+}
+
+/**
+ * The fact sentences for the card, each derived from the employer's own
+ * listings on this board. A value the data cannot back is left out rather
+ * than padded: one open role (this one) is not a fact worth a sentence, and
+ * a pay range needs two or more listings with employer-stated pay.
+ */
+export function buildEmployerFactSentences(name: string, facts: EmployerFacts | null | undefined): EmployerFactSentences {
+    if (!facts || facts.openRoles < 2) return { roles: null, states: null, pay: null };
+    const roles = `${name} has ${facts.openRoles} open roles listed on ${brand.name}.`;
+
+    let states: string | null = null;
+    if (facts.stateCount === 1 && facts.topStates[0]) {
+        states = `Its listings here are in ${facts.topStates[0].name}.`;
+    } else if (facts.stateCount > 1) {
+        const led = joinWithAnd(facts.topStates.map((s) => `${s.name} (${s.count})`));
+        states = `They span ${facts.stateCount} states, led by ${led}.`;
+    }
+
+    const pay = facts.postedPay
+        ? `Employer-stated pay on ${facts.postedPay.listings} of these listings runs from ${formatAnnualK(facts.postedPay.min)} to ${formatAnnualK(facts.postedPay.max)} a year.`
+        : null;
+
+    return { roles, states, pay };
+}
 
 /**
  * Distinct from the pipeline's "Verified Employer" pill by colour, shape and
@@ -105,11 +148,77 @@ function ClaimedByEmployerBadge({ gapLeft = false }: { gapLeft?: boolean }) {
     );
 }
 
+function WebsiteLink({ href, block }: { href: string; block: boolean }) {
+    return (
+        <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+                display: block ? 'flex' : 'inline-flex', alignItems: 'center', gap: '4px',
+                fontSize: '12px', color: '#BE185D', marginTop: '4px',
+                textDecoration: 'none',
+            }}
+        >
+            <Globe style={{ width: '12px', height: '12px' }} />
+            {href.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+            <ExternalLink style={{ width: '10px', height: '10px' }} />
+        </a>
+    );
+}
+
+/** The facts list and the profile and listings links. */
+function EmployerFactsBlock({
+    displayName, sentences, companyPath, otherJobsCount, employerLink,
+}: {
+    displayName: string;
+    sentences: EmployerFactSentences;
+    companyPath: string | null;
+    otherJobsCount: number;
+    employerLink: string;
+}) {
+    const hasSentences = Boolean(sentences.roles || sentences.states || sentences.pay);
+    return (
+        <>
+            {hasSentences && (
+                <div style={{ margin: '0 0 12px' }}>
+                    {sentences.roles && (
+                        <p style={factRow}><Briefcase style={factIcon} aria-hidden="true" />{sentences.roles}</p>
+                    )}
+                    {sentences.states && (
+                        <p style={factRow}><MapPin style={factIcon} aria-hidden="true" />{sentences.states}</p>
+                    )}
+                    {sentences.pay && (
+                        <p style={factRow}><DollarSign style={factIcon} aria-hidden="true" />{sentences.pay}</p>
+                    )}
+                </div>
+            )}
+            {(companyPath || otherJobsCount > 0) && (
+                <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {companyPath && (
+                        <Link href={companyPath} style={linkStyle}>
+                            <Building2 style={{ width: '14px', height: '14px' }} />
+                            See the {displayName} company profile
+                        </Link>
+                    )}
+                    {otherJobsCount > 0 && (
+                        <Link href={employerLink} style={linkStyle}>
+                            <Briefcase style={{ width: '14px', height: '14px' }} />
+                            View {otherJobsCount} other job{otherJobsCount > 1 ? 's' : ''} from {displayName}
+                        </Link>
+                    )}
+                </div>
+            )}
+        </>
+    );
+}
+
 export default function AboutEmployer({
     employerName,
     company,
     otherJobsCount = 0,
     companyWebsite,
+    facts,
 }: AboutEmployerProps) {
     // Resolve website: prefer company record, fall back to job-level data.
     // Only an absolute http(s) URL may become an href: stored values can
@@ -120,6 +229,8 @@ export default function AboutEmployer({
 
     // Employer jobs link — uses the employer filter param which is handled by the filter system
     const employerLink = `/jobs?employer=${encodeURIComponent(displayName)}`;
+    const sentences = buildEmployerFactSentences(displayName, facts);
+    const companyPath = facts?.companyPath ?? null;
 
     // If we have company data from the database
     if (company && company.description) {
@@ -172,22 +283,7 @@ export default function AboutEmployer({
                         {company.claimVerifiedAt && (
                             <ClaimedByEmployerBadge gapLeft={company.isVerified} />
                         )}
-                        {websiteUrl && (
-                            <a
-                                href={websiteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '4px',
-                                    fontSize: '12px', color: '#BE185D', marginTop: '4px',
-                                    textDecoration: 'none',
-                                }}
-                            >
-                                <Globe style={{ width: '12px', height: '12px' }} />
-                                {websiteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                                <ExternalLink style={{ width: '10px', height: '10px' }} />
-                            </a>
-                        )}
+                        {websiteUrl && <WebsiteLink href={websiteUrl} block />}
                     </div>
                 </div>
 
@@ -195,26 +291,24 @@ export default function AboutEmployer({
                     {company.description}
                 </p>
 
-                {otherJobsCount > 0 && (
-                    <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                        <Link
-                            href={employerLink}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                fontSize: '13px', fontWeight: 600, color: '#BE185D',
-                                textDecoration: 'none',
-                            }}
-                        >
-                            <Briefcase style={{ width: '14px', height: '14px' }} />
-                            View {otherJobsCount} other job{otherJobsCount > 1 ? 's' : ''} from {company.name}
-                        </Link>
-                    </div>
-                )}
+                <EmployerFactsBlock
+                    displayName={company.name}
+                    sentences={sentences}
+                    companyPath={companyPath}
+                    otherJobsCount={otherJobsCount}
+                    employerLink={employerLink}
+                />
             </section>
         );
     }
 
-    // Fallback: Generic employer section when no company data
+    // Fallback: Generic employer section when no company description. It
+    // prints only facts this board holds (open roles, states, posted pay,
+    // the profile link), never boilerplate, and renders nothing at all when
+    // there are none (indexing audit CQ-11).
+    const hasFacts = Boolean(sentences.roles || companyPath || otherJobsCount > 0);
+    if (!hasFacts && !websiteUrl && !company?.claimVerifiedAt) return null;
+
     return (
         <section style={clayCard}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '14px' }}>
@@ -228,7 +322,7 @@ export default function AboutEmployer({
                         color: 'var(--text-primary)',
                         margin: 0,
                     }}>
-                        About {employerName}
+                        About {displayName}
                     </h2>
                     {/* The branch a real Company row actually reaches: the rich
                         branch above needs `company.description`, which has no
@@ -244,46 +338,17 @@ export default function AboutEmployer({
                             <ClaimedByEmployerBadge />
                         </div>
                     )}
-                    {websiteUrl && (
-                        <a
-                            href={websiteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                fontSize: '12px', color: '#BE185D', marginTop: '4px',
-                                textDecoration: 'none',
-                            }}
-                        >
-                            <Globe style={{ width: '12px', height: '12px' }} />
-                            {websiteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                            <ExternalLink style={{ width: '10px', height: '10px' }} />
-                        </a>
-                    )}
+                    {websiteUrl && <WebsiteLink href={websiteUrl} block={false} />}
                 </div>
             </div>
 
-            <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'var(--text-secondary)', margin: '0 0 14px' }}>
-                {employerName} is hiring for this {brand.niche.short} position. {brand.niche.long}s
-                play a critical role in addressing the growing demand for {brand.niche.category} services across the United States.
-                This employer is actively seeking qualified candidates to join its team.
-            </p>
-
-            {otherJobsCount > 0 && (
-                <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                    <Link
-                        href={employerLink}
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            fontSize: '13px', fontWeight: 600, color: '#BE185D',
-                            textDecoration: 'none',
-                        }}
-                    >
-                        <Briefcase style={{ width: '14px', height: '14px' }} />
-                        View {otherJobsCount} other job{otherJobsCount > 1 ? 's' : ''} from this employer
-                    </Link>
-                </div>
-            )}
+            <EmployerFactsBlock
+                displayName={displayName}
+                sentences={sentences}
+                companyPath={companyPath}
+                otherJobsCount={otherJobsCount}
+                employerLink={employerLink}
+            />
         </section>
     );
 }

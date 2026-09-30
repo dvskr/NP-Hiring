@@ -20,7 +20,9 @@ describe('P10 job detail #1: ApplyButton search-param read cannot bail the page 
     expect(src).toMatch(/import \{[^}]*\bSuspense\b[^}]*\} from 'react'/);
     const uses = src.match(/<ApplyButton\b/g) ?? [];
     expect(uses.length).toBeGreaterThan(0);
-    const wrapped = src.match(/<Suspense fallback=\{<ApplyButtonPlaceholder \/>\}>\s*<ApplyButton\b/g) ?? [];
+    // The placeholder takes the job's apply props (indexing audit GFJ-03: it
+    // is the server-rendered employer link for external jobs).
+    const wrapped = src.match(/<Suspense fallback=\{<ApplyButtonPlaceholder\b[^>]*\/>\}>\s*<ApplyButton\b/g) ?? [];
     expect(wrapped.length).toBe(uses.length);
   });
 

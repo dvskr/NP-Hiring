@@ -52,6 +52,7 @@ import {
   buildCitySlug,
   buildStateCityDirectory,
   cityLinkResolves,
+  foldDirectoryCityRows,
   getStatesWithCityDirectory,
   isDistrictOfColumbia,
   selectCityDetails,
@@ -82,10 +83,15 @@ export const revalidate = 3600; // ISR: revalidate every hour
  *   404s by design)
  *   0 active jobs: omitted entirely
  *
- * Robots: shouldIndexStateCityDirectory (3 or more linkable cities), the same
- * function app/sitemap.ts reads, so a sitemap URL is never a noindex page.
- * A directory that renders but does not index keeps its self canonical and
- * `follow`.
+ * Robots: shouldIndexStateCityDirectory (5 or more linkable cities, FB-1 and
+ * M-05), the same function app/sitemap.ts reads, so a sitemap URL is never a
+ * noindex page. Below it the directory is a `noindex, follow` navigation page
+ * that keeps its self canonical, so it never competes with the state hub for
+ * "NP jobs in {State}".
+ *
+ * City names fold onto the city they belong to before anything is counted
+ * (CQ-08, foldDirectoryCityRows): a Chicago neighborhood or a "Boston-"
+ * parser leftover is counted under Chicago or Boston, never listed as a town.
  */
 
 interface StateDirectoryPageProps {
@@ -184,13 +190,13 @@ const getStateDirectory = cache(async (stateName: string, stateCode: string): Pr
   return {
     stateName,
     stateCode,
-    directory: buildStateCityDirectory(aggregates, {
+    directory: buildStateCityDirectory(foldDirectoryCityRows(aggregates, stateCode), {
       // A city whose stored name does not survive the city route's slug parser
       // is named but never linked: the link would resolve to zero jobs and
       // 404. See cityLinkResolves.
       canLink: (row) => cityLinkResolves(row.city, stateCode),
     }),
-    cityDetails: selectCityDetails(detailRows),
+    cityDetails: selectCityDetails(detailRows, undefined, stateCode),
   };
 });
 
@@ -248,7 +254,7 @@ export async function generateMetadata({ params }: StateDirectoryPageProps): Pro
   if (!shouldRenderStateCityDirectory(data.directory)) {
     // The page 404s; keep the metadata honest in case anything reads it first.
     return {
-      title: `${brand.niche.short} Jobs by City in ${stateName}`,
+      title: `${stateName} Cities Hiring ${brand.niche.short}s`,
       robots: { index: false, follow: true },
       alternates: { canonical },
     };
@@ -265,7 +271,9 @@ export async function generateMetadata({ params }: StateDirectoryPageProps): Pro
     trackedCities,
     leadCities: data.directory.linkable.slice(0, 2).map((c) => c.city),
   });
-  const ogTitle = `${brand.niche.short} Jobs by City in ${stateName}`;
+  // M-05: the directory names its own intent (which cities are hiring), not
+  // the state hub query "NP jobs in {State}".
+  const ogTitle = `${stateName} Cities Hiring ${brand.niche.short}s`;
   const indexable = shouldIndexStateCityDirectory({ linkableCities: data.directory.linkable.length });
 
   return {
@@ -486,7 +494,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: `${brand.niche.short} Jobs by City in ${stateName}`,
+    name: `${stateName} Cities Hiring ${brand.niche.short}s`,
     description: `Cities in ${stateName} with active ${brand.niche.descriptor} openings on ${brand.name}.`,
     url: `${brand.baseUrl}${canonicalPath}`,
     mainEntity: {
@@ -548,7 +556,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                 className="font-lora"
                 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px', lineHeight: 1.15 }}
               >
-                {brand.niche.short} Jobs by City in {stateName}
+                {stateName} Cities Hiring {brand.niche.short}s
               </h1>
               <p style={{ fontSize: '15px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                 Every {stateName} city currently carrying {brand.niche.descriptor} openings, ranked by how many

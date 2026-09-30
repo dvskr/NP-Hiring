@@ -11,7 +11,7 @@ import { Metadata } from 'next';
  * middleware's X-Robots-Tag list).
  */
 export const metadata: Metadata = {
-    title: `Unsubscribe | ${brand.name}`,
+    title: 'Unsubscribe',
     description: `Manage whether you receive email from ${brand.name}.`,
     robots: { index: false, follow: false },
 };

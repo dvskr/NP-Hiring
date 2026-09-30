@@ -82,8 +82,8 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     icon={<ShieldCheck size={14} strokeWidth={2.5} />}
                     iconBg="#FCE7F3"
                     iconColor="#9D174D"
-                    title="↗ Direct Apply"
-                    body="Goes straight to the employer's careers site, with no aggregator in between. Either employer-posted or a vetted partner link."
+                    title="↗ Apply on employer site"
+                    body="After you sign in, the application continues on the employer's own careers site."
                 />
 
                 <Row
@@ -102,7 +102,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     <ExternalLink size={14} strokeWidth={2.5} />
                 </span>
                 <p style={{ margin: 0, fontSize: '12px', color: '#6B7F8A', lineHeight: 1.5 }}>
-                    Your <strong style={{ color: '#1A2E35' }}>Recommended for you</strong> feed prioritizes Easy Apply and Direct Apply listings, because they convert faster and do not send you through unnecessary redirects.
+                    Your <strong style={{ color: '#1A2E35' }}>Recommended for you</strong> feed prioritizes Easy Apply and employer site listings, because they convert faster and do not send you through unnecessary redirects.
                 </p>
             </div>
         </aside>

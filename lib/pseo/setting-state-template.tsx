@@ -12,9 +12,11 @@
  * components in components/seo/pseo. A section whose facts miss its floor
  * renders nothing; nothing here is padded or invented. Pay prints only
  * through the gated median or the cited BLS figure, never a typed band or a
- * posting mean. Robots read the cron's stored verdict (PseoStats.indexable)
- * while its row is fresh and the live facts through the same render-gate
- * function otherwise, so the page and the sitemaps cannot disagree.
+ * posting mean. Robots read the cron's stored strict verdict
+ * (PseoStats.indexable) through isSettingStateIndexable, which also reads
+ * the FB-1 switch; a stale or missing row answers noindex (the verdict
+ * needs the parent hub's facts, which only the cron computes), so the page
+ * and the sitemaps cannot disagree.
  */
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -24,12 +26,14 @@ import ImmersiveImage from '@/components/ImmersiveImage';
 import { getCitiesByState } from './city-data/cities';
 import {
   isPseoStatsFresh,
+  isSettingStateIndexable,
   pseoStatsFreshnessThreshold,
   PSEO_STATS_MAX_AGE_HOURS,
-  shouldIndexSettingState,
-  type SettingStateIndexFacts,
+  SETTING_STATE_INDEXING_ENABLED,
   MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
+import { labelNoun } from './category-metadata';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
+import { LISTING_PAGE_SIZE, isPageOutOfRange, listingCanonical, pageOffset } from './listing-pagination';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { brand } from '@/config/brand';
 import { Bell, MapPin, Lightbulb, ArrowRight } from 'lucide-react';
@@ -66,7 +70,6 @@ import { canonicalBucketWhere } from '@/lib/canonical-counts';
 import { getListingFacts, type ListingFacts } from './listing-facts';
 import {
   buildRecencySentence,
-  buildRoleSetup,
   buildSettingStateDescription,
   buildSettingStateFaqs,
   buildSettingStateTitle,
@@ -114,8 +117,8 @@ interface SettingStateGateRow {
   updatedAt: Date;
 }
 
-/** Listings per page; the count drives the pagination controls. */
-const PAGE_SIZE = 10;
+/** Listings per page (M-01, lib/pseo/listing-pagination); the count drives the pagination controls. */
+const PAGE_SIZE = LISTING_PAGE_SIZE;
 
 /**
  * GA4 item_list_name for the listings on every category x state page. The
@@ -171,43 +174,34 @@ async function readStoredIndexVerdict(config: SettingConfig, stateSlug: string):
       LIMIT 1`;
     return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
   } catch (error) {
-    // A failed gate read must never take the page down: robots fall back to
-    // the live facts, the same decision the cron would have stored.
+    // A failed gate read must never take the page down: robots answer
+    // noindex, follow until the verdict is readable again.
     console.error(
-      `[setting-state] stored index verdict unavailable for ${config.slug}/${stateSlug}; robots use the live facts (freshness window ${PSEO_STATS_MAX_AGE_HOURS}h):`,
+      `[setting-state] stored index verdict unavailable for ${config.slug}/${stateSlug}; robots answer noindex (freshness window ${PSEO_STATS_MAX_AGE_HOURS}h):`,
       error,
     );
     return null;
   }
 }
 
-/** The facts shouldIndexSettingState reads, computed exactly as the cron computes them. */
-export function settingStateIndexFacts(slug: string, facts: ListingFacts): SettingStateIndexFacts {
-  return {
-    totalJobs: facts.total,
-    employerCount: facts.distinctEmployers,
-    namedCityCount: facts.cities.length,
-    hasBenchmark: facts.benchmark !== null,
-    postedLast30Days: facts.recency.last30,
-    roleSetupRenders: buildRoleSetup({ slug, facts }).rendered,
-  };
-}
-
 /**
- * Robots verdict (PLAN C.2): only page 1 can index; a fresh PseoStats row
- * carries the cron's stored verdict, which the sitemaps also read; a stale
- * or missing row falls back to the live facts through the same function.
+ * Robots verdict (PLAN C.2, FB-1, CQ-01): only page 1 can index, and only
+ * while SETTING_STATE_INDEXING_ENABLED is on and a fresh PseoStats row
+ * carries a true strict verdict (the one the sitemaps read). A stale or
+ * missing row fails CLOSED: the strict gate needs the parent hub's verdict
+ * and share, which only the cron computes, so the page never re-derives it.
+ * `indexingEnabled` exists for tests; production reads the switch.
  */
 export function resolveSettingStateIndexable(input: {
   stored: SettingStateGateRow | null;
-  indexFacts: SettingStateIndexFacts;
   page: number;
   now?: number;
+  indexingEnabled?: boolean;
 }): boolean {
-  const { stored, indexFacts, page, now = Date.now() } = input;
+  const { stored, page, now = Date.now(), indexingEnabled = SETTING_STATE_INDEXING_ENABLED } = input;
   if (page !== 1) return false;
-  if (stored && isPseoStatsFresh(stored.updatedAt, now)) return stored.indexable;
-  return shouldIndexSettingState(indexFacts, page);
+  if (!stored || !isPseoStatsFresh(stored.updatedAt, now)) return false;
+  return isSettingStateIndexable(stored.indexable, indexingEnabled);
 }
 
 /** Other settings with fresh inventory in this state (CS-S8), most listings first. */
@@ -330,7 +324,12 @@ export async function buildSettingStateMetadata(
     readStoredIndexVerdict(config, stateSlug),
   ]);
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
-  const title = buildSettingStateTitle({ titleLabel: config.label, stateName, total: facts.total });
+  // TECH-09: a page past the last one is a 404, never an empty 200.
+  if (isPageOutOfRange(page, facts.total, PAGE_SIZE)) {
+    const { notFound } = await import('next/navigation');
+    notFound();
+  }
+  const title = buildSettingStateTitle({ titleLabel: config.label, slug: config.slug, stateName, total: facts.total });
   const description = buildSettingStateDescription({
     label: config.label,
     slug: config.slug,
@@ -338,11 +337,7 @@ export async function buildSettingStateMetadata(
     facts,
     statsAsOf: facts.computedAt,
   });
-  const indexable = resolveSettingStateIndexable({
-    stored,
-    indexFacts: settingStateIndexFacts(config.slug, facts),
-    page,
-  });
+  const indexable = resolveSettingStateIndexable({ stored, page });
 
   return {
     title,
@@ -359,10 +354,12 @@ export async function buildSettingStateMetadata(
       }],
     },
     alternates: {
-      // Self canonical on every page; paginated views canonical to page 1.
-      canonical: `${brand.baseUrl}${basePath}`,
+      // TECH-08: every page is its own canonical (page N is ?page=N, never
+      // page 1); page 2 and later answer noindex, follow like the middleware.
+      canonical: listingCanonical(basePath, page),
     },
     // Noindex pages keep follow so PageRank flows through the internal links.
+    // resolveSettingStateIndexable is false on page 2 and later.
     robots: { index: indexable, follow: true },
   };
 }
@@ -440,14 +437,21 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
     notFound();
   }
 
-  const skip = (page - 1) * PAGE_SIZE;
+  // APRN-axis labels already name the role ("Nurse Anesthetist"), so they
+  // never gain the NP suffix (CQ-06): "Nurse Anesthetist Jobs", not
+  // "Nurse Anesthetist NP Jobs".
+  const noun = labelNoun(config.slug, config.label);
+  const isStandaloneRole = noun === config.label;
+  const nounLower = isStandaloneRole ? config.label.toLowerCase() : `${config.label.toLowerCase()} ${brand.niche.short}`;
+  const skip = pageOffset(page, PAGE_SIZE);
 
   // 1. The canonical facts (one loader, shared with generateMetadata).
   const facts = await getSettingStateFacts(config, stateName!, stateSlug);
 
   // A category x state combo with no matching jobs is a real 404: nothing
   // below is worth rendering for it.
-  if (facts.total === 0) {
+  // TECH-09: so is a page past the last one.
+  if (facts.total === 0 || isPageOutOfRange(page, facts.total, PAGE_SIZE)) {
     const { notFound: notFoundFn } = await import('next/navigation');
     notFoundFn();
   }
@@ -533,7 +537,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+              name: `${noun} Jobs in ${stateName}`,
               numberOfItems: facts.total,
               itemListElement: jobs.slice(0, PAGE_SIZE).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -580,7 +584,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'WebPage',
-            name: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+            name: `${noun} Jobs in ${stateName}`,
             dateModified: statsAsOf.toISOString(),
             speakable: {
               '@type': 'SpeakableSpecification',
@@ -622,16 +626,16 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
       <CategoryHero
         bgColor={assets.bgColor}
         heroImage={assets.heroImage}
-        heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
+        heroAlt={`${noun} jobs in ${stateName}`}
         // P2 #15: freshness comes from when the counts were actually computed
         // (shared formatter with the city template).
         badgeText={formatStatsBadge(facts.total, statsAsOf)}
         breadcrumbs={[]}
         headlineLine1={config.label}
-        headlineLine2={brand.niche.short}
-        headlineSub={`jobs in ${stateName}.`}
+        headlineLine2={isStandaloneRole ? 'Jobs' : brand.niche.short}
+        headlineSub={isStandaloneRole ? `in ${stateName}.` : `jobs in ${stateName}.`}
         stats={heroStats}
-        description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}
+        description={`${noun} positions in ${stateName}. ${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
         ctaHref={`/jobs/${config.slug}`}
         secondaryCtaLabel={`All ${stateName} Jobs`}
@@ -717,7 +721,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName}, delivered daily.
+                    New {nounLower} positions in {stateName}, delivered daily.
                   </p>
                   <Link href="/job-alerts" style={{
                     display: 'block', width: '100%', textAlign: 'center',
@@ -789,7 +793,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               )}
             </div>
             {assets.bentoImages[0] && (
-              <ImmersiveImage src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} minHeight={240} />
+              <ImmersiveImage src={assets.bentoImages[0]} alt={noun} minHeight={240} />
             )}
           </div>
 
@@ -833,7 +837,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               {nearbyStates.length > 0 && (
                 <div style={otherSettings.length > 0 ? { marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' } : undefined}>
                   <h3 style={crossLinkHeadingStyle}>
-                    {config.label} {brand.niche.short} jobs in nearby states
+                    {noun} jobs in nearby states
                   </h3>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {nearbyStates.map((neighbor) => (
@@ -872,7 +876,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           category={config.faqCategory as CategorySlug}
           totalJobs={facts.total}
           customFaqs={stateFaqs}
-          heading={`${config.label} ${brand.niche.short} Jobs in ${stateName} FAQ`}
+          heading={`${noun} Jobs in ${stateName} FAQ`}
         />
       )}
     </div>

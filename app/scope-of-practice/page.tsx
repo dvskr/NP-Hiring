@@ -18,6 +18,10 @@ import {
     buildSopFaqs,
 } from '@/components/ScopeOfPracticeData';
 import { getAanpTierDefinition, getAuthorityColor, getAuthorityLabel } from '@/lib/state-practice-authority';
+// Audit CQ-12: visible byline and Article schema authorship both derive from
+// brand.editorial.author and .reviewer (config/brand.ts), the same wiring as
+// app/blog/[slug]/page.tsx and the /resources guides.
+import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 
 /**
  * /scope-of-practice — the interactive 51-jurisdiction scope-of-practice
@@ -153,6 +157,10 @@ export default function ScopeOfPracticePage() {
                         image: HERO_IMAGE,
                         author: { '@type': 'Organization', name: brand.name },
                         publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+                        // {} while brand.editorial.author and .reviewer are
+                        // null; the real people's Person records when
+                        // configured. Never a fabricated name.
+                        ...editorialSchemaFields(),
                     }),
                 }}
             />
@@ -202,6 +210,12 @@ export default function ScopeOfPracticePage() {
 
             <div className="container mx-auto px-4 py-8 md:py-12">
                 <div className="max-w-5xl mx-auto">
+
+                    {/* Visible byline: the editorial team while the config is
+                        null, the named author and reviewer once filled. */}
+                    <div className="mb-8">
+                        <EditorialByline variant="hero" />
+                    </div>
 
                     {/* Tier legend */}
                     <div className="mb-8 md:mb-12">

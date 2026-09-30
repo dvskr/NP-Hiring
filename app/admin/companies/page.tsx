@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Building2, Briefcase, ShieldQuestion, Tags } from 'lucide-react';
+import WebIdentityEditor from './WebIdentityEditor';
+import { companyProfilePath } from '@/lib/company-slug';
 
 /* ─── Types (mirror app/api/admin/companies/company-select.ts) ─── */
 type RecruitmentType = 'direct_hire' | 'staffing_agency';
@@ -11,6 +13,7 @@ interface AdminCompany {
     name: string;
     normalizedName: string;
     website: string | null;
+    logoUrl: string | null;
     isVerified: boolean;
     claimVerifiedAt: string | null;
     recruitmentType: RecruitmentType | null;
@@ -37,12 +40,6 @@ function badge(text: string, color: 'green' | 'gray' | 'red' | 'orange' | 'blue'
         purple: { bg: 'rgba(147,51,234,0.12)', text: '#9333EA' },
     };
     return <span style={{ display: 'inline-flex', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, backgroundColor: colors[color].bg, color: colors[color].text, whiteSpace: 'nowrap' }}>{text}</span>;
-}
-
-/** Canonical public URL for a Company row (same legacy-space-form guard as
- *  the claims queue — see admin/company-claims/page.tsx companyHref). */
-function companyHref(normalizedName: string): string {
-    return `/companies/${normalizedName.replace(/ /g, '-')}`;
 }
 
 type ClassFilter = 'unclassified' | 'direct_hire' | 'staffing_agency' | 'all';
@@ -230,7 +227,7 @@ export default function AdminCompaniesPage() {
                                             <tr key={c.id}>
                                                 <td style={{ ...td, fontWeight: 600, color: '#1A2E35', minWidth: 200 }}>
                                                     <a
-                                                        href={companyHref(c.normalizedName)}
+                                                        href={companyProfilePath({ name: c.name, normalizedName: c.normalizedName })}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{ color: '#BE185D', textDecoration: 'none' }}
@@ -241,11 +238,12 @@ export default function AdminCompaniesPage() {
                                                         {c.isVerified && badge('Pipeline verified', 'blue')}
                                                         {c.claimVerifiedAt !== null && badge('Claimed', 'green')}
                                                     </div>
-                                                    <div style={{ ...muted, fontWeight: 400, marginTop: 4 }}>
-                                                        {c.website
-                                                            ? c.website.replace(/^https?:\/\//, '')
-                                                            : 'No website on file'}
-                                                    </div>
+                                                    {/* GFJ-08: website and logo feed the JobPosting hiringOrganization. */}
+                                                    <WebIdentityEditor
+                                                        company={c}
+                                                        onSaved={(updated) => setCompanies(prev => prev.map(row => (row.id === updated.id ? updated : row)))}
+                                                        onMessage={showMsg}
+                                                    />
                                                 </td>
                                                 <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 600, color: '#1A2E35' }}>{c._count.jobs}</td>
                                                 <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.jobCount}</td>

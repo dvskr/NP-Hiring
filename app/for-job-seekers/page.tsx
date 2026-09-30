@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   // live UI is a credibility hit. Description now describes the platform
   // value without a numeric claim.
   description:
-    `Find your next ${brand.niche.long} position. Search thousands of verified roles, compare salaries, get daily alerts, and apply directly, all 100% free forever.`,
+    `Find your next ${brand.niche.long} position. Search thousands of verified roles, compare salaries, get daily alerts, and apply with one free account, all 100% free forever.`,
   openGraph: {
     images: [{ url: SEEKERS_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job seeker career resources` }],
   },
@@ -83,7 +83,7 @@ const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: t
   { feature: 'Salary Transparency on Every Listing', us: true, indeed: false, linkedin: false, note: 'Others hide salary' },
   { feature: 'Completely Free for Job Seekers', us: true, indeed: true, linkedin: 'partial', note: 'LinkedIn: premium features cost extra' },
   { feature: 'AI Match Scoring', us: true, indeed: false, linkedin: false },
-  { feature: 'One-Click Direct Apply', us: true, indeed: true, linkedin: true },
+  { feature: 'Easy Apply or Apply on the Employer Site', us: true, indeed: true, linkedin: true },
   { feature: '50-State Licensure Guides', us: true, indeed: false, linkedin: false },
   { feature: 'State-by-State Salary Data', us: true, indeed: 'partial', linkedin: false },
   { feature: 'Save & Track Applications', us: true, indeed: true, linkedin: true },
@@ -437,7 +437,8 @@ export default async function ForJobSeekersPage() {
               },
               {
                 title: 'Full Practice Authority Guide',
-                desc: 'Which states let you practice independently? Understand FPA, reduced, and restricted practice levels.',
+                // CQ-13: the concept guide; each state's rule is on /scope-of-practice.
+                desc: 'What full practice authority means, and how full, reduced and restricted practice differ.',
                 href: '/resources/fpa-guide',
                 IconComponent: Award,
                 iconColor: '#D97706',

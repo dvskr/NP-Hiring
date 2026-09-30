@@ -27,6 +27,7 @@ import {
     type DirectoryGroupRow,
 } from '@/app/jobs/locations/[state]/directory';
 import { getListingFacts } from '@/lib/pseo/listing-facts';
+import { MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX } from '@/lib/pseo/render-gate';
 import { buildPlainStateNarrative, buildSettingStateNarrative } from '@/lib/pseo/state-narrative';
 import * as settingStateConfig from '@/lib/pseo/setting-state-config';
 import sitemap from '@/app/sitemap';
@@ -102,7 +103,10 @@ describe('the locations index reads the canonical buckets and the full jurisdict
     const code = stripComments(src);
 
     it('counts the remote banner and the hero total on canonicalBucketWhere', () => {
-        expect(code).toContain('prisma.job.count({ where: canonicalBucketWhere({ isRemote: true }) })');
+        // The banner counts the bucket /jobs/remote itself counts (fully
+        // remote, not hybrid), so the two numbers cannot disagree.
+        expect(code).toContain("prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere('remote')) })");
+        expect(code).not.toContain('canonicalBucketWhere({ isRemote: true })');
         expect(code).toContain('prisma.job.count({ where: canonicalBucketWhere({}) })');
     });
 
@@ -150,12 +154,15 @@ describe('the locations index reads the canonical buckets and the full jurisdict
 
 /* ─── 2. sitemap directories ───────────────────────────────────────────── */
 
+/** A job created before STAMP; the sitemap dates a row by its content change (CS-02). */
+const CREATED = new Date('2026-09-01T00:00:00.000Z');
+
 function groupRow(city: string, state: string, count: number, newest: Date = STAMP) {
-    return { city, state, _count: { city: count }, _max: { updatedAt: newest } };
+    return { city, state, _count: { city: count }, _max: { contentChangedAt: newest, createdAt: CREATED } };
 }
 
 function codeRow(city: string, state: string | null, stateCode: string, count: number, newest: Date = STAMP) {
-    return { city, state, stateCode, _count: { city: count }, _max: { updatedAt: newest } };
+    return { city, state, stateCode, _count: { city: count }, _max: { contentChangedAt: newest, createdAt: CREATED } };
 }
 
 type GroupByArgs = { by: readonly string[] };
@@ -168,7 +175,7 @@ function mockSitemap(byName: unknown[], byCode: unknown[]): void {
     vi.mocked(prisma.company.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.job.groupBy).mockImplementation((async (args: GroupByArgs) => {
         const by = [...args.by].join(',');
-        if (by === 'state') return [{ state: 'District of Columbia', _count: { state: 10 }, _max: { updatedAt: STAMP } }];
+        if (by === 'state') return [{ state: 'District of Columbia', _count: { state: 10 }, _max: { contentChangedAt: STAMP, createdAt: CREATED } }];
         if (by === 'city,state') return byName;
         if (by === 'city,state,stateCode') return byCode;
         return [];
@@ -195,11 +202,13 @@ describe('tallyDirectoryCities rebuilds the directory page bucket from two group
             ],
         );
         const dc = tally.get('District of Columbia');
+        // Rows come back folded (CQ-08), so each carries the count the city
+        // page itself would find under that exact spelling.
         expect(dc?.rows).toEqual(
             expect.arrayContaining([
-                { city: 'Washington', count: 4 },
-                { city: 'Georgetown', count: 4 },
-                { city: 'Anacostia', count: 3 },
+                { city: 'Washington', count: 4, linkCount: 4 },
+                { city: 'Georgetown', count: 4, linkCount: 4 },
+                { city: 'Anacostia', count: 3, linkCount: 3 },
             ]),
         );
         expect(dc?.rows).toHaveLength(3);
@@ -216,12 +225,15 @@ describe('tallyDirectoryCities rebuilds the directory page bucket from two group
 });
 
 describe('the sitemap lists a directory exactly when the page would index it', () => {
-    it('lists the District of Columbia directory from the name half alone at 3 linkable cities', async () => {
+    it('lists the District of Columbia directory from the name half alone at 5 linkable cities', async () => {
+        expect(MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX).toBe(5);
         mockSitemap(
             [
                 groupRow('Washington', 'District of Columbia', 5),
                 groupRow('Georgetown', 'District of Columbia', 3),
                 groupRow('Anacostia', 'District of Columbia', 3),
+                groupRow('Brookland', 'District of Columbia', 3),
+                groupRow('Capitol Hill', 'District of Columbia', 3),
             ],
             [],
         );
@@ -233,9 +245,11 @@ describe('the sitemap lists a directory exactly when the page would index it', (
         const byName = [
             groupRow('Washington', 'District of Columbia', 4),
             groupRow('Georgetown', 'District of Columbia', 3),
+            groupRow('Navy Yard', 'District of Columbia', 3),
+            groupRow('Capitol Hill', 'District of Columbia', 3),
             groupRow('Brookland', 'District of Columbia', 1),
         ];
-        // Name half alone: 2 linkable cities, so the page renders noindex and
+        // Name half alone: 4 linkable cities, so the page renders noindex and
         // the sitemap rightly leaves it out.
         mockSitemap(byName, []);
         expect((await sitemap()).map((e) => e.url)).not.toContain(DC_DIRECTORY);
@@ -253,14 +267,15 @@ describe('the sitemap lists a directory exactly when the page would index it', (
         expect(dc?.lastModified).toEqual(LATER);
     });
 
-    it('keeps the index gate: a rendering directory with fewer than 3 linkable cities is not listed', async () => {
+    it('keeps the index gate: a rendering directory with fewer than 5 linkable cities is not listed', async () => {
         mockSitemap(
             [
                 groupRow('Washington', 'District of Columbia', 6),
-                groupRow('Georgetown', 'District of Columbia', 2),
+                groupRow('Georgetown', 'District of Columbia', 3),
+                groupRow('Navy Yard', 'District of Columbia', 3),
                 groupRow('Brookland', 'District of Columbia', 1),
             ],
-            [codeRow('Anacostia', 'DC', 'DC', 2)],
+            [codeRow('Anacostia', 'DC', 'DC', 3)],
         );
         expect((await sitemap()).map((e) => e.url)).not.toContain(DC_DIRECTORY);
     });

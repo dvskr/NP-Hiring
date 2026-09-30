@@ -30,6 +30,13 @@
  * only when its own facts clear their floor. The uncited premium table is
  * NOT extended into any new copy.
  *
+ * INDEX RULE (indexing audit CQ-09, plan FB-2): the page indexes only when
+ * it publishes pay it can back, a gated posted median (benchmark gate plus
+ * the CQ-15 employer-share cap) or, for CRNA and CNM, the role's own cited
+ * BLS OEWS median. Everything else renders `noindex, follow`. The verdict
+ * comes from lib/salary-guide-specialty.ts, the module the sitemap reads,
+ * and the title claims only the sections that render.
+ *
  * STYLE: clay (owner decision 2026-09-20), matching the rest of the pSEO
  * family: the CLAY_GROUND page, clay cards, pink eyebrows and Lora band
  * headings.
@@ -39,17 +46,16 @@ import { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import SalaryProvenance from '@/components/SalaryProvenance';
 import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
-import { STAT_SOURCES } from '@/lib/stats-sources';
-import { withTagFallback, type CategoryTag } from '@/lib/pseo/category-tagger';
+import { type CategoryTag } from '@/lib/pseo/category-tagger';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
-import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
+import { stateToSlug } from '@/lib/pseo/setting-state-config';
 import { canonicalBucketWhere } from '@/lib/canonical-counts';
-import { formatCount } from '@/lib/display-text';
+import { formatCount, truncateOnWord } from '@/lib/display-text';
+import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
 import { getListingFacts, MIX_MIN_POSTINGS_HUB, type ListingFacts } from '@/lib/pseo/listing-facts';
 import {
     buildLandingStatesSentence,
@@ -59,6 +65,7 @@ import {
     formatK,
 } from '@/lib/pseo/listing-narrative';
 import {
+    isSettingStateIndexable,
     MIN_JOBS_FOR_LINK_LIST_ROW,
     pseoStatsFreshnessThreshold,
 } from '@/lib/pseo/render-gate';
@@ -94,31 +101,40 @@ import {
     SpecialtySalaryPage,
 } from '../specialty-config';
 import {
+    buildOccupationWageDescription,
     buildSpecialtyFaqs,
+    buildSpecialtyHeadline,
+    buildSpecialtyTitle,
+    citedMedian,
     configRange,
     formatSalary,
     hasReportedRange,
     medianSentence,
     medianSentenceParts,
+    MIN_TOP_STATES,
+    specialtyIndexBasis,
     specialtyNoun,
     specialtyNounPlural,
-    SpecialtyExperienceRow,
-    SpecialtyLiveStats,
-    SpecialtyStateRow,
+    type SpecialtyTitleClaims,
 } from '../specialty-content';
-// P9 #2c/#2d: every live figure runs the gated analytics pool through the
-// benchmark widget's publishing policy, the same pipeline as the
-// salary-guide hub and state pages.
+// P9 #2c/#2d: every live figure runs the gated analytics pool
+// (fetchNpAnalyticsRows: npSalaryAnalyticsWhere, then filterNpEligibleRows)
+// through the benchmark widget's publishing policy plus the CQ-15
+// employer-share cap, the same pipeline as the salary-guide hub and state
+// pages. The loaders and the index verdict live in one module, which the
+// sitemap reads too.
 import {
-    summarizeBenchmarks,
     BENCHMARK_MIN_POSTINGS,
     BENCHMARK_MIN_EMPLOYERS,
 } from '@/components/tools/benchmark-model';
 import {
-    npSalaryAnalyticsWhere,
-    NP_SALARY_ANALYTICS_SELECT,
-    filterNpEligibleRows,
-} from '@/lib/salary-utils';
+    getSalarySpecialtyIndexBasis,
+    getSpecialtyExperienceBands,
+    getSpecialtyLiveStats,
+    getSpecialtyTopPayingStates,
+    specialtyTagWhere,
+} from '@/lib/salary-guide-specialty';
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-gate';
 import {
     Award,
     ArrowRight,
@@ -139,102 +155,10 @@ const specialtyOgImage = (page: SpecialtySalaryPage): string =>
     `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${page.shortTitle} Salary Guide`)}&type=page`;
 
 // ─── Data fetching (live DB aggregation over Job.categoryTags) ──────────────
-
-/**
- * withTagFallback returns an intentionally untyped where fragment (its
- * callers cast; see lib/pseo/setting-state-template.tsx). Cast once here so
- * every query below stays fully typed.
- */
-const tagWhere = (slug: CategoryTag): Prisma.JobWhereInput =>
-    withTagFallback(slug) as Prisma.JobWhereInput;
-
-/**
- * NP-eligible analytics rows for this specialty tag: the hygiene pool
- * (npSalaryAnalyticsWhere, which is published, non-expired, non-estimated,
- * confidence of 0.8 or more, annual cadence, normalized salary present)
- * intersected with the tag predicate via a top-level AND (both sides carry
- * their own AND and OR trees, so an object spread would silently drop
- * clauses), then scoped to NP-eligible titles in JS. This is the ONLY pool
- * any figure on this page may derive from.
- */
-async function fetchSpecialtyAnalyticsRows(
-    slug: CategoryTag,
-    extra: Prisma.JobWhereInput = {},
-): Promise<Array<{ state: string | null; employer: string | null; title: string | null; normalizedMinSalary: number | null; normalizedMaxSalary: number | null }>> {
-    const rows = await prisma.job.findMany({
-        where: { AND: [npSalaryAnalyticsWhere(), tagWhere(slug), extra] },
-        select: NP_SALARY_ANALYTICS_SELECT,
-    });
-    return filterNpEligibleRows(rows);
-}
-
-async function getLiveStats(slug: CategoryTag): Promise<SpecialtyLiveStats> {
-    const npRows = await fetchSpecialtyAnalyticsRows(slug);
-    // Pool the whole tag through the national benchmark gate; rows without a
-    // state still count toward the specialty-wide median (same coalescing as
-    // the state pages' board median).
-    const { national } = summarizeBenchmarks(
-        npRows.map((r) => ({ ...r, state: r.state ?? 'Unknown' })),
-    );
-    const mins = npRows
-        .map((r) => r.normalizedMinSalary)
-        .filter((v): v is number => typeof v === 'number' && v > 0);
-    const maxs = npRows
-        .map((r) => r.normalizedMaxSalary ?? r.normalizedMinSalary)
-        .filter((v): v is number => typeof v === 'number' && v > 0);
-    return {
-        medianSalary: national?.median ?? 0,
-        minSalary: mins.length > 0 ? Math.min(...mins) : 0,
-        maxSalary: maxs.length > 0 ? Math.max(...maxs) : 0,
-        // The sample size behind the published median: benchmark postings
-        // when gated (rows lacking an employer are excluded there), else the
-        // raw eligible-row count for the cross-link copy.
-        jobCount: national?.postings ?? npRows.length,
-        gatePassed: national != null,
-    };
-}
-
-async function getTopPayingStates(slug: CategoryTag): Promise<SpecialtyStateRow[]> {
-    const npRows = await fetchSpecialtyAnalyticsRows(slug, { state: { not: null } });
-    // summarizeBenchmarks enforces the per-state publishing gate (n of 5 or
-    // more postings from 3 or more employers) and computes true medians. A
-    // ranked list over anything less re-created the n=1 "top paying state"
-    // defect.
-    const { states } = summarizeBenchmarks(npRows);
-    return states
-        .filter((s) => STATE_CODES[s.scope])
-        .map((s) => ({
-            state: s.scope,
-            stateCode: STATE_CODES[s.scope],
-            slug: stateToSlug(s.scope),
-            medianSalary: s.median,
-            jobCount: s.postings,
-        }))
-        .sort((a, b) => b.medianSalary - a.medianSalary)
-        .slice(0, 8);
-}
-
-async function getExperienceBands(slug: CategoryTag): Promise<SpecialtyExperienceRow[]> {
-    const bands = [
-        { label: 'New-grad friendly roles', extra: { newGradFriendly: true } },
-        { label: 'Roles requiring 3+ years', extra: { minYearsExperience: { gte: 3 } } },
-        { label: 'Roles requiring 5+ years', extra: { minYearsExperience: { gte: 5 } } },
-    ] as const;
-    const results = await Promise.all(
-        bands.map(async (band): Promise<SpecialtyExperienceRow | null> => {
-            const npRows = await fetchSpecialtyAnalyticsRows(slug, band.extra);
-            // Same publishing gate per band: a three-posting "average" for an
-            // experience bucket is the same defect as a one-posting state.
-            const { national } = summarizeBenchmarks(
-                npRows.map((r) => ({ ...r, state: r.state ?? 'Unknown' })),
-            );
-            return national
-                ? { label: band.label, medianSalary: national.median, jobCount: national.postings }
-                : null;
-        }),
-    );
-    return results.filter((r): r is SpecialtyExperienceRow => r != null);
-}
+// The gated loaders (posted median, top-paying states, experience bands)
+// and the index verdict live in lib/salary-guide-specialty.ts, so the page
+// and the sitemap read one pool and one gate. The two helpers below are
+// COUNTS and stats rows, not pay figures.
 
 /**
  * SPEC-P4 experience COUNTS over the canonical pool. Counts rather than
@@ -246,8 +170,8 @@ interface ExperienceCounts { threeYears: number; fiveYears: number }
 async function getExperienceCounts(slug: CategoryTag): Promise<ExperienceCounts> {
     try {
         const [threeYears, fiveYears] = await Promise.all([
-            prisma.job.count({ where: canonicalBucketWhere({ AND: [tagWhere(slug), { minYearsExperience: { gte: 3 } }] }) }),
-            prisma.job.count({ where: canonicalBucketWhere({ AND: [tagWhere(slug), { minYearsExperience: { gte: 5 } }] }) }),
+            prisma.job.count({ where: canonicalBucketWhere({ AND: [specialtyTagWhere(slug), { minYearsExperience: { gte: 3 } }] }) }),
+            prisma.job.count({ where: canonicalBucketWhere({ AND: [specialtyTagWhere(slug), { minYearsExperience: { gte: 5 } }] }) }),
         ]);
         return { threeYears, fiveYears };
     } catch (error) {
@@ -281,7 +205,7 @@ async function getCategoryStateRows(slug: string): Promise<CategoryStateStatsRow
 
 /** Canonical listing facts for the specialty pool (SPEC-P1 to P4). */
 function loadFacts(slug: CategoryTag): Promise<ListingFacts> {
-    return getListingFacts(`salary-specialty:${slug}`, tagWhere(slug));
+    return getListingFacts(`salary-specialty:${slug}`, specialtyTagWhere(slug));
 }
 
 // ─── Static params + metadata ───────────────────────────────────────────────
@@ -299,25 +223,42 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const page = getSpecialtySalaryPage(specialty);
     if (!page) return { title: 'Specialty Not Found' };
 
-    // getListingFacts is cache()d on its scope key, so the page handler
-    // reuses this read rather than running a second query.
-    const facts = await loadFacts(page.slug);
+    // getListingFacts and the salary loaders are cache()d, so the page
+    // handler reuses these reads rather than running a second query.
+    const [facts, indexBasis, topStates] = await Promise.all([
+        loadFacts(page.slug),
+        getSalarySpecialtyIndexBasis(page.slug),
+        getSpecialtyTopPayingStates(page.slug),
+    ]);
     const year = facts.computedAt.getUTCFullYear();
-    const title = `${page.shortTitle} Salary Guide ${year}: Pay and Top States`;
+    // CQ-09: the title claims pay and top states only when the page renders
+    // them, and the page indexes only on pay it can back (the verdict the
+    // sitemap reads, from lib/salary-guide-specialty.ts).
+    const claims: SpecialtyTitleClaims = {
+        hasPay: indexBasis !== null,
+        hasTopStates: topStates.length >= MIN_TOP_STATES,
+    };
+    const title = buildSpecialtyTitle(page, year, claims);
     // SPEC-meta: the live count and the gated board median, with the
-    // all-niche BLS median attached only to niche roles.
-    const description = buildSpecialtyDescription({
-        role: page.role,
-        total: facts.total,
-        benchmark: facts.benchmark,
-        isNicheRole: page.isNicheRole,
-    });
+    // all-niche BLS median attached only to niche roles; a non-niche role
+    // leads with its own cited occupation median.
+    const description = truncateOnWord(
+        buildOccupationWageDescription(page, { total: facts.total, posted: facts.benchmark })
+            ?? buildSpecialtyDescription({
+                role: page.role,
+                total: facts.total,
+                benchmark: facts.benchmark,
+                isNicheRole: page.isNicheRole,
+            }),
+        DESCRIPTION_MAX,
+    );
     const ogImage = specialtyOgImage(page);
     const url = `${brand.baseUrl}/salary-guide/specialty/${page.slug}`;
 
     return {
         title,
         description,
+        robots: { index: indexBasis !== null, follow: true },
         alternates: { canonical: url },
         openGraph: {
             title,
@@ -363,9 +304,9 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
     if (!page) notFound();
 
     const [live, topStates, experienceBands, facts, experienceCounts, categoryStateRows] = await Promise.all([
-        getLiveStats(page.slug),
-        getTopPayingStates(page.slug),
-        getExperienceBands(page.slug),
+        getSpecialtyLiveStats(page.slug),
+        getSpecialtyTopPayingStates(page.slug),
+        getSpecialtyExperienceBands(page.slug),
         loadFacts(page.slug),
         getExperienceCounts(page.slug),
         getCategoryStateRows(page.slug),
@@ -374,10 +315,15 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
     // P9 #2d: a figure renders ONLY when the benchmark publishing gate
     // passed (n of BENCHMARK_MIN_POSTINGS or more from
     // BENCHMARK_MIN_EMPLOYERS or more employers over the NP-eligible
-    // analytics pool). Below it: omit, never fabricate.
+    // analytics pool, with no employer above the CQ-15 share cap). Below
+    // it: omit, never fabricate.
     const hasLive = live.gatePassed && live.medianSalary > 0;
+    const hasTopStates = topStates.length >= MIN_TOP_STATES;
     const range = configRange(page);
-    const median = STAT_SOURCES.averageSalary;
+    // The cited national median this page leads with: the all-niche BLS
+    // median on a niche page, the role's own occupation median otherwise.
+    const cited = citedMedian(page);
+    const claims: SpecialtyTitleClaims = { hasPay: specialtyIndexBasis(page, live) !== null, hasTopStates };
     const pageUrl = `${brand.baseUrl}/salary-guide/specialty/${page.slug}`;
     const stateEligible = STATE_ELIGIBLE_CATEGORY_SLUGS.includes(page.slug);
     // Shared with the Article description and the FAQ so the visible
@@ -391,7 +337,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
     // A state links its category spoke only when that page indexes, and
     // otherwise its state hub, which renders at one or more jobs.
     const indexableStates = new Set(
-        categoryStateRows.filter((row) => row.indexable).map((row) => row.locationSlug),
+        categoryStateRows.filter((row) => isSettingStateIndexable(row.indexable)).map((row) => row.locationSlug),
     );
     const places: LocationSpreadPlace[] = facts.states.slice(0, 8).map((state) => {
         const slug = stateToSlug(state.name);
@@ -425,22 +371,37 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
     const faqs = buildSpecialtyFaqs(page, live, topStates, { statesSentence, workMode });
     const ctaLine = buildSpecialtyCtaLine({ label: noun, total: facts.total });
 
+    // Article description: the shared median sentence, then only what the
+    // page renders (the labelled estimate, the gated posted median).
+    const articleDescription = [
+        `${page.role} salary guide.`,
+        medianSentence(page),
+        range && page.premium
+            ? `${brand.name} estimates ${page.label.toLowerCase()} pay at ${formatSalary(range.min)} to ${formatSalary(range.max)}, an editorial estimate rather than survey data.`
+            : null,
+        hasLive
+            ? `The median of ${formatCount(live.jobCount, 'posting')} with disclosed pay on ${brand.name} is ${formatSalary(live.medianSalary)}.`
+            : null,
+    ].filter((part): part is string => part !== null).join(' ');
+
     // Live stat cards, only when the aggregate clears the gate.
     const statCards = [
         {
             icon: BarChart3,
-            label: `All-${brand.niche.short} median (BLS)`,
-            value: median.formatted,
-            // On a non-niche APRN page this card is a benchmark, not the
-            // page's own cohort figure. Say so on the card itself.
-            sub: page.isNicheRole ? median.source : `Benchmark, excludes ${nounPlural}`,
+            // A non-niche APRN page leads with its own occupation median,
+            // never the all-niche figure that excludes the role.
+            label: page.isNicheRole
+                ? `All-${brand.niche.short} median (BLS)`
+                : `${page.credential} median (BLS)`,
+            value: cited.formatted,
+            sub: cited.source,
         },
         ...(range && page.premium
             ? [{
                 icon: TrendingUp,
                 label: `Estimated ${page.label} range`,
                 value: `${formatSalary(range.min)} to ${formatSalary(range.max)}`,
-                sub: `Median times a premium of ${page.premium.minPct} to ${page.premium.maxPct}%`,
+                sub: `Editorial estimate: the BLS median plus ${page.premium.minPct} to ${page.premium.maxPct}%`,
             }]
             : []),
         ...(hasLive
@@ -506,19 +467,17 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 daily and there is no editorial publish date, so stamping a
                 modified date of now would fabricate freshness (B54
                 principle, same as the salary-guide state pages). Mirrors the
-                visible hero: the premium range is labelled "estimated" (it
-                is the median times a published premium, not an observation),
-                and on a non-niche APRN page the cited median is stated as an
-                excluding benchmark rather than as that role's pay. */}
+                visible hero: the premium range is labelled an editorial
+                estimate (it is the median times a published premium, not an
+                observation), a non-niche APRN page cites its own occupation
+                median, and the headline names only sections that render. */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: sanitizeJson({
                     '@context': 'https://schema.org',
                     '@type': 'Article',
-                    headline: `${page.role} Salary Guide: Pay, Premium and Top States`,
-                    description: page.isNicheRole
-                        ? `${page.role} pay: national all-${brand.niche.short} median ${median.formatted} (${median.source})${range ? `, estimated ${page.label} range ${formatSalary(range.min)} to ${formatSalary(range.max)}` : ''}.`
-                        : `${page.role} salary guide: certification, where ${specialtyNounPlural(page)} work, top-paying states, and pay disclosed in live openings on ${brand.name}. ${medianSentence(page)}`,
+                    headline: buildSpecialtyHeadline(page, claims),
+                    description: articleDescription,
                     author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
                     publisher: { '@type': 'Organization', name: brand.name, logo: { '@type': 'ImageObject', url: `${brand.baseUrl}/logo.png` } },
                     mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
@@ -573,14 +532,14 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                         }}
                     >
                         {page.blurb} {medianLead}
-                        <strong>{median.formatted}</strong>
+                        <strong>{cited.formatted}</strong>
                         {medianTail}
                         {range && page.premium && (
                             <>
                                 {' '}
-                                {page.label} pay is estimated at{' '}
+                                This guide estimates {page.label.toLowerCase()} pay at{' '}
                                 <strong>{formatSalary(range.min)} to {formatSalary(range.max)}</strong>
-                                {`, a premium of ${page.premium.minPct} to ${page.premium.maxPct}%`}.
+                                {`, an editorial premium of ${page.premium.minPct} to ${page.premium.maxPct}% over that median rather than survey data`}.
                             </>
                         )}
                     </p>
@@ -611,7 +570,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                     has no editorial review literal (B54; its Article schema
                     omits dates too). */}
                 <SalaryProvenance
-                    cited={[median]}
+                    cited={[cited]}
                     live={hasLive ? { count: live.jobCount, minimum: BENCHMARK_MIN_POSTINGS } : undefined}
                     style={{ margin: '16px 0 0' }}
                 />
@@ -704,11 +663,11 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
             )}
 
             {/* Top-paying states (live, gated) */}
-            {topStates.length >= 3 && (
+            {hasTopStates && (
                 <Band
                     eyebrow="Pay by state"
                     title={<>Top-Paying States for {nounPlural}</>}
-                    lede={`Medians over active postings with disclosed, non-estimated salary on ${brand.name}, published only for states with at least ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers.`}
+                    lede={`Medians over active postings with disclosed, non-estimated salary on ${brand.name}, published only for states with at least ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, none contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`}
                 >
                     <ClayTable
                         caption={`Ranked on the gated per-state median over ${brand.name} postings that disclose annual pay, not on posting volume.`}
@@ -734,7 +693,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 <Band
                     eyebrow="Pay by experience"
                     title="What experience changes about the pay"
-                    lede={`Medians across live ${page.label.toLowerCase()} postings with disclosed salary on this board, grouped by the experience each posting asks for and published only when a bucket clears the ${BENCHMARK_MIN_POSTINGS} posting, ${BENCHMARK_MIN_EMPLOYERS} employer minimum. Buckets overlap.`}
+                    lede={`Medians across live ${page.label.toLowerCase()} postings with disclosed salary on this board, grouped by the experience each posting asks for and published only when a bucket clears the ${BENCHMARK_MIN_POSTINGS} posting, ${BENCHMARK_MIN_EMPLOYERS} employer minimum with no employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of it. Buckets overlap.`}
                 >
                     <ClayTable
                         caption={`Gated medians per experience bucket over ${brand.name} postings that disclose annual pay.`}
@@ -840,14 +799,11 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
             <section className="sp-band">
                 <div style={{ ...clayCard, padding: '20px 24px' }}>
                     <p style={{ fontSize: '12px', color: CLAY_MUTED, margin: 0, lineHeight: 1.7 }}>
-                        <strong>Data sources:</strong> {median.source}
+                        <strong>Data sources:</strong> {cited.source}
                         {hasLive && (
                             <>, plus {formatCount(live.jobCount, `active ${page.label.toLowerCase()} posting`)} with disclosed salary on {brand.name}</>
                         )}
-                        {page.premium && <>, plus the specialty premium published in the {brand.name} salary guide, applied to that median as an estimate</>}
-                        {!page.isNicheRole && (
-                            <>. That median covers {brand.niche.long}s and does not include {nounPlural}; no national {page.credential} wage figure is cited on this board</>
-                        )}
+                        {page.premium && <>, plus the specialty premium published in the {brand.name} salary guide, applied to that median as an editorial estimate</>}
                         .
                     </p>
                 </div>

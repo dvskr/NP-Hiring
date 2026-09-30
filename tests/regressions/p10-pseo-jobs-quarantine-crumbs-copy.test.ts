@@ -22,6 +22,7 @@ import {
     PUBLISHED_LISTING_WHERE,
 } from '@/lib/pseo/listing-where';
 import { canonicalActiveJobWhere, canonicalBucketWhere } from '@/lib/canonical-counts';
+import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
 import { STATE_CODES } from '@/lib/pseo/setting-state-config';
 import CategoryHero, { crumbsFromSchema, normalizeCrumbs } from '@/components/CategoryHero';
 import { metadata as notFoundMetadata } from '@/app/not-found';
@@ -30,7 +31,16 @@ import LocationsPage from '@/app/jobs/locations/page';
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-const NOT_CLAUSES = GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion }));
+/**
+ * What withListingQuarantine appends: every GLOBAL_EXCLUSIONS veto, then the
+ * dead-link gate (EDGE-CRONS handoff 20: a job at DEAD_LINK_MISS_THRESHOLD
+ * consecutive source misses answers 410 on its URL, so no listing shows it).
+ */
+const PROFESSION_NOT_CLAUSES = GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion }));
+const NOT_CLAUSES = [
+    ...PROFESSION_NOT_CLAUSES,
+    { healthConsecutiveMissing: { lt: DEAD_LINK_MISS_THRESHOLD } },
+];
 
 describe('1. profession quarantine on pSEO listing predicates', () => {
     it('appends every GLOBAL_EXCLUSIONS veto under AND and keeps the caller OR', () => {
@@ -145,9 +155,12 @@ describe('1. profession quarantine on pSEO listing predicates', () => {
         // appends has to survive in the canonical predicate and in a bucketed
         // composition of it, which is the shape the hub actually queries with.
         const canonical = JSON.stringify(canonicalActiveJobWhere());
-        for (const clause of NOT_CLAUSES) expect(canonical).toContain(JSON.stringify(clause));
+        for (const clause of PROFESSION_NOT_CLAUSES) expect(canonical).toContain(JSON.stringify(clause));
         const bucketed = JSON.stringify(canonicalBucketWhere({ state: 'Texas' }));
-        for (const clause of NOT_CLAUSES) expect(bucketed).toContain(JSON.stringify(clause));
+        for (const clause of PROFESSION_NOT_CLAUSES) expect(bucketed).toContain(JSON.stringify(clause));
+        // Both also carry the dead-link gate the spreadable base now appends.
+        expect(canonicalActiveJobWhere().healthConsecutiveMissing).toEqual({ lt: DEAD_LINK_MISS_THRESHOLD });
+        expect(bucketed).toContain(`"healthConsecutiveMissing":{"lt":${DEAD_LINK_MISS_THRESHOLD}}`);
         expect(bucketed).toContain('professionClass');
         expect(bucketed).toContain('other_clinical');
         expect(bucketed).toContain('Podiatrist');

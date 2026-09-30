@@ -11,28 +11,21 @@ import { MetadataRoute } from 'next'
 // fills against the latest source.
 export const dynamic = 'force-dynamic'
 
-// ── P2.3: Auth-pages temporary unblock window ────────────────────────
-// We unblocked /signup, /login, /messages, /saved, /job-alerts/manage,
-// /employer/login from FULL_DISALLOW so Googlebot can crawl them, see the
-// X-Robots-Tag: noindex header, and drop them from the index. After the
-// window below expires we MUST re-add them to FULL_DISALLOW. The CI test
-// at tests/sitemap-budget.test.ts (P4) should fail if today > this date.
-const AUTH_REBLOCK_DATE = '2026-05-19'; // 14 days from 2026-05-04
-
-// S3 fix (2026-06-01): the auth pages that were temporarily unblocked
-// during the GSC de-index window now need to be silently re-added to the
-// disallow list once we're past AUTH_REBLOCK_DATE. The previous version
-// only printed `console.warn` (line 211 below) and never actually
-// re-blocked, so /signup, /login, /messages, /saved, /job-alerts/manage,
-// /employer/login stayed crawlable indefinitely.
-const POST_DEADLINE_AUTH_REBLOCK = [
-  '/signup',
-  '/login',
-  '/messages',
-  '/saved',
-  '/job-alerts/manage',
-  '/employer/login',
-];
+// ── Account pages stay crawlable (indexing audit TECH-05, fixSoon 9) ─────
+// /signup, /login, /messages, /saved, /job-alerts/manage and /employer/login
+// are NOT disallowed for search and AI crawlers. Each answers noindex (its
+// metadata robots, plus the X-Robots-Tag the middleware sets on these paths),
+// and a crawler can only obey a noindex it is allowed to fetch. Google says a
+// robots.txt-blocked URL "can still appear in search results, for example if
+// other pages link to it", and /saved and /messages are linked from every
+// page (header, bottom nav, footer), so blocking them is what produced
+// "Indexed, though blocked by robots.txt" for these URLs before (GSC P2.3).
+// A 2026-06 change re-blocked them after a dated window (AUTH_REBLOCK_DATE);
+// that re-block is removed for good. /job-alerts/manage reads its alert
+// through /api/job-alerts, which stays blocked, so a crawler that fetches a
+// manage link sees only the noindexed shell. Social preview bots, which do
+// not read X-Robots-Tag and would only render a login shell, still skip all
+// six (SOCIAL_DISALLOW). Pinned by tests/seo/sitemap-budget.test.ts.
 
 // ── Allow lists ──────────────────────────────────────────────────────
 // Public surfaces every legitimate crawler should be able to index.
@@ -53,25 +46,9 @@ const PUBLIC_ALLOW = [
 
 // ── Disallow lists ───────────────────────────────────────────────────
 // Full disallow list — applied to `*` AND every named AI/search crawler.
-// Token-based URLs (edit, checkout, manage, unsubscribe, password reset)
-// must never be crawled or trained on. Internal Next.js data routes too.
-//
-// GSC Fix (P2.3): /signup, /login, /messages, /saved, /job-alerts/manage,
-// /employer/login were previously hard-blocked here, which prevented Googlebot
-// from ever fetching them. Result: 5 URLs stuck in GSC's "Indexed, though
-// blocked by robots.txt" category — Google indexed them from sitemaps/links
-// before the block, then couldn't crawl to see our X-Robots-Tag: noindex.
-//
-// Fix sequence (must run together):
-//   1. (this PR) Move auth pages OUT of FULL_DISALLOW so Googlebot can crawl.
-//   2. Middleware sets X-Robots-Tag: noindex, nofollow on these paths
-//      (already in middleware.ts:461-477 — verified before deploy).
-//   3. Run scripts/deindex-auth-pages.ts once to submit URL_DELETED via
-//      Indexing API (instant signal vs waiting for crawl).
-//   4. Wait 14 days for Google to confirm de-indexed.
-//   5. RE-ADD these paths to FULL_DISALLOW. Tracked by AUTH_REBLOCK_DATE
-//      below — CI lint should fail if today >= AUTH_REBLOCK_DATE and these
-//      paths aren't back in FULL_DISALLOW.
+// Token-based URLs (edit, checkout, unsubscribe, password reset) must never
+// be crawled or trained on. Internal Next.js data routes too. The account
+// pages above are deliberately absent (TECH-05).
 const FULL_DISALLOW = [
   // Block all other API routes. The /api/sitemaps/ and /api/og allows in
   // PUBLIC_ALLOW above carve out the public sub-routes; everything else
@@ -96,9 +73,7 @@ const FULL_DISALLOW = [
   // app/dashboard/page.tsx) AND child paths (/dashboard/foo). Robots.txt
   // does prefix matching: `/dashboard/` only matches /dashboard/* — not
   // the bare /dashboard. Most of these have a real page at the bare URL
-  // so dropping the trailing slash plugs a coverage gap. (Not the
-  // leaked-into-index auth pages — those are temporarily unblocked per
-  // P2.3.)
+  // so dropping the trailing slash plugs a coverage gap.
   '/employer/dashboard',
   '/employer/candidates',
   '/employer/applicants',
@@ -127,14 +102,13 @@ const FULL_DISALLOW = [
 // to refuse the fetch outright. Path prefixes match the FULL_DISALLOW
 // convention (no trailing slash → covers bare + child paths).
 //
-// Note on /login, /signup, /employer/login, /job-alerts/manage:
-//   These are P2.3 carve-outs in FULL_DISALLOW (intentionally crawlable
-//   so Googlebot can read the X-Robots-Tag: noindex header and drop
-//   them from the index). Social bots don't honor X-Robots-Tag — they
-//   just render whatever HTML they fetch, which for these paths is a
-//   login shell. Blocking them HERE (but not for Googlebot) keeps
-//   preview cards useful without re-trapping Googlebot in the original
-//   "Indexed though blocked by robots.txt" state.
+// Note on /login, /signup, /employer/login, /saved, /messages,
+// /job-alerts/manage: crawlable for search crawlers on purpose (TECH-05,
+// above) so they can read the noindex. Social bots don't honor
+// X-Robots-Tag — they just render whatever HTML they fetch, which for these
+// paths is a login shell. Blocking them HERE (but not for Googlebot) keeps
+// preview cards useful without re-trapping Googlebot in the
+// "Indexed, though blocked by robots.txt" state.
 const SOCIAL_DISALLOW = [
   // Blocks infrastructure API routes — but the social-bot rule block
   // below MUST pair this with the PUBLIC_ALLOW carve-outs so /api/og
@@ -224,20 +198,6 @@ const SEO_CRAWLERS = [
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
 
-  // S3 fix (2026-06-01): now that the date has passed, actually enforce
-  // the reblock — append the auth paths to the per-rule disallow lists
-  // below — rather than just logging a reminder. The previous version
-  // only printed a warning and left the paths crawlable, defeating the
-  // purpose of the deadline.
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const pastDeadline = todayIso > AUTH_REBLOCK_DATE;
-  const effectiveFullDisallow = pastDeadline
-    ? [...FULL_DISALLOW, ...POST_DEADLINE_AUTH_REBLOCK]
-    : FULL_DISALLOW;
-  if (pastDeadline) {
-    console.info(`[robots.ts] AUTH_REBLOCK_DATE (${AUTH_REBLOCK_DATE}) passed — re-applying auth-page disallow.`);
-  }
-
   return {
     rules: [
       // ── ClaudeBot — dedicated rule with EXPLICIT `Allow: /` ─────────
@@ -278,7 +238,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: PUBLIC_ALLOW,
-        disallow: effectiveFullDisallow,
+        disallow: FULL_DISALLOW,
       },
       // AI search & LLM crawlers grouped into one block. Named explicitly
       // (rather than letting them fall through to the catch-all) so the
@@ -295,7 +255,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: [...AI_CRAWLERS],
         allow: ['/', ...PUBLIC_ALLOW],
-        disallow: effectiveFullDisallow,
+        disallow: FULL_DISALLOW,
       },
       // SEO link-graph crawlers grouped. Same posture: explicit allow
       // for max backlink-graph coverage so Ahrefs/Semrush/etc. can keep
@@ -304,7 +264,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: [...SEO_CRAWLERS],
         allow: PUBLIC_ALLOW,
-        disallow: effectiveFullDisallow,
+        disallow: FULL_DISALLOW,
       },
       // Social / link-preview bots grouped — fetch a single URL on
       // demand for the preview card, so they need access to almost
@@ -326,11 +286,15 @@ export default function robots(): MetadataRoute.Robots {
         disallow: SOCIAL_DISALLOW,
       },
     ],
+    // One entry point (indexing audit FB-4, CS-07, CS-08, TECH-01, TECH-11):
+    // the sitemap index, which lists /sitemap.xml, the cities batches and the
+    // job batches. /sitemap.xml is not listed again (the same file twice),
+    // the retired /image-sitemap.xml (ungated: noindex and 404 pages) is
+    // gone, and the empty /video-sitemap.xml stays unlisted until a page
+    // whose main content is a video exists. Search Console counts every
+    // sitemap named here as submitted.
     sitemap: [
       `${baseUrl}/api/sitemaps/index`,
-      `${baseUrl}/sitemap.xml`,
-      `${baseUrl}/image-sitemap.xml`,
-      `${baseUrl}/video-sitemap.xml`,
     ],
   }
 }

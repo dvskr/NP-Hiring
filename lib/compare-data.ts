@@ -142,7 +142,9 @@ const OUR_TAXONOMY_CELL = `${OUR_FACTS.categoryPageCount} ${brand.niche.short} c
 
 const OUR_SALARY_CELL = `Salary guide with state and specialty pages computed from live postings, a calculator, and a free PDF. Every national statistic names its source (last reviewed ${OUR_FACTS.statsLastReviewed})`;
 
-const OUR_LICENSURE_CELL = `${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series plus a practice-authority guide, linking to each state board`;
+// CQ-13: the state by state reference with board links is the scope of
+// practice explorer; /resources/fpa-guide explains the concept.
+const OUR_LICENSURE_CELL = `${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series plus a scope of practice explorer, linking to each state board`;
 
 export const COMPETITOR_PROFILES: readonly CompetitorProfile[] = [
     // ── Indeed ──────────────────────────────────────────────────────────────
@@ -197,8 +199,8 @@ export const COMPETITOR_PROFILES: readonly CompetitorProfile[] = [
             },
             {
                 title: 'Licensure and practice-authority coverage',
-                body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series and a full practice-authority guide, each linking to the actual state board rather than asserting fees and processing times as fact.`,
-                href: '/resources/fpa-guide',
+                body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series and a state by state scope of practice explorer, each linking to the state board and stating a fee or processing time only with its source and check date.`,
+                href: '/scope-of-practice',
             },
             {
                 title: 'Salary product with a citation regime',
@@ -444,8 +446,8 @@ export const COMPETITOR_PROFILES: readonly CompetitorProfile[] = [
             },
             {
                 title: 'Licensure editorial',
-                body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series plus a practice-authority guide with board deep-links, editorial infrastructure we invest in heavily.`,
-                href: '/resources/fpa-guide',
+                body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series plus a scope of practice explorer with board deep-links, editorial infrastructure we invest in heavily.`,
+                href: '/scope-of-practice',
             },
             {
                 title: 'Employer price point',

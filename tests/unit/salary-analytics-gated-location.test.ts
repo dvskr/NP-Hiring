@@ -13,7 +13,11 @@ import {
   getGatedCitySalaries,
   getGatedBenchmarkRows,
   getPublishableSalaryGuideStates,
+  getGatedBenchmark,
+  getGatedBenchmarkDetail,
+  getGatedStateBenchmarks,
   type GatedSalary,
+  type GatedSalaryDetail,
 } from '@/lib/salary-analytics';
 import { CONTRACT_CADENCE_PERIODS, SALARY_ANALYTICS_MIN_CONFIDENCE } from '@/lib/salary-utils';
 
@@ -87,7 +91,7 @@ describe('summarizeGatedSalary (pure)', () => {
 
   it('5 postings from 3 employers passes with a true median and quartiles in dollars and $k', () => {
     const result = summarizeGatedSalary(GATED_ROWS);
-    expect(result).toEqual<GatedSalary>({
+    expect(result).toEqual<GatedSalaryDetail>({
       postings: 5,
       employers: 3,
       gatePassed: true,
@@ -97,7 +101,30 @@ describe('summarizeGatedSalary (pure)', () => {
       medianK: 120,
       p25K: 110,
       p75K: 130,
+      // CQ-15: the largest employer posts 2 of 5 (40%), inside the cap.
+      topEmployerPostings: 2,
+      heldByEmployerShare: false,
     });
+  });
+
+  it('CQ-15: a sample that clears the gate but not the employer-share cap has no figure and says why', () => {
+    // 6 postings from 3 employers: the old gate passes, but one employer
+    // posts 4 of them (67%), so the median would be that employer's own.
+    const result = summarizeGatedSalary([
+      row('Alpha Health', 100_000), row('Alpha Health', 105_000), row('Alpha Health', 110_000),
+      row('Alpha Health', 115_000), row('Beta Clinic', 150_000), row('Gamma Care', 160_000),
+    ]);
+    expect(result.postings).toBe(6);
+    expect(result.employers).toBe(3);
+    expectBelowGate(result);
+    expect(result.heldByEmployerShare).toBe(true);
+    expect(result.topEmployerPostings).toBe(4);
+  });
+
+  it('CQ-15: a sample that is simply too small is not reported as a cap hold', () => {
+    const result = summarizeGatedSalary(GATED_ROWS.slice(0, 4));
+    expectBelowGate(result);
+    expect(result.heldByEmployerShare).toBe(false);
   });
 
   it('rounds $k to the nearest thousand from a range midpoint', () => {
@@ -278,5 +305,73 @@ describe('getPublishableSalaryGuideStates', () => {
   it('is empty when no state clears the gate', async () => {
     mockRows(GATED_ROWS.slice(0, 4));
     expect((await getPublishableSalaryGuideStates()).size).toBe(0);
+  });
+
+  it('CQ-15: leaves out a state where one employer posts more than the cap allows', async () => {
+    // Virginia: 6 postings from 3 employers, 4 of them from one employer.
+    // The page renders noindex for it, so the sitemap must not list it.
+    mockRows([
+      ...GATED_ROWS,
+      row('Alpha Health', 100_000, { state: 'Virginia' }),
+      row('Alpha Health', 101_000, { state: 'Virginia' }),
+      row('Alpha Health', 102_000, { state: 'Virginia' }),
+      row('Alpha Health', 103_000, { state: 'Virginia' }),
+      row('Beta Clinic', 150_000, { state: 'Virginia' }),
+      row('Gamma Care', 160_000, { state: 'Virginia' }),
+    ]);
+    expect(await getPublishableSalaryGuideStates()).toEqual(new Set(['Texas']));
+  });
+});
+
+describe('CQ-15: every gated helper applies the employer-share cap', () => {
+  /** 6 postings from 3 employers, 4 from one employer (67%). */
+  const DOMINATED: FixtureRow[] = [
+    row('Alpha Health', 100_000), row('Alpha Health', 105_000), row('Alpha Health', 110_000),
+    row('Alpha Health', 115_000), row('Beta Clinic', 150_000), row('Gamma Care', 160_000),
+  ];
+
+  it('getGatedBenchmark returns null for a dominated sub-pool and the row for a mixed one', async () => {
+    mockRows(DOMINATED);
+    expect(await getGatedBenchmark({ state: 'Texas' })).toBeNull();
+    mockRows(GATED_ROWS);
+    expect(await getGatedBenchmark({ state: 'Texas' })).toMatchObject({ median: 120_000, postings: 5 });
+  });
+
+  it('getGatedBenchmarkDetail says why a figure is missing: a cap hold, not a small sample', async () => {
+    mockRows(DOMINATED);
+    expect(await getGatedBenchmarkDetail({ state: 'Texas' })).toEqual({
+      benchmark: null,
+      heldByEmployerShare: { postings: 6, employers: 3, topEmployerPostings: 4 },
+    });
+    mockRows(GATED_ROWS.slice(0, 4));
+    expect(await getGatedBenchmarkDetail({ state: 'Texas' })).toEqual({ benchmark: null, heldByEmployerShare: null });
+    mockRows(GATED_ROWS);
+    const passed = await getGatedBenchmarkDetail({ state: 'Texas' });
+    expect(passed.benchmark?.median).toBe(120_000);
+    expect(passed.heldByEmployerShare).toBeNull();
+  });
+
+  it('getGatedStateBenchmarks drops a dominated state', async () => {
+    mockRows([...GATED_ROWS, ...DOMINATED.map((r) => ({ ...r, state: 'Ohio' }))]);
+    expect((await getGatedStateBenchmarks()).map((r) => r.scope)).toEqual(['Texas']);
+  });
+
+  it('getGatedLocationSalary reports the hold for the state page', async () => {
+    mockRows(DOMINATED);
+    const result = await getGatedLocationSalary({ state: 'Texas' });
+    expectBelowGate(result);
+    expect(result).toMatchObject({ postings: 6, employers: 3, topEmployerPostings: 4, heldByEmployerShare: true });
+  });
+
+  it('getGatedCitySalaries keeps a dominated city out of the map', async () => {
+    mockRows(DOMINATED.map((r) => ({ ...r, city: 'Austin' })));
+    expect((await getGatedCitySalaries('Texas')).size).toBe(0);
+  });
+
+  it('getGatedBenchmarkRows drops a dominated sub-pool row', async () => {
+    mockRows(GATED_ROWS);
+    mockRows(DOMINATED);
+    const rows = await getGatedBenchmarkRows({ Remote: { isRemote: true }, 'On site': { isRemote: false } });
+    expect(rows.map((r) => r.label)).toEqual(['Remote']);
   });
 });

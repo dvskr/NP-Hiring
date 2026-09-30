@@ -214,8 +214,9 @@ describe('post shape', () => {
 describe('truth rules', () => {
     it('cited statistics match lib/stats-sources.ts and carry attribution', () => {
         for (const { slug, body } of BODIES) {
-            if (body.includes('$129,210')) {
-                expect(STAT_SOURCES.averageSalary.formatted).toBe('$129,210');
+            expect(body, `${slug}: cites the retired May 2024 median`).not.toContain('$129,210');
+            if (body.includes('$132,300')) {
+                expect(STAT_SOURCES.averageSalary.formatted).toBe('$132,300');
                 expect(body, `${slug}: median cited without BLS attribution`).toMatch(/BLS/);
             }
             if (body.includes('27 states + DC')) {

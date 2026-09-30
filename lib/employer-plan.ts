@@ -397,7 +397,9 @@ export async function resumePlanPosts(userId: string, now: Date = new Date()): P
   });
   if (rows.length === 0) return [];
   const jobIds = rows.map((r) => r.jobId);
-  await prisma.job.updateMany({ where: { id: { in: jobIds } }, data: { isPublished: true } });
+  // A revival: each post is public again, so its content counts as changed
+  // now (sitemap lastmod, "Last updated"; indexing audit fixSoon 5).
+  await prisma.job.updateMany({ where: { id: { in: jobIds } }, data: { isPublished: true, contentChangedAt: now } });
   logger.info('employer plan posts resumed', { userId, count: jobIds.length });
   return jobIds;
 }

@@ -17,7 +17,7 @@ import {
     type BlogPost,
 } from '@/lib/blog';
 import { autoLinkCategories } from '@/lib/autoLink';
-import { buildLicenseGuideHowTo, getLicenseGuideState } from '@/lib/blog-license-guides';
+import { buildLicenseGuideHowTo, getLicenseGuideState, isLicenseGuideStateIndexable } from '@/lib/blog-license-guides';
 import {
     buildLicenseGuideDescription,
     buildLicenseGuideTitle,
@@ -254,6 +254,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const ogImage = post.image_url || `${brand.baseUrl}/api/og`;
     const url = `${brand.baseUrl}/blog/${slug}`;
 
+    // Audit CQ-03 / FB-2: a license guide stays live and linked, but renders
+    // "noindex, follow" until its state's licensing facts are verified
+    // (lib/license-guide-facts.ts). The sitemap reads the same predicate
+    // (getIndexableLicenseGuideSlugs). Never blocked in robots.txt: Google
+    // has to fetch the page to see this tag.
+    const licenseNoindex = licenseMatch !== null && !isLicenseGuideStateIndexable(licenseMatch[1]);
+
     return {
         // B54: no auto-appended year. Stamping the current year onto every
         // title fabricates freshness (a 2026 badge on an unrevised post,
@@ -287,6 +294,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         alternates: {
             canonical: url,
         },
+        ...(licenseNoindex ? { robots: { index: false, follow: true } } : {}),
     };
 }
 
@@ -441,17 +449,19 @@ export default async function BlogPostPage({ params }: Props) {
 
     // JSON-LD BlogPosting schema
     //
-    // Authorship stays at the Organization level — posts are editorially
-    // produced from cited data sources, not individually authored, and
-    // fabricating clinical credentials on healthcare YMYL content is a
-    // manual-action risk (SEO Fix C1). The editorialSchemaFields() spread
-    // below is the sanctioned path forward: it contributes NOTHING while
-    // brand.editorial.reviewer (config/brand.ts) is null, and emits the
-    // review attribution as a schema.org Person derived from that same
-    // config once a real credentialed reviewer is contracted — the
-    // visible byline (components/EditorialByline.tsx) renders from the
-    // identical object, so schema and UI can never disagree. See
-    // /editorial-policy for the public-facing version of this policy.
+    // Authorship defaults to the Organization: fabricating an author or
+    // clinical credentials on healthcare YMYL content is a manual-action
+    // risk (SEO Fix C1). editorialSchemaFields() is the sanctioned path
+    // forward (audit CQ-12): it contributes NOTHING while brand.editorial
+    // .author and .reviewer (config/brand.ts) are null, and once the owner
+    // fills them it emits a schema.org Person `author` (overriding the
+    // Organization below) and a Person `reviewedBy`, derived from the same
+    // config the visible byline (components/EditorialByline.tsx) renders,
+    // so schema and UI can never disagree. The license guides are generated
+    // from repo data, so no named person wrote or reviewed them: they keep
+    // the Organization and get no named people. See /editorial-policy for
+    // the public-facing version of this policy.
+    const namedPeople = licenseSlugMatch ? {} : editorialSchemaFields();
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
@@ -483,9 +493,9 @@ export default async function BlogPostPage({ params }: Props) {
         keywords: post.target_keyword || undefined,
         articleSection: categoryLabel,
         url: currentUrl,
-        // {} while brand.editorial.reviewer is null; the real reviewer's
-        // Person record when configured. Never a fabricated name.
-        ...editorialSchemaFields(),
+        // {} while brand.editorial.author and .reviewer are null; the real
+        // people's Person records when configured. Never a fabricated name.
+        ...namedPeople,
     };
 
     // JSON-LD serialization guard (same chain as BreadcrumbSchema / the
@@ -600,14 +610,14 @@ export default async function BlogPostPage({ params }: Props) {
                                 <strong>{categoryLabel}</strong>
                             </div>
                         </div>
-                        {/* P1 #8: visible byline. Renders for every post —
-                            generic and license-guide branches alike — but
+                        {/* P1 #8: visible byline. Renders for every post,
+                            generic and license-guide branches alike, but
                             the license-guide series is machine-generated
                             from repo data and no human read it, so it gets
                             the generated-content byline instead of an
-                            editorial-review claim (licenseSlugMatch, ~line
-                            104). A named credentialed reviewer, once
-                            contracted, supersedes both. */}
+                            editorial-review claim (licenseSlugMatch). The
+                            named author and reviewer in config/brand.ts
+                            (audit CQ-12) apply to hand-written posts only. */}
                         <EditorialByline variant="hero" generated={Boolean(licenseSlugMatch)} />
                     </div>
                     <div className="ed-hero-side">
@@ -675,14 +685,14 @@ export default async function BlogPostPage({ params }: Props) {
                     <EditorialShare title={post.title} url={currentUrl} />
 
 
-                    {/* SEO Fix C1 + P1 #8: the author card names the publishing
-                        organization; the EditorialByline inside it renders the
-                        review status straight from brand.editorial.reviewer
-                        (config/brand.ts) — the editorial team + policy link
-                        while that config is null, the real named credentialed
-                        reviewer once contracted. Fake credentials are never
-                        rendered because the byline and the schema derive from
-                        the same config object. */}
+                    {/* SEO Fix C1 + P1 #8 + CQ-12: the author card names the
+                        publishing organization; the EditorialByline inside it
+                        renders authorship and review straight from
+                        brand.editorial.author and .reviewer (config/brand.ts):
+                        the editorial team and policy link while those are null,
+                        the real named people once the owner fills them. Fake
+                        credentials are never rendered because the byline and
+                        the schema derive from the same config objects. */}
                     <div className="ed-author">
                         {/* Brand initial. */}
                         <div className="ed-author-avatar" aria-hidden="true">{brand.name.charAt(0)}</div>

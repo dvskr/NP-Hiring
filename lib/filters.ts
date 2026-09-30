@@ -12,11 +12,22 @@ import {
 import { CATEGORY_AXES } from '@/lib/pseo/taxonomy-registry';
 import { NON_NP_PROFESSION_CLASSES } from '@/lib/profession-classifier';
 import { extractSearchQueryIntent, buildSearchConditionSet } from '@/lib/search-query-intent';
+import { liveLinkWhere } from '@/lib/dead-link-threshold';
 import {
     CANONICAL_CATEGORY_SLUGS,
     withTagFallback,
     type CategoryTag,
 } from '@/lib/pseo/category-tagger';
+import {
+    NEW_GRAD_EXCLUSIONS,
+    NEW_GRAD_EXTRA_OR,
+    NEW_GRAD_TITLE_OR,
+    newGradWhereClause,
+} from '@/lib/pseo/new-grad-clause';
+
+// The new grad predicate lives in a leaf module so the category tagger can
+// read it without an import cycle; re-exported under its historical name.
+export { newGradWhereClause };
 
 /**
  * "Posted Within" semantics (revised 2026-05-06).
@@ -182,25 +193,25 @@ const SENIOR_LEAD_TITLE_CLAUSES: Prisma.JobWhereInput[] = ['senior', 'lead'].fla
 );
 
 /**
- * Centralized Category Filter Registry
- * Single source of truth for all category page filters.
- * Used by both /jobs/[category]/page.tsx AND /jobs?category=[slug]
+ * LEGACY category keyword registry (title sweeps). Since the indexing audit
+ * (CQ-14, fixSoon 11) no category page and no ?category= query reads it:
+ * every one counts the category's one predicate, categoryPredicate in
+ * lib/pseo/category-tagger.ts (see landingBucketWhere in
+ * lib/pseo/landing-where.ts). What still reads these entries:
+ * buildCategoryWhereClause (the /about counts until they move to
+ * landingBucketWhere), the job alerts service's new grad branch and the
+ * scripts/audit tools. The new grad lists are the live ones, owned by
+ * lib/pseo/new-grad-clause.ts.
  *
  * Keys are taxonomy-registry slugs (lib/pseo/taxonomy-registry.ts).
- * Registry slugs WITHOUT an entry here (the 2026-07 NP specialties and
- * APRN roles) gate on the precomputed categoryTags column instead — see
- * the ?category= fallback in buildWhereClause and the equivalent branch
- * in lib/pseo/category-landing-template.tsx.
  */
-// Per-slug structured-flag OR clauses that augment the keyword regex. Shared by
-// BOTH the category-page builder and the ?category= querystring builder so
-// /jobs/new-grad and /jobs?category=new-grad return the same set (they used to
-// disagree — the querystring path omitted the newGradFriendly flag branch).
+// Per-slug structured-flag OR clauses that augment the keyword regex.
 export const CATEGORY_EXTRA_OR: Record<string, Prisma.JobWhereInput[]> = {
   // newGradFriendly flag OR the 0-yr "New grad accepted" bucket (min=0). The
   // latter is the same signal the JobCard chip shows for min=0, so the filter,
-  // the ?category=new-grad path, and the /jobs/new-grad pSEO page all agree.
-  'new-grad': [{ newGradFriendly: true }, { minYearsExperience: 0 }],
+  // the ?category=new-grad path, and the /jobs/new-grad pSEO page all agree
+  // (lib/pseo/new-grad-clause.ts owns the list).
+  'new-grad': NEW_GRAD_EXTRA_OR,
 };
 
 export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
@@ -225,16 +236,9 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
   // Bare `fellowship` / `residency` removed 2026-05-15 — they matched
   // post-grad APP fellowships requiring 3-5 yrs prior NP experience.
   // The `program` suffix is required so NP residency / fellowship
-  // training programs are caught while post-grad fellowships aren't.
-  'new-grad': [
-    { title: { contains: 'new grad', mode: 'insensitive' } },
-    { title: { contains: 'new graduate', mode: 'insensitive' } },
-    { title: { contains: 'entry level', mode: 'insensitive' } },
-    { title: { contains: 'fellowship program', mode: 'insensitive' } },
-    { title: { contains: 'residency program', mode: 'insensitive' } },
-    { title: { contains: 'recent graduate', mode: 'insensitive' } },
-    { title: { contains: 'training program', mode: 'insensitive' } },
-  ],
+  // training programs are caught while post-grad fellowships aren't
+  // (lib/pseo/new-grad-clause.ts owns the list).
+  'new-grad': NEW_GRAD_TITLE_OR,
   'outpatient': [
     { title: { contains: 'outpatient', mode: 'insensitive' } },
     { title: { contains: 'out-patient', mode: 'insensitive' } },
@@ -393,15 +397,7 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
  * Each entry is a list of conditions — any matching job is EXCLUDED.
  */
 export const CATEGORY_EXCLUSIONS: Record<string, Prisma.JobWhereInput[]> = {
-  'new-grad': [
-    { title: { contains: 'director', mode: 'insensitive' } },
-    { title: { contains: 'instructor', mode: 'insensitive' } },
-    { title: { contains: 'no new grad', mode: 'insensitive' } },
-    { title: { contains: 'clinical psychology', mode: 'insensitive' } },
-    { title: { contains: 'fellowship trained', mode: 'insensitive' } },
-    { title: { contains: 'APC Fellowship', mode: 'insensitive' } },
-    { title: { contains: 'Advanced Practice Provider', mode: 'insensitive' } },
-  ],
+  'new-grad': NEW_GRAD_EXCLUSIONS,
   'part-time': [
     // PRN sometimes appears alongside Full-Time in dual-listing titles
     // like "Part or Full Time" / "FT/PRN". Use the structured jobType
@@ -648,9 +644,10 @@ export const GLOBAL_EXCLUSIONS: Prisma.JobWhereInput[] = [
 ];
 
 /**
- * Build a Prisma WHERE clause for a category page.
- * Applies: CATEGORY_FILTERS + CATEGORY_EXCLUSIONS + GLOBAL_EXCLUSIONS
- * This guarantees the same count the main /jobs?category=slug page shows.
+ * LEGACY: a category clause from the keyword registry above.
+ * Applies: CATEGORY_FILTERS + CATEGORY_EXCLUSIONS + GLOBAL_EXCLUSIONS.
+ * Category pages and ?category= no longer use it (they count
+ * landingBucketWhere, lib/pseo/landing-where.ts); new code must not either.
  *
  * @param slug  Category slug (e.g. '1099', 'addiction')
  * @param extra Additional Prisma conditions merged at the top level
@@ -682,6 +679,8 @@ export function buildCategoryWhereClause(
   GLOBAL_EXCLUSIONS.forEach(exclusion => {
     andConditions.push({ NOT: exclusion });
   });
+  // Dead links answer 410 on their own URL, so no listing shows them.
+  andConditions.push(liveLinkWhere());
 
   return {
     isPublished: true,
@@ -690,33 +689,12 @@ export function buildCategoryWhereClause(
   };
 }
 
-/**
- * "Open to new grads" match — the single source of truth shared by
- * buildWhereClause AND the filter-counts route, so the filter predicate and the
- * badge count can never diverge. A job qualifies when ANY of:
- *   (a) employer flagged newGradFriendly: true
- *   (b) it declares a 0-year minimum — the "New grad accepted" bucket, the SAME
- *       signal the JobCard chip shows for min=0 (deriveExperienceLabel). Without
- *       this, a min=0 post read "New grad welcome" on the card but was invisible
- *       to this filter.
- *   (c) title matches CATEGORY_FILTERS['new-grad'] keywords
- * ...minus CATEGORY_EXCLUSIONS['new-grad'] (director, instructor, "no new grad").
+/*
+ * "Open to new grads" (newGradWhereClause) lives in lib/pseo/new-grad-clause.ts
+ * and is re-exported above: buildWhereClause, the filter-counts route, the
+ * /jobs/new-grad landing and its state and city pages all read that one
+ * clause, so the filter predicate and the badge count can never diverge.
  */
-export function newGradWhereClause(): Prisma.JobWhereInput {
-  return {
-    AND: [
-      {
-        OR: [
-          // structured flags (newGradFriendly OR min=0) + title keywords —
-          // identical OR to buildCategoryWhereClause('new-grad').
-          ...(CATEGORY_EXTRA_OR['new-grad'] ?? []),
-          ...(CATEGORY_FILTERS['new-grad'] ?? []),
-        ],
-      },
-      ...(CATEGORY_EXCLUSIONS['new-grad'] ?? []).map((ex): Prisma.JobWhereInput => ({ NOT: ex })),
-    ],
-  };
-}
 
 /* ─── Employer type (direct hire vs staffing agency) — teardown A6 ──────────
  *
@@ -861,25 +839,25 @@ export function postedWithinClause(postedWithin: string | null, now: Date): Pris
   return freshnessClause(now, postedWithin as PostedWithinWindow);
 }
 
-/** Legacy 'Telehealth' work-type matcher (title + description keywords). */
+/**
+ * The 'Telehealth' work-type value: the telehealth category's one
+ * predicate (the /jobs/telehealth landing's clause: a telehealth title on a
+ * fully remote job), never a description keyword (CQ-05, fixSoon 11).
+ */
 export function telehealthSpecialtyClause(): Prisma.JobWhereInput {
-  return {
-    OR: [
-      { title: { contains: 'telehealth', mode: 'insensitive' } },
-      { title: { contains: 'telemedicine', mode: 'insensitive' } },
-      { title: { contains: 'telepsychiatry', mode: 'insensitive' } },
-      { description: { contains: 'telehealth', mode: 'insensitive' } },
-      { description: { contains: 'telemedicine', mode: 'insensitive' } },
-    ],
-  };
+  return withTagFallback('telehealth') as Prisma.JobWhereInput;
 }
 
-/** Legacy 'Travel' work-type matcher (title keywords). */
+/**
+ * The 'Travel' work-type value (its URL contract covers locum tenens too):
+ * the travel OR the locum tenens category predicate, the clauses the
+ * /jobs/travel and /jobs/locum-tenens landings list with.
+ */
 export function travelSpecialtyClause(): Prisma.JobWhereInput {
   return {
     OR: [
-      { title: { contains: 'travel', mode: 'insensitive' } },
-      { title: { contains: 'locum', mode: 'insensitive' } },
+      withTagFallback('travel') as Prisma.JobWhereInput,
+      withTagFallback('locum-tenens') as Prisma.JobWhereInput,
     ],
   };
 }
@@ -889,8 +867,8 @@ export function travelSpecialtyClause(): Prisma.JobWhereInput {
 //     slugs, matched via the precomputed categoryTags column (withTagFallback
 //     keeps not-yet-backfilled rows visible through the ingest classifier's
 //     legacy keyword OR).
-//   • Work-type values ('Telehealth' / 'Travel'): legacy keyword matchers —
-//     this URL contract predates the registry and is preserved as-is.
+//   • Work-type values ('Telehealth' / 'Travel'): a URL contract that
+//     predates the registry, now answered with the category predicates.
 export function specialtyClause(specialty: readonly string[] | undefined): Prisma.JobWhereInput | null {
   if (!specialty || specialty.length === 0) return null;
   const conditions: Prisma.JobWhereInput[] = [];
@@ -982,6 +960,9 @@ export function buildWhereClause(
   GLOBAL_EXCLUSIONS.forEach(exclusion => {
     andConditions.push({ NOT: exclusion });
   });
+  // A dead link (DEAD_LINK_MISS_THRESHOLD consecutive source misses) answers
+  // 410 on its own URL, so search never lists it (EDGE-CRONS handoff 20).
+  andConditions.push(liveLinkWhere());
 
   // Search — filter-first deterministic intent (live-review item #3, WP-3).
   //
@@ -1015,26 +996,13 @@ export function buildWhereClause(
     }
   }
 
-  // Category filter (enterprise pattern: reuses same filter as category pages).
-  // Include CATEGORY_EXTRA_OR so ?category=new-grad matches the same jobs as the
-  // /jobs/new-grad page (both reach newGradFriendly-flagged jobs).
-  const categoryKeywordOr = filters.category
-    ? [...(CATEGORY_FILTERS[filters.category] ?? []), ...(CATEGORY_EXTRA_OR[filters.category] ?? [])]
-    : [];
-  if (filters.category && categoryKeywordOr.length > 0) {
-    andConditions.push({ OR: categoryKeywordOr });
-    // Apply exclusions to remove false positives
-    if (CATEGORY_EXCLUSIONS[filters.category]) {
-      CATEGORY_EXCLUSIONS[filters.category].forEach(exclusion => {
-        andConditions.push({ NOT: exclusion });
-      });
-    }
-  } else if (filters.category && isCanonicalCategorySlug(filters.category)) {
-    // Registry slugs without a legacy keyword entry — the 2026-07 NP
-    // taxonomy's specialty / APRN categories, plus 'remote' (whose keyword
-    // entry is deliberately empty) — gate on the precomputed categoryTags
-    // column, the same fallback the category landing pages use, instead of
-    // silently ignoring the param (or pushing a match-nothing `OR: []`).
+  // Category filter: the category's ONE predicate (categoryPredicate in
+  // lib/pseo/category-tagger.ts, reached through withTagFallback), the very
+  // clause /jobs/{category}, its state and city pages and the aggregate-pseo
+  // verdicts count with (CQ-14, fixSoon 11). The legacy CATEGORY_FILTERS
+  // title sweeps no longer decide any tagged slug; a retired or unknown
+  // slug is ignored rather than matched oddly.
+  if (filters.category && isCanonicalCategorySlug(filters.category)) {
     andConditions.push(withTagFallback(filters.category) as Prisma.JobWhereInput);
   }
 

@@ -220,6 +220,22 @@ const css = `
         transition: transform 0.15s ease, background 0.2s ease;
     }
     .fjs-join:hover { transform: translateY(-2px); background: #9D174D; }
+    .fjs-cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 22px;
+    }
+    .fjs-more {
+        margin-top: 30px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #7A1C2B;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+    .fjs-more:hover { color: #BE185D; }
+    .fjs-more:focus-visible, .fjs-join:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
 
     /* ── Job cards: flat, hard-shadowed ── */
     .fjs-job {
@@ -374,9 +390,17 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                             ))}
                         </div>
 
-                        <m.div variants={fadeLeft}>
-                            <Link href="/register" className="fjs-join">
+                        {/* Indexing audit L-05: /register only 308s to /signup,
+                            so link the destination. M-07: /for-job-seekers is
+                            in the sitemap but had no crawlable link from an
+                            indexable page, and this "How it works" column is
+                            the one place on the homepage that describes it. */}
+                        <m.div variants={fadeLeft} className="fjs-cta-row">
+                            <Link href="/signup" className="fjs-join">
                                 Join Now <ArrowUpRight size={15} />
+                            </Link>
+                            <Link href="/for-job-seekers" className="fjs-more">
+                                How it works for job seekers
                             </Link>
                         </m.div>
                     </div>

@@ -11,11 +11,13 @@ import {
 } from '@/lib/blog';
 import { LICENSE_GUIDE_SERIES_PUBLISHED, LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { LICENSE_GUIDE_STATES, type LicenseGuideState } from '@/lib/blog-license-guides';
+import { CEU_GUIDE_SLUG, CEU_GUIDE_TITLE } from '@/lib/blog-ceu-guide';
 import { AUTHORITY_TITLE, isLicenseGuideLive } from '@/lib/pseo/practice-environment';
 import type { PracticeAuthority } from '@/lib/state-practice-authority';
 import { formatCount, joinWithAnd } from '@/lib/display-text';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import { listingCanonical, listingRobots, parseListingPage } from '@/lib/pseo/listing-pagination';
 
 const NP = brand.niche.short;
 
@@ -58,7 +60,14 @@ function buildBlogDescription(authoredPosts: number, licenseGuides: number): str
     return `${lead} covering certification, interviews, salary negotiation and practice rules by state.`;
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+    searchParams,
+}: {
+    searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+    // TECH-08, M-01: page N is its own canonical and answers noindex, follow,
+    // matching the X-Robots-Tag the middleware sends for any ?page >= 2.
+    const page = parseListingPage((await searchParams).page);
     const slugs = await getAllPublishedSlugs();
     const licenseGuides = slugs.filter((row) => LICENSE_GUIDE_SLUG_REGEX.test(row.slug)).length;
     const description = buildBlogDescription(slugs.length - licenseGuides, licenseGuides);
@@ -75,8 +84,9 @@ export async function generateMetadata(): Promise<Metadata> {
         },
         twitter: { card: 'summary_large_image', images: [BLOG_OG_IMAGE] },
         alternates: {
-            canonical: `${brand.baseUrl}/blog`,
+            canonical: listingCanonical('/blog', page),
         },
+        robots: listingRobots(true, page),
     };
 }
 
@@ -182,8 +192,8 @@ export default async function BlogIndexPage({
     searchParams: Promise<{ category?: string; page?: string }>;
 }) {
     const { category, page } = await searchParams;
-    const parsed = parseInt(page || '1', 10);
-    const currentPage = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+    // The shared rule generateMetadata reads too: anything unparsable is page 1.
+    const currentPage = parseListingPage(page);
     const categoryFilter = category || undefined;
 
     const [posts, totalCount, categoryScan, liveGuides] = await Promise.all([
@@ -592,6 +602,14 @@ export default async function BlogIndexPage({
                             );
                         })}
                     </div>
+                    {/* SITE-COPY 58/152b: the CE hub's only listing link sat on a
+                        noindexed ?page=N, so every page of the index links it here. */}
+                    <p style={{ fontSize: '14px', color: '#5A4A42', margin: '24px 0 0' }}>
+                        Renewing a license?{' '}
+                        <Link href={`/blog/${CEU_GUIDE_SLUG}`} style={{ color: '#BE185D', fontWeight: 600 }}>
+                            {CEU_GUIDE_TITLE}
+                        </Link>
+                    </p>
                 </div>
             </section>
 

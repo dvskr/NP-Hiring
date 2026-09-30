@@ -4,10 +4,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ImmersiveImage from '@/components/ImmersiveImage';
 import { ArrowRight, Bell, BookOpen, ShieldCheck } from 'lucide-react';
-import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
-import { buildCategoryWhereClause, CATEGORY_EXTRA_OR, CATEGORY_FILTERS } from '@/lib/filters';
+import { landingBucketWhere } from '@/lib/pseo/landing-where';
+import { notFound } from 'next/navigation';
+import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
+import {
+  LISTING_PAGE_SIZE,
+  ListingPagination,
+  isPageOutOfRange,
+  listingCanonical,
+  listingPagePath,
+  pageOffset,
+  parseListingPage,
+  totalPagesFor,
+} from '@/lib/pseo/listing-pagination';
 import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { formatCount, pluralize } from '@/lib/display-text';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -53,7 +64,7 @@ import {
     labelSentence,
 } from '@/lib/pseo/category-metadata';
 import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
-import { MIN_JOBS_FOR_INDEX } from '@/lib/pseo/render-gate';
+import { MIN_JOBS_FOR_INDEX, shouldRenderCategoryLanding } from '@/lib/pseo/render-gate';
 import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 
 
@@ -88,32 +99,8 @@ const MID = labelSentence(LABEL);
  */
 const LIST_NAME = `${NOUN} Jobs`;
 
-/**
- * Buckets the bespoke landings count with, so a sibling card here prints the
- * same number that page prints (remote counts the structured work-mode flag).
- */
-const BESPOKE_BUCKETS: Record<string, Prisma.JobWhereInput> = {
-    remote: { isRemote: true },
-    inpatient: buildCategoryWhereClause('inpatient', { isRemote: { not: true } }),
-};
-
-/**
- * The category bucket for a slug. Slugs without a legacy keyword entry gate
- * on the precomputed categoryTags column, so a count can never degrade to
- * "all published jobs" (the shared template applies the same rule).
- */
-function categoryWhere(slug: string): Prisma.JobWhereInput {
-    const bespoke = BESPOKE_BUCKETS[slug];
-    if (bespoke) return bespoke;
-    const hasLegacyKeywordFilter =
-        (CATEGORY_FILTERS[slug]?.length ?? 0) > 0 || (CATEGORY_EXTRA_OR[slug]?.length ?? 0) > 0;
-    return hasLegacyKeywordFilter
-        ? buildCategoryWhereClause(slug)
-        : buildCategoryWhereClause(slug, { categoryTags: { has: slug } });
-}
-
 /** This page's bucket, composed onto the canonical predicate by every reader. */
-const BUCKET = categoryWhere(SLUG);
+const BUCKET = landingBucketWhere(SLUG);
 
 /**
  * LAND-T3: the one facts load for this page. getListingFacts composes the
@@ -126,7 +113,7 @@ function getFacts() {
 
 async function getOutpatientJobs(skip: number = 0, take: number = 10) {
     return prisma.job.findMany({
-        where: canonicalBucketWhere(BUCKET),
+        where: canonicalBucketWhere(BUCKET), omit: JOB_LISTING_OMIT,
         orderBy: BEST_SORT_ORDER_BY,
         skip,
         take,
@@ -153,7 +140,7 @@ async function getRelatedCounts(): Promise<Map<string, number>> {
     const slugs = EXPLORE_CARDS.flatMap((card) => { const slug = cardSlug(card.href); return slug ? [slug] : []; });
     const rows = await Promise.all(slugs.map(async (slug) => {
         try {
-            return [slug, await prisma.job.count({ where: canonicalBucketWhere(categoryWhere(slug)) })] as const;
+            return [slug, await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(slug)) })] as const;
         } catch (error) {
             console.error(`[jobs/${SLUG}] sibling count failed for "${slug}":`, error);
             return [slug, null] as const;
@@ -210,7 +197,10 @@ function Band({ id, eyebrow, title, background, children }: {
  */
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
     const [facts, params] = await Promise.all([getFacts(), searchParams]);
-    const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
+    const page = parseListingPage(params.page);
+  // TECH-09: a page past the last one is a 404, never an empty 200.
+  // TECH-06: 0 canonical jobs is a 404, never an empty "0 positions" 200.
+  if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();
     const totalJobs = facts.total;
     const title = buildCategoryLandingTitle({ role: NOUN, totalJobs });
     const description = buildCategoryLandingDescription({
@@ -236,10 +226,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
                 width: 1200, height: 630, alt: `${NOUN} Jobs`,
             }],
         },
-        alternates: { canonical: `${brand.baseUrl}/jobs/outpatient` },
-        // thin-spec-1 8.3 / PLAN C.2: index page 1 only, at MIN_JOBS_FOR_INDEX
-        // or more canonical jobs. Every other view stays follow.
-        robots: categoryLandingRobots(totalJobs, page),
+        alternates: { canonical: listingCanonical('/jobs/outpatient', page) },
+        // Indexing audit fixSoon 1 / PLAN C.2: index page 1 only, at the listing
+        // floor (5 or more distinct postings from 3 or more employers), the same
+        // verdict the cron stores for the sitemap. Every other view stays follow
+        // and keeps its canonical.
+        robots: categoryLandingRobots(facts, page),
     };
 }
 
@@ -249,11 +241,14 @@ interface PageProps {
 
 export default async function OutpatientJobsPage({ searchParams }: PageProps) {
     const params = await searchParams;
-    const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
-    const limit = 10;
-    const skip = (page - 1) * limit;
+    const page = parseListingPage(params.page);
+    const limit = LISTING_PAGE_SIZE;
+    const skip = pageOffset(page, limit);
 
     const [facts, relatedCounts] = await Promise.all([getFacts(), getRelatedCounts()]);
+    // TECH-09: a page past the last one is a 404.
+    if (isPageOutOfRange(page, facts.total, limit) || !shouldRenderCategoryLanding(facts.total)) notFound();
+    const totalPages = totalPagesFor(facts.total, limit);
     const jobs = facts.total > 0 ? await getOutpatientJobs(skip, limit) : [];
 
     // Data bands, each rendered only when its own builder returns something.
@@ -315,13 +310,13 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
         ]}
         description="Clinic, private practice and community health positions, with the hours and panel each employer expects named in the listing."
         ctaLabel="Browse Outpatient Jobs"
-        ctaHref="/jobs?category=outpatient"
+        ctaHref="#listings"
         secondaryCtaLabel="Set Alert"
         secondaryCtaHref="/job-alerts"
       />
 
       {/* ═══ JOB LISTINGS ═══ */}
-      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px' }}>
+      <div id="listings" style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px', scrollMarginTop: '80px' }}>
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-6">
@@ -360,13 +355,14 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
               </div>
             )}
 
-            {jobs.length > 0 && (
+            {page < totalPages && (
               <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                <Link href="/jobs?category=outpatient" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
-                  Browse All Outpatient Jobs <ArrowRight size={16} />
+                <Link href={listingPagePath('/jobs/outpatient', page + 1)} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
+                  More Outpatient Jobs <ArrowRight size={16} />
                 </Link>
               </div>
             )}
+            <ListingPagination basePath="/jobs/outpatient" page={page} totalPages={totalPages} label="outpatient NP jobs" />
           </div>
           {/* Sidebar: the page's ONE alert CTA (T0-5). Alert cadence:
               /api/cron/send-alerts runs in the daily group
@@ -530,6 +526,8 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
             {EXPLORE_CARDS.map(c => {
               const slug = cardSlug(c.href);
               const count = slug ? relatedCounts.get(slug) : undefined;
+              // TECH-06: a landing at 0 jobs answers 404, so its card is not linked.
+              if (count === 0) return null;
               return (
                 <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                   <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

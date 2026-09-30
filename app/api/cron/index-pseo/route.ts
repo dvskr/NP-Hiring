@@ -18,9 +18,10 @@
  * nothing, and tests/regressions/indexing-safety.test.ts fails before it ships.
  *
  * Strategy:
- * - Candidates pass the same gate as the city sitemap: the job and employer
- *   floors and the freshness window from lib/pseo/render-gate.ts, plus the
- *   population floor below.
+ * - Candidates pass the same gate as the city sitemap: the stored category x
+ *   city verdict (PseoStats.indexable), the job and employer floors and the
+ *   freshness window from lib/pseo/render-gate.ts, plus the population floor
+ *   below.
  * - Pages are scored (job count, city size, the city's shortage flag) and the
  *   best SUBMISSIONS_PER_RUN that were not offered in the last seven days go
  *   out, highest score first.
@@ -74,18 +75,24 @@ interface CandidateRow {
   locationSlug: string;
   totalJobs: number;
   distinctEmployers: number;
+  /**
+   * The cron's stored verdict (aggregate-pseo counts distinct postings, so
+   * duplicates can hold a landing under the floor that the raw row counts
+   * would admit). The city sitemap skips a row without it, and so does this.
+   */
+  indexable: boolean;
 }
 
 /**
  * Fresh category-city rows for the submittable categories. WHY RAW: the gate
- * reads distinctEmployers, a column the generated Prisma client predates and
+ * reads distinctEmployers and indexable, columns the generated Prisma client predates and
  * that must not be regenerated on this branch (see aggregate-pseo/route.ts).
  * Tagged template: the slug list and the cutoff are bound parameters.
  */
 async function readCandidateRows(): Promise<CandidateRow[]> {
   if (PSEO_INDEXING_CATEGORIES.length === 0) return [];
   const rows = await prisma.$queryRaw<CandidateRow[]>`
-    SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers"
+    SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable"
     FROM "PseoStats"
     WHERE "type" = 'category-city'
       AND "categorySlug" IN (${Prisma.join([...PSEO_INDEXING_CATEGORIES])})
@@ -109,6 +116,8 @@ function scoreCandidates(rows: CandidateRow[]): ScoredUrl[] {
   const scoredUrls: ScoredUrl[] = [];
 
   for (const row of rows) {
+    // Mirrors app/api/sitemaps/cities/[batch]/route.ts: no stored verdict, no submission.
+    if (!row.indexable) continue;
     if (!shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers })) continue;
     const city = getCityBySlug(row.locationSlug);
     if (!city || city.population < MIN_POPULATION) continue;

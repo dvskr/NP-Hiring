@@ -5,6 +5,8 @@ import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { extractWithLLM } from '@/lib/llm-enrichment';
 import { withCronTracking } from '@/lib/cron/track';
 import { inngest } from '@/lib/inngest/client';
+import { contentChangeStamp } from '@/lib/job-content-change';
+import { renewalCategoryTags } from '@/lib/ingestion-service';
 
 export const maxDuration = 300; // 5 minutes
 
@@ -85,6 +87,12 @@ export async function GET(req: Request) {
       population: true,
       benefits: true,
       sourceProvider: true,
+      // The rest of the category tagger's inputs, and the stored tags, so a
+      // run that fills a tagger input re-derives categoryTags (CQ-05).
+      descriptionSummary: true,
+      newGradFriendly: true,
+      minYearsExperience: true,
+      categoryTags: true,
     } as const;
 
     const freshJobs = await prisma.job.findMany({
@@ -257,9 +265,13 @@ export async function GET(req: Request) {
             : (raw === 'Remote' || raw === 'Hybrid' || raw === 'In-Person') ? raw
             : null;
           if (canon) {
+            // Flags are derived from the mode as a pair (workModeFlagsFor in
+            // lib/ingestion-service.ts): OR-ing a flag on left a stale
+            // isRemote beside a new Hybrid or In-Person mode, which is how
+            // on-site jobs kept TELECOMMUTE markup (indexing audit GFJ-01).
             updateData.mode = canon;
-            if (canon === 'Remote') updateData.isRemote = true;
-            if (canon === 'Hybrid') updateData.isHybrid = true;
+            updateData.isRemote = canon === 'Remote';
+            updateData.isHybrid = canon === 'Hybrid';
             stats.modeUpdated++;
             fieldsUpdated++;
           }
@@ -272,12 +284,13 @@ export async function GET(req: Request) {
           fieldsUpdated++;
         }
 
-        // State
-        if (extracted.state && !job.state) {
-          updateData.state = extracted.state;
-          const code = STATE_CODES[extracted.state.toLowerCase()];
-          if (code && !job.stateCode) {
-            updateData.stateCode = code;
+        // State: only a real US state. An LLM answer such as "United
+        // States" or "Remote" is not a state and must not become one.
+        const extractedStateCode = extracted.state ? STATE_CODES[extracted.state.trim().toLowerCase()] : undefined;
+        if (extracted.state && extractedStateCode && !job.state) {
+          updateData.state = extracted.state.trim();
+          if (!job.stateCode) {
+            updateData.stateCode = extractedStateCode;
           }
           stats.stateUpdated++;
           fieldsUpdated++;
@@ -314,57 +327,39 @@ export async function GET(req: Request) {
         if (fieldsUpdated > 0) stats.enriched++;
         } // end if (extracted)
 
-        // ── FINAL FALLBACK PASS (2026-05-05) ───────────────────────────
-        // After source extraction, regex extraction, and LLM enrichment
-        // have all had their chance, fill any STILL-missing critical
-        // fields with heuristic defaults so every row leaves enrich-jobs
-        // with usable values. The completeness gate would otherwise
-        // reject borderline rows; these defaults nudge them above the
-        // floor with sensible, defensible guesses.
+        // ── FINAL CONSISTENCY PASS ─────────────────────────────────────
+        // Until 2026-09-28 this block filled still-missing fields with
+        // guesses: a job with no parsed location was marked REMOTE, a job
+        // with no mode became In-Person, a job with no type became
+        // Full-Time (or Contract from its pay period), and a remote job
+        // with no state got state "United States". Every guess was then
+        // published as fact on the job page and in JobPosting markup
+        // (indexing audit GFJ-01 / GFJ-06 / CS-03: on-site inpatient roles
+        // marked TELECOMMUTE, unknown job types marked FULL_TIME). A missing
+        // location is not evidence of remote work, and an unknown field
+        // stays unknown. What remains: a mode is recorded only when the
+        // stored flags already say exactly one thing.
         // Helper: resolve "what value the row will have after this update".
         const fin = <K extends keyof typeof job>(key: K) =>
           (updateData[key as string] !== undefined ? updateData[key as string] : job[key]) as (typeof job)[K];
 
-        // 1. Location signal: if NOTHING is set, mark remote.
-        if (!fin('city') && !fin('state') && !fin('isRemote') && !fin('isHybrid')) {
-          updateData.isRemote = true;
-        }
-
-        // 2. Mode fallback. Derives from the now-populated isRemote/isHybrid.
         if (!fin('mode')) {
-          if (fin('isRemote')) updateData.mode = 'Remote';
-          else if (fin('isHybrid')) updateData.mode = 'Hybrid';
-          else updateData.mode = 'In-Person';
+          if (fin('isRemote') && !fin('isHybrid')) updateData.mode = 'Remote';
+          else if (fin('isHybrid') && !fin('isRemote')) updateData.mode = 'Hybrid';
         }
 
-        // 3. JobType fallback. Salary period is the strongest signal —
-        // hourly/weekly/daily rates are almost always Contract;
-        // annual is almost always Full-Time. Missing salary entirely
-        // defaults to Full-Time (the modal PMHNP arrangement).
-        if (!fin('jobType')) {
-          const period = fin('salaryPeriod');
-          if (period === 'annual' || period === 'year' || period === 'yearly') {
-            updateData.jobType = 'Full-Time';
-          } else if (
-            period === 'hour' || period === 'hourly' ||
-            period === 'day'  || period === 'daily'  ||
-            period === 'week' || period === 'weekly' ||
-            period === 'biweekly' ||
-            period === 'month'|| period === 'monthly'
-          ) {
-            updateData.jobType = 'Contract';
-          } else {
-            updateData.jobType = 'Full-Time';
-          }
-        }
+        // CQ-05: a run that filled a field the category tagger reads (the
+        // job type, the work mode, setting, population) re-derives the
+        // category tags in the same write, so the listings and PseoStats
+        // never count the job under a category its fields no longer support.
+        // The same rule a renewal applies (lib/ingestion-service.ts).
+        const categoryTags = renewalCategoryTags(job, updateData);
+        if (categoryTags) updateData.categoryTags = categoryTags;
 
-        // 4. State fallback. If remote and no state, USA-wide.
-        // For in-person/hybrid with no state, leave null — phantom
-        // states would pollute /jobs/state/[state] SEO pages.
-        if (!fin('state') && fin('isRemote')) {
-          updateData.state = 'United States';
-          if (!fin('country')) updateData.country = 'US';
-        }
+        // contentChangedAt (sitemap lastmod, the page's "Last updated")
+        // moves only when this run filled a rendered field; a run that
+        // only stamps lastEnrichedAt leaves it alone.
+        Object.assign(updateData, contentChangeStamp(job, updateData));
 
         // Execute update (always writes lastEnrichedAt)
         try {

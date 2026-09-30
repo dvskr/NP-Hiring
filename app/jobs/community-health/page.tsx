@@ -4,10 +4,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ImmersiveImage from '@/components/ImmersiveImage';
 import { BookOpen, Bell, ArrowRight, ShieldCheck } from 'lucide-react';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
-import { buildCategoryWhereClause, CATEGORY_FILTERS, CATEGORY_EXTRA_OR } from '@/lib/filters';
+import { landingBucketWhere } from '@/lib/pseo/landing-where';
+import { notFound } from 'next/navigation';
+import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
+import {
+  LISTING_PAGE_SIZE,
+  ListingPagination,
+  isPageOutOfRange,
+  listingCanonical,
+  listingPagePath,
+  pageOffset,
+  parseListingPage,
+  totalPagesFor,
+} from '@/lib/pseo/listing-pagination';
 import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { formatCount, pluralize } from '@/lib/display-text';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -20,13 +31,14 @@ import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore'
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { getListingFacts, type ListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
-import { MIN_JOBS_FOR_INDEX, shouldIndexListingPage } from '@/lib/pseo/render-gate';
+import { MIN_JOBS_FOR_INDEX, shouldRenderCategoryLanding } from '@/lib/pseo/render-gate';
 import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
 import {
   buildCategoryLandingDescription,
   buildCategoryLandingTitle,
   labelNoun,
   labelSentence,
+  shouldIndexCategoryLanding,
 } from '@/lib/pseo/category-metadata';
 import {
   NATIONAL_MEDIAN_SENTENCE,
@@ -89,17 +101,7 @@ const MID = labelSentence(LABEL);
  */
 const LIST_NAME = `Community Health ${brand.niche.short} Jobs`;
 
-/**
- * Category bucket. Slugs without a legacy keyword entry gate on the
- * precomputed categoryTags column so a sibling count never degrades to
- * "all published jobs" (same rule as lib/pseo/category-landing-template).
- */
-function categoryWhere(slug: string): Prisma.JobWhereInput {
-  const hasKeywords = (CATEGORY_FILTERS[slug]?.length ?? 0) > 0 || (CATEGORY_EXTRA_OR[slug]?.length ?? 0) > 0;
-  return hasKeywords ? buildCategoryWhereClause(slug) : buildCategoryWhereClause(slug, { categoryTags: { has: slug } });
-}
-
-const COMMUNITY_HEALTH_FILTER = categoryWhere(SLUG);
+const COMMUNITY_HEALTH_FILTER = landingBucketWhere(SLUG);
 
 /**
  * The one facts load per request (LAND-T3): getListingFacts composes the
@@ -112,7 +114,7 @@ function getFacts(): Promise<ListingFacts> {
 
 async function getCommunityHealthJobs(skip: number = 0, take: number = 10) {
   return prisma.job.findMany({
-    where: canonicalBucketWhere(COMMUNITY_HEALTH_FILTER),
+    where: canonicalBucketWhere(COMMUNITY_HEALTH_FILTER), omit: JOB_LISTING_OMIT,
     orderBy: BEST_SORT_ORDER_BY,
     skip,
     take,
@@ -149,7 +151,7 @@ async function getExploreCounts(): Promise<Map<string, number>> {
     const slug = exploreSlug(card.href);
     if (!slug) return;
     try {
-      counts.set(slug, await prisma.job.count({ where: canonicalBucketWhere(categoryWhere(slug)) }));
+      counts.set(slug, await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(slug)) }));
     } catch (error) {
       console.error(`[${SLUG}] explore count failed for "${slug}":`, error);
     }
@@ -290,7 +292,10 @@ function buildCommunityHealthFaqs(facts: ListingFacts) {
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [facts, params] = await Promise.all([getFacts(), searchParams]);
-  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
+  const page = parseListingPage(params.page);
+  // TECH-09: a page past the last one is a 404, never an empty 200.
+  // TECH-06: 0 canonical jobs is a 404, never an empty "0 positions" 200.
+  if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();
   const totalJobs = facts.total;
   const title = buildCategoryLandingTitle({ role: NOUN, totalJobs, tagline: 'FQHC and Public Health' });
   const description = buildCategoryLandingDescription({
@@ -323,11 +328,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       title,
       description,
     },
-    alternates: { canonical: `${brand.baseUrl}/jobs/community-health` },
-    // thin-spec-1 8.3 / PLAN C.2: index page 1 only at MIN_JOBS_FOR_INDEX or
-    // more canonical jobs, through the same gate the sitemap reads. Every
-    // other view keeps its canonical and stays follow.
-    ...(!shouldIndexListingPage(totalJobs, page) && { robots: { index: false, follow: true } }),
+    alternates: { canonical: listingCanonical('/jobs/community-health', page) },
+    // Indexing audit fixSoon 1 / PLAN C.2: index page 1 only, at the listing
+    // floor (5 or more distinct postings from 3 or more employers), the same
+    // verdict the cron stores for the sitemap. Every other view stays follow
+    // and keeps its canonical.
+    ...(!shouldIndexCategoryLanding(facts, page) && { robots: { index: false, follow: true } }),
   };
 }
 
@@ -337,11 +343,14 @@ interface PageProps {
 
 export default async function CommunityHealthJobsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
-  const limit = 10;
-  const skip = (page - 1) * limit;
+  const page = parseListingPage(params.page);
+  const limit = LISTING_PAGE_SIZE;
+  const skip = pageOffset(page, limit);
 
   const [facts, exploreCounts] = await Promise.all([getFacts(), getExploreCounts()]);
+  // TECH-09: a page past the last one is a 404.
+  if (isPageOutOfRange(page, facts.total, limit) || !shouldRenderCategoryLanding(facts.total)) notFound();
+  const totalPages = totalPagesFor(facts.total, limit);
   const jobs = facts.total > 0 ? await getCommunityHealthJobs(skip, limit) : [];
 
   const communityHealthFaqs = buildCommunityHealthFaqs(facts);
@@ -421,13 +430,13 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
         ]}
         description="FQHC, community health center and public health positions with integrated care teams."
         ctaLabel="Browse Community Health Jobs"
-        ctaHref="/jobs?category=community-health"
+        ctaHref="#listings"
         secondaryCtaLabel="Set Alert"
         secondaryCtaHref="/job-alerts"
       />
 
       {/* JOB LISTINGS */}
-      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px' }}>
+      <div id="listings" style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px', scrollMarginTop: '80px' }}>
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-6">
@@ -440,13 +449,14 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
               </div>
             )}
             {isLowInventory && (<LowInventoryBlock total={facts.total} counts={exploreCounts} />)}
-            {jobs.length > 0 && (
+            {page < totalPages && (
               <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                <Link href="/jobs?category=community-health" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
-                  Browse All Community Health Jobs <ArrowRight size={16} />
+                <Link href={listingPagePath('/jobs/community-health', page + 1)} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
+                  More Community Health Jobs <ArrowRight size={16} />
                 </Link>
               </div>
             )}
+            <ListingPagination basePath="/jobs/community-health" page={page} totalPages={totalPages} label="community health NP jobs" />
           </div>
           {/* Sidebar: the page's one alert CTA. Alert cadence:
               /api/cron/send-alerts runs in the daily group. */}
@@ -597,6 +607,8 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
             {EXPLORE_CARDS.map(c => {
               const slug = exploreSlug(c.href);
               const count = slug ? exploreCounts.get(slug) : undefined;
+              // TECH-06: a landing at 0 jobs answers 404, so its card is not linked.
+              if (count === 0) return null;
               return (
                 <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                   <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

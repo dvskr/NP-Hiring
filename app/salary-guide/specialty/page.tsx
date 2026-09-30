@@ -19,7 +19,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import SalaryProvenance from '@/components/SalaryProvenance';
+import SalaryProvenance, { formatStatVintage } from '@/components/SalaryProvenance';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { withTagFallback } from '@/lib/pseo/category-tagger';
 import { canonicalBucketWhere } from '@/lib/canonical-counts';
@@ -129,11 +129,11 @@ export default async function SalarySpecialtyIndexPage() {
                     </h1>
                     <p style={{ fontSize: '16px', color: CLAY_BODY, maxWidth: '620px', margin: '0 auto', lineHeight: 1.65 }}>
                         The national median across all {brand.niche.short}s is{' '}
-                        <strong>{median.formatted}</strong> per year ({median.source}), and specialty
-                        choice moves pay more than almost any other factor. Pick a specialty for its
-                        full breakdown: premiums, top-paying states and live postings. The nurse
-                        anesthetist and nurse midwife guides cover neighbouring APRN roles, which that
-                        median does not include.
+                        <strong>{median.formatted}</strong> per year ({median.source}). Pick a
+                        specialty for its full breakdown: certification, where the roles are open, and
+                        live postings with disclosed pay. The nurse anesthetist and nurse midwife
+                        guides cover neighboring APRN roles, which that median does not include, so
+                        each cites the BLS median for its own occupation instead.
                     </p>
                     {/* A4: cited-stat provenance for the median every card
                         benchmarks against, source and vintage straight from
@@ -149,12 +149,13 @@ export default async function SalarySpecialtyIndexPage() {
                     {SALARY_SPECIALTY_PAGES.map((page, i) => {
                         const range = configRange(page);
                         const count = liveCounts[page.slug] ?? 0;
-                        const figure = range && page.premium
-                            ? `${formatSalary(range.min)} to ${formatSalary(range.max)} estimated, a premium of ${page.premium.minPct} to ${page.premium.maxPct}% over the median`
-                            : page.isNicheRole
-                                ? `National median ${median.formatted}, with live board data on the guide`
-                                // The all-niche median excludes this role, so it never appears here.
-                                : `Pay from live ${page.credential} postings on the guide`;
+                        const figure = !page.isNicheRole
+                            // The all-niche median excludes this role, so the
+                            // card cites the role's own occupation median.
+                            ? `National ${page.credential} median ${page.occupationWage.formatted} (BLS OEWS, ${formatStatVintage(page.occupationWage.asOf)})`
+                            : range && page.premium
+                                ? `${formatSalary(range.min)} to ${formatSalary(range.max)}, an editorial estimate of a ${page.premium.minPct} to ${page.premium.maxPct}% premium over the median`
+                                : `National median ${median.formatted}, with live board data on the guide`;
                         return (
                             <ClayCard
                                 key={page.slug}

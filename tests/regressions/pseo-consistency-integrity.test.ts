@@ -20,6 +20,7 @@ import {
   MIN_JOBS_FOR_CATEGORY_CITY,
   MIN_JOBS_FOR_LINK_LIST_ROW,
   MIN_JOBS_FOR_STATE_HUB_INDEX,
+  MIN_POSTINGS_FOR_LISTING_INDEX,
 } from '@/lib/pseo/render-gate';
 
 const ROOT = process.cwd();
@@ -151,8 +152,12 @@ describe('HUB: the state hub, the sitemap and the render gates agree', () => {
     const page = read(PAGE);
     const sitemap = read(SITEMAP);
     expect(page).toContain("shouldIndexStateHub,\n} from '@/lib/pseo/render-gate'");
-    expect(page).toContain('shouldIndexStateHub({ activeJobs: facts.total, liveDataSections, page })');
-    expect(sitemap).toContain('shouldIndexStateHub({ activeJobs, liveDataSections })');
+    // CQ-07: distinct postings and employers at the listing floor.
+    expect(page).toMatch(/shouldIndexStateHub\(\{\s*activeJobs: facts\.distinctPostings,\s*distinctEmployers: facts\.distinctEmployers,\s*liveDataSections,\s*page,\s*\}\)/);
+    // The sitemap lists the hubs whose shared verdict is true: shouldIndexStateHub
+    // over the page's own input, computed in lib/pseo/state-hub-index.ts.
+    expect(sitemap).toContain("import { loadStateHubVerdicts, type StateHubVerdict } from '@/lib/pseo/state-hub-index'");
+    expect(read('lib/pseo/state-hub-index.ts')).toContain('indexable: shouldIndexStateHub(input)');
     // The page keeps rendering below the gate; only the index flag changes.
     expect(page).toContain('if (facts.total === 0) {\n    notFound();');
     expect(page).not.toMatch(/totalJobs\s*<\s*\d/);
@@ -166,13 +171,19 @@ describe('HUB: the state hub, the sitemap and the render gates agree', () => {
       expect(end, 'S7 line missing').toBeGreaterThan(start);
       return source.slice(start, end).split('\n').map((line) => line.trim().replace(/\s+/g, ' ')).filter(Boolean);
     };
-    const page = recipe(read(PAGE));
-    const sitemap = recipe(read(SITEMAP));
+    // The page reads the shared recipe (lib/pseo/state-hub-index.ts), which
+    // the aggregate-pseo cron also reads for the parent-hub verdict.
+    const SHARED = 'lib/pseo/state-hub-index.ts';
+    expect(read(PAGE)).toContain("import { countHubLiveDataSections } from '@/lib/pseo/state-hub-index';");
+    const shared = recipe(read(SHARED));
     // Same builders, same facts fields, same order: only the facts variable
-    // differs (the page holds ListingFacts, the sitemap a tally).
+    // differs (the shared layer holds ListingFacts, a sitemap copy a tally).
     const normalize = (lines: string[]) => lines.map((line) => line.replace(/\b(tally|facts)\./g, 'F.').replace(/facts: employerFacts/, 'facts'));
-    expect(normalize(page)).toEqual(normalize(sitemap));
-    expect(page.some((line) => line.includes('S6'))).toBe(true);
+    if (!read(SITEMAP).includes("from '@/lib/pseo/state-hub-index'")) {
+      expect(normalize(shared)).toEqual(normalize(recipe(read(SITEMAP))));
+    }
+    expect(shared.some((line) => line.includes('S6'))).toBe(true);
+    expect(read(SHARED)).toContain("import { getPublishableSalaryGuideStates } from '@/lib/salary-analytics'");
     for (const rel of [PAGE, SITEMAP]) {
       expect(read(rel)).toContain("import { getPublishableSalaryGuideStates } from '@/lib/salary-analytics'");
     }
@@ -183,8 +194,10 @@ describe('HUB: the state hub, the sitemap and the render gates agree', () => {
     expect(MIN_CITY_JOBS_FOR_LINK).toBe(MIN_JOBS_FOR_CATEGORY_CITY);
     // Category pills (HUB-S3) link a category x state page only where it is not noindex for count.
     expect(MIN_JOBS_FOR_LINK_LIST_ROW).toBe(MIN_JOBS_FOR_CATEGORY_CITY);
-    // The hub index floor is the same inventory floor.
-    expect(MIN_JOBS_FOR_STATE_HUB_INDEX).toBe(MIN_JOBS_FOR_CATEGORY_CITY);
+    // The hub index floor is the listing floor (CQ-07), never below the
+    // render floor its links respect.
+    expect(MIN_JOBS_FOR_STATE_HUB_INDEX).toBe(MIN_POSTINGS_FOR_LISTING_INDEX);
+    expect(MIN_JOBS_FOR_STATE_HUB_INDEX).toBeGreaterThanOrEqual(MIN_JOBS_FOR_CATEGORY_CITY);
     const page = read(PAGE);
     expect(page).toContain('linkable: count >= MIN_JOBS_FOR_LINK_LIST_ROW');
     expect(page).toContain('city.count >= MIN_CITY_JOBS_FOR_LINK && cityLinkResolves(name, stateCode)');

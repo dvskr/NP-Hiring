@@ -30,6 +30,7 @@ import { normalizeDisplaySalary } from '@/lib/salary-display';
 // and in JSON-LD; every visible render point goes through displayText so the
 // card never prints a dash (lib/display-text.ts).
 import { displayText } from '@/lib/display-text';
+import { shortEmployerLabel } from '@/lib/employer-display';
 // GA4 select_item is the only event that joins a list impression to the
 // detail-page view, so without it no click-through rate can be computed for
 // any listing surface on the board.
@@ -112,10 +113,12 @@ function buildSalaryDisplay(job: Job): string | null {
   return null;
 }
 
-// Direct-apply detection moved to lib/direct-apply.ts so the detail
-// page's ApplyButton uses the exact same logic — no more mismatch
-// between "Direct Apply" on the card and "Apply Now" on the detail.
-import { isDirectApplyUrl } from '@/lib/direct-apply';
+// The apply label comes from lib/direct-apply.ts so the card and the detail
+// page's ApplyButton describe the same route. An external job is never
+// labelled "Direct Apply": its application continues on another site.
+import { applyCtaLabel, cardApplyLabel, resolveApplyRoute } from '@/lib/direct-apply';
+import { withApplyIntent } from '@/lib/apply-intent';
+import { safeApplyHref } from '@/components/jobs/safe-external-href';
 // Render-time experience-label override so residency/fellowship/
 // training-program jobs always show "New grad welcome" — even when
 // the inference regex previously mis-extracted "5 years" from
@@ -162,14 +165,19 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
   const shareDescription = `Check out this ${brand.niche.short} job: ${displayTitle} at ${displayEmployer}`;
   const viewed = isHydrated && isViewed(jobSlug);
   const easyApply = job.applyOnPlatform === true;
-  // "Direct Apply" = employer posted the job here AND links to their own
-  // ATS, OR an aggregated job whose apply URL matches a known ATS pattern.
-  // Either way, the user is going straight to the employer (no aggregator
-  // middleman) so the "Direct Apply" label is honest.
-  const directApply =
-    !easyApply &&
-    !!job.applyLink &&
-    (job.sourceType === 'employer' || isDirectApplyUrl(job.applyLink));
+  // The card's Apply button. Only a safe http(s) or mailto: link counts as an
+  // external apply path, the same test the job page uses. The visible label
+  // is compact ("Easy Apply" or "Apply"); the full wording ("Apply on
+  // employer site") is its accessible name and tooltip.
+  const applyTarget = {
+    applyLink: easyApply ? job.applyLink : safeApplyHref(job.applyLink),
+    sourceType: job.sourceType,
+    applyOnPlatform: easyApply,
+  };
+  const applyLabel = cardApplyLabel(applyTarget);
+  const applyName = applyCtaLabel(applyTarget);
+  const applyTitle = resolveApplyRoute(applyTarget) === 'employer-site' ? applyName : undefined;
+  const applyIntentUrl = withApplyIntent(jobUrl) ?? jobUrl;
   // Every employer post — free or paid — is sold a "Featured badge" on the
   // listing card (Terms §7, /pricing + /faq feature lists, post-job page,
   // onboarding/confirmation emails). The visible badge was retired
@@ -183,7 +191,7 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
   // Fires select_item for a card opened from a named list. Both halves of
   // the attribution must be present: see the listName/listIndex prop note.
   // Every route out of the card that lands on the job detail page calls
-  // this, and they are mutually exclusive (the Easy Apply handler stops
+  // this, and they are mutually exclusive (the Apply handler stops
   // propagation), so a single click can never be counted twice.
   const trackListClick = () => {
     if (!listName || typeof listIndex !== 'number') return;
@@ -202,14 +210,18 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
     );
   };
 
-  // Card "Easy Apply" → navigate to job detail with ?apply=1 so the apply
-  // popup auto-opens. Stops the surrounding card-link from firing too.
-  const handleEasyApplyClick = (e: React.MouseEvent) => {
+  // Card Apply (Easy Apply or external) → the job page with ?apply=1.
+  // Applying requires an account (owner decision 2026-09), so the card never
+  // opens the employer's site itself: the job page shows a signed-out
+  // visitor the sign-up or log-in gate, and a signed-in one the Easy Apply
+  // form or the "Continue to employer application" link. Stops the
+  // surrounding card link from firing too.
+  const handleApplyClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     markAsViewed(jobSlug);
     trackListClick();
-    router.push(`${jobUrl}?apply=1`);
+    router.push(applyIntentUrl);
   };
 
   // Clean summary for display
@@ -451,8 +463,9 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
               </span>
               {easyApply ? (
                 <button
+                  type="button"
                   className="jc-easy-apply-btn"
-                  onClick={handleEasyApplyClick}
+                  onClick={handleApplyClick}
                   style={{
                     padding: '8px 16px', borderRadius: '14px',
                     fontSize: '13px', fontWeight: 700, color: '#fff',
@@ -464,21 +477,17 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
                     display: 'inline-flex', alignItems: 'center', gap: '5px',
                   }}
                 >
-                  <Zap size={13} fill="currentColor" />
+                  <Zap size={13} fill="currentColor" aria-hidden="true" />
                   Easy Apply
                 </button>
-              ) : job.applyLink && (
+              ) : applyLabel && (
                 <button
-                  className={directApply ? "jc-direct-apply-btn" : "jc-apply-btn"}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(job.applyLink!, '_blank', 'noopener,noreferrer'); }}
-                  style={directApply ? {
-                    padding: '8px 16px', borderRadius: '14px',
-                    fontSize: '13px', fontWeight: 600, color: '#1E40AF',
-                    backgroundColor: '#BFDBFE', whiteSpace: 'nowrap',
-                    border: '1px solid rgba(255,255,255,0.5)',
-                    boxShadow: '4px 4px 10px rgba(59,130,246,0.12), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)',
-                    cursor: 'pointer', transition: 'all 0.2s ease',
-                  } : {
+                  type="button"
+                  className="jc-apply-btn"
+                  onClick={handleApplyClick}
+                  aria-label={applyName}
+                  title={applyTitle}
+                  style={{
                     padding: '8px 16px', borderRadius: '14px',
                     fontSize: '13px', fontWeight: 600, color: '#fff',
                     backgroundColor: '#BE185D', whiteSpace: 'nowrap',
@@ -487,7 +496,7 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
                     cursor: 'pointer', transition: 'all 0.2s ease',
                   }}
                 >
-                  {directApply ? 'Direct Apply' : 'Apply'}
+                  {applyLabel}
                 </button>
               )}
             </div>
@@ -619,15 +628,11 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
                 that's preferred over starving every row of 50px. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
               <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', flexShrink: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'clip' }}>
-                {(() => {
-                  // Short names (≤20 chars) render in full so "Sol Mental
-                  // Health" isn't needlessly cut to "Sol Mental". Anything
-                  // longer falls back to first 2 words to avoid the ugly
-                  // CSS ellipsis we were seeing on aggregator-long names.
-                  const full = displayEmployer.trim();
-                  if (full.length <= 20) return full;
-                  return full.split(/\s+/).slice(0, 2).join(' ');
-                })()}
+                {/* Short names render in full; a long name is cut to its
+                    first two words only when those stand as a name on
+                    their own, never "University of" (CQ-16,
+                    lib/employer-display.ts). */}
+                {shortEmployerLabel(displayEmployer)}
               </p>
               {shortLocation && (
                 <>
@@ -754,8 +759,9 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
             </span>
             {easyApply ? (
               <button
+                type="button"
                 className="jc-easy-apply-btn"
-                onClick={handleEasyApplyClick}
+                onClick={handleApplyClick}
                 style={{
                   fontSize: '13px', fontWeight: 700, color: '#fff',
                   background: 'linear-gradient(135deg, #F472B6, #BE185D)',
@@ -766,22 +772,17 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
                   cursor: 'pointer', transition: 'all 0.2s ease',
                 }}
               >
-                <Zap size={13} fill="currentColor" />
+                <Zap size={13} fill="currentColor" aria-hidden="true" />
                 Easy Apply
               </button>
-            ) : job.applyLink && (
+            ) : applyLabel && (
               <button
-                className={directApply ? "jc-direct-apply-btn" : "jc-apply-btn"}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(job.applyLink!, '_blank', 'noopener,noreferrer'); }}
-                style={directApply ? {
-                  fontSize: '13px', fontWeight: 700, color: '#1E40AF',
-                  backgroundColor: '#BFDBFE',
-                  padding: '7px 16px', borderRadius: '14px',
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  border: '1px solid rgba(255,255,255,0.5)',
-                  boxShadow: '4px 4px 10px rgba(59,130,246,0.12), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)',
-                  cursor: 'pointer', transition: 'all 0.2s ease',
-                } : {
+                type="button"
+                className="jc-apply-btn"
+                onClick={handleApplyClick}
+                aria-label={applyName}
+                title={applyTitle}
+                style={{
                   fontSize: '13px', fontWeight: 700, color: '#fff',
                   backgroundColor: '#BE185D',
                   padding: '7px 16px', borderRadius: '14px',
@@ -791,7 +792,7 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
                   cursor: 'pointer', transition: 'all 0.2s ease',
                 }}
               >
-                {directApply ? 'Direct Apply' : 'Apply'}
+                {applyLabel}
               </button>
             )}
           </div>
@@ -840,15 +841,6 @@ function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) 
         .jc-easy-apply-btn:active {
           transform: translateY(1px);
           box-shadow: inset 3px 3px 6px rgba(0,0,0,0.15), inset -2px -2px 4px rgba(255,255,255,0.15) !important;
-        }
-        .jc-direct-apply-btn:hover {
-          background-color: #93C5FD !important;
-          transform: translateY(-2px);
-          box-shadow: 6px 6px 16px rgba(59,130,246,0.20), -3px -3px 8px rgba(255,255,255,0.6), inset 2px 2px 4px rgba(255,255,255,0.5), inset -1px -1px 2px rgba(0,0,0,0.05) !important;
-        }
-        .jc-direct-apply-btn:active {
-          transform: translateY(1px);
-          box-shadow: inset 3px 3px 6px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.1) !important;
         }
         .jc-apply-btn:active {
           transform: translateY(1px);

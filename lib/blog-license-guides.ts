@@ -32,9 +32,18 @@
  *   - State rule text: STATE_PRACTICE_AUTHORITY[state].details, quoted
  *     verbatim (LIC-L1), so guides in the same authority tier differ.
  *   - Board contact: the NCSBN member-board directory. Fees, CE hours,
- *     renewal cycles, and processing times are NOT in repo data, so the
- *     guides deliberately never quote them — every such question is
- *     answered with a board link (truth rule: link, don't invent).
+ *     renewal cycles, and processing times are quoted ONLY from
+ *     lib/license-guide-facts.ts, where every value carries its source link
+ *     and the date it was checked, and render in a cited "licensing facts"
+ *     section. A state without facts there answers every such question with
+ *     a board link (truth rule: link, don't invent).
+ *
+ * INDEXING (audit CQ-03, owner decision 2026-09-28): every guide stays live
+ * and linked, but renders "noindex, follow" and stays out of the sitemap
+ * until isLicenseGuideIndexable (lib/license-guide-facts.ts) holds for its
+ * state. isLicenseGuideStateIndexable and getIndexableLicenseGuideSlugs
+ * below expose that one predicate by state slug and blog slug, for the post
+ * page's robots tag and for app/sitemap.ts.
  *
  * SERVING: lib/blog.ts resolves license-guide slugs through this module
  * as a fallback when no DB row exists, so once
@@ -47,7 +56,7 @@
 // Relative imports (not '@/') so scripts/sync-blog-to-db.ts can load this
 // module under plain tsx/ts-node without tsconfig-path registration.
 import { brand } from '../config/brand';
-import { licenseGuideSlug } from '../config/niche/content-map';
+import { LICENSE_GUIDE_SLUG_REGEX, licenseGuideSlug } from '../config/niche/content-map';
 import {
     STATE_PRACTICE_AUTHORITY,
     type PracticeAuthority,
@@ -58,7 +67,18 @@ import {
     BENCHMARK_MIN_EMPLOYERS,
     BENCHMARK_MIN_POSTINGS,
 } from '../components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT } from './salary-guide-policy';
+import {
+    LICENSE_GUIDE_FACTS,
+    isLicenseGuideIndexable,
+    type LicenseGuideFact,
+    type LicenseGuideStateFacts,
+} from './license-guide-facts';
 import type { BlogPost } from './blog';
+// A cycle by design: the CE hub builds its table from LICENSE_GUIDE_STATES,
+// and each guide links the hub. Both sides read the other's exports only
+// inside functions, never at module load, so either may load first.
+import { CEU_GUIDE_SLUG, CEU_GUIDE_TITLE } from './blog-ceu-guide';
 
 // ─── Editorial dates (real, fixed — never render-time; audit B54) ───────────
 
@@ -66,7 +86,9 @@ import type { BlogPost } from './blog';
  *  each editorial review pass (feeds reviewed_at → BlogPosting.dateModified).
  *  2026-09-25: the practice-authority pass that rebuilt every per-state
  *  answer from the audited dataset. lib/blog.ts also uses this date to let
- *  the generator supersede a blog_posts mirror synced before it. */
+ *  the generator supersede a blog_posts mirror synced before it. A state
+ *  whose licensing facts were checked later carries that later date instead
+ *  (getLicenseGuideReviewedAt), with no bump here. */
 export const LICENSE_GUIDE_REVIEWED_AT = '2026-09-25T00:00:00.000Z';
 /** Series publish date (fixed so freshness is never fabricated per-render). */
 export const LICENSE_GUIDE_PUBLISH_DATE = '2026-07-29T00:00:00.000Z';
@@ -296,13 +318,202 @@ export function nlcTableLabel(status: NlcStatus): string {
     return 'Not a member';
 }
 
+// ─── Licensing facts (lib/license-guide-facts.ts) ───────────────────────────
+//
+// The only place a guide quotes a fee, renewal cycle, CE requirement or
+// processing time. Each value renders beside its source link and the date it
+// was checked, and a value that is not well formed is left out rather than
+// shown without its citation.
+
+/** The facts table the generator reads; tests pass a sample in its place. */
+export type LicenseGuideFactsTable = Readonly<Record<string, LicenseGuideStateFacts>>;
+
+type LicenseGuideFactKey = 'applicationRoute' | 'initialFee' | 'processingTime' | 'renewalCycle' | 'ceRequirement';
+
+/** Display order and row labels of the facts section. */
+const LICENSE_GUIDE_FACT_FIELDS: ReadonlyArray<{ key: LicenseGuideFactKey; label: string }> = [
+    { key: 'applicationRoute', label: 'How to apply' },
+    { key: 'initialFee', label: 'Initial application fee' },
+    { key: 'processingTime', label: 'Processing time' },
+    { key: 'renewalCycle', label: 'Renewal cycle' },
+    { key: 'ceRequirement', label: 'Continuing education for renewal' },
+];
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** U+2013, U+2014 or a spaced hyphen: banned in rendered copy. */
+const FACT_DASH_RULE = /[–—]| - /;
+/** Characters that would break the markdown table, add markup or smuggle a link. */
+const FACT_MARKUP_RULE = /[|[\]<>*`\r\n]/;
+
+/** True for a real calendar day written YYYY-MM-DD. */
+function isIsoDay(day: string): boolean {
+    if (!ISO_DAY.test(day)) return false;
+    const time = Date.parse(`${day}T00:00:00Z`);
+    return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === day;
+}
+
+/**
+ * True when a fact can render with its citation: a one-line value in house
+ * style, a named source, an https source URL a markdown link can carry, and
+ * a real check date.
+ */
+export function isWellFormedLicenseGuideFact(fact: LicenseGuideFact | null | undefined): fact is LicenseGuideFact {
+    if (!fact) return false;
+    const value = typeof fact.value === 'string' ? fact.value.trim() : '';
+    const sourceName = typeof fact.sourceName === 'string' ? fact.sourceName.trim() : '';
+    if (!value || FACT_DASH_RULE.test(value) || FACT_MARKUP_RULE.test(value)) return false;
+    if (!sourceName || FACT_DASH_RULE.test(sourceName) || FACT_MARKUP_RULE.test(sourceName)) return false;
+    if (typeof fact.checkedOn !== 'string' || !isIsoDay(fact.checkedOn)) return false;
+    if (typeof fact.sourceUrl !== 'string' || /[()\s]/.test(fact.sourceUrl)) return false;
+    try {
+        return new URL(fact.sourceUrl).protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+/** One rendered row of a guide's facts section. */
+export interface LicenseGuideFactRow {
+    label: string;
+    fact: LicenseGuideFact;
+}
+
+/** The well-formed facts a state's guide renders, in display order. */
+export function getLicenseGuideFactRows(
+    stateCode: string,
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): LicenseGuideFactRow[] {
+    const entry = facts[stateCode];
+    if (!entry || entry.stateCode !== stateCode) return [];
+    return LICENSE_GUIDE_FACT_FIELDS.flatMap(({ key, label }) => {
+        const fact = entry[key];
+        return isWellFormedLicenseGuideFact(fact) ? [{ label, fact }] : [];
+    });
+}
+
+/** "September 28, 2026" for a YYYY-MM-DD check date. */
+function checkedOnLabel(day: string): string {
+    return new Date(`${day}T00:00:00Z`).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+    });
+}
+
+/** Heading of the facts section (also the TOC entry). */
+export function licenseGuideFactsHeading(s: LicenseGuideState): string {
+    return `${s.name} licensing facts, with sources`;
+}
+
+/**
+ * The cited facts section: every value beside its source link and the date
+ * it was checked. Empty when the state has no well-formed facts.
+ */
+function factsSection(s: LicenseGuideState, rows: readonly LicenseGuideFactRow[]): string {
+    if (rows.length === 0) return '';
+    const tableRows = rows
+        .map(({ label, fact }) => `| ${label} | ${fact.value.trim()} | [${fact.sourceName.trim()}](${fact.sourceUrl}) | ${checkedOnLabel(fact.checkedOn)} |`)
+        .join('\n');
+    return `## ${licenseGuideFactsHeading(s)}
+
+Each entry below is quoted from the source named beside it, as read on the date shown. Boards revise fees, renewal rules and processing times, so confirm each one with the [${s.boardName}](${s.boardUrl}) before you rely on it.
+
+| Topic | What the source states | Source | Checked |
+|---|---|---|---|
+${tableRows}
+
+`;
+}
+
+/** Renewal section body: cites the facts section when the state has one. */
+function renewalParagraph(s: LicenseGuideState, hasFacts: boolean): string {
+    const evergreen = `Two evergreen rules: keep your national certification current (state renewal typically requires it), and check the [board's renewal checklist](${s.boardUrl}) well before your expiration date so a missing CE item does not lapse your license. For where every state publishes its CE rules and how renewal and certification fit together, see [${CEU_GUIDE_TITLE}](/blog/${CEU_GUIDE_SLUG}).`;
+    return hasFacts
+        ? `Renewal cycles, continuing-education requirements, and fees are set by the ${s.boardName}, and boards revise them. The licensing facts above name the source of each figure and the date it was checked; for anything not listed there, work from the board's own pages. ${evergreen}`
+        : `Renewal cycles, continuing-education requirements, and fees are set by the ${s.boardName}. We deliberately do not quote them here because boards revise them and stale numbers are worse than none. ${evergreen}`;
+}
+
+/**
+ * The guide's review date: the series review date, or the latest date one
+ * of the state's rendered facts was checked, whichever is later. Feeds
+ * reviewed_at, BlogPosting.dateModified and the sitemap lastmod, and lets
+ * lib/blog.ts retire a blog_posts mirror synced before the facts landed.
+ */
+export function getLicenseGuideReviewedAt(
+    stateSlug: string,
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): string {
+    const s = getLicenseGuideState(stateSlug);
+    const latest = (s ? getLicenseGuideFactRows(s.code, facts) : [])
+        .reduce((max, { fact }) => (fact.checkedOn > max ? fact.checkedOn : max), '');
+    const latestIso = latest ? `${latest}T00:00:00.000Z` : '';
+    return latestIso > LICENSE_GUIDE_REVIEWED_AT ? latestIso : LICENSE_GUIDE_REVIEWED_AT;
+}
+
+/** The facts a guide must render, not merely hold, before it may be indexed. */
+const FACTS_REQUIRED_FOR_INDEX: readonly LicenseGuideFactKey[] = ['initialFee', 'renewalCycle', 'ceRequirement'];
+
+/**
+ * isLicenseGuideIndexable for one guide, plus the check that the three
+ * required facts are well formed, so a guide is never indexed on a fact its
+ * page would leave out.
+ */
+function guideIndexable(s: LicenseGuideState, facts: LicenseGuideFactsTable): boolean {
+    const entry = facts[s.code];
+    return isLicenseGuideIndexable(s.code, facts)
+        && entry?.stateCode === s.code
+        && FACTS_REQUIRED_FOR_INDEX.every((key) => isWellFormedLicenseGuideFact(entry[key]));
+}
+
+/**
+ * True when the guide for this state slug may be indexed and listed in the
+ * sitemap. False for an unknown slug. The post page's robots tag reads this.
+ */
+export function isLicenseGuideStateIndexable(
+    stateSlug: string,
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): boolean {
+    const s = getLicenseGuideState(stateSlug);
+    return s ? guideIndexable(s, facts) : false;
+}
+
+/**
+ * Jurisdictions whose guide renders a cited licensing facts section, for
+ * surfaces that describe the series (app/editorial-policy/page.tsx): while
+ * this is empty, "the series never quotes fees, CE hours, renewal cycles or
+ * processing times" is true; once it is not, only the cited form is.
+ */
+export function getLicenseGuideStatesWithFacts(facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS): LicenseGuideState[] {
+    return LICENSE_GUIDE_STATES.filter((s) => getLicenseGuideFactRows(s.code, facts).length > 0);
+}
+
+/**
+ * False only for a license-guide blog slug whose guide renders noindex; true
+ * for every other blog slug. For surfaces that list posts for crawlers or
+ * subscribers (the blog RSS feed).
+ */
+export function isBlogSlugIndexable(
+    blogSlug: string,
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): boolean {
+    const match = blogSlug.match(LICENSE_GUIDE_SLUG_REGEX);
+    return match === null || isLicenseGuideStateIndexable(match[1], facts);
+}
+
+/**
+ * Blog slugs of the guides that may be indexed today, for app/sitemap.ts
+ * (the same predicate as the robots tag). Empty until a state's facts are
+ * verified in lib/license-guide-facts.ts.
+ */
+export function getIndexableLicenseGuideSlugs(facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS): string[] {
+    return LICENSE_GUIDE_STATES.filter((s) => guideIndexable(s, facts)).map((s) => s.slug);
+}
+
 // ─── Prose builders ─────────────────────────────────────────────────────────
 
 /**
- * Inline citation for prose: "$129,210 (BLS OEWS … May 2024)".
+ * Inline citation for prose: "$132,300 (BLS OEWS … May 2025)".
  * Deliberately NOT stats-sources' citedValue(), which appends `asOf` on
- * top of a `source` string that already names its vintage — "May 2024,
- * 2024-05" reads like machine output on 51 pages. The source string is
+ * top of a `source` string that already names its vintage — "May 2025,
+ * 2025-05" reads like machine output on 51 pages. The source string is
  * kept verbatim, so the claim stays fully attributed.
  */
 function cite(s: StatSource): string {
@@ -686,8 +897,14 @@ export interface LicenseGuideFaq {
  * FAQ — ONE array feeds both the visible "Frequently asked questions"
  * markdown section and faq_json (FAQPage JSON-LD emitted by
  * app/blog/[slug]/page.tsx), so schema always matches visible content.
+ * `facts` only changes the application answer, which points at the cited
+ * facts section when the state has one.
  */
-export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
+export function buildLicenseGuideFaq(
+    s: LicenseGuideState,
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): LicenseGuideFaq[] {
+    const hasFacts = getLicenseGuideFactRows(s.code, facts).length > 0;
     const fpa = STAT_SOURCES.fullPracticeStates;
     // The classification answers "does the state have FPA" only in AANP's
     // terms; the state's own rule follows, so a transition period (or a
@@ -719,7 +936,9 @@ export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
         },
         {
             name: `What do I need to apply for APRN licensure in ${s.name}?`,
-            text: `An active RN license, an MSN or DNP from an accredited program, national certification where the board requires it (AANP or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. Fees, forms, and processing times are set by the board and change, so work directly from the board site rather than third-party summaries.`,
+            text: `An active RN license, an MSN or DNP from an accredited program, national certification where the board requires it (AANP or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. ${hasFacts
+                ? 'Fees, forms, and processing times are set by the board and change. The licensing facts on this page name the source of each figure and the date it was checked, so confirm them on the board site before you apply.'
+                : 'Fees, forms, and processing times are set by the board and change, so work directly from the board site rather than third-party summaries.'}`,
         },
         {
             name: `Do I need a collaborating or supervising physician in ${s.name}?`,
@@ -738,12 +957,13 @@ export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
  * the faq_json synced from it) cannot know whether the gate is met.
  */
 function payFaqAnswer(s: LicenseGuideState): string {
-    return `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it. The ${s.name} job market snapshot on this page reports the current ${s.code} figure whenever that gate is met.`;
+    return `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The ${s.name} job market snapshot on this page reports the current ${s.code} figure whenever that gate is met.`;
 }
 
-function buildMarkdown(s: LicenseGuideState): string {
+function buildMarkdown(s: LicenseGuideState, facts: LicenseGuideFactsTable): string {
     const steps = buildLicenseGuideSteps(s);
-    const faqs = buildLicenseGuideFaq(s);
+    const faqs = buildLicenseGuideFaq(s, facts);
+    const factRows = getLicenseGuideFactRows(s.code, facts);
     const stepsMd = steps
         .map((step, i) => `${i + 1}. **${step.name}.** ${step.text}`)
         .join('\n');
@@ -778,13 +998,13 @@ The sequence below is the standard ${s.code} path. Details such as required form
 
 ${stepsMd}
 
-## Renewing your ${s.name} license
+${factsSection(s, factRows)}## Renewing your ${s.name} license
 
-Renewal cycles, continuing-education requirements, and fees are set by the ${s.boardName}. We deliberately do not quote them here because boards revise them and stale numbers are worse than none. Two evergreen rules: keep your national certification current (state renewal typically requires it), and check the [board's renewal checklist](${s.boardUrl}) well before your expiration date so a missing CE item does not lapse your license.
+${renewalParagraph(s, factRows.length > 0)}
 
 ## What ${NP}s earn in ${s.name}
 
-The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it. The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
+The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
 
 ## Frequently asked questions
 
@@ -819,16 +1039,20 @@ export function getAllLicenseGuideSlugs(): string[] {
  * Build the full BlogPost object for a state slug — the same shape
  * lib/blog.ts serves from the blog_posts table, so app/blog/[slug]
  * renders it with zero template changes. Returns null for unknown slugs
- * (the caller 404s).
+ * (the caller 404s). `facts` defaults to lib/license-guide-facts.ts.
  */
-export function getLicenseGuidePost(stateSlug: string): BlogPost | null {
+export function getLicenseGuidePost(
+    stateSlug: string,
+    facts: LicenseGuideFactsTable = LICENSE_GUIDE_FACTS,
+): BlogPost | null {
     const s = getLicenseGuideState(stateSlug);
     if (!s) return null;
+    const reviewedAt = getLicenseGuideReviewedAt(stateSlug, facts);
     return {
         id: `license-guide-${s.stateSlug}`,
         title: `How to Get Your ${NP_LONG} License in ${s.name}`,
         slug: s.slug,
-        content: buildMarkdown(s),
+        content: buildMarkdown(s, facts),
         meta_description: metaDescription(s),
         target_keyword: `${s.name.toLowerCase()} ${NP_PROSE} license`,
         category: 'state_spotlight',
@@ -837,10 +1061,10 @@ export function getLicenseGuidePost(stateSlug: string): BlogPost | null {
         image_url: null,
         youtube_video_id: null,
         video_url: null,
-        reviewed_at: LICENSE_GUIDE_REVIEWED_AT,
-        faq_json: buildLicenseGuideFaq(s),
+        reviewed_at: reviewedAt,
+        faq_json: buildLicenseGuideFaq(s, facts),
         created_at: LICENSE_GUIDE_PUBLISH_DATE,
-        updated_at: LICENSE_GUIDE_REVIEWED_AT,
+        updated_at: reviewedAt,
     };
 }
 

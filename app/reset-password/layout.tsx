@@ -12,7 +12,7 @@ import { Metadata } from 'next';
  * explicit for anything that renders the page directly).
  */
 export const metadata: Metadata = {
-    title: `Set a New Password | ${brand.name}`,
+    title: 'Set a New Password',
     description: `Choose a new password for your ${brand.name} account.`,
     robots: { index: false, follow: false },
 };

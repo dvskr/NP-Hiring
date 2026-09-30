@@ -123,8 +123,22 @@ async function bodyScrollLock(page: Page): Promise<string> {
   return page.evaluate(() => document.body.style.overflow);
 }
 
+// Applying requires an account (owner decision 2026-09): for a signed-out visitor every Apply control
+// is a button that opens the sign-up or log-in gate; a signed-in candidate gets a real link to an
+// external employer application. An external ATS job reads "Apply on employer site", never "Direct Apply".
 function visibleApplyButton(page: Page): Locator {
-  return page.getByRole('button', { name: /apply now|direct apply|easy apply|apply again|^apply$/i }).filter({ visible: true }).first();
+  const name = /apply on employer site|apply now|easy apply|apply again|^apply$/i;
+  return page.getByRole('button', { name }).or(page.getByRole('link', { name })).filter({ visible: true }).first();
+}
+
+/**
+ * Open a job page and wait for ApplyButton's /api/auth/me probe, so a click lands on the hydrated
+ * Apply control rather than the server fallback (a plain sign-up form before hydration).
+ */
+async function gotoJobHydrated(page: Page, path: string): Promise<void> {
+  const probe = page.waitForResponse((r) => r.url().includes('/api/auth/me'), { timeout: 45_000 });
+  await gotoReady(page, path);
+  await probe;
 }
 
 function annotateAxe(testInfo: { annotations: { type: string; description?: string }[] }, all: string[]): void {
@@ -270,7 +284,7 @@ test.describe('mobile 375x812', () => {
     test.skip(!JOB_SLUG, 'E2E_TEST_JOB_SLUG not set');
     await gotoReady(page, `/jobs/${JOB_SLUG}`);
     // Observed: bottom-most control a "YouTube" (footer social link) is hit-tested to the
-    // fixed Apply bar (div.flex.flex-col.w-full "Direct Apply…"). components/MainContent.tsx
+    // fixed Apply bar (div.flex.flex-col.w-full holding the Apply CTA). components/MainContent.tsx
     // gives /jobs* routes pb-24 (96px) but app/jobs/[slug]/page.tsx renders a ~110px+ fixed
     // bar (Apply + Save/Message row) on top of the 64px BottomNav.
     await assertBottomContentNotCovered(page, 'job detail');
@@ -296,41 +310,77 @@ test.describe('mobile 375x812', () => {
     await expect(dialog).toBeHidden();
   });
 
-  test('job detail: signed-out Apply shows the sign-in gate, Back restores the CTA, Sign In deep-links back', async ({ page }) => {
+  test('job detail: signed-out Apply opens the sign-up or log-in gate and never the employer site', async ({ page }) => {
     test.skip(!JOB_SLUG, 'E2E_TEST_JOB_SLUG not set');
-    await gotoReady(page, `/jobs/${JOB_SLUG}`);
+    await gotoJobHydrated(page, `/jobs/${JOB_SLUG}`);
+    // Owner decision 2026-09: applying requires an account, for external ATS jobs and Easy Apply
+    // alike. The description stays readable; the Apply control is a button, not an employer link.
+    await expect(page.locator('h1').first()).toBeVisible();
     const apply = visibleApplyButton(page);
     await expect(apply).toBeVisible();
+    await expect(apply).not.toHaveAttribute('href', /^(https?:|mailto:)/);
+    await expect(page.getByRole('button', { name: /direct apply/i }).or(page.getByRole('link', { name: /direct apply/i }))).toHaveCount(0);
+
+    let popups = 0;
+    page.on('popup', () => { popups += 1; });
     await apply.click();
-    const gate = page.getByRole('heading', { name: 'Sign in to apply' }).filter({ visible: true }).first();
-    await expect(gate).toBeVisible();
-    await assertNoHorizontalOverflow(page, 'job detail with sign-in gate');
+    await expect(page.getByRole('heading', { name: 'Sign in to apply' }).filter({ visible: true }).first()).toBeVisible();
+    await assertNoHorizontalOverflow(page, 'job detail with the apply gate');
     await expectTapTarget(page.getByRole('button', { name: 'Create Free Account' }).filter({ visible: true }).first(), 'gate: Create Free Account');
+    await expectTapTarget(page.getByRole('button', { name: 'Sign In' }).filter({ visible: true }).first(), 'gate: Sign In');
+    expect(popups, 'a signed-out Apply click must not open the employer site').toBe(0);
+  });
 
-    // Back returns to the CTA
-    await page.getByRole('button', { name: /back/i }).filter({ visible: true }).first().click();
-    await expect(gate).toBeHidden();
-    await expect(visibleApplyButton(page)).toBeVisible();
-
-    // Sign In → /login?redirectTo=<this job>
+  test('apply gate: Sign In and Create Free Account deep-link back to the job with ?apply=1', async ({ page }) => {
+    test.skip(!JOB_SLUG, 'E2E_TEST_JOB_SLUG not set');
+    await gotoJobHydrated(page, `/jobs/${JOB_SLUG}`);
     await visibleApplyButton(page).click();
     await page.getByRole('button', { name: 'Sign In' }).filter({ visible: true }).first().click();
     await page.waitForURL(/\/login\?redirectTo=/);
-    expect(decodeURIComponent(new URL(page.url()).searchParams.get('redirectTo') ?? '')).toContain(`/jobs/${JOB_SLUG}`);
+    const loginReturn = decodeURIComponent(new URL(page.url()).searchParams.get('redirectTo') ?? '');
+    expect(loginReturn).toContain(`/jobs/${JOB_SLUG}`);
+    expect(loginReturn).toContain('apply=1');
+    // The "Create one" link on /login keeps the same return path.
+    const createOne = page.getByRole('link', { name: 'Create one' });
+    expect(decodeURIComponent((await createOne.getAttribute('href')) ?? '')).toContain(`/jobs/${JOB_SLUG}?apply=1`);
 
-    // Browser back lands on the job again with the bar intact
-    await page.goBack({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'About this role' })).toBeVisible();
-    await expect(visibleApplyButton(page)).toBeVisible();
+    await gotoJobHydrated(page, `/jobs/${JOB_SLUG}`);
+    await visibleApplyButton(page).click();
+    await page.getByRole('button', { name: 'Create Free Account' }).filter({ visible: true }).first().click();
+    await page.waitForURL(/\/signup\?redirectTo=/);
+    const signupReturn = decodeURIComponent(new URL(page.url()).searchParams.get('redirectTo') ?? '');
+    expect(signupReturn).toContain(`/jobs/${JOB_SLUG}`);
+    expect(signupReturn).toContain('apply=1');
   });
 
-  test('DEFECT: sign-in gate "Sign In" button is 42px tall on mobile (below the 44px tap-target minimum)', async ({ page }) => {
+  test('job detail (signed in, external job): ?apply=1 shows Continue to employer application, and the confirm prompt restores the CTA', async ({ page }) => {
     test.skip(!JOB_SLUG, 'E2E_TEST_JOB_SLUG not set');
-    await gotoReady(page, `/jobs/${JOB_SLUG}`);
-    await visibleApplyButton(page).click();
-    await expect(page.getByRole('heading', { name: 'Sign in to apply' }).filter({ visible: true }).first()).toBeVisible();
-    // Observed 343x42 — components/ApplyButton.tsx "Sign In" uses py-2.5 while "Create Free Account" uses py-3.
-    await expectTapTarget(page.getByRole('button', { name: 'Sign In' }).filter({ visible: true }).first(), 'gate: Sign In');
+    test.skip(!getSeekerCreds(), 'E2E_SEEKER_EMAIL/PASS not set');
+    await playwrightAuth(page, 'candidate');
+    await gotoJobHydrated(page, `/jobs/${JOB_SLUG}?apply=1`);
+    // The return trip from sign up or log in: a real link the candidate clicks, never a script-opened tab.
+    const cont = page.getByRole('link', { name: /continue to employer application/i }).filter({ visible: true }).first();
+    const easyApply = page.getByRole('dialog', { name: /apply for this position/i });
+    await expect(cont.or(easyApply)).toBeVisible();
+    test.skip(await easyApply.isVisible(), 'the seeded job is on-platform Easy Apply; ?apply=1 opened its form');
+    const href = await cont.getAttribute('href');
+    expect(href).toMatch(/^(https?:|mailto:)/);
+    test.skip(href!.startsWith('mailto:'), 'mailto apply opens the mail client, which the browser cannot follow here');
+    expect(await cont.getAttribute('target')).toBe('_blank');
+    // Keep the employer's site off the network: answer the popup locally.
+    await page.context().route(href!, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>employer</p>' }));
+    const [popup] = await Promise.all([page.waitForEvent('popup'), cont.click()]);
+    expect(popup.url()).toBe(new URL(href!).toString());
+    await popup.close();
+
+    await expect(page.getByText('Did you finish applying?').filter({ visible: true }).first()).toBeVisible();
+    await assertNoHorizontalOverflow(page, 'job detail with the apply confirmation');
+    await expectTapTarget(page.getByRole('button', { name: 'Yes, I applied' }).filter({ visible: true }).first(), 'confirm: Yes, I applied');
+
+    // Not yet returns to the CTA, which is now the employer link itself.
+    await page.getByRole('button', { name: 'Not yet' }).filter({ visible: true }).first().click();
+    await expect(visibleApplyButton(page)).toBeVisible();
+    await expect(visibleApplyButton(page)).toHaveAttribute('href', href!);
   });
 
   test('/salary-guide: no overflow, H1 clear, footer reachable', async ({ page }) => {

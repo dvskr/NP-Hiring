@@ -128,7 +128,19 @@ describe('C-IDX — a profile is indexable only at the company floor', () => {
         expect(loader.length).toBeGreaterThan(0);
         expect(loader).not.toContain('notFound()');
         expect(loader).not.toMatch(/catch\s*\(/);
-        expect(loader).toContain('if (!resolvedName) return null;');
+        // Indexing audit L-01 renamed the resolver's result: it is now a route
+        // (a profile, or a redirect for an old slug), and absence is still null.
+        expect(loader).toContain('if (!route) return null;');
+        // The resolver the loader awaits holds to the same rule: no catch, no
+        // notFound(), so a failed lookup throws instead of caching a 404.
+        const resolver = page.slice(
+            page.indexOf('async function findCompanyByLegacySlug('),
+            page.indexOf('// ─── P1 #12 enrichment helpers'),
+        );
+        expect(resolver.length).toBeGreaterThan(0);
+        expect(resolver).toContain('async function resolveCompanyRoute(');
+        expect(resolver).not.toContain('notFound()');
+        expect(resolver).not.toMatch(/catch\s*\(/);
     });
 });
 
@@ -345,8 +357,10 @@ describe('CO-C5 — a city chip links only where the destination resolves', () =
     });
 
     it('a row with no state code is never linked', () => {
+        // A real town name: "Remote" is no longer a city at all (CQ-02,
+        // lib/locality.ts), so it would not reach the chip list.
         const rows = Array.from({ length: COMPANY_CITY_LINK_MIN_JOBS }, () =>
-            row({ city: 'Remote', stateCode: null }));
+            row({ city: 'Springfield', stateCode: null }));
         expect(selectCompanyCities(rows)[0].slug).toBeNull();
     });
 });

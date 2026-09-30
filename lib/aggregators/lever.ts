@@ -14,6 +14,8 @@ interface LeverPosting {
     level?: string;
     location?: string;
     team?: string;
+    /** Every location the posting lists, the primary one included. */
+    allLocations?: string[];
   };
   description: string;
   descriptionPlain: string;
@@ -23,6 +25,41 @@ interface LeverPosting {
   }>;
   additional?: string;
   additionalPlain?: string;
+  /** Lever's workplace field: 'remote' | 'hybrid' | 'on-site' | 'unspecified'. */
+  workplaceType?: string;
+  /** ISO 3166-1 alpha-2 code of the posting's country, or null when unknown. */
+  country?: string | null;
+}
+
+/**
+ * Where a Lever posting is: its location, and every other location it
+ * lists, joined with "; " with the primary first (the parser files the job
+ * under the first; the job page emits one Place per listed site); else
+ * "Remote" only when Lever's own workplaceType says remote; else "United
+ * States". A posting with no location is not proof of remote work (indexing
+ * audit GFJ-01, CS-03): the old "Remote" default published on-site jobs as
+ * TELECOMMUTE.
+ */
+export function leverLocation(posting: Pick<LeverPosting, 'categories' | 'workplaceType'>): string {
+  const listed = [posting.categories?.location, ...(posting.categories?.allLocations ?? [])]
+    .map((l) => (typeof l === 'string' ? l.trim() : ''))
+    .filter(Boolean);
+  const unique = [...new Set(listed)];
+  if (unique.length > 0) return unique.join('; ');
+  return posting.workplaceType?.trim().toLowerCase() === 'remote' ? 'Remote' : 'United States';
+}
+
+/**
+ * Lever's country code for the non-US gate (owner decision: US jobs only),
+ * or undefined. The code describes the primary location only, so a posting
+ * that lists several locations passes none: one of the others may be in the
+ * United States, and such a posting is a US job. The location string then
+ * decides.
+ */
+export function leverCountry(posting: Pick<LeverPosting, 'country' | 'categories'>): string | undefined {
+  if ((posting.categories?.allLocations?.length ?? 0) > 1) return undefined;
+  const code = typeof posting.country === 'string' ? posting.country.trim() : '';
+  return code || undefined;
 }
 
 export interface LeverJobRaw {
@@ -33,6 +70,16 @@ export interface LeverJobRaw {
   description: string;
   applyLink: string;
   job_type: string | null;
+  /**
+   * categories.commitment ("Full-time", "Part-time", "Contract", "Per
+   * Diem"): the structured employment type. The normalizer reads `jobType`;
+   * `job_type` alone was never read, so Lever's field was lost (H-03).
+   */
+  jobType?: string;
+  /** workplaceType ('remote' | 'hybrid' | 'on-site'): the structured work mode (GFJ-01). */
+  workMode?: string;
+  /** Lever's country code, for the non-US gate. */
+  country?: string;
   department: string | null;
   postedDate?: string;
 }
@@ -81,10 +128,13 @@ async function fetchCompanyPostings(companySlug: string): Promise<LeverJobRaw[]>
         externalId: `lever-${companySlug}-${posting.id}`,
         title: posting.text,
         company: companyName,
-        location: posting.categories?.location || 'Remote',
+        location: leverLocation(posting),
         description: descriptionParts.join('\n\n'),
         applyLink: posting.hostedUrl || posting.applyUrl,
         job_type: posting.categories?.commitment || null,
+        ...(posting.categories?.commitment ? { jobType: posting.categories.commitment } : {}),
+        ...(posting.workplaceType ? { workMode: posting.workplaceType } : {}),
+        ...(leverCountry(posting) ? { country: leverCountry(posting) } : {}),
         department: posting.categories?.department || null,
         postedDate: new Date(posting.createdAt).toISOString(),
       };

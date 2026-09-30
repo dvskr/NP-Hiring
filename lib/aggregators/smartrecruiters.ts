@@ -43,6 +43,8 @@ export interface SmartRecruitersJobRaw {
     applyLink: string;
     postedDate?: string;
     jobType?: string;
+    /** posting.location.country (ISO alpha-2, lower case), for the non-US gate. */
+    country?: string;
 }
 
 /** Shape of the detail endpoint response — only the fields we read. */
@@ -66,6 +68,28 @@ interface SmartRecruitersListResponse {
 
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Where a SmartRecruiters posting is: "City, Region", else "Remote" when the
+ * posting's own remote flag is set, else "United States" (the place is not
+ * known; it is never guessed).
+ */
+export function smartRecruitersLocation(posting: Pick<SmartRecruitersPosting, 'location'>): string {
+    const parts = [posting.location?.city, posting.location?.region]
+        .map((p) => (typeof p === 'string' ? p.trim() : ''))
+        .filter(Boolean);
+    if (parts.length > 0) return parts.join(', ');
+    return posting.location?.remote ? 'Remote' : 'United States';
+}
+
+/**
+ * The posting's country code (ISO alpha-2, lower case: "us", "ca") for the
+ * normalizer's non-US gate (owner decision: US jobs only), or undefined.
+ */
+export function smartRecruitersCountry(posting: Pick<SmartRecruitersPosting, 'location'>): string | undefined {
+    const code = typeof posting.location?.country === 'string' ? posting.location.country.trim() : '';
+    return code || undefined;
 }
 
 /**
@@ -133,13 +157,8 @@ async function fetchCompanyJobs(company: { slug: string; name: string }): Promis
 
                     const description = await fetchJobDescription(company.slug, posting.id);
 
-                    const locationParts = [
-                        posting.location?.city,
-                        posting.location?.region,
-                    ].filter(Boolean);
-                    const location = locationParts.length > 0
-                        ? locationParts.join(', ')
-                        : posting.location?.remote ? 'Remote' : 'United States';
+                    const location = smartRecruitersLocation(posting);
+                    const country = smartRecruitersCountry(posting);
 
                     allJobs.push({
                         externalId: `smartrecruiters-${company.slug}-${posting.id}`,
@@ -150,6 +169,7 @@ async function fetchCompanyJobs(company: { slug: string; name: string }): Promis
                         applyLink: `https://jobs.smartrecruiters.com/${company.slug}/${posting.id}`,
                         postedDate: posting.releasedDate || undefined,
                         jobType: posting.typeOfEmployment?.label || undefined,
+                        ...(country ? { country } : {}),
                     });
 
                     await sleep(100); // Rate limit between detail requests

@@ -177,9 +177,12 @@ export const fpRecoveryProbe = inngest.createFunction(
         // 4. If the re-probe says alive → resurrect.
         if (decision.alive) {
             await step.run('resurrect-job', async () => {
+                // A revival: the posting is public again, so its content
+                // counts as changed now (sitemap lastmod, "Last updated";
+                // indexing audit fixSoon 5).
                 await prisma.job.update({
                     where: { id: jobId },
-                    data: { isPublished: true },
+                    data: { isPublished: true, contentChangedAt: new Date() },
                 });
                 log.warn('FP-recovery resurrected a previously-flipped job', {
                     jobId,

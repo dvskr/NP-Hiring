@@ -36,6 +36,8 @@ import { withCronTracking } from '@/lib/cron/track';
 import { pingIndexNow } from '@/lib/indexnow';
 import { inngest } from '@/lib/inngest/client';
 import { brand } from '@/config/brand';
+import { analyzeDescriptionStub } from '@/lib/job-normalizer';
+import { contentChangeStamp } from '@/lib/job-content-change';
 
 export const maxDuration = 300;
 
@@ -82,6 +84,15 @@ function visibleLength(html: string): number {
 }
 
 async function enrichOne(job: ThinJob): Promise<{ ok: boolean; reason?: string; snapshot?: DescriptionSnapshot }> {
+  // A stub (the title plus "Employer: / Department: / Location:" metadata)
+  // is not a posting to expand: rewriting it would publish a long-form
+  // description the employer never wrote as a complete JobPosting
+  // (indexing audit GFJ-04). Stubs are rejected at ingest and held by
+  // scripts/indexing-fixes; they are never inflated here.
+  if (analyzeDescriptionStub(job.description, job.title).isStub) {
+    return { ok: false, reason: 'stub_description' };
+  }
+
   const userMessage = [
     `Role: ${job.title}`,
     `Employer: ${job.employer}`,
@@ -145,6 +156,9 @@ async function enrichOne(job: ThinJob): Promise<{ ok: boolean; reason?: string; 
       data: {
         description: aiResponse.content,
         lastEnrichedAt: new Date(),
+        // The rendered description changed: sitemap lastmod and the job
+        // page's "Last updated" line follow it (indexing audit CS-02).
+        ...contentChangeStamp({ description: job.description }, { description: aiResponse.content }),
       },
     });
   } catch (err) {

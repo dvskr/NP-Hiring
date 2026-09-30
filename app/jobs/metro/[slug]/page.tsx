@@ -7,6 +7,7 @@ import { MapPin, Building2, Shield, Users, Briefcase, ArrowRight, Bell, DollarSi
 import { prisma } from '@/lib/prisma';
 import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
+import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
 import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { formatCount, pluralize, truncateOnWord } from '@/lib/display-text';
 import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
@@ -85,8 +86,13 @@ const RULE = '1px solid rgba(0,0,0,0.06)';
 /** Decorative glyphs for the bento bullet tiles, in a fixed order. */
 const BULLET_GLYPHS = [Building2, Users, Shield, Video];
 
-/** Listing cards shown before the "view all" link. */
-const LISTING_TAKE = 10;
+/**
+ * Listing cards on the guide. The page is ISR (no ?page), so the cap is set
+ * above any metro's inventory: every job in scope is linked from this
+ * indexable page (M-01, TECH-10) instead of from a noindexed filtered
+ * /jobs?location view. A metro past the cap links its state hub for the rest.
+ */
+const LISTING_TAKE = 60;
 /**
  * GA4 item_list_name for the listings on every metro guide. The
  * view_item_list impression and each card's select_item read this one
@@ -147,6 +153,7 @@ async function getStateFigures(metro: MetroCity, now: Date): Promise<StateFigure
 async function getMetroListings(metro: MetroCity, now: Date): Promise<Job[]> {
   const rows = await prisma.job.findMany({
     where: canonicalBucketWhere({ ...PUBLISHED_LISTING_WHERE, ...metroScopeWhere(metro) }, now),
+    omit: JOB_LISTING_OMIT, // L-06: cards never need the multi-KB description body
     orderBy: BEST_SORT_ORDER_BY,
     take: LISTING_TAKE,
   });
@@ -247,10 +254,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    // METRO-M1: the metro indexes at 3 or more canonical jobs (the sitemap
-    // reads the same function); below that it stays rendered, linked and
-    // followed with a self canonical.
-    robots: shouldIndexMetro({ activeJobs: facts.total })
+    // METRO-M1 and CQ-08: the metro indexes at 3 or more distinct postings,
+    // at least one of them posted in the last 30 days (the sitemap reads the
+    // same function); below that it stays rendered, linked and followed with
+    // a self canonical.
+    robots: shouldIndexMetro({ activeJobs: facts.distinctPostings, postedLast30Days: facts.recency.last30 })
       ? { index: true, follow: true }
       : { index: false, follow: true },
     openGraph: {
@@ -465,13 +473,14 @@ export default async function MetroLandingPage({ params }: PageProps) {
         stats={buildHeroStats(metro, facts, state)}
         description={heroDeck}
         ctaLabel={`View All ${metro.city} Jobs`}
-        ctaHref={`/jobs?location=${encodeURIComponent(metro.city)}`}
+        // TECH-10: the primary CTA stays on this indexable guide.
+        ctaHref="#listings"
         secondaryCtaLabel="Set Alert"
         secondaryCtaHref={`/job-alerts?location=${encodeURIComponent(metro.city)}`}
       />
 
       {/* ═══ JOB LISTINGS ═══ */}
-      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px' }}>
+      <div id="listings" style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px', scrollMarginTop: '80px' }}>
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3">
@@ -481,7 +490,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 {facts.total >= 1 ? ` (${facts.total})` : ''}
               </h2>
               <Link
-                href={`/jobs?location=${encodeURIComponent(metro.city)}`}
+                href="/jobs"
                 className="text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ color: ACCENT }}
               >
@@ -495,7 +504,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
             {facts.total >= 1 && (
               <p style={{ fontSize: '12px', color: '#A09080', margin: '0 0 20px', lineHeight: 1.5 }}>
                 {nearbyCities.length > 0
-                  ? `This count includes ${metro.city} plus nearby ${nearbyCities.slice(0, 4).join(', ')}. Browsing by location filters to ${metro.city} itself.`
+                  ? `This count includes ${metro.city} plus nearby ${nearbyCities.slice(0, 4).join(', ')}.`
                   : `Live ${metro.city} listings, refreshed hourly.`}
               </p>
             )}
@@ -534,17 +543,20 @@ export default async function MetroLandingPage({ params }: PageProps) {
                   ))}
                 </div>
 
-                {/* Browse All CTA */}
-                <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                  <Link href={`/jobs?location=${encodeURIComponent(metro.city)}`} className="metro-cta" style={{
-                    padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px',
-                    background: ACCENT, color: '#fff', textDecoration: 'none',
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
-                  }}>
-                    View All Jobs in {metro.city} <ArrowRight size={16} />
-                  </Link>
-                </div>
+                {/* Past the cap only: the rest of the state's listings live on
+                    its indexable hub (TECH-10), never a filtered /jobs view. */}
+                {facts.total > recentJobs.length && stateLinksRender && (
+                  <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                    <Link href={`/jobs/state/${metro.stateSlug}`} className="metro-cta" style={{
+                      padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px',
+                      background: ACCENT, color: '#fff', textDecoration: 'none',
+                      display: 'inline-flex', alignItems: 'center', gap: '8px',
+                      boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
+                    }}>
+                      More Jobs in {metro.state} <ArrowRight size={16} />
+                    </Link>
+                  </div>
+                )}
               </>
             )}
           </div>

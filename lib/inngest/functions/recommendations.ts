@@ -8,7 +8,7 @@
  *      which applies:
  *        - Health filter   — drop likely-dead aggregator links.
  *        - License filter  — only jobs in candidate's licensed states OR remote.
- *        - Quota selection — guarantees Easy Apply + Direct Apply slots
+ *        - Quota selection — guarantees Easy Apply + employer site slots
  *                            so platform-revenue jobs always have visibility,
  *                            even when external scrapes score higher.
  *        - Diversity cap   — no employer hogs > ⌈totalSlots/3⌉ slots.

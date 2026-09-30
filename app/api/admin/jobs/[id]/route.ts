@@ -4,6 +4,7 @@ import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { inngest } from '@/lib/inngest/client';
 import { logger } from '@/lib/logger';
 import { logAudit } from '@/lib/audit-log';
+import { contentChangeStamp } from '@/lib/job-content-change';
 import {
     UPDATE_FIELD_KINDS,
     patchAuditAction,
@@ -123,10 +124,19 @@ export async function PATCH(
         }
 
         const fields = Object.keys(validated.data);
-        const data: Record<string, unknown> = {
+        const edits: Record<string, unknown> = {
             ...withOrderedSalary(validated.data),
             ...(typeof validated.data.isPublished === 'boolean' ? publishStateFields(validated.data.isPublished) : {}),
             ...(expiresAt !== undefined ? { expiresAt } : {}),
+        };
+        // contentChangedAt (sitemap lastmod, "Last updated") moves when the
+        // edit changes a rendered field or republishes the job; feature,
+        // verification and quality-score edits leave it alone.
+        const data: Record<string, unknown> = {
+            ...edits,
+            ...contentChangeStamp(prior, edits, {
+                revived: edits.isPublished === true && prior.isPublished === false,
+            }),
         };
 
         const job = await prisma.job.update({

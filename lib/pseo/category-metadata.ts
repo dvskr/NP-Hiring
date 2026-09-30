@@ -17,7 +17,7 @@
 import { brand } from '@/config/brand';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { formatCount, truncateOnWord } from '@/lib/display-text';
-import { shouldIndexListingPage } from './render-gate';
+import { shouldIndexCategoryLanding as shouldIndexLandingAtFloor } from './render-gate';
 import { CATEGORY_AXES } from './taxonomy-registry';
 
 /** SERP title budget before the layout template adds the brand suffix. */
@@ -116,20 +116,32 @@ export function buildCategoryLandingDescription(input: CategoryLandingDescriptio
   ]);
 }
 
+/** The landing facts the index rule reads (a ListingFacts satisfies it). */
+export interface LandingIndexFacts {
+  /** Distinct postings behind the landing (exact duplicate rows collapsed). */
+  distinctPostings: number;
+  distinctEmployers: number;
+}
+
 /**
- * Landing index rule (thin-spec 1, section 8.3; PLAN C.2): page 1 with at
- * least MIN_JOBS_FOR_INDEX canonical jobs. Read straight from render-gate's
- * shouldIndexListingPage, the one function the sitemap and the cross-link
- * gates also call for this page type, so the three can never drift.
+ * Landing index rule (indexing audit fixSoon 1 and CQ-06; PLAN C.2): page 1
+ * at the listing floor, 5 or more distinct postings from 3 or more
+ * employers. Read straight from render-gate's shouldIndexCategoryLanding,
+ * the function the aggregate-pseo cron stores on the 'category-landing'
+ * PseoStats row for the sitemap, so the page and the sitemap cannot drift.
  */
-export function shouldIndexCategoryLanding(totalJobs: number, page: number = 1): boolean {
-  return shouldIndexListingPage(totalJobs, page);
+export function shouldIndexCategoryLanding(facts: LandingIndexFacts, page: number = 1): boolean {
+  return shouldIndexLandingAtFloor({
+    activeJobs: facts.distinctPostings,
+    distinctEmployers: facts.distinctEmployers,
+    page,
+  });
 }
 
 /** Robots object for generateMetadata; noindex pages stay follow. */
 export function categoryLandingRobots(
-  totalJobs: number,
+  facts: LandingIndexFacts,
   page: number = 1,
 ): { index: boolean; follow: boolean } {
-  return { index: shouldIndexCategoryLanding(totalJobs, page), follow: true };
+  return { index: shouldIndexCategoryLanding(facts, page), follow: true };
 }

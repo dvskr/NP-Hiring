@@ -22,9 +22,17 @@ import {
     ALL_CATEGORY_SLUGS,
     JOBS_NAMESPACE_SEGMENTS,
 } from '@/lib/pseo/taxonomy-registry';
+import {
+    FOOTER_CANDIDATE_SLUGS,
+    selectFooterCategoryColumns,
+} from '@/lib/pseo/footer-category-links';
 
 const ROOT = process.cwd();
-const FOOTER = fs.readFileSync(path.join(ROOT, 'components/Footer.tsx'), 'utf8');
+// The category columns moved to lib/pseo/footer-category-links.ts (indexing
+// audit TECH-06 / M-02: chosen by the landing index verdict); the rest of
+// the footer is still literal in components/Footer.tsx.
+const FOOTER = fs.readFileSync(path.join(ROOT, 'components/Footer.tsx'), 'utf8')
+    + fs.readFileSync(path.join(ROOT, 'lib/pseo/footer-category-links.ts'), 'utf8');
 
 /** All string-literal hrefs in the footer source (linkColumns + JSX). */
 const extractHrefs = (src: string): string[] => {
@@ -34,9 +42,11 @@ const extractHrefs = (src: string): string[] => {
     return hrefs;
 };
 
-const jobsHrefs = extractHrefs(FOOTER).filter(
-    (h) => h === '/jobs' || h.startsWith('/jobs/'),
-);
+const jobsHrefs = [
+    ...extractHrefs(FOOTER),
+    // Every category link either column can ever carry.
+    ...FOOTER_CANDIDATE_SLUGS.map((slug) => `/jobs/${slug}`),
+].filter((h) => h === '/jobs' || h.startsWith('/jobs/'));
 
 describe('P0 #2 — footer must not link 410\'d donor category slugs', () => {
     it.each(['behavioral-health', 'substance-abuse', 'child-adolescent'])(
@@ -79,9 +89,10 @@ describe('P0 #2 — footer must not link 410\'d donor category slugs', () => {
         ).toEqual([]);
     });
 
-    it('the replacement specialty hubs are present', () => {
+    it('the replacement specialty hubs are present in the fallback columns', () => {
+        const hrefs = selectFooterCategoryColumns(null).flatMap((column) => column.links.map((link) => link.href));
         for (const slug of ['family-practice', 'primary-care', 'acute-care']) {
-            expect(FOOTER).toContain(`/jobs/${slug}`);
+            expect(hrefs).toContain(`/jobs/${slug}`);
         }
     });
 });

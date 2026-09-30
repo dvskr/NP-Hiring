@@ -4,10 +4,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ImmersiveImage from '@/components/ImmersiveImage';
 import { ArrowRight, Bell, BookOpen, ShieldCheck } from 'lucide-react';
-import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
-import { buildCategoryWhereClause, CATEGORY_EXTRA_OR, CATEGORY_FILTERS } from '@/lib/filters';
+import { landingBucketWhere } from '@/lib/pseo/landing-where';
+import { notFound } from 'next/navigation';
+import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
+import {
+  LISTING_PAGE_SIZE,
+  ListingPagination,
+  isPageOutOfRange,
+  listingCanonical,
+  listingPagePath,
+  pageOffset,
+  parseListingPage,
+  totalPagesFor,
+} from '@/lib/pseo/listing-pagination';
 import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { formatCount, pluralize } from '@/lib/display-text';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -52,7 +63,7 @@ import {
   labelSentence,
 } from '@/lib/pseo/category-metadata';
 import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
-import { MIN_JOBS_FOR_INDEX } from '@/lib/pseo/render-gate';
+import { MIN_JOBS_FOR_INDEX, shouldRenderCategoryLanding } from '@/lib/pseo/render-gate';
 import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 
 const clayCard: React.CSSProperties = { background: '#FFFFFF', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)' };
@@ -81,21 +92,8 @@ const MID = labelSentence(LABEL);
  */
 const LIST_NAME = `${NOUN} Jobs`;
 
-/**
- * The bucket for a category slug. Slugs without a legacy keyword entry gate
- * on the precomputed categoryTags column, so a sibling count can never
- * degrade to "all published jobs".
- */
-function categoryWhere(slug: string): Prisma.JobWhereInput {
-  const hasLegacyKeywordFilter =
-    (CATEGORY_FILTERS[slug]?.length ?? 0) > 0 || (CATEGORY_EXTRA_OR[slug]?.length ?? 0) > 0;
-  return hasLegacyKeywordFilter
-    ? buildCategoryWhereClause(slug)
-    : buildCategoryWhereClause(slug, { categoryTags: { has: slug } });
-}
-
 /** This page's bucket, composed onto the canonical predicate by every reader. */
-const LG_FILTER = categoryWhere(SLUG);
+const LG_FILTER = landingBucketWhere(SLUG);
 
 /** LAND-T3: the one facts load for this page, React cache()d on the scope key. */
 function getFacts() {
@@ -107,7 +105,7 @@ const ldJson = (obj: unknown): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 async function getJobs(skip = 0, take = 10) {
-  return prisma.job.findMany({ where: canonicalBucketWhere(LG_FILTER), orderBy: BEST_SORT_ORDER_BY, skip, take });
+  return prisma.job.findMany({ where: canonicalBucketWhere(LG_FILTER), omit: JOB_LISTING_OMIT, orderBy: BEST_SORT_ORDER_BY, skip, take });
 }
 
 /**
@@ -147,7 +145,7 @@ async function getRelatedCounts(): Promise<Map<string, number>> {
   const slugs = EXPLORE_CARDS.flatMap((card) => { const slug = cardSlug(card.href); return slug ? [slug] : []; });
   const rows = await Promise.all(slugs.map(async (slug) => {
     try {
-      return [slug, await prisma.job.count({ where: canonicalBucketWhere(categoryWhere(slug)) })] as const;
+      return [slug, await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(slug)) })] as const;
     } catch (error) {
       console.error(`[jobs/${SLUG}] sibling count failed for "${slug}":`, error);
       return [slug, null] as const;
@@ -207,7 +205,10 @@ function Band({ id, eyebrow, title, background, children }: {
  */
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [facts, params] = await Promise.all([getFacts(), searchParams]);
-  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
+  const page = parseListingPage(params.page);
+  // TECH-09: a page past the last one is a 404, never an empty 200.
+  // TECH-06: 0 canonical jobs is a 404, never an empty "0 positions" 200.
+  if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();
   const totalJobs = facts.total;
   const title = buildCategoryLandingTitle({ role: NOUN, totalJobs });
   const description = buildCategoryLandingDescription({
@@ -234,8 +235,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         width: 1200, height: 630, alt: `${NOUN} Jobs`,
       }],
     },
-    alternates: { canonical: `${brand.baseUrl}/jobs/lgbtq` },
-    robots: categoryLandingRobots(totalJobs, page),
+    alternates: { canonical: listingCanonical('/jobs/lgbtq', page) },
+    robots: categoryLandingRobots(facts, page),
   };
 }
 
@@ -243,11 +244,14 @@ interface PageProps { searchParams: Promise<{ page?: string }>; }
 
 export default async function LgbtqPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
-  const limit = 10;
-  const skip = (page - 1) * limit;
+  const page = parseListingPage(params.page);
+  const limit = LISTING_PAGE_SIZE;
+  const skip = pageOffset(page, limit);
 
   const [facts, relatedCounts] = await Promise.all([getFacts(), getRelatedCounts()]);
+  // TECH-09: a page past the last one is a 404.
+  if (isPageOutOfRange(page, facts.total, limit) || !shouldRenderCategoryLanding(facts.total)) notFound();
+  const totalPages = totalPagesFor(facts.total, limit);
   const jobs = facts.total > 0 ? await getJobs(skip, limit) : [];
 
   // Data bands, each rendered only when its own builder returns something.
@@ -306,13 +310,13 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
         ]}
         description={`Gender-affirming and LGBTQ+-focused ${brand.niche.short} positions with inclusive, culturally competent care.`}
         ctaLabel="Browse LGBTQ+ Jobs"
-        ctaHref="/jobs?category=lgbtq"
+        ctaHref="#listings"
         secondaryCtaLabel="Set Alert"
         secondaryCtaHref="/job-alerts"
       />
 
       {/* 2. JOB LISTINGS */}
-      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px' }}>
+      <div id="listings" style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px', scrollMarginTop: '80px' }}>
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>LGBTQ+ Affirming Positions ({facts.total})</h2>
@@ -347,11 +351,12 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
               </div>
             )}
 
-            {jobs.length > 0 && (
+            {page < totalPages && (
               <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                <Link href="/jobs?category=lgbtq" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All LGBTQ+ Jobs <ArrowRight size={16} /></Link>
+                <Link href={listingPagePath('/jobs/lgbtq', page + 1)} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>More LGBTQ+ Jobs <ArrowRight size={16} /></Link>
               </div>
             )}
+            <ListingPagination basePath="/jobs/lgbtq" page={page} totalPages={totalPages} label="LGBTQ+ affirming NP jobs" />
           </div>
           {/* Sidebar: the page's ONE alert CTA (T0-5). The employer list moved
               into the market snapshot band below. */}
@@ -465,6 +470,8 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
             {EXPLORE_CARDS.map(c => {
               const slug = cardSlug(c.href);
               const count = slug ? relatedCounts.get(slug) : undefined;
+              // TECH-06: a landing at 0 jobs answers 404, so its card is not linked.
+              if (count === 0) return null;
               return (
                 <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center', display: 'block' }}>
                   {c.icon && <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />}

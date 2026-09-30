@@ -37,16 +37,51 @@
  * forms from config/niche/relevance.ts (' fnp', '(crna', '/cnm', …).
  * A bare short token like 'prn' or 'cns' is NEVER safe ('aprn',
  * "CNS depressants") — always anchor it on at least one side.
+ *
+ * ── ONE PREDICATE PER CATEGORY (indexing audit CQ-05, CQ-14, 2026-09) ──
+ * Remote, telehealth, the job types and new grad are decided by structured
+ * fields (lib/pseo/category-structural.ts, lib/pseo/new-grad-clause.ts),
+ * never by description keywords: 'remote' is the fully remote work mode,
+ * the job types read jobType (title keywords only when jobType is blank),
+ * and LGBTQ+ and veterans read the title and the employer's population
+ * only. Description matching that remains (community-health, va, 1099)
+ * runs on the description with its EEO boilerplate removed.
+ * categoryPredicate() below is THE clause every page, sitemap, cron verdict
+ * and in-memory tally counts a category with; withTagFallback is its
+ * historical name and returns the same clause.
  */
 
+import type { Prisma } from '@prisma/client';
 import { CATEGORY_AXES } from './taxonomy-registry';
+import {
+    FULLY_REMOTE_WHERE,
+    isFullyRemote,
+    isJobTypeCategory,
+    jobTypeCategoriesOf,
+    jobTypeCategoryWhere,
+    stripEeoBoilerplate,
+    titleKeywordWhere,
+} from './category-structural';
+import { newGradWhereClause } from './new-grad-clause';
 
 export interface ClassifiableJob {
     title: string;
     description?: string | null;
     descriptionSummary?: string | null;
     jobType?: string | null;
+    /** Fully remote only together with isHybrid !== true (reconcileWorkMode keeps them exclusive). */
     isRemote?: boolean | null;
+    isHybrid?: boolean | null;
+    /** Employer "open to new grads" flag (a structured new grad signal). */
+    newGradFriendly?: boolean | null;
+    /** Structured minimum years; 0 is the "New grad accepted" bucket. */
+    minYearsExperience?: number | null;
+    /**
+     * The employer name. Only the VA rule reads it: a Department of Veterans
+     * Affairs posting is a VA job whatever its description says (the legacy
+     * /jobs/va filter matched the employer the same way).
+     */
+    employer?: string | null;
     setting?: string | null;        // populated for employer-posted jobs
     population?: string | null;     // populated for employer-posted jobs
     /**
@@ -153,6 +188,7 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
     va: {
         keywords: ['VA medical center', 'veterans affairs', 'department of veterans', 'VHA'],
         matchDescription: true,
+        structural: (j) => isVaEmployer(j.employer),
     },
     correctional: {
         keywords: ['correctional', 'corrections', 'prison', 'forensic', 'jail', 'detention', 'incarcerat'],
@@ -160,48 +196,34 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
     },
 
     // ── Modality (job can simultaneously be remote AND telehealth) ──
-    remote: {
-        keywords: ['remote', 'work from home', 'WFH'],
-        structural: (j) => j.isRemote === true,
-    },
+    // 'remote' has no keyword rule: it is the fully remote work mode
+    // (isFullyRemote, CQ-05). "Hybrid role, 1 to 2 days remotely", "remote
+    // patient monitoring" and "remote and austere environments" all used to
+    // tag it. See the structural branch in classifyJobTags.
     telehealth: {
+        // Title only. categoryPredicate('telehealth') also requires the fully
+        // remote work mode at query time, so a stale isRemote on the stored
+        // tag can never put an on-site job on a telehealth page.
         keywords: ['telehealth', 'telemedicine', 'telepsychiatry', 'telepsych', 'virtual care'],
         matchDescription: false,
     },
     travel: {
-        keywords: ['travel position', 'travel assignment', 'travel nurse practitioner', 'travel np', 'travel crna'],
+        keywords: [
+            'travel position', 'travel assignment', 'travel nurse practitioner', 'travel np', 'travel crna',
+            'traveling nurse practitioner', 'traveling np', 'travel contract',
+        ],
         matchDescription: false,
     },
 
-    // ── Job type (mutually exclusive in spirit) ──
-    'full-time': {
-        keywords: ['full-time', 'full time'],
-        structural: (j) =>
-            (j.jobType || '').toLowerCase().includes('full'),
-    },
-    'part-time': {
-        keywords: ['part-time', 'part time'],
-        structural: (j) =>
-            (j.jobType || '').toLowerCase().includes('part'),
-        excludeIfAlsoTagged: ['full-time'],
-    },
-    contract: {
-        keywords: ['contract position', 'temp-to-perm', 'temporary assignment'],
-        structural: (j) =>
-            (j.jobType || '').toLowerCase().includes('contract'),
-    },
-    'per-diem': {
-        // 'PRN' must stay boundary-anchored: bare 'prn' is a substring of
-        // 'APRN', which appears in virtually every posting on this board.
-        keywords: ['per diem', 'per-diem', ' prn', '(prn', '/prn', '-prn'],
-        structural: (j) =>
-            (j.jobType || '').toLowerCase().includes('per diem'),
-    },
-    'locum-tenens': {
-        keywords: ['locum tenens', 'locums'],
-    },
+    // ── Job type: full-time, part-time, contract, per-diem and locum-tenens
+    // are decided by lib/pseo/category-structural.ts jobTypeCategoriesOf
+    // (jobType first; title keywords only when jobType is blank), never by
+    // a description keyword ("Full-time employees qualify for benefits" used
+    // to strip real part-time jobs of their tag).
     '1099': {
-        keywords: ['1099', 'independent contractor', 'IC position'],
+        // ' ic position' stays anchored: a bare 'ic position' matched
+        // "clinic position" and "medic position".
+        keywords: ['1099', 'independent contractor', ' ic position'],
         matchDescription: true,
     },
 
@@ -348,8 +370,16 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
 
     // ── Experience tier (mutually exclusive) ──
     'new-grad': {
-        keywords: ['new grad', 'new graduate', 'recent graduate', 'fellowship', 'residency'],
+        // Aligned with lib/pseo/new-grad-clause.ts, the predicate the pages
+        // count with: bare 'fellowship' and 'residency' matched post-graduate
+        // APP fellowships that require years of NP experience. The structured
+        // signals (newGradFriendly, a 0-year minimum) tag it too.
+        keywords: [
+            'new grad', 'new graduate', 'recent graduate',
+            'fellowship program', 'residency program', 'training program',
+        ],
         matchDescription: false,
+        structural: (j) => j.newGradFriendly === true || j.minYearsExperience === 0,
     },
     'entry-level': {
         keywords: ['entry level', 'entry-level'],
@@ -376,19 +406,34 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
         keywords: ['geriatric', 'geropsych', 'elderly', 'senior living', 'nursing home'],
         matchDescription: false,
     },
+    // Title and the employer-declared population only (CQ-05): "gender
+    // identity" and "protected veterans" sit in nearly every EEO statement,
+    // which is how Nashville read "LGBTQ+ (3)".
     lgbtq: {
-        keywords: ['LGBTQ', 'transgender', 'gender-affirming', 'gender affirming', 'gender identity', 'affirming care'],
-        matchDescription: true,
+        keywords: ['LGBTQ', 'transgender', 'gender-affirming', 'gender affirming'],
+        matchDescription: false,
     },
     veterans: {
         keywords: ['veterans', 'PTSD', 'military mental health'],
-        matchDescription: true,
+        matchDescription: false,
         excludeIfAlsoTagged: ['va'], // VA is more specific than generic "veterans"
     },
 };
 
 function matchesKeyword(haystack: string, keyword: string): boolean {
     return haystack.toLowerCase().includes(keyword.toLowerCase());
+}
+
+/** The employer is the Department of Veterans Affairs (the legacy /jobs/va employer test). */
+function isVaEmployer(employer: string | null | undefined): boolean {
+    const name = (employer ?? '').trim().toLowerCase();
+    return name.includes('veterans affairs') || name.includes('department of veterans')
+        || /\bvha\b/.test(name) || name.startsWith('va ');
+}
+
+/** Rules whose tag is decided outside RULES (category-structural.ts). */
+function isStructuralOnlySlug(slug: CategoryTag): boolean {
+    return slug === 'remote' || isJobTypeCategory(slug);
 }
 
 // ── Explicit employer-declared fields (2026-07 P1 #20) ──────────────────────
@@ -499,11 +544,17 @@ function explicitTags(job: ClassifiableJob): {
  */
 export function classifyJobTags(job: ClassifiableJob): CategoryTag[] {
     const title = job.title || '';
-    const description = job.description || job.descriptionSummary || '';
+    // Description rules never read EEO or legal boilerplate (CQ-05).
+    const description = stripEeoBoilerplate(job.description || job.descriptionSummary || '');
     const titleLower = title.toLowerCase();
     const descLower = description.toLowerCase();
 
     const tagged = new Set<CategoryTag>();
+
+    // Structured categories (lib/pseo/category-structural.ts): the fully
+    // remote work mode and the job types. They take no keyword pass below.
+    if (isFullyRemote(job)) tagged.add('remote');
+    for (const slug of jobTypeCategoriesOf(job)) tagged.add(slug);
 
     // Explicit employer-declared fields (P1 #20). An explicit specialty
     // REPLACES substring guessing across the whole specialty/APRN axis —
@@ -523,6 +574,7 @@ export function classifyJobTags(job: ClassifiableJob): CategoryTag[] {
             && EMPLOYER_SPECIALTY_SLUG_SET.has(slug)) {
             continue;
         }
+        if (isStructuralOnlySlug(slug)) continue;
 
         const rule = RULES[slug];
         if (!rule) continue;
@@ -565,45 +617,72 @@ export function classifyJobTags(job: ClassifiableJob): CategoryTag[] {
 }
 
 /**
- * Build a Prisma WHERE fragment that matches via the legacy keyword OR
- * matchers. Used as the backward-compat fallback for buildWhere callers
- * during the deploy → backfill window: rows with empty `categoryTags`
- * (i.e. not yet backfilled) still render correctly.
- *
- * Once `scripts/backfill-category-tags.ts --apply` has populated every
- * row, this fallback is dead code and can be removed in a follow-up PR.
- *
- * Note: the classifier's `excludeIfAlsoTagged` mutual-exclusion isn't
- * replicable at query time — pre-backfill pages may slightly over-match
- * across taxonomies, but that's strictly better than rendering empty
- * during the gap. Post-backfill, the precomputed tags enforce exclusion.
- *
- * Space-anchored keywords (' fnp', '(crna', …) under-match at query time
- * (Prisma `contains` can't see the classifier's haystack padding) — also
- * acceptable for the same reason: the fallback arm only exists for
- * not-yet-backfilled rows.
+ * The legacy keyword OR for rows whose categoryTags is still empty (not yet
+ * tagged by ingest or scripts/indexing-fixes/retag-category-tags.ts).
+ * Title-only rules use the padded title twin (titleKeywordWhere), so the
+ * query matches exactly the titles the classifier matches; description
+ * rules keep a plain contains (Prisma cannot strip boilerplate), which is
+ * acceptable because the arm only exists for untagged rows.
  */
 function legacyKeywordOr(tag: CategoryTag): Record<string, unknown>[] {
     const rule = RULES[tag];
-    if (!rule) return [];
-    const matchDesc = rule.matchDescription !== false;
-    return rule.keywords.flatMap((kw) =>
-        matchDesc
-            ? [
-                { title: { contains: kw, mode: 'insensitive' } },
-                { description: { contains: kw, mode: 'insensitive' } },
-            ]
-            : [{ title: { contains: kw, mode: 'insensitive' } }],
-    );
+    if (!rule || rule.keywords.length === 0) return [];
+    if (rule.matchDescription === false) return [titleKeywordWhere(rule.keywords) as Record<string, unknown>];
+    return rule.keywords.flatMap((kw) => [
+        { title: { contains: kw, mode: 'insensitive' } },
+        { description: { contains: kw, mode: 'insensitive' } },
+    ]);
 }
 
 /**
- * Returns a Prisma WHERE fragment to spread into a buildWhere result.
- * The fragment matches:
- *   • rows with `categoryTags has '<tag>'` (post-backfill, primary path), OR
- *   • rows with empty `categoryTags` AND any legacy keyword/structural match
- *     (pre-backfill fallback so pages don't render empty during the deploy
- *      window).
+ * The stored-tag clause: rows tagged `tag`, or untagged rows that match the
+ * legacy keywords. The predicate of every keyword category; the structured
+ * categories wrap or replace it in categoryPredicate.
+ */
+export function tagOrLegacyFallback(tag: CategoryTag): Record<string, unknown> {
+    const legacy = legacyKeywordOr(tag);
+    return {
+        OR: [
+            { categoryTags: { has: tag } },
+            ...(legacy.length > 0
+                ? [{
+                    AND: [
+                        { categoryTags: { isEmpty: true } },
+                        legacy.length === 1 ? legacy[0] : { OR: legacy },
+                    ],
+                }]
+                : []),
+        ],
+    };
+}
+
+/**
+ * THE predicate for a category (CQ-14, fixSoon 11): the clause the landing
+ * (`/jobs/{slug}`), its state and city pages, the aggregate-pseo verdicts,
+ * the sitemaps (through those verdicts), the /jobs ?category= filter and the
+ * in-memory category tallies (lib/pseo/category-row-match.ts) all count
+ * with. Always a single top-level `OR` key, so callers can keep spreading it
+ * beside `isPublished`, `state` and `city`.
+ *
+ *   remote       the fully remote work mode (isRemote and not isHybrid);
+ *   telehealth   the telehealth tag AND the fully remote work mode;
+ *   job types    jobType, else title keywords (category-structural.ts);
+ *   new-grad     lib/pseo/new-grad-clause.ts (the /jobs facet clause);
+ *   every other  the stored tag, with the legacy fallback for untagged rows.
+ */
+export function categoryPredicate(tag: CategoryTag): Record<string, unknown> {
+    if (tag === 'remote') return { OR: [FULLY_REMOTE_WHERE] };
+    if (tag === 'telehealth') return { OR: [{ AND: [tagOrLegacyFallback('telehealth'), FULLY_REMOTE_WHERE] }] };
+    if (isJobTypeCategory(tag)) return { OR: [jobTypeCategoryWhere(tag)] };
+    if (tag === 'new-grad') return { OR: [newGradWhereClause()] };
+    return tagOrLegacyFallback(tag);
+}
+
+/**
+ * The category predicate under its historical name (it used to be the tag
+ * plus legacy fallback for every slug). Kept so the setting x state and
+ * category x city configs, the widget, the salary guide tables and the /jobs
+ * specialty facet all read categoryPredicate without a code change.
  *
  * Usage:
  *   buildWhere: (stateName) => ({
@@ -613,38 +692,10 @@ function legacyKeywordOr(tag: CategoryTag): Record<string, unknown>[] {
  *   })
  */
 export function withTagFallback(tag: CategoryTag): Record<string, unknown> {
-    const rule = RULES[tag];
-    const legacyConditions: Record<string, unknown>[] = [];
-    // Legacy keyword matchers (title + optionally description).
-    const kw = legacyKeywordOr(tag);
-    if (kw.length > 0) legacyConditions.push({ OR: kw });
-    // Structural fallbacks for tags whose primary classifier signal is a
-    // structured field (e.g. remote → isRemote=true; full-time → jobType
-    // contains 'Full'). These are the only legacy conditions we can express
-    // in a Prisma where without re-running the classifier per row.
-    if (tag === 'remote') legacyConditions.push({ isRemote: true });
-    if (tag === 'full-time') legacyConditions.push({ jobType: { contains: 'Full', mode: 'insensitive' } });
-    if (tag === 'part-time') legacyConditions.push({ jobType: { contains: 'Part', mode: 'insensitive' } });
-    if (tag === 'contract') legacyConditions.push({ jobType: { contains: 'Contract', mode: 'insensitive' } });
-    if (tag === 'per-diem') legacyConditions.push({ jobType: { contains: 'Per Diem', mode: 'insensitive' } });
+    return categoryPredicate(tag);
+}
 
-    // Suppress unused warning for `rule` if classifier rule is missing for
-    // an exotic tag — we still emit a tag-only path so post-backfill works.
-    void rule;
-
-    return {
-        OR: [
-            { categoryTags: { has: tag } },
-            ...(legacyConditions.length > 0
-                ? [{
-                    AND: [
-                        { categoryTags: { isEmpty: true } },
-                        ...(legacyConditions.length === 1
-                            ? legacyConditions
-                            : [{ OR: legacyConditions }]),
-                    ],
-                }]
-                : []),
-        ],
-    };
+/** categoryPredicate typed for Prisma callers. */
+export function categoryPredicateWhere(tag: CategoryTag): Prisma.JobWhereInput {
+    return categoryPredicate(tag) as Prisma.JobWhereInput;
 }

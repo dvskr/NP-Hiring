@@ -45,7 +45,8 @@ function makeJob(overrides: Partial<SchemaJob> = {}): SchemaJob {
     title: 'Nurse Practitioner — Primary Care',
     employer: 'Acme Health',
     slug: 'nurse-practitioner-primary-care-fixture-job-1',
-    description: 'Full-time nurse practitioner role in a busy primary care clinic.',
+    // Real prose: GFJ-04 emits no JobPosting for a stub description.
+    description: 'Full-time nurse practitioner role in a busy primary care clinic. You will see adult patients, manage chronic conditions and work with a supervising physician.',
     descriptionSummary: null,
     city: 'Austin',
     state: 'Texas',
@@ -68,6 +69,17 @@ function makeJob(overrides: Partial<SchemaJob> = {}): SchemaJob {
     companyLogoUrl: null,
     ...overrides,
   } as unknown as SchemaJob;
+}
+
+/**
+ * The builder returns null for a job with neither a place nor a verified
+ * remote arrangement (indexing audit GFJ-02). Every fixture here names a
+ * place or is verified remote, so a null is a test failure.
+ */
+function schemaFor(job: SchemaJob): Record<string, unknown> {
+  const schema = buildJobPostingSchema(job);
+  if (!schema) throw new Error("expected a JobPosting for this fixture");
+  return schema;
 }
 
 /* ─── 7-i: SOC / occupationalCategory gating ────────────────────────────── */
@@ -144,12 +156,12 @@ describe('7-i — occupationalCategory is gated, never hardcoded', () => {
   });
 
   it('schema object omits occupationalCategory for a psychiatrist row', () => {
-    const schema = buildJobPostingSchema(makeJob({ title: 'Psychiatrist' }));
+    const schema = schemaFor(makeJob({ title: 'Psychiatrist' }));
     expect('occupationalCategory' in schema).toBe(false);
   });
 
   it('schema object carries the NP code for an NP row', () => {
-    const schema = buildJobPostingSchema(makeJob());
+    const schema = schemaFor(makeJob());
     expect(schema.occupationalCategory).toBe('29-1171.00');
   });
 });
@@ -158,21 +170,30 @@ describe('7-i — occupationalCategory is gated, never hardcoded', () => {
 
 describe('7-ii — TELECOMMUTE means 100% remote, never hybrid', () => {
   it('fully remote: TELECOMMUTE + applicantLocationRequirements, no physical jobLocation', () => {
-    const schema = buildJobPostingSchema(makeJob({ isRemote: true, isHybrid: false }));
+    // Indexing audit GFJ-01: the flags alone no longer earn TELECOMMUTE. The
+    // job must also be Remote by mode, remote in its location string, and
+    // not described as on-site or hybrid (isVerifiedFullyRemote).
+    const schema = schemaFor(makeJob({
+      isRemote: true,
+      isHybrid: false,
+      mode: 'Remote',
+      location: 'Remote',
+      description: 'This is a fully remote telehealth position. You will see adult patients by video, manage chronic conditions and document visits in the EHR.',
+    }));
     expect(schema.jobLocationType).toBe('TELECOMMUTE');
     expect(schema.jobLocation).toBeUndefined();
     expect(schema.applicantLocationRequirements).toBeDefined();
   });
 
   it('hybrid: physical jobLocation only — never TELECOMMUTE (the inverted-guidance bug)', () => {
-    const schema = buildJobPostingSchema(makeJob({ isRemote: true, isHybrid: true }));
+    const schema = schemaFor(makeJob({ isRemote: true, isHybrid: true }));
     expect('jobLocationType' in schema).toBe(false);
     expect('applicantLocationRequirements' in schema).toBe(false);
     expect(schema.jobLocation).toBeDefined();
   });
 
   it('onsite: physical jobLocation, no TELECOMMUTE', () => {
-    const schema = buildJobPostingSchema(makeJob({ isRemote: false, isHybrid: false }));
+    const schema = schemaFor(makeJob({ isRemote: false, isHybrid: false }));
     expect('jobLocationType' in schema).toBe(false);
     expect(schema.jobLocation).toBeDefined();
   });
@@ -192,7 +213,7 @@ function salaryValue(schema: Record<string, unknown>): SalaryValue {
 
 describe('7-iii — baseSalary carries the honest source unit', () => {
   it('hourly rows emit HOUR with the raw hourly values, not the annualization', () => {
-    const schema = buildJobPostingSchema(makeJob({
+    const schema = schemaFor(makeJob({
       salaryPeriod: 'hourly', minSalary: 60, maxSalary: 75,
       normalizedMinSalary: 124800, normalizedMaxSalary: 156000,
     }));
@@ -200,7 +221,7 @@ describe('7-iii — baseSalary carries the honest source unit', () => {
   });
 
   it('monthly rows emit MONTH with the raw monthly value (the $40k/month case)', () => {
-    const schema = buildJobPostingSchema(makeJob({
+    const schema = schemaFor(makeJob({
       salaryPeriod: 'monthly', minSalary: 40000, maxSalary: null,
       normalizedMinSalary: 480000, normalizedMaxSalary: 480000,
     }));
@@ -208,7 +229,7 @@ describe('7-iii — baseSalary carries the honest source unit', () => {
   });
 
   it('biweekly rows convert the per-paycheck value to per-month (× 26/12), not a bare clamp', () => {
-    const schema = buildJobPostingSchema(makeJob({
+    const schema = schemaFor(makeJob({
       salaryPeriod: 'biweekly', minSalary: 5000, maxSalary: 6000,
     }));
     // 5000 × 26 / 12 = 10833.33… → rounded; the old clamp emitted 5000 as a
@@ -221,7 +242,7 @@ describe('7-iii — baseSalary carries the honest source unit', () => {
   });
 
   it('annual rows prefer the normalized figures with YEAR', () => {
-    const schema = buildJobPostingSchema(makeJob({
+    const schema = schemaFor(makeJob({
       salaryPeriod: 'yearly', minSalary: 120000, maxSalary: 150000,
       normalizedMinSalary: 120000, normalizedMaxSalary: 150000,
     }));
@@ -229,7 +250,7 @@ describe('7-iii — baseSalary carries the honest source unit', () => {
   });
 
   it('no salary at all → baseSalary omitted', () => {
-    const schema = buildJobPostingSchema(makeJob());
+    const schema = schemaFor(makeJob());
     expect('baseSalary' in schema).toBe(false);
   });
 
@@ -240,24 +261,24 @@ describe('7-iii — baseSalary carries the honest source unit', () => {
   // $35,000 emitted as $35,000/year — the 7-iii wrong-unit defect recreated
   // for this row class). Omission beats wrong.
   it("salaryPeriod='unknown' with raw-only values → baseSalary omitted, never raw + YEAR", () => {
-    const schema = buildJobPostingSchema(makeJob({
+    const schema = schemaFor(makeJob({
       salaryPeriod: 'unknown', minSalary: 35000, maxSalary: 45000,
       normalizedMinSalary: null, normalizedMaxSalary: null,
     }));
     expect('baseSalary' in schema).toBe(false);
   });
 
-  it("salaryPeriod='unknown' emits ONLY annualized normalized values under YEAR (defensive)", () => {
-    // The pipeline withholds normalized values for unknown periods today; if
-    // that ever changes, the annualized figures are the only ones honest
-    // under a YEAR unit — the raw bounds must still never leak.
-    const schema = buildJobPostingSchema(makeJob({
+  it("salaryPeriod='unknown' emits no baseSalary even with normalized values (defensive)", () => {
+    // The pipeline withholds normalized values for unknown periods today. If
+    // that ever changes, the page's pay badge still shows no figure for an
+    // unknown cadence (formatSalary returns ''), and the markup states only
+    // pay the page shows (indexing audit 2026-09: every JobPosting field
+    // matches the visible page). The raw bounds never leak either way.
+    const schema = schemaFor(makeJob({
       salaryPeriod: 'unknown', minSalary: 35000, maxSalary: 45000,
       normalizedMinSalary: 120000, normalizedMaxSalary: 150000,
     }));
-    expect(salaryValue(schema)).toMatchObject({
-      minValue: 120000, maxValue: 150000, unitText: 'YEAR',
-    });
+    expect('baseSalary' in schema).toBe(false);
   });
 });
 
@@ -427,6 +448,10 @@ describe('7-vii — /post-job renders an h1', () => {
 
 describe('backfill-remote-flags script is written check-first', () => {
   const script = read('scripts/backfill-remote-flags.ts');
+  // GFJ-01: the planner moved to lib/work-mode-integrity.ts so the daily
+  // job-posting-integrity cron runs the same check as --check. The
+  // derivation pins below read it there; the script only delegates.
+  const planner = read('lib/work-mode-integrity.ts');
 
   it('dry-run is the default; writes require an explicit --apply', () => {
     expect(script).toContain("process.argv.includes('--apply')");
@@ -434,15 +459,29 @@ describe('backfill-remote-flags script is written check-first', () => {
     expect(script).toMatch(/DRY RUN — nothing was written/);
   });
 
+  it('the script plans through the shared lib planner', () => {
+    expect(script).toContain("from '@/lib/work-mode-integrity'");
+    expect(script).toContain('return planWorkModeRepair(row);');
+  });
+
+  it('every --apply write stamps contentChangedAt, so index-urls resubmits the corrected page', () => {
+    // mode, isRemote and isHybrid are rendered fields (lib/job-content-change.ts).
+    expect(read('lib/job-content-change.ts')).toMatch(/RENDERED_JOB_FIELDS = \[[\s\S]*?'isRemote'[\s\S]*?\]/);
+    expect(script).toContain('const contentChangedAt = new Date();');
+    expect(script).toContain('data: { mode: r.newMode, isRemote: r.newIsRemote, isHybrid: r.newIsHybrid, contentChangedAt },');
+    // The only job write in the script is that one.
+    expect(script.match(/prisma\.job\.update(?:Many)?\(/g) ?? []).toHaveLength(1);
+  });
+
   it('re-derives through the SAME shared functions the ingest path uses', () => {
-    expect(script).toContain("from '@/lib/location-parser'");
-    expect(script).toContain('reconcileWorkMode');
-    expect(script).toContain('detectMode');
+    expect(planner).toContain("from './location-parser'");
+    expect(planner).toContain('reconcileWorkMode');
+    expect(planner).toContain('detectMode');
   });
 
   it('employer-declared modes are passed as structuredMode (never overridden by inference)', () => {
-    expect(script).toMatch(/STRUCTURED_MODE_SOURCE_TYPES/);
-    expect(script).toContain("'employer'");
+    expect(planner).toMatch(/STRUCTURED_MODE_SOURCE_TYPES/);
+    expect(planner).toContain("'employer'");
   });
 
   it('planRow scans the SAME text surface as ingest: title + description + LOCATION', () => {
@@ -451,7 +490,7 @@ describe('backfill-remote-flags script is written check-first', () => {
     // the location derives null where ingest derives a mode, so --apply
     // writes values a renewal re-ingest immediately reverts (flip-flop) —
     // and the post-apply self-verify reuses planRow, so it cannot see it.
-    expect(script).toMatch(
+    expect(planner).toMatch(
       /detectMode\(`\$\{row\.title\} \$\{row\.description \|\| ''\} \$\{row\.location \|\| ''\}`\)/,
     );
   });

@@ -56,7 +56,8 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 
 ### Guides
 - /resources/1099-vs-w2: 1099 vs W-2 for nurse practitioners
-- /resources/fpa-guide: Full practice authority by state
+- /resources/fpa-guide: What full practice authority means
+- /scope-of-practice: Practice authority rules by state
 - /resources/private-practice-guide: Starting an NP private practice
 
 ### For employers

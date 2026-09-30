@@ -5,6 +5,7 @@ import CategoryCityPage, {
   ALL_CATEGORY_CONFIGS,
 } from '@/lib/pseo/category-city-template';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
+import { parseListingPage } from '@/lib/pseo/listing-pagination';
 
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
 export const revalidate = 3600;
@@ -19,13 +20,13 @@ interface Props {
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
   const sp = await searchParams;
-  return buildCategoryCityMetadata(CATEGORY_KEY, slug, parseInt(sp.page || '1'));
+  return buildCategoryCityMetadata(CATEGORY_KEY, slug, parseListingPage(sp.page));
 }
 
 export default async function RemoteCityJobsPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const sp = await searchParams;
-  const page = Math.max(1, parseInt(sp.page || '1'));
+  const page = parseListingPage(sp.page);
 
   if (!getCityBySlug(slug)) notFound();
 

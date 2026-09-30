@@ -1,6 +1,7 @@
 import { brand } from '@/config/brand';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isBlogSlugIndexable } from '@/lib/blog-license-guides';
 
 const BASE_URL = brand.baseUrl;
 
@@ -15,6 +16,13 @@ export const revalidate = 86400; // daily
  * secondary content will never pass the "video isn't the main content" filter.
  * Only YouTube blog videos are included — they're on dedicated blog pages
  * where the video IS primary content.
+ *
+ * NOT LISTED IN robots.txt (indexing audit CS-07, TECH-11): no post carries a
+ * video, so this answers an empty <urlset>, and a listed sitemap with no
+ * entries is noise in Search Console. The route stays so a URL Google already
+ * knows answers a valid file; list it in app/robots.ts again once it emits a
+ * video on a page where the video is the main content. A post whose page
+ * renders noindex (a license guide awaiting verified facts) is never listed.
  *
  * @see https://developers.google.com/search/docs/crawling-indexing/sitemaps/video-sitemaps
  */
@@ -33,7 +41,7 @@ export async function GET() {
             .not('youtube_video_id', 'is', null);
 
         if (posts && posts.length > 0) {
-            blogEntries = posts.map(
+            blogEntries = posts.filter((post) => isBlogSlugIndexable(post.slug)).map(
                 (post) => `  <url>
     <loc>${BASE_URL}/blog/${post.slug}</loc>
     <video:video>

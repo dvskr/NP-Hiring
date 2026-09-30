@@ -9,7 +9,7 @@
  * treat 0 as "this page has no jobs":
  *
  *   • setting×state → notFound()          (~663 indexed URLs)
- *   • category×city → permanentRedirect()  (a 308 to the parent category)
+ *   • category×city → notFound()          (TECH-07; it used to 308 to the parent category)
  *
  * Every route carries `export const revalidate = 3600`, so either verdict is
  * written into the full route cache. A DB blip therefore deindexed the

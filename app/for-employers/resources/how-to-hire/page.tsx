@@ -17,6 +17,7 @@
  *    new Date() (fabricated-freshness rule, audit P0 #23).
  */
 import { brand } from '@/config/brand';
+import { indefiniteArticle } from '@/lib/display-text';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -39,7 +40,8 @@ const PAGE_DESCRIPTION = `A step-by-step employer guide to hiring a ${brand.nich
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`How to Hire a ${brand.niche.long}`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | ${brand.name}`,
+  // L-02: brand suffix comes from the root layout title template, once.
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `how to hire a ${brand.niche.descriptor}`,
@@ -402,7 +404,7 @@ export default function HowToHireGuidePage() {
           {/* Related resources */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link href="/for-employers/resources/job-description-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--color-primary)' }}>Writing a {brand.niche.short} Job Description</h3>
+              <h3 className="font-semibold text-sm" style={{ color: 'var(--color-primary)' }}>Writing {indefiniteArticle(brand.niche.short)} {brand.niche.short} Job Description</h3>
               <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>Section-by-section guide to a posting that converts.</p>
             </Link>
             <Link href="/for-employers/resources/job-description-templates" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>

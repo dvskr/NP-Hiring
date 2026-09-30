@@ -18,6 +18,7 @@
  * dateModified renders the LAST_REVIEWED constant — never new Date().
  */
 import { brand } from '@/config/brand';
+import { indefiniteArticle } from '@/lib/display-text';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -32,12 +33,15 @@ const PUBLISHED_AT = '2026-07-29';
 const LAST_REVIEWED = '2026-07-29';
 
 const PAGE_URL = `${brand.baseUrl}/for-employers/resources/job-description-guide`;
-const PAGE_TITLE = `Writing a ${brand.niche.short} Job Description That Actually Converts`;
+// "an NP", not "a NP": the article follows the credential brand.niche.short spells.
+const NICHE_ARTICLE = indefiniteArticle(brand.niche.short);
+const PAGE_TITLE = `Writing ${NICHE_ARTICLE} ${brand.niche.short} Job Description That Actually Converts`;
 const PAGE_DESCRIPTION = `A section-by-section employer guide to writing a ${brand.niche.descriptor} job description: structure, title formula, salary transparency, and the mistakes that make qualified clinicians skip your posting.`;
-const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Writing a ${brand.niche.short} Job Description`)}&type=page`;
+const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Writing ${NICHE_ARTICLE} ${brand.niche.short} Job Description`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | ${brand.name}`,
+  // L-02: brand suffix comes from the root layout title template, once.
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `${brand.niche.short} job description`,
@@ -205,7 +209,7 @@ export default function JobDescriptionGuidePage() {
               <PenLine className="w-8 h-8" aria-hidden="true" />
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              Writing a {brand.niche.short} Job Description
+              Writing {NICHE_ARTICLE} {brand.niche.short} Job Description
             </h1>
             <p className="text-sm text-pink-200 mb-4">
               Last reviewed: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}

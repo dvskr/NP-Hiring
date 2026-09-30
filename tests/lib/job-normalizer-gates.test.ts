@@ -111,10 +111,12 @@ describe('normalizeJobWithReason — completeness gate', () => {
 });
 
 describe('detectJobType — extended patterns', () => {
-    const cases: Array<[string, string]> = [
+    const cases: Array<[string, string | null]> = [
         ['1099 contractor opportunity', 'Contract'],
         ['independent contractor role', 'Contract'],
-        ['fee-for-service position', 'Contract'],
+        // H-03: fee for service is a pay model, not a contract; W-2 fee for
+        // service roles (Thriveworks) were published as CONTRACTOR.
+        ['fee-for-service position', null],
         ['locum tenens coverage needed', 'Locum Tenens'],
         ['PRN coverage', 'Per Diem'],
         ['per-diem psychiatric NP', 'Per Diem'],
@@ -271,10 +273,12 @@ describe('normalizeJobWithReason — salary period passthrough (Bug #1)', () => 
         expect(result.job!.normalizedMaxSalary).toBe(486652);
     });
 
-    it('above-cap salary $700k is clamped to $550k high-confidence ceiling', () => {
-        // Behavior changed 2026-05-05: out-of-range values are now CLAMPED
-        // to the band edge instead of dropped to null. The source still
-        // gave us a number; a clamped useable value beats no signal.
+    it('above-cap salary $700k is withheld, never published as a clamped figure', () => {
+        // Behavior changed 2026-09-28 (indexing audit CQ-02): clamping to the
+        // band edge published a figure the employer never stated ($500k in
+        // the header, $550k in JobPosting baseSalary). An implausible value
+        // is now dropped, and with no stated range in the text the row
+        // carries no salary at all.
         const result = normalizeJobWithReason(
             rawJob({
                 minSalary: 700000,
@@ -284,11 +288,10 @@ describe('normalizeJobWithReason — salary period passthrough (Bug #1)', () => 
             'adzuna',
         );
         expect(result.job).not.toBeNull();
-        // Stored raw values stay clamped at the validator step ($500k cap
-        // for annual). normalizeSalary then takes the clamped value into
-        // its 0.5-confidence path.
-        expect(result.job!.minSalary).toBe(500000);
-        expect(result.job!.maxSalary).toBe(500000);
+        expect(result.job!.minSalary).toBeNull();
+        expect(result.job!.maxSalary).toBeNull();
+        expect(result.job!.normalizedMinSalary).toBeNull();
+        expect(result.job!.displaySalary ?? null).toBeNull();
     });
 });
 

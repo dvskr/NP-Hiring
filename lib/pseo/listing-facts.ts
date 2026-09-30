@@ -32,6 +32,9 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { canonicalBucketWhere, canonicalEmployerWhere } from '@/lib/canonical-counts';
 import { findCanonicalName, normalizeCompanyName } from '@/lib/company-normalizer';
+// Employer links use the display-name slug the profile serves (the company
+// slug package), never the normalizedName form that now 308s.
+import { companyProfilePath } from '@/lib/company-slug';
 import { selectCityEmployers, type EmployerGroupRow } from '@/lib/pseo/city-employers';
 import { getGatedBenchmark } from '@/lib/salary-analytics';
 import type { BenchmarkRow } from '@/components/tools/benchmark-model';
@@ -41,6 +44,10 @@ import { categoryFilterLabel } from '@/lib/filters';
 import { SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { getNearbyQueryCities, type MetroCity } from '@/lib/metro-data';
+import { countPostings, distinctPostingTotal } from '@/lib/pseo/posting-clusters';
+import { categoriesOfRow } from '@/lib/pseo/category-row-match';
+import type { CategoryTag } from '@/lib/pseo/category-tagger';
+import { tallyCityName } from '@/lib/pseo/city-tally';
 
 // ─── Floors (PLAN C.0) ──────────────────────────────────────────────────────
 
@@ -79,9 +86,15 @@ export interface RecencyFacts {
 export interface EmployerTally { name: string; count: number; companyId: string | null }
 export interface EmployerFact { name: string; count: number; companyPath: string | null }
 
-/** The minimal Job projection the loader selects and the tally consumes. */
+/**
+ * The minimal Job projection the loader selects and the tally consumes.
+ * `title` feeds the posting and role-cluster counts behind the index gates
+ * (lib/pseo/posting-clusters.ts); a select without it counts every row as
+ * its own posting.
+ */
 export interface ListingFactRow {
   employer: string | null;
+  title?: string | null;
   companyId: string | null;
   city: string | null;
   state: string | null;
@@ -94,6 +107,12 @@ export interface ListingFactRow {
   originalPostedAt: Date | null;
   createdAt: Date;
   newGradFriendly: boolean;
+  /**
+   * Structured minimum years (0 is the "New grad accepted" bucket). Read by
+   * the new grad category tally; optional so a select without it still
+   * tallies (new grad then falls back to the stored tag).
+   */
+  minYearsExperience?: number | null;
   salaryIsEstimated: boolean;
   normalizedMinSalary: number | null;
 }
@@ -102,6 +121,15 @@ export interface ListingFacts {
   /** Canonical count for the scope (a separate COUNT, never the sample size). */
   total: number;
   distinctEmployers: number;
+  /**
+   * The total with exact duplicate rows (same employer, normalized title,
+   * city and state) collapsed: what every pSEO index gate counts.
+   */
+  distinctPostings: number;
+  /** Distinct (employer, normalized title) pairs across the scope's rows. */
+  roleClusters: number;
+  /** Distinct postings held by the largest employer. */
+  topEmployerPostings: number;
   topEmployers: EmployerFact[];
   cities: CityCount[];
   states: StateCount[];
@@ -113,6 +141,8 @@ export interface ListingFacts {
   newGradFriendly: number;
   /** Rows with an employer-stated (not estimated) normalized salary. */
   salaryDisclosedCount: number;
+  /** Distinct employers behind salaryDisclosedCount. */
+  salaryDisclosedEmployers: number;
   /** Gated median row, or null below 5 postings from 3 employers. */
   benchmark: BenchmarkRow | null;
   computedAt: Date;
@@ -122,6 +152,7 @@ export interface ListingFacts {
 
 const LISTING_FACT_SELECT = {
   employer: true,
+  title: true,
   companyId: true,
   city: true,
   state: true,
@@ -134,6 +165,7 @@ const LISTING_FACT_SELECT = {
   originalPostedAt: true,
   createdAt: true,
   newGradFriendly: true,
+  minYearsExperience: true,
   salaryIsEstimated: true,
   normalizedMinSalary: true,
 } as const satisfies Prisma.JobSelect;
@@ -298,13 +330,22 @@ export function selectEmployers(
   return { employers, distinct: merged.length };
 }
 
-/** Rows grouped by (city, stateCode), volume then name. */
+/**
+ * Rows grouped by (city, stateCode), volume then name. Only values that read
+ * as a town count (tallyCityName, lib/pseo/city-tally.ts: a town-shaped name
+ * by the rule the job page's addressLocality uses, or a town the city
+ * dataset knows in that state): a street number, a street address, a work
+ * mode or a facility stored as the city never reaches a city list, a "led
+ * by" sentence or a meta "Top city" (CQ-02: "led by 1730 (1)" on the Rhode
+ * Island specialty page was a DC street address), while a real town whose
+ * name carries a facility word ("College Station, TX") still counts.
+ */
 export function selectCities(rows: ReadonlyArray<Pick<ListingFactRow, 'city' | 'stateCode'>>): CityCount[] {
   const counts = new Map<string, CityCount>();
   for (const row of rows) {
-    const name = row.city?.trim();
-    if (!name) continue;
     const stateCode = row.stateCode?.trim().toUpperCase() || null;
+    const name = tallyCityName(row.city, stateCode);
+    if (!name) continue;
     const key = `${name.toLowerCase()}|${stateCode ?? ''}`;
     const entry = counts.get(key) ?? { name, stateCode, count: 0 };
     entry.count += 1;
@@ -345,14 +386,20 @@ export function categoryLabelOf(slug: string): string {
   return SETTING_CONFIGS[slug]?.label ?? categoryFilterLabel(slug);
 }
 
-/** Top taxonomy tags across rows; unknown tags are dropped. */
+/**
+ * Top taxonomy categories across rows. Each row counts under a category
+ * only when the category's one predicate (categoryPredicate, the clause its
+ * page lists with) accepts it: remote is the fully remote work mode, the
+ * job types read jobType, new grad the structured signals, every other
+ * category the stored tag (CQ-05). Unknown tags are dropped.
+ */
 export function selectCategoryTop(
-  rows: ReadonlyArray<Pick<ListingFactRow, 'categoryTags'>>,
+  rows: ReadonlyArray<Pick<ListingFactRow, 'categoryTags'> & Partial<ListingFactRow>>,
   limit: number = TOP_LIST_LIMIT,
 ): LabeledCount[] {
   const counts = new Map<string, number>();
   for (const row of rows) {
-    for (const tag of row.categoryTags ?? []) {
+    for (const tag of categoriesOfRow(ALL_CATEGORY_SLUGS as readonly CategoryTag[], row)) {
       if (CATEGORY_SLUG_SET.has(tag)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
   }
@@ -370,8 +417,15 @@ export function tallyListingFacts(
   topEmployers: EmployerTally[];
 } {
   const { employers, distinct } = selectEmployers(rows);
+  const postings = countPostings(rows);
+  const disclosed = rows.filter((r) => !r.salaryIsEstimated && r.normalizedMinSalary !== null);
   return {
     distinctEmployers: distinct,
+    // The sample's own distinct postings; computeListingFacts rescales it to
+    // the scope's full count through distinctPostingTotal.
+    distinctPostings: postings.postings,
+    roleClusters: postings.roleClusters,
+    topEmployerPostings: postings.topEmployerPostings,
     topEmployers: employers,
     cities: selectCities(rows),
     states: selectStates(rows),
@@ -384,7 +438,8 @@ export function tallyListingFacts(
     recency: selectRecency(rows, now, 0)
       ?? { total: 0, datedCount: 0, last7: 0, last30: 0, newestPostedAt: null },
     newGradFriendly: rows.filter((r) => r.newGradFriendly).length,
-    salaryDisclosedCount: rows.filter((r) => !r.salaryIsEstimated && r.normalizedMinSalary !== null).length,
+    salaryDisclosedCount: disclosed.length,
+    salaryDisclosedEmployers: selectEmployers(disclosed).distinct,
   };
 }
 
@@ -412,11 +467,6 @@ export function metroScopeWhere(metro: MetroCity): Prisma.JobWhereInput {
       })),
     ],
   };
-}
-
-/** `/companies/{slug}` in the kebab form app/sitemap.ts emits. */
-export function companyProfilePath(normalizedName: string): string {
-  return `/companies/${normalizedName.replace(/ /g, '-')}`;
 }
 
 // ─── Loader ─────────────────────────────────────────────────────────────────
@@ -462,9 +512,9 @@ async function resolveCompanyPaths(
   try {
     const companies = await prisma.company.findMany({
       where: { AND: [{ id: { in: [...companyIds] } }, canonicalEmployerWhere(now)] },
-      select: { id: true, normalizedName: true },
+      select: { id: true, name: true, normalizedName: true },
     });
-    return new Map(companies.map((c) => [c.id, companyProfilePath(c.normalizedName)]));
+    return new Map(companies.map((c) => [c.id, companyProfilePath(c)]));
   } catch (error) {
     console.error(`[listing-facts] company lookup failed for scope "${scopeKey}":`, error);
     return new Map();
@@ -493,6 +543,7 @@ async function computeListingFacts(scopeKey: string, bucket: Prisma.JobWhereInpu
       companyPath: companyId ? companyPaths.get(companyId) ?? null : null,
     })),
     total,
+    distinctPostings: distinctPostingTotal(total, { rows: rows.length, postings: tally.distinctPostings }),
     benchmark,
     computedAt: now,
     sampled: rows.length >= LISTING_FACTS_ROW_CAP && total > rows.length,

@@ -77,7 +77,7 @@ describe('P6 #9 — the widget stamps its figures with real provenance', () => {
 
     it('the cited sentence names the BLS source with its vintage exactly once', () => {
         // Same behavior pin as the A4 suite: the OEWS source string already
-        // names "May 2024", so the helper must not double-render it.
+        // names "May 2025", so the helper must not double-render it.
         const [sentence] = buildProvenanceSentences({
             cited: [STAT_SOURCES.averageSalary],
         });

@@ -240,9 +240,10 @@ describe('resumePlanPosts — re-publish paused plan posts within the remaining 
             orderBy: { createdAt: 'desc' },
             take: 2,
         });
+        // A revival stamps contentChangedAt (indexing audit fixSoon 5).
         expect(prisma.job.updateMany).toHaveBeenCalledWith({
             where: { id: { in: ['newest', 'older'] } },
-            data: { isPublished: true },
+            data: { isPublished: true, contentChangedAt: NOW },
         });
     });
 

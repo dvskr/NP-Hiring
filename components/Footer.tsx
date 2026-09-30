@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { XLogo, FacebookLogo, InstagramLogo, LinkedinLogo, YoutubeLogo } from '@phosphor-icons/react';
 import { reopenConsentBanner } from '@/lib/consent';
 import { brand } from '@/config/brand';
+import { selectFooterCategoryColumns, type FooterColumn } from '@/lib/pseo/footer-category-links';
 /* ──────────────────────────────────────────────
  *  Footer — Dark, clean, professional
  *  Uses inline styles for background/color to
@@ -16,7 +17,14 @@ import { brand } from '@/config/brand';
 // the site), descriptive-anchor gaps ("Remote" vs "Remote PMHNP Jobs"),
 // and an audience mismatch ("Post a Job" in the For Job Seekers column).
 // Restructured into 5 columns that surface every primary category hub.
-const linkColumns = [
+//
+// Indexing audit TECH-06 / M-02: the two category columns ("Browse by
+// Setting", "Browse by Specialty") come from lib/pseo/footer-category-links,
+// chosen by the category-landing index verdict the sitemap reads
+// (components/SiteFooter.tsx passes them in). The footer never links an
+// empty noindexed landing: /jobs/va ("0 positions"), /jobs/veterans and
+// /jobs/locum-tenens sat in every page's footer.
+const leadColumns: FooterColumn[] = [
   {
     title: 'For Job Seekers',
     links: [
@@ -27,37 +35,12 @@ const linkColumns = [
       { label: 'FAQ', href: '/faq' },
     ],
   },
-  {
-    // Descriptive anchor text — Google uses footer link text as a
-    // category-relevance signal, and bare single-word labels ("Remote")
-    // are weaker than the noun phrase the page actually targets.
-    title: 'Browse by Setting',
-    links: [
-      { label: `Remote ${brand.niche.short} Jobs`, href: '/jobs/remote' },
-      { label: `Telehealth ${brand.niche.short} Jobs`, href: '/jobs/telehealth' },
-      { label: `Inpatient ${brand.niche.short} Jobs`, href: '/jobs/inpatient' },
-      { label: `Outpatient ${brand.niche.short} Jobs`, href: '/jobs/outpatient' },
-      { label: `Hospital ${brand.niche.short} Jobs`, href: '/jobs/hospital' },
-      { label: `Travel ${brand.niche.short} Jobs`, href: '/jobs/travel' },
-      { label: 'Locum Tenens', href: '/jobs/locum-tenens' },
-    ],
-  },
-  {
-    title: 'Browse by Specialty',
-    links: [
-      { label: `VA ${brand.niche.short} Jobs`, href: '/jobs/va' },
-      { label: `Veterans ${brand.niche.short} Jobs`, href: '/jobs/veterans' },
-      { label: `New Grad ${brand.niche.short}`, href: '/jobs/new-grad' },
-      // Content audit P0 #2: the previous three links here (behavioral-health,
-      // substance-abuse, child-adolescent) were donor-board slugs that
-      // middleware 410s — every page footer-linked three dead URLs. Replaced
-      // with live high-value specialty hubs from lib/pseo/taxonomy-registry.ts
-      // (each app/jobs/<slug>/page.tsx verified to exist and render).
-      { label: `Family Practice ${brand.niche.short} Jobs`, href: '/jobs/family-practice' },
-      { label: `Primary Care ${brand.niche.short} Jobs`, href: '/jobs/primary-care' },
-      { label: `Acute Care ${brand.niche.short} Jobs`, href: '/jobs/acute-care' },
-    ],
-  },
+];
+
+// Descriptive anchor text in every column: Google uses footer link text as a
+// category-relevance signal, and bare single-word labels ("Remote") are
+// weaker than the noun phrase the page actually targets.
+const tailColumns: FooterColumn[] = [
   {
     title: 'Browse by Location',
     links: [
@@ -134,8 +117,22 @@ const linkStyle: React.CSSProperties = {
   transition: 'color 0.15s ease',
 };
 
-export default function Footer() {
+interface FooterProps {
+  /**
+   * The two category columns (components/SiteFooter.tsx reads the index
+   * verdicts). Absent, the footer uses the fixed fallback list of standing
+   * landings, never an empty noindexed one.
+   */
+  categoryColumns?: FooterColumn[];
+}
+
+export default function Footer({ categoryColumns }: FooterProps = {}) {
   const pathname = usePathname();
+  const linkColumns: FooterColumn[] = [
+    ...leadColumns,
+    ...(categoryColumns ?? selectFooterCategoryColumns(null)).filter((column) => column.links.length > 0),
+    ...tailColumns,
+  ];
   const AUTH_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/employer/login', '/employer/signup'];
   if (AUTH_ROUTES.some(r => pathname?.startsWith(r))) return null;
 
@@ -300,7 +297,7 @@ export default function Footer() {
               </Link>
               <span className="footer-pipe" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)' }} />
               <p className="footer-tagline" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, margin: 0, whiteSpace: 'nowrap' }}>
-                The #1 specialized job board for {brand.niche.descriptor}s.
+                Jobs for {brand.niche.descriptor}s, updated daily.
               </p>
             </div>
 

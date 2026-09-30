@@ -130,17 +130,30 @@ function detectSalaryPeriod(
 }
 
 /**
+ * An annualized figure below this is not a salary for any role on this
+ * board (it is a benefit amount, a typo or a per-visit fee read as annual
+ * pay). Withheld rather than published.
+ */
+export const MIN_PLAUSIBLE_ANNUAL = 10_000;
+
+/** Confidence for a real but out-of-band figure: shown, never aggregated. */
+export const OUT_OF_BAND_CONFIDENCE = 0.5;
+
+/**
  * Normalize a single salary value to annual.
  *
- * Changed 2026-05-05: out-of-range annuals are CLAMPED to the
- * confidence-band bounds rather than dropped to null. The source
- * tried to give us a number, so a clamped usable value is better
- * than no signal. Behavior:
+ * Changed 2026-09-28 (indexing audit CQ-02): nothing is CLAMPED any more.
+ * The 2026-05-05 clamp published figures no employer stated: a $40k to $44k
+ * posting went out as $48k, and a $1,500 CEU budget as $48k/yr, in both the
+ * job card and the JobPosting baseSalary. Behavior now:
  *
- *   - Hourly $20–$300 stays as-is, then × 2080 to annual
- *   - Annual < $64k → clamped UP to $64k (high-confidence floor)
- *   - Annual > $550k → clamped DOWN to $550k
- *   - confidence drops to 0.5 when we clamp (signals "approximate")
+ *   - A real figure inside the band keeps full confidence.
+ *   - A real figure below the band floor (a part-time or low-paid role) is
+ *     kept AS STATED with confidence 0.5, so it displays but never enters
+ *     a published aggregate (those gate on 0.8).
+ *   - An hourly rate above the contractor ceiling, an annual equivalent
+ *     above the cap, or anything under MIN_PLAUSIBLE_ANNUAL is withheld
+ *     (null): no figure is better than a fabricated one.
  */
 function normalizeSingleSalary(
   salary: number,
@@ -158,28 +171,32 @@ function normalizeSingleSalary(
   }
 
   const multiplier = PERIOD_MULTIPLIERS[period] || 1;
-  let annualSalary = Math.round(salary * multiplier);
+  const annualSalary = Math.round(salary * multiplier);
 
   let confidence = isEstimated ? 0.6 : 1.0;
 
   const isHourly = period === 'hourly' || period === 'hour';
 
+  if (annualSalary < MIN_PLAUSIBLE_ANNUAL) {
+    console.log(`[Salary] $${salary} ${period} annualizes to $${annualSalary}, below any plausible salary, withheld`);
+    return null;
+  }
+
   if (isHourly) {
     // Hourly: validate the hourly RATE against the contractor band first.
     const minHourly = NICHE_SALARY_RANGES.contractorHourlyMin;
     const maxHourly = NICHE_SALARY_RANGES.contractorHourlyMax;
+    if (salary > maxHourly) {
+      console.log(`[Salary] Hourly $${salary}/hr is over the $${maxHourly}/hr ceiling, withheld`);
+      return null;
+    }
     if (salary < minHourly) {
-      console.log(`[Salary] Clamped low hourly: $${salary}/hr → $${minHourly}/hr`);
-      annualSalary = minHourly * HOURS_PER_YEAR;
-      confidence = 0.5;
-    } else if (salary > maxHourly) {
-      console.log(`[Salary] Clamped high hourly: $${salary}/hr → $${maxHourly}/hr`);
-      annualSalary = maxHourly * HOURS_PER_YEAR;
-      confidence = 0.5;
+      console.log(`[Salary] Hourly $${salary}/hr is under the $${minHourly}/hr band floor, kept as stated, flagged approximate`);
+      confidence = OUT_OF_BAND_CONFIDENCE;
     }
     // Review P9 #2b: an in-band contractor rate can still annualize past
-    // the W-2 cap ($350/hr × 2080 = $728k). The value is NOT clamped —
-    // clamping would corrupt the hourly display (formatDisplaySalary
+    // the W-2 cap ($350/hr × 2080 = $728k). The value is kept:
+    // changing it would corrupt the hourly display (formatDisplaySalary
     // divides the annual back by 2080) — but confidence drops below the
     // analytics threshold so the row can never enter a published average.
     // Contract-cadence rows are ALSO excluded from aggregates outright by
@@ -189,25 +206,24 @@ function normalizeSingleSalary(
       console.log(
         `[Salary] Hourly $${salary}/hr annualizes to $${annualSalary} (over the $${BAND.highConfidenceAnnualCap} W-2 cap) — flagged approximate`,
       );
-      confidence = 0.5;
+      confidence = OUT_OF_BAND_CONFIDENCE;
     }
   } else {
     // Single annual sanity choke point (review P9 #2b): after ANY period
     // conversion (annual, monthly ×12, weekly ×52, biweekly ×26, daily
     // ×260) the annual band applies exactly once. No conversion path can
-    // bypass the cap.
+    // store an annual above the cap: such a figure is withheld.
     const minAnnual = confidence < 0.5
       ? NICHE_SALARY_RANGES.min * BAND.lowConfidenceFloorFactor
       : NICHE_SALARY_RANGES.min * BAND.highConfidenceFloorFactor;
     const maxAnnual = confidence < 0.5 ? BAND.lowConfidenceAnnualCap : BAND.highConfidenceAnnualCap;
+    if (annualSalary > maxAnnual) {
+      console.log(`[Salary] Annual $${annualSalary} is over the $${maxAnnual} cap, withheld`);
+      return null;
+    }
     if (annualSalary < minAnnual) {
-      console.log(`[Salary] Clamped low annual: $${annualSalary} → $${minAnnual}`);
-      annualSalary = minAnnual;
-      confidence = 0.5;
-    } else if (annualSalary > maxAnnual) {
-      console.log(`[Salary] Clamped high annual: $${annualSalary} → $${maxAnnual}`);
-      annualSalary = maxAnnual;
-      confidence = 0.5;
+      console.log(`[Salary] Annual $${annualSalary} is under the $${minAnnual} band floor, kept as stated, flagged approximate`);
+      confidence = OUT_OF_BAND_CONFIDENCE;
     }
   }
 

@@ -248,7 +248,7 @@ export default function PrivatePracticeRevenueCalculatorPage() {
           <div className="tool-three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
               { href: PRACTICE_GUIDE_PATH, title: 'Private practice guide', blurb: 'Entity formation, credentialing, EHR, malpractice, and the model this tool runs.' },
-              { href: '/resources/fpa-guide', title: 'Practice authority guide', blurb: 'Whether an independent practice is available to you at all.' },
+              { href: '/scope-of-practice', title: 'Scope of practice by state', blurb: 'Each state’s practice rule and any transition period, with a link to its board.' },
               { href: '/tools/licensure-checker', title: 'Licensure checker', blurb: 'Your state\u2019s authority classification and licensure steps.' },
               { href: '/tools/1099-vs-w2-calculator', title: '1099 vs W-2 calculator', blurb: 'The tax this net figure sits before, modeled properly.' },
               { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'What employed roles pay: the opportunity cost of going independent.' },

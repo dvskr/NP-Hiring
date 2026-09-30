@@ -25,10 +25,10 @@
  * deliberate design — Google requires video to be a page's PRIMARY content,
  * which a scroll recording embedded as page decoration never is. So no
  * sitemap entry can ever advertise a file that is missing from
- * public/videos/, and app/robots.ts can keep advertising
- * /video-sitemap.xml unconditionally: with no YouTube-backed posts the
- * route still returns a well-formed, empty <urlset> (0 URLs is a valid
- * sitemap, not a fetch error).
+ * public/videos/. robots.txt no longer lists /video-sitemap.xml (indexing
+ * audit CS-07, TECH-11): the route still answers a well-formed empty
+ * <urlset>, and it is listed again in app/robots.ts only once it emits a
+ * video on a page where the video is the main content.
  *
  * ── WHAT A RECORDING DROP-IN NEEDS (human task — out of agent scope) ──
  * Recording the walkthroughs requires a human with the running app. Per

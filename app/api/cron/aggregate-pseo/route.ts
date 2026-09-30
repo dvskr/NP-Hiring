@@ -10,16 +10,22 @@ import {
   type SettingConfig,
 } from '@/lib/pseo/setting-state-config'
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry'
-import { buildCategoryWhereClause, CATEGORY_EXTRA_OR, CATEGORY_FILTERS } from '@/lib/filters'
 import { canonicalBucketWhere } from '@/lib/canonical-counts'
-import { selectEmployers, tallyListingFacts, type ListingFactRow } from '@/lib/pseo/listing-facts'
-import { buildRoleSetup } from '@/lib/pseo/listing-narrative'
-import { fetchNpAnalyticsRows, summarizeGatedSalary } from '@/lib/salary-analytics'
+import { selectEmployers } from '@/lib/pseo/listing-facts'
+import { countPostings, distinctPostingTotal } from '@/lib/pseo/posting-clusters'
+import { landingBucketWhere, stripLocationKeys } from '@/lib/pseo/landing-where'
+import { loadStateHubVerdicts, type StateHubVerdict } from '@/lib/pseo/state-hub-index'
 import {
-  shouldIndexListingPage,
+  buildSettingStateIndexFacts,
+  settingStateGateJobIds,
+  type SettingStateGateRow,
+} from '@/lib/pseo/setting-state-index'
+import { settingStateKey, settingStateSiblingVerdicts } from './setting-state-siblings'
+import {
+  SETTING_STATE_INDEXING_ENABLED,
+  shouldIndexCategoryLanding,
   shouldIndexLocalListingPage,
   shouldIndexSettingState,
-  type SettingStateIndexFacts,
 } from '@/lib/pseo/render-gate'
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
@@ -57,6 +63,19 @@ import { checkCategoryCityStaleness } from './staleness'
 // with the same case-insensitive equality the page templates query with,
 // instead of one count plus one aggregate per row (the old shape ran about
 // 9,000 queries per 200-city batch).
+//
+// Indexing audit (2026-09): the verdicts count distinct postings, not rows
+// (lib/pseo/posting-clusters.ts). Setting x state rows store the STRICT gate
+// (shouldIndexSettingState: 5 postings, 3 employers, 3 role clusters, top
+// employer at most half, an indexable parent hub, at most 70 percent of the
+// hub, a posting in the last 30 days), computed against one load of every
+// hub verdict per run. Then, per state, two passing sibling settings whose
+// counted job sets overlap 70 percent or more keep one verdict, the larger
+// page's (dedupeSiblingSettingStates, CQ-01): so every setting's rows are
+// computed before any setting-state row is written. Whether a stored `true`
+// actually indexes is decided by the FB-1 switch,
+// SETTING_STATE_INDEXING_ENABLED, at read time. Category landings count the
+// shared landingBucketWhere and store the listing-floor verdict.
 export const maxDuration = 300
 
 const BATCH_SIZE = 200 // Cities per invocation
@@ -67,15 +86,16 @@ const WRITE_CHUNK_ROWS = 250
 
 /**
  * Memory guard for the per-category row fetch behind the setting x state
- * facts. The canonical pool is about one thousand rows today; a category
- * that ever exceeds this cap falls back to one count query per state for
- * its totals (the tally is then a newest-first sample, as on the page).
+ * and landing verdicts. The canonical pool is about one thousand rows today;
+ * a category that ever exceeds this cap falls back to one count query per
+ * state for its totals, and its setting x state verdicts close (a sample
+ * cannot prove a floor).
  */
 const FACT_ROW_CAP = 10_000
 
 /**
  * Placeholder location handed to a config's buildWhere so its location keys
- * can be stripped. The value never reaches the database: categoryClauseOf()
+ * can be stripped. The value never reaches the database: stripLocationKeys()
  * removes the `state` and `city` keys before the clause is used.
  */
 const LOCATION_PROBE = 'probe'
@@ -96,37 +116,62 @@ interface StatsRow {
 
 type CityRecord = (typeof CITIES)[number]
 
-/** A groupBy row over (state, city, employer) inside one category. */
+/** A groupBy row over (state, city, employer, title) inside one category. */
 interface CityEmployerGroup {
   state: string | null
   city: string | null
   employer: string | null
+  title: string | null
   _count: { _all: number }
 }
 
 /**
- * Mirror of the private LISTING_FACT_SELECT in lib/pseo/listing-facts.ts:
- * the projection tallyListingFacts() consumes. The `satisfies` keeps the
- * shape checkable against Prisma; the ListingFactRow annotation on the
- * fetch keeps it checkable against the tally.
+ * The projection the gate counts read: the id (sibling job sets), employer
+ * (with its company id for the alias merge), the title (postings and role
+ * clusters), the location, the structured work mode (the remote and
+ * telehealth gates) and the posted dates (the 30 day recency rule).
  */
-const LISTING_FACT_ROW_SELECT = {
+const GATE_ROW_SELECT = {
+  id: true,
+  originalPostedAt: true,
+  createdAt: true,
   employer: true,
   companyId: true,
+  title: true,
   city: true,
   state: true,
   stateCode: true,
   isRemote: true,
   isHybrid: true,
-  jobType: true,
-  setting: true,
-  categoryTags: true,
-  originalPostedAt: true,
-  createdAt: true,
-  newGradFriendly: true,
-  salaryIsEstimated: true,
-  normalizedMinSalary: true,
 } as const satisfies Prisma.JobSelect
+
+interface GateRow extends SettingStateGateRow {
+  id: string
+  companyId: string | null
+}
+
+/**
+ * A setting x state row before sibling de-duplication: the stored columns
+ * plus the job set and posting count the de-duplication compares
+ * (./setting-state-siblings.ts).
+ */
+interface SettingStateDraft extends StatsRow {
+  gateJobIds: string[]
+  gatePostings: number
+}
+
+/** The stored rows from every setting's drafts, sibling verdicts applied. */
+function finalizeSettingStateRows(drafts: readonly SettingStateDraft[], complete: boolean): StatsRow[] {
+  const verdicts = settingStateSiblingVerdicts(drafts, complete)
+  return drafts.map((d) => ({
+    type: d.type,
+    categorySlug: d.categorySlug,
+    locationSlug: d.locationSlug,
+    totalJobs: d.totalJobs,
+    distinctEmployers: d.distinctEmployers,
+    indexable: verdicts.get(settingStateKey(d.categorySlug, d.locationSlug)) ?? false,
+  }))
+}
 
 /** JS twin of Prisma `{ equals: value, mode: 'insensitive' }`. */
 function sameText(stored: string | null | undefined, wanted: string): boolean {
@@ -138,66 +183,47 @@ function cityKey(state: string, city: string): string {
   return `${state.toLowerCase()}|${city.toLowerCase()}`
 }
 
-/**
- * Lift a config's per-location where to the whole category. Every
- * SETTING_CONFIGS and ALL_CATEGORY_CONFIGS buildWhere returns
- * `{ isPublished, state: { equals }, city?: { equals }, ...categoryClause }`
- * with the location keys at the top level (pinned by
- * tests/regressions/pseo-index-gate.test.ts), so dropping them yields the
- * category clause; the per-location split then happens in memory with
- * sameText(), the same case-insensitive equality the template queries with.
- */
-function categoryClauseOf(where: Record<string, unknown>): Prisma.JobWhereInput {
-  return Object.fromEntries(
-    Object.entries(where).filter(([key]) => key !== 'state' && key !== 'city'),
-  ) as Prisma.JobWhereInput
-}
-
-/**
- * The category landing count predicate, mirroring the private categoryWhere()
- * in lib/pseo/category-landing-template.tsx (thin-spec-1 T3): slugs with a
- * legacy keyword filter use it, the rest gate on the precomputed
- * categoryTags column. Wrapped in canonicalBucketWhere() by the caller.
- */
-function landingCategoryWhere(slug: string): Prisma.JobWhereInput {
-  const hasLegacyKeywordFilter =
-    (CATEGORY_FILTERS[slug]?.length ?? 0) > 0 || (CATEGORY_EXTRA_OR[slug]?.length ?? 0) > 0
-  return hasLegacyKeywordFilter
-    ? buildCategoryWhereClause(slug)
-    : buildCategoryWhereClause(slug, { categoryTags: { has: slug } })
-}
-
-/** Newest-first row sample for one category, capped as a memory guard. */
-async function fetchFactRows(
-  where: Prisma.JobWhereInput,
-): Promise<{ rows: ListingFactRow[]; capped: boolean }> {
-  const rows: ListingFactRow[] = await prisma.job.findMany({
-    where,
-    select: LISTING_FACT_ROW_SELECT,
+/** Newest-first canonical row sample for one bucket, capped as a memory guard. */
+async function fetchGateRows(bucket: Prisma.JobWhereInput, now: Date): Promise<{ rows: GateRow[]; capped: boolean }> {
+  const rows: GateRow[] = await prisma.job.findMany({
+    where: canonicalBucketWhere(bucket, now),
+    select: GATE_ROW_SELECT,
     orderBy: { createdAt: 'desc' },
     take: FACT_ROW_CAP,
   })
-  return { rows, capped: rows.length >= FACT_ROW_CAP }
+  const list = Array.isArray(rows) ? rows : []
+  return { rows: list, capped: list.length >= FACT_ROW_CAP }
 }
 
 /**
- * Setting x state rows for one setting config: one row fetch and one
- * salary-pool fetch for the whole category, split per state in memory and
- * tallied with the same selectors the page template uses, so the stored
- * `indexable` verdict is the one shouldIndexSettingState() returns live.
+ * Every state hub's verdict, loaded once per run for the strict setting x
+ * state gate. A failed load closes every hub, and with it every setting x
+ * state verdict of the run: a child never indexes on an unknown parent.
+ */
+async function loadHubVerdictsOrNone(now: Date): Promise<Map<string, StateHubVerdict>> {
+  try {
+    return await loadStateHubVerdicts(now)
+  } catch (error) {
+    console.error('[pseo-agg] state hub verdicts unavailable; every setting-state verdict this run is false:', error)
+    return new Map()
+  }
+}
+
+/**
+ * Setting x state rows for one setting config: one row fetch for the whole
+ * category, split per state in memory. The stored `indexable` is the strict
+ * gate (shouldIndexSettingState) over buildSettingStateIndexFacts, which
+ * counts distinct postings (fully remote rows only for remote and
+ * telehealth) against the parent hub's verdict.
  */
 async function aggregateSettingState(
   config: SettingConfig,
   stateSlugs: readonly string[],
   now: Date,
-): Promise<StatsRow[]> {
-  const where = canonicalBucketWhere(categoryClauseOf(config.buildWhere(LOCATION_PROBE)), now)
-  const [{ rows, capped }, payRows] = await Promise.all([
-    fetchFactRows(where),
-    // Same pool getGatedBenchmark() reads for the page's posted-pay section.
-    fetchNpAnalyticsRows(where),
-  ])
-  const out: StatsRow[] = []
+  hubs: ReadonlyMap<string, StateHubVerdict>,
+): Promise<SettingStateDraft[]> {
+  const { rows, capped } = await fetchGateRows(stripLocationKeys(config.buildWhere(LOCATION_PROBE)), now)
+  const out: SettingStateDraft[] = []
   for (const stateSlug of stateSlugs) {
     const stateName = resolveStateSlug(stateSlug)
     if (!stateName) continue
@@ -207,67 +233,62 @@ async function aggregateSettingState(
           where: canonicalBucketWhere(config.buildWhere(stateName) as Prisma.JobWhereInput, now),
         })
       : stateRows.length
-    const facts = tallyListingFacts(stateRows, now)
-    const indexFacts: SettingStateIndexFacts = {
-      totalJobs,
-      employerCount: facts.distinctEmployers,
-      namedCityCount: facts.cities.length,
-      hasBenchmark: summarizeGatedSalary(payRows.filter((row) => sameText(row.state, stateName))).gatePassed,
-      postedLast30Days: facts.recency.last30,
-      roleSetupRenders: buildRoleSetup({ slug: config.slug, facts }).rendered,
-    }
+    const indexFacts = buildSettingStateIndexFacts({ slug: config.slug, rows: stateRows, hub: hubs.get(stateName), now })
     out.push({
       type: 'setting-state',
       categorySlug: config.slug,
       locationSlug: stateSlug,
       totalJobs,
-      distinctEmployers: facts.distinctEmployers,
-      indexable: shouldIndexSettingState(indexFacts),
+      distinctEmployers: selectEmployers(stateRows).distinct,
+      indexable: !capped && shouldIndexSettingState(indexFacts),
+      gateJobIds: settingStateGateJobIds(config.slug, stateRows),
+      gatePostings: indexFacts.postings,
     })
   }
   return out
 }
 
 /**
- * One 'category-landing' row per taxonomy slug (locationSlug 'all'): one
- * grouped query by employer gives the canonical total and, through
- * selectEmployers() (alias merging), the distinct employer count.
+ * One 'category-landing' row per taxonomy slug (locationSlug 'all') over the
+ * shared landingBucketWhere, the clause the landing page itself counts:
+ * the canonical total, the distinct employers (selectEmployers, alias
+ * merging) and the listing-floor verdict over distinct postings.
  */
 async function aggregateCategoryLanding(slug: string, now: Date): Promise<StatsRow> {
-  const groups = await prisma.job.groupBy({
-    by: ['employer'],
-    where: canonicalBucketWhere(landingCategoryWhere(slug), now),
-    _count: { _all: true },
-  })
-  const totalJobs = groups.reduce((sum, group) => sum + group._count._all, 0)
-  const { distinct } = selectEmployers(groups.map((group) => ({ employer: group.employer, companyId: null })))
+  const { rows, capped } = await fetchGateRows(landingBucketWhere(slug), now)
+  const totalJobs = capped
+    ? await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(slug), now) })
+    : rows.length
+  const { distinct } = selectEmployers(rows)
+  const postings = distinctPostingTotal(totalJobs, countPostings(rows))
   return {
     type: 'category-landing',
     categorySlug: slug,
     locationSlug: LANDING_LOCATION_SLUG,
     totalJobs,
     distinctEmployers: distinct,
-    indexable: shouldIndexListingPage(totalJobs),
+    indexable: shouldIndexCategoryLanding({ activeJobs: postings, distinctEmployers: distinct }),
   }
 }
 
 /**
  * One grouped query per category for a batch of cities: rows grouped by
- * (state, city, employer) inside the batch's states, bucketed in memory by
- * the same case-insensitive (state, city) equality the city template queries
- * with. Returns the buckets; rowsForCity() reads them per city.
+ * (state, city, employer, title) inside the batch's states, bucketed in
+ * memory by the same case-insensitive (state, city) equality the city
+ * template queries with. Returns the buckets; rowsForCity() reads them per
+ * city. The title in the grouping lets the verdict count distinct postings.
  */
 async function groupCategoryByCity(
   config: CategoryConfig,
   cities: readonly CityRecord[],
   now: Date,
 ): Promise<Map<string, CityEmployerGroup[]>> {
-  const category = categoryClauseOf(config.buildWhere(LOCATION_PROBE, LOCATION_PROBE))
+  const category = stripLocationKeys(config.buildWhere(LOCATION_PROBE, LOCATION_PROBE))
   const stateNames = [...new Set(cities.map((city) => city.state))]
   // Not annotated: Prisma infers groupBy's result from its argument, and an
   // annotation on the binding makes it type the argument as the array.
   const groups = await prisma.job.groupBy({
-    by: ['state', 'city', 'employer'],
+    by: ['state', 'city', 'employer', 'title'],
     where: canonicalBucketWhere({ AND: [category, { state: { in: stateNames, mode: 'insensitive' } }] }, now),
     _count: { _all: true },
   })
@@ -282,7 +303,12 @@ async function groupCategoryByCity(
   return buckets
 }
 
-/** The category x city rows for one city, read from the per-category buckets. */
+/**
+ * The category x city rows for one city, read from the per-category buckets.
+ * totalJobs stays the row count (the page's render floor and printed
+ * count); the verdict counts distinct postings, each (employer, title)
+ * group being one posting at this location.
+ */
 function rowsForCity(
   city: CityRecord,
   bucketsByCategory: ReadonlyMap<string, Map<string, CityEmployerGroup[]>>,
@@ -292,13 +318,20 @@ function rowsForCity(
     const groups = buckets.get(key) ?? []
     const totalJobs = groups.reduce((sum, group) => sum + group._count._all, 0)
     const { distinct } = selectEmployers(groups.map((group) => ({ employer: group.employer, companyId: null })))
+    const postings = countPostings(groups.map((group) => ({
+      employer: group.employer,
+      title: group.title ?? '',
+      city: group.city,
+      state: group.state,
+      stateCode: null,
+    }))).postings
     return {
       type: 'category-city',
       categorySlug,
       locationSlug: city.slug,
       totalJobs,
       distinctEmployers: distinct,
-      indexable: shouldIndexLocalListingPage({ activeJobs: totalJobs, distinctEmployers: distinct }),
+      indexable: shouldIndexLocalListingPage({ activeJobs: postings, distinctEmployers: distinct }),
     }
   })
 }
@@ -376,6 +409,10 @@ export async function GET(request: NextRequest) {
       : await readCityCursor(totalCities)
 
     let settingStateCount = 0
+    // Setting x state rows whose stored strict verdict is true. They index
+    // only once SETTING_STATE_INDEXING_ENABLED is turned on (FB-1); the count
+    // is reported so the owner can see what would re-enter.
+    let settingStateStrictPassCount = 0
     let categoryLandingCount = 0
     let categoryCityCount = 0
 
@@ -383,19 +420,55 @@ export async function GET(request: NextRequest) {
     // category-landing rows (one per taxonomy slug). Runs on every scheduled
     // entry run so these rows stay well inside the freshness window (matches
     // pre-fix behaviour, where the offset was always 0). Chained links pass
-    // mode=city to skip it. One query pair per setting and one grouped
-    // query per landing slug; nothing per row.
+    // mode=city to skip it. One hub-pool query per run, one row query per
+    // setting and one per landing slug; nothing per row.
     if (mode !== 'city') {
       const stateSlugs = getAllStateSlugs()
+      const hubs = await loadHubVerdictsOrNone(now)
+
+      // Setting x state first, every setting before any write: the sibling
+      // de-duplication (CQ-01) compares all settings of a state at once. A
+      // setting whose query fails is logged and skipped (its stored rows age
+      // out through the freshness window), and like a budget cut it leaves
+      // the comparison incomplete, so the run writes what it computed with
+      // every verdict closed (settingStateSiblingVerdicts).
+      const settingConfigs = Object.values(SETTING_CONFIGS)
+      const drafts: SettingStateDraft[] = []
+      let settingsComputed = 0
+      let settingFailed = false
+      for (const config of settingConfigs) {
+        if (Date.now() - startTime > TIME_BUDGET_MS) break
+        try {
+          drafts.push(...await aggregateSettingState(config, stateSlugs, now, hubs))
+        } catch (error) {
+          settingFailed = true
+          console.error(`[pseo-agg] Error in setting-state ${config.slug}:`, error)
+        }
+        settingsComputed++
+      }
+      const settingsComplete = settingsComputed === settingConfigs.length
+      const settingVerdictsComplete = settingsComplete && !settingFailed
+      try {
+        const settingRows = finalizeSettingStateRows(drafts, settingVerdictsComplete)
+        await writeStatsRows(settingRows, now)
+        settingStateCount += settingRows.length
+        settingStateStrictPassCount += settingRows.filter((row) => row.indexable).length
+        const siblingDrops = drafts.filter((d) => d.indexable).length - settingStateStrictPassCount
+        if (siblingDrops > 0 && settingVerdictsComplete) {
+          console.log(`[pseo-agg] ${siblingDrops} setting-state verdict(s) closed as near-copies of a larger sibling`)
+        }
+      } catch (error) {
+        console.error('[pseo-agg] Error writing setting-state rows:', error)
+      }
+
       const phaseOneUnits: Array<() => Promise<StatsRow[]>> = [
-        ...Object.values(SETTING_CONFIGS).map((config) => () => aggregateSettingState(config, stateSlugs, now)),
         ...ALL_CATEGORY_SLUGS.map((slug) => async () => [await aggregateCategoryLanding(slug, now)]),
       ]
 
       for (const unit of phaseOneUnits) {
         // Budget check: if Phase 1 alone blows the budget, bail without
         // touching the city cursor so Phase 2 work is never skipped-over.
-        if (Date.now() - startTime > TIME_BUDGET_MS) {
+        if (!settingsComplete || Date.now() - startTime > TIME_BUDGET_MS) {
           console.warn(`[pseo-agg] Timeout safety in Phase 1 after ${settingStateCount} setting-state rows; city cursor stays at ${startOffset}`)
           const cursorPersisted = await persistCityCursor(startOffset)
           return {
@@ -417,10 +490,7 @@ export async function GET(request: NextRequest) {
         try {
           const rows = await unit()
           await writeStatsRows(rows, now)
-          for (const row of rows) {
-            if (row.type === 'setting-state') settingStateCount++
-            else categoryLandingCount++
-          }
+          categoryLandingCount += rows.length
         } catch (error) {
           console.error('[pseo-agg] Error in Phase 1 unit:', error)
         }
@@ -433,11 +503,13 @@ export async function GET(request: NextRequest) {
             success: true,
             mode: 'state',
             settingStateCount,
+            settingStateStrictPassCount,
+            settingStateIndexingEnabled: SETTING_STATE_INDEXING_ENABLED,
             categoryLandingCount,
             elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
             timestamp: new Date().toISOString(),
           }),
-          metrics: { mode: 'state', settingStateCount, categoryLandingCount },
+          metrics: { mode: 'state', settingStateCount, settingStateStrictPassCount, categoryLandingCount },
         }
       }
     }
@@ -525,6 +597,8 @@ export async function GET(request: NextRequest) {
         partial: !wrapped,
         mode,
         settingStateCount,
+        settingStateStrictPassCount,
+        settingStateIndexingEnabled: SETTING_STATE_INDEXING_ENABLED,
         categoryLandingCount,
         categoryCityCount,
         batchInfo: {
@@ -547,6 +621,7 @@ export async function GET(request: NextRequest) {
       metrics: {
         mode,
         settingStateCount,
+        settingStateStrictPassCount,
         categoryLandingCount,
         categoryCityCount,
         startOffset,

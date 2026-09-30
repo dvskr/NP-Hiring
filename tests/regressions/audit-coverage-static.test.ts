@@ -136,7 +136,14 @@ describe('pSEO crawler edge-caching', () => {
   it('middleware edge-caches public /jobs listing pages for crawlers and skips the consent cookie for them', () => {
     const src = read('middleware.ts');
     // Consent cookie skipped for crawlers (so the response is CDN-cacheable).
-    expect(src).toMatch(/if \(!isCrawler\)\s*\{\s*response\.cookies\.set\('pmhnp_consent_region'/);
+    // For users it is written only when the stored region changes (M-03).
+    // The name comes from lib/consent.ts, the module the client reads it
+    // with, so the read and the write share one constant.
+    expect(src).toMatch(
+      /if \(!isCrawler\)\s*\{\s*if \(request\.cookies\.get\(CONSENT_REGION_COOKIE\)\?\.value !== region\)\s*\{\s*response\.cookies\.set\(CONSENT_REGION_COOKIE,/,
+    );
+    expect(src).toMatch(/import \{[^}]*\bCONSENT_REGION_COOKIE\b[^}]*\} from '@\/lib\/consent';/);
+    expect(read('lib/consent.ts')).toContain("export const CONSENT_REGION_COOKIE = 'pmhnp_consent_region';");
     // Edge cache directive set for crawler GETs on listing paths.
     expect(src).toContain("response.headers.set('CDN-Cache-Control'");
     expect(src).toMatch(/isCrawler &&[\s\S]*isJobDetailUrl/);

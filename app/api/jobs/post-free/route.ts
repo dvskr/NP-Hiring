@@ -37,7 +37,7 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeJobPosting, sanitizeText, normalizeContentWhitespace } from '@/lib/sanitize';
 import { logger } from '@/lib/logger';
 import { slugify } from '@/lib/utils';
-import { pingAllSearchEngines } from '@/lib/search-indexing';
+import { pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
 import { computeQualityScore } from '@/lib/utils/quality-score';
@@ -415,6 +415,9 @@ export async function POST(request: NextRequest) {
             isVerifiedEmployer: true,
             sourceType: 'employer',
             expiresAt,
+            // A new posting's content is new now (sitemap lastmod, the
+            // page's "Last updated"; indexing audit fixSoon 5).
+            contentChangedAt: now,
             qualityScore,
             benefits: benefitsResult.value,
             setting: settingResult.value,
@@ -570,7 +573,8 @@ export async function POST(request: NextRequest) {
     const isProduction = process.env.VERCEL_ENV === 'production' || (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_BASE_URL?.includes('localhost'));
     if (isProduction) {
       const jobUrl = `${brand.baseUrl}/jobs/${slug}`;
-      pingAllSearchEngines(jobUrl).catch((err) =>
+      // Google only when the page carries a JobPosting (lib/job-page-indexing.ts).
+      pingSearchEnginesForJobPage(jobUrl, job).catch((err) =>
         logger.error('[Post-Free] Background indexing ping failed', err)
       );
     } else {

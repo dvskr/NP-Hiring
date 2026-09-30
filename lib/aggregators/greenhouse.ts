@@ -46,6 +46,53 @@ export interface GreenhouseJobRaw {
   description: string;
   applyLink: string;
   postedDate?: string;
+  /**
+   * The board's employment-type custom field ("Employment Type", "Job
+   * Type", "Time Type" metadata), when the employer publishes one. The
+   * normalizer prefers it over any text scan (H-03).
+   */
+  jobType?: string;
+}
+
+/** Metadata names that carry the employment type on Greenhouse boards. */
+const EMPLOYMENT_TYPE_METADATA_RE =
+  /^(?:employment|job|position|time|employee|worker)\s*(?:type|status|category|schedule)$|^(?:schedule|full\s*\/\s*part\s*time)$/i;
+
+/**
+ * The employment type a Greenhouse job's custom metadata states, or
+ * undefined. Values arrive as a string, a list of strings (multi select) or
+ * an object with a name; the first non-empty text wins.
+ */
+export function greenhouseEmploymentType(metadata: ReadonlyArray<Record<string, unknown>> | null | undefined): string | undefined {
+  for (const field of metadata ?? []) {
+    const name = typeof field?.name === 'string' ? field.name.trim() : '';
+    if (!EMPLOYMENT_TYPE_METADATA_RE.test(name)) continue;
+    const value = field.value;
+    const texts = Array.isArray(value) ? value : [value];
+    for (const v of texts) {
+      if (typeof v === 'string' && v.trim()) return v.trim();
+      if (v && typeof v === 'object' && typeof (v as { name?: unknown }).name === 'string') {
+        const text = ((v as { name: string }).name).trim();
+        if (text) return text;
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Where a Greenhouse job is: its location name, else its first office's
+ * name, else "United States". A posting with no location is not a remote
+ * posting: the old "Remote" default published unknown-location jobs as
+ * TELECOMMUTE (indexing audit GFJ-01, CS-03). "United States" says only
+ * that the place is unknown; remote work still comes from the title or the
+ * description, and a place from lib/location-fallback.ts at ingest.
+ */
+export function greenhouseLocation(job: {
+  location?: { name?: string | null } | null;
+  offices?: ReadonlyArray<{ name?: string | null }> | null;
+}): string {
+  return job.location?.name?.trim() || job.offices?.[0]?.name?.trim() || 'United States';
 }
 
 function formatCompanyName(slug: string): string {
@@ -82,11 +129,12 @@ async function fetchCompanyJobs(companySlug: string): Promise<GreenhouseJobRaw[]
 
     console.log(`[Greenhouse] ${companySlug}: ${totalJobs} jobs fetched`);
 
-    const allJobs = jobs.map((job: GreenhouseJob) => ({
+    const allJobs = jobs.map((job: GreenhouseJob): GreenhouseJobRaw => ({
+      jobType: greenhouseEmploymentType(job.metadata),
       externalId: `greenhouse-${companySlug}-${job.id}`,
       title: job.title,
       company: companyName,
-      location: job.location?.name || job.offices?.[0]?.name || 'Remote',
+      location: greenhouseLocation(job),
       description: job.content || '',
       applyLink: job.absolute_url,
       // Greenhouse exposes first_published (true original post date) AND

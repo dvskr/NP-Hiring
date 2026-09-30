@@ -14,10 +14,14 @@ import { logger } from '@/lib/logger';
 import {
     DEINDEX_EXPIRED_CRON,
     advanceCursor,
+    isDeadLinkJob,
+    isPresenceClosedJob,
     passedOverWhere,
     pendingJobsWhere,
     planWindow,
-    readLastCursor,
+    readLastRun,
+    rememberRemovedDeadLinks,
+    stillRemovedDeadLinks,
     type CursorHold,
     type DeindexCursor,
     type OfferedJob,
@@ -36,13 +40,19 @@ export const maxDuration = 300;
 const BATCH_SIZE = GOOGLE_INDEXING_LANES['expired-job-removal'].perInvocation;
 
 /**
- * Dedicated de-indexing cron for expired jobs.
+ * Dedicated de-indexing cron for expired jobs and jobs dead at their source.
  *
  * WHY THIS EXISTS. Expiry unpublishes a job (cleanup-expired, and the sweep at
  * the end of every ingest run), and a dead job URL that is still in Google's
  * index has no other way out: IndexNow reaches Bing, Yandex and Seznam but
  * cannot remove anything from Google. This cron is the caller that tells
- * Google, out of the expired-job-removal lane in lib/search-indexing.ts.
+ * Google, out of the expired-job-removal lane in lib/search-indexing.ts. A job
+ * whose source stopped listing it answers 410 from the middleware job gate, so
+ * it is sent the same way: one source-presence-unpublish took down (at
+ * JOB_HEALTH_MIN_PRESENCE_MISSES, usually long before its expiresAt), and one
+ * at or above DEAD_LINK_MISS_THRESHOLD. ./cursor.ts explains both, and how a
+ * published dead-link job, which source presence keeps writing, is still sent
+ * only once.
  *
  * HOW IT PICKS JOBS. Oldest first, from a resume point stored in cron_runs, so a
  * job is sent once unless another writer updates it after it was sent
@@ -59,7 +69,8 @@ const BATCH_SIZE = GOOGLE_INDEXING_LANES['expired-job-removal'].perInvocation;
  * the cursor forward. Sending to IndexNow alone would move the cursor past jobs
  * Google was never told about. Meanwhile IndexNow still hears about every job
  * the sweep at the end of an ingest run expires (lib/ingestion-service.ts);
- * only jobs the cleanup-expired safety net flips wait for this cron.
+ * jobs the cleanup-expired safety net flips, and jobs closed at their source,
+ * wait for this cron.
  *
  * Schedule: the midday batch in config/cron-schedule.ts, twice daily, after
  * cleanup-expired.
@@ -76,7 +87,8 @@ export async function GET(request: NextRequest) {
             const now = new Date();
             // Read before anything else, so that every successful run, including
             // one that sends nothing, carries the resume point forward.
-            const previous = await readLastCursor();
+            const last = await readLastRun();
+            const previous = last.cursor;
 
             if (!process.env.GOOGLE_INDEXING_CREDENTIALS) {
                 logger.warn(
@@ -87,15 +99,17 @@ export async function GET(request: NextRequest) {
                     message: 'Google Indexing API is not configured, so no expired job was sent',
                     hold: 'google-not-configured',
                     cursor: previous,
+                    removedDeadLinks: last.removedDeadLinks,
                 });
             }
 
             const window = planWindow(previous, now);
-            const pending = pendingJobsWhere(window, now);
+            const removedDeadLinks = await stillRemovedDeadLinks(last.removedDeadLinks, window);
+            const pending = pendingJobsWhere(window, now, removedDeadLinks);
             const [waiting, passedOver] = await Promise.all([
                 prisma.job.count({ where: pending }),
                 window.staleCursor
-                    ? prisma.job.count({ where: passedOverWhere(window.staleCursor, window, now) })
+                    ? prisma.job.count({ where: passedOverWhere(window.staleCursor, window, now, removedDeadLinks) })
                     : Promise.resolve(0),
             ]);
             if (passedOver > 0) {
@@ -107,7 +121,16 @@ export async function GET(request: NextRequest) {
 
             const batch = await prisma.job.findMany({
                 where: pending,
-                select: { id: true, title: true, slug: true, updatedAt: true },
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    updatedAt: true,
+                    isPublished: true,
+                    isManuallyUnpublished: true,
+                    sourceType: true,
+                    healthConsecutiveMissing: true,
+                },
                 orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
                 take: BATCH_SIZE,
             });
@@ -115,9 +138,10 @@ export async function GET(request: NextRequest) {
             if (batch.length === 0) {
                 return report(startTime, {
                     ...NOTHING_SENT,
-                    message: 'No expired jobs waiting for removal',
+                    message: 'No expired or closed jobs waiting for removal',
                     passedOver,
                     cursor: previous,
+                    removedDeadLinks,
                 });
             }
 
@@ -133,6 +157,20 @@ export async function GET(request: NextRequest) {
                 'expired-job-removal',
             );
             const outcome = advanceCursor(previous, offered, results.google);
+            // Dead-link jobs the cursor moved past are remembered, so the
+            // presence writes that keep moving their updatedAt never bring them
+            // back. A job the cursor stopped short of is offered again anyway.
+            const deadLinkIds = new Set(batch.filter(isDeadLinkJob).map((job) => job.id));
+            // Presence closed rows below the dead-link threshold are counted
+            // for the report only: nothing rewrites them, so the cursor alone
+            // sends each once.
+            const presenceClosedCount = batch.filter(
+                (job) => !isDeadLinkJob(job) && isPresenceClosedJob(job),
+            ).length;
+            const removedThisRun = offered
+                .slice(0, outcome.completed)
+                .map((job) => job.id)
+                .filter((id) => deadLinkIds.has(id));
 
             if (outcome.hold === 'google-rejected-every-url') {
                 logger.warn('[CRON:deindex-expired] Google refused every removal; the batch will be offered again', {
@@ -151,13 +189,16 @@ export async function GET(request: NextRequest) {
             const indexNowDeleted = results.indexNow.filter((r) => r.success).length;
 
             return report(startTime, {
-                message: `Offered ${batch.length} expired job URLs; the cursor moved past ${outcome.completed}`,
+                message: `Offered ${batch.length} expired or closed job URLs; the cursor moved past ${outcome.completed}`,
                 expiredCount: batch.length,
+                deadLinkCount: deadLinkIds.size,
+                presenceClosedCount,
                 completed: outcome.completed,
                 backlog: Math.max(0, waiting - outcome.completed),
                 passedOver,
                 hold: outcome.hold,
                 cursor: outcome.cursor,
+                removedDeadLinks: rememberRemovedDeadLinks(removedDeadLinks, removedThisRun),
                 google: {
                     deleted: googleDeleted,
                     failed: results.google.length - googleDeleted - googleNotAsked,
@@ -187,23 +228,31 @@ export async function GET(request: NextRequest) {
 
 interface RunReport {
     readonly message: string;
-    /** Jobs offered to the search engines this run. */
+    /** Jobs offered to the search engines this run, expired and closed alike. */
     readonly expiredCount: number;
+    /** Of those, jobs at or past the dead-link threshold. */
+    readonly deadLinkCount: number;
+    /** Of those, jobs source-presence-unpublish took down below that threshold. */
+    readonly presenceClosedCount: number;
     /** Jobs the cursor moved past; the next run will not offer them again. */
     readonly completed: number;
-    /** Expired jobs inside the window still waiting after this run. */
+    /** Expired and closed jobs inside the window still waiting after this run. */
     readonly backlog: number;
-    /** Expired jobs that fell behind the lookback floor before any run sent them. */
+    /** Removals that fell behind the lookback floor before any run sent them. */
     readonly passedOver: number;
     readonly hold: CursorHold | 'google-not-configured' | null;
     /** The resume point the next run reads back from this run's metrics. */
     readonly cursor: DeindexCursor | null;
+    /** Dead-link jobs already sent, carried forward in the metrics (./cursor.ts). */
+    readonly removedDeadLinks: readonly string[];
     readonly google: { readonly deleted: number; readonly failed: number; readonly notAsked: number };
     readonly indexNow: { readonly deleted: number; readonly failed: number };
 }
 
-const NOTHING_SENT: Omit<RunReport, 'message' | 'cursor'> = {
+const NOTHING_SENT: Omit<RunReport, 'message' | 'cursor' | 'removedDeadLinks'> = {
     expiredCount: 0,
+    deadLinkCount: 0,
+    presenceClosedCount: 0,
     completed: 0,
     backlog: 0,
     passedOver: 0,
@@ -213,18 +262,24 @@ const NOTHING_SENT: Omit<RunReport, 'message' | 'cursor'> = {
 };
 
 /**
- * The response and the run metrics. Every successful run records `cursor`,
- * because the next run reads its resume point from the newest successful run.
+ * The response and the run metrics. Every successful run records `cursor` and
+ * `removedDeadLinks`, because the next run reads its resume state from the
+ * newest successful run. The response reports only how many ids are
+ * remembered; the ids themselves live in the metrics.
  */
 function report(startTime: number, run: RunReport): CronRunResult {
+    const { removedDeadLinks, ...counts } = run;
     const summary = {
         success: true,
-        ...run,
+        ...counts,
+        rememberedDeadLinks: removedDeadLinks.length,
         duration: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
         timestamp: new Date().toISOString(),
     };
     logger.info('[CRON:deindex-expired] Complete', {
         expiredCount: run.expiredCount,
+        deadLinkCount: run.deadLinkCount,
+        presenceClosedCount: run.presenceClosedCount,
         completed: run.completed,
         backlog: run.backlog,
         hold: run.hold,
@@ -234,6 +289,8 @@ function report(startTime: number, run: RunReport): CronRunResult {
         response: NextResponse.json(summary),
         metrics: {
             expiredCount: run.expiredCount,
+            deadLinkCount: run.deadLinkCount,
+            presenceClosedCount: run.presenceClosedCount,
             completed: run.completed,
             backlog: run.backlog,
             passedOver: run.passedOver,
@@ -244,6 +301,7 @@ function report(startTime: number, run: RunReport): CronRunResult {
             indexNowDeleted: run.indexNow.deleted,
             indexNowFailed: run.indexNow.failed,
             cursor: run.cursor,
+            removedDeadLinks: [...removedDeadLinks],
         },
     };
 }

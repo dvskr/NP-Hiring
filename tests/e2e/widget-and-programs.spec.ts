@@ -106,9 +106,9 @@ test.describe('/widget — job-card content', () => {
       const row = rows.nth(i)
       await expect(row.locator('.pd-title')).not.toBeEmpty()
       await expect(row.locator('.pd-employer')).not.toBeEmpty()
-      // Either Direct Apply OR Easy Apply — never External
+      // Either Apply on employer site OR Easy Apply, never External
       const applyText = await row.locator('.pd-btn--direct, .pd-btn--easy').first().innerText()
-      expect(applyText).toMatch(/Direct Apply|Easy Apply/)
+      expect(applyText).toMatch(/Apply on employer site|Easy Apply/)
     }
   })
 

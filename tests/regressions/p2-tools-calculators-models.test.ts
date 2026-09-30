@@ -570,8 +570,10 @@ describe('comparator city links never point at a known 404', () => {
 
     for (const option of linked) {
       expect(cityLinkResolves(option.name, option.stateCode)).toBe(true);
-      // The linked path is exactly what cityLinkResolves validated.
-      const routeSlug = option.jobsHref!.replace('/jobs/city/', '');
+      // The linked path is exactly what cityLinkResolves validated. A
+      // curated metro links its guide under the same slug (L-05).
+      expect(option.jobsHref).toMatch(/^\/jobs\/(?:city|metro)\//);
+      const routeSlug = option.jobsHref!.replace(/^\/jobs\/(?:city|metro)\//, '');
       expect(routeSlug).toBe(
         `${option.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${option.stateCode.toLowerCase()}`,
       );

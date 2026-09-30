@@ -51,7 +51,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${template.label} | ${brand.niche.short} Job Description Template`;
   const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(title)}&type=page`;
   return {
-    title: `${title} | ${brand.name}`,
+    // L-02 / CS-10: the root layout template appends the brand once; a manual
+    // suffix here rendered "| NP Hiring | NP Hiring".
+    title,
     description: `${template.summary} A free ${brand.niche.descriptor} job description skeleton for this setting. Customize the bracketed prompts and post in minutes.`,
     openGraph: {
       title,

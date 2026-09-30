@@ -1,11 +1,92 @@
+import { createHash } from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { parseLocation, leadingStreetAddress } from '@/lib/location-parser';
 
 interface DuplicateCheckResult {
   isDuplicate: boolean;
   confidence: number;
-  matchType: 'exact_id' | 'exact_title' | 'fuzzy_title' | 'apply_url' | 'none';
+  matchType: 'exact_id' | 'exact_title' | 'same_site' | 'exact_content' | 'fuzzy_title' | 'apply_url' | 'none';
   matchedJobId?: string;
 }
+
+// ── Work-site identity (indexing audit CQ-10 / GFJ-09 / fixSoon 8) ──────
+// Two postings are the same job only when they are for the same work site.
+// Comparing raw location strings missed format variants of one site
+// ("Denver, CO" vs "Denver, Colorado, United States"), and the fuzzy
+// strategy's 50% string similarity merged different sites whose names look
+// alike ("VA - Norfolk" vs "VA - Suffolk", "Springfield, MO" vs
+// "Springfield, IL"), collapsing genuine per-city requisitions.
+
+/** What a location string says about the work site, via the ingest parser. */
+export interface WorkSite {
+  city: string | null;
+  stateCode: string | null;
+  isRemote: boolean;
+  /**
+   * The normalized street address in front of the city, or null. Two clinics
+   * of one employer in the same city ("4200 Wisconsin Ave NW" and "1730
+   * Rhode Island Ave NW", both Washington, DC) are different work sites.
+   */
+  address: string | null;
+}
+
+export function workSiteOf(location: string | null | undefined): WorkSite {
+  const p = parseLocation(location ?? '');
+  return {
+    city: p.city ? normalizeLocation(p.city) : null,
+    stateCode: p.stateCode,
+    isRemote: p.isRemote,
+    address: leadingStreetAddress(location),
+  };
+}
+
+/**
+ * Whether two work sites are the same place. Two different street addresses
+ * are always different sites. With a city on both sides the city and state
+ * must match. Without a city on either side, the state (or its absence) and
+ * the remote flag must match. A city on one side only is not enough evidence
+ * either way, so it is treated as different.
+ */
+export function isSameWorkSite(a: WorkSite, b: WorkSite): boolean {
+  if (a.address && b.address && a.address !== b.address) return false;
+  if (a.city && b.city) return a.city === b.city && a.stateCode === b.stateCode;
+  if (a.city || b.city) return false;
+  return a.stateCode === b.stateCode && a.isRemote === b.isRemote;
+}
+
+/**
+ * Format-insensitive identity key: normalized title, employer and the
+ * parsed "city|ST|street address" work site. Null when the location has no
+ * parsable city, so state-only and remote postings never collapse on this
+ * key (they may be separate requisitions whose location text simply omits
+ * the city). The street address keeps two clinics in one city apart.
+ */
+export function buildSiteIdentityKey(title: string, employer: string, location: string): string | null {
+  const site = workSiteOf(location);
+  if (!site.city || !site.stateCode) return null;
+  return `${normalizeTitle(title)}|${normalizeCompany(employer)}|${site.city}|${site.stateCode}|${site.address ?? ''}`;
+}
+
+/** Descriptions shorter than this carry too little text to prove two rows are one posting. */
+const MIN_FINGERPRINT_CHARS = 200;
+
+/**
+ * A hash of a description's words, ignoring markup, case, punctuation and
+ * spacing. Equal fingerprints mean the same posting text.
+ */
+export function descriptionFingerprint(description: string | null | undefined): string | null {
+  const words = (description ?? '')
+    .toLowerCase()
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  if (words.length < MIN_FINGERPRINT_CHARS) return null;
+  return createHash('sha1').update(words).digest('hex');
+}
+
+/** Upper bound on same-employer rows read for the content check. */
+const CONTENT_CHECK_CANDIDATES = 300;
 
 /**
  * Optional pre-loaded maps so `checkDuplicate` can do exact-title and
@@ -18,6 +99,8 @@ interface DuplicateCheckResult {
 export interface DuplicateCheckOptions {
   /** key = `${normalizeTitle}|${normalizeCompany}|${normalizeLocation}` → jobId */
   globalTitleKeyMap?: Map<string, string>;
+  /** key = buildSiteIdentityKey(title, employer, location) → jobId */
+  globalSiteKeyMap?: Map<string, string>;
   /** key = `URL.pathname.slice(0, 60)` → jobId */
   globalApplyLinkMap?: Map<string, string>;
 }
@@ -193,6 +276,8 @@ export async function checkDuplicate(
     externalId?: string;
     sourceProvider?: string;
     applyLink?: string;
+    /** Enables the same-text check (Strategy 5). */
+    description?: string | null;
   },
   options: DuplicateCheckOptions = {},
 ): Promise<DuplicateCheckResult> {
@@ -264,6 +349,23 @@ export async function checkDuplicate(
       }
     }
 
+    // STRATEGY 2b: same title + employer + parsed work site (confidence: 0.93)
+    // Catches one posting whose location text differs only in format
+    // ("Denver, CO" vs "Denver, Colorado, United States"). Only keys with a
+    // city exist, so per-city requisitions stay separate.
+    if (options.globalSiteKeyMap) {
+      const siteKey = buildSiteIdentityKey(job.title, job.employer, job.location);
+      const matchedId = siteKey ? options.globalSiteKeyMap.get(siteKey) : undefined;
+      if (matchedId) {
+        return {
+          isDuplicate: true,
+          confidence: 0.93,
+          matchType: 'same_site',
+          matchedJobId: matchedId,
+        };
+      }
+    }
+
     // STRATEGY 3: Apply URL match — GLOBAL cross-source check (confidence: 0.90)
     // Catches the same job posted across different sources (e.g. fantastic
     // scraping a lever board that we also ingest natively).
@@ -293,6 +395,32 @@ export async function checkDuplicate(
             matchedJobId: globalUrlMatch.id,
           };
         }
+      }
+    }
+
+    // STRATEGY 5: same text (confidence: 0.97)
+    // Same employer, same normalized title, same work site and the same
+    // description word for word: the exact-duplicate definition of indexing
+    // audit fixSoon 8. Reaches rows whose location text is not parsable to
+    // a city (remote and state-level postings) that Strategy 2b cannot key.
+    const fingerprint = descriptionFingerprint(job.description);
+    if (fingerprint && job.employer) {
+      const sameEmployer = await prisma.job.findMany({
+        where: { isPublished: true, employer: { equals: job.employer, mode: 'insensitive' } },
+        select: { id: true, title: true, location: true, description: true },
+        take: CONTENT_CHECK_CANDIDATES,
+      });
+      const site = workSiteOf(job.location);
+      for (const candidate of sameEmployer ?? []) {
+        if (normalizeTitle(candidate.title) !== normalizedTitle) continue;
+        if (!isSameWorkSite(site, workSiteOf(candidate.location))) continue;
+        if (descriptionFingerprint(candidate.description) !== fingerprint) continue;
+        return {
+          isDuplicate: true,
+          confidence: 0.97,
+          matchType: 'exact_content',
+          matchedJobId: candidate.id,
+        };
       }
     }
 
@@ -331,12 +459,23 @@ export async function checkDuplicate(
         // clearly different cities ("Wilmington, Delaware" vs "Saint Louis, MO").
         const matchNormalizedTitle = normalizeTitle(match.title);
         const matchNormLocation = normalizeLocation(match.location);
-        const locationSimilarity = calculateSimilarity(normalizedLocation, matchNormLocation);
         const bothRemote = normalizedLocation.includes('remote') && matchNormLocation.includes('remote');
 
-        if (!bothRemote && locationSimilarity <= 0.50) {
-          // Same company + title but different location = different position, skip
-          continue;
+        // When both locations parse to a place, the parsed place decides:
+        // string similarity called "VA - Norfolk" and "VA - Suffolk" the same
+        // site and merged genuine per-city requisitions (indexing audit
+        // GFJ-09). Similarity is only the fallback for unparsable text.
+        const mySite = workSiteOf(job.location);
+        const theirSite = workSiteOf(match.location);
+        const bothPlaced = (mySite.city || mySite.stateCode) && (theirSite.city || theirSite.stateCode);
+        if (bothPlaced) {
+          if (!isSameWorkSite(mySite, theirSite)) continue;
+        } else {
+          const locationSimilarity = calculateSimilarity(normalizedLocation, matchNormLocation);
+          if (!bothRemote && locationSimilarity <= 0.50) {
+            // Same company + title but different location = different position, skip
+            continue;
+          }
         }
 
         // Both-remote guard (added 2026-05-05 after prod audit). When both

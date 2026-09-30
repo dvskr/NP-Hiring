@@ -210,6 +210,9 @@ export async function POST(request: NextRequest) {
                 benefits: (input.benefits as string[] | undefined) ?? [],
                 setting: str('setting'),
                 population: str('population'),
+                // A new posting's content is new now (sitemap lastmod, the
+                // page's "Last updated"; indexing audit fixSoon 5).
+                contentChangedAt: new Date(),
             },
         });
 

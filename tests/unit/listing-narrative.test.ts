@@ -14,6 +14,7 @@ import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS, type BenchmarkRow } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 import {
   MIX_MIN_POSTINGS_HUB,
   MIX_MIN_POSTINGS_LISTING,
@@ -395,16 +396,33 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
       .toBe(`The median posted salary for ${NP} roles in Texas is $132K, and the middle half of postings runs $118K to $150K. It is based on 6 postings from 3 employers that list annual pay. Hourly, estimated and non-${NP} postings are excluded.`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 0 }) })))
       .toBe(`No current posting in Texas states a salary, so this site publishes no state figure. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
-    expect(keep(buildHubPayParagraph({ scopeName: 'Austin', scopeNoun: 'metro', facts: facts({ salaryDisclosedCount: 1 }) })))
-      .toBe(`1 posting in Austin states a salary, which is below the minimum of ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} employers this site requires before publishing a metro figure. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+    expect(keep(buildHubPayParagraph({ scopeName: 'Austin', scopeNoun: 'metro', facts: facts({ salaryDisclosedCount: 1, salaryDisclosedEmployers: 1 }) })))
+      .toBe(`1 posting in Austin states a salary. This site publishes a metro figure only once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 2 }) }))).toMatch(/^2 postings in Texas state a salary/);
+  });
+
+  it('the below-gate sentence names the condition that failed (CQ-08)', () => {
+    // Enough postings, too few employers: the Illinois directory case.
+    expect(keep(buildHubPayParagraph({ scopeName: 'Illinois', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 13, salaryDisclosedEmployers: 2 }) })))
+      .toBe(`13 postings in Illinois state a salary, but they come from only 2 employers, and this site publishes a state figure only once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+    expect(keep(buildHubPayParagraph({ scopeName: 'Maine', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 6, salaryDisclosedEmployers: 1 }) })))
+      .toMatch(/^6 postings in Maine state a salary, but they come from only 1 employer, /);
+    // Both counts clear, so the annual-pay rule or the employer-share cap
+    // (CQ-15) failed; the facts cannot tell which, so the whole rule is stated.
+    expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 14, salaryDisclosedEmployers: 4 }) })))
+      .toBe(`14 postings in Texas state a salary from 4 employers, but this site publishes a state figure only once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers list annual pay for an ${NP} role, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them, and that is not met yet. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+    // No sentence ever claims a count that passed is "below the minimum".
+    for (const [d, e] of [[13, 2], [14, 4], [5, 3], [2, 1]]) {
+      const text = buildHubPayParagraph({ scopeName: 'Ohio', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: d, salaryDisclosedEmployers: e }) });
+      expect(text).not.toContain('below the minimum');
+    }
   });
 
   it('CS-S4 and LAND-L4: benchmark, else a cited count, else nothing', () => {
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 8, benchmark: BENCH }) })))
       .toBe('Across 6 listings from 3 employers that state an annual salary, the median posted pay is $132K. The middle half of those listings fall between $118K and $150K.');
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 2 }) })))
-      .toBe(`2 of 5 listings state an annual salary. This site publishes a median only once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do, so compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`);
+      .toBe(`2 of 5 listings state an annual salary. This site publishes a median only once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them, so compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`);
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 1, salaryDisclosedCount: 1 }) }))).toMatch(/^1 of 1 listing states an annual salary\./);
     expect(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 0 }) })).toBeNull();
   });
@@ -428,16 +446,16 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
     expect(keep(buildCityPayParagraph({ city: 'Austin', benchmark: BENCH })))
       .toBe(`Across 6 listings from 3 employers that disclose annual pay, the median in Austin is $132,000. The middle half falls between $118,000 and $150,000. ${NATIONAL_REFERENCE_SENTENCE}`);
     expect(keep(buildCityPayParagraph({ city: 'Austin', benchmark: null })))
-      .toBe(`Fewer than ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers in Austin disclose annual pay, so this page does not publish a local figure. ${NATIONAL_REFERENCE_SENTENCE}`);
+      .toBe(`This page does not publish a local figure until at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers in Austin disclose annual pay, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. ${NATIONAL_REFERENCE_SENTENCE}`);
   });
 
   it('CC-K3 has three branches', () => {
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: BENCH, cityBenchmark: BENCH })))
       .toMatch(/^Across 6 remote listings from 3 employers that disclose annual pay, the median in Austin is \$132,000\./);
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: null, cityBenchmark: BENCH })))
-      .toMatch(new RegExp(`^Not enough remote listings disclose pay\\. Across 6 listings from 3 employers that disclose annual pay, the median across all ${NP} listings in Austin is \\$132,000\\.`));
+      .toMatch(new RegExp(`^No median is published for remote listings alone\\. Across 6 listings from 3 employers that disclose annual pay, the median across all ${NP} listings in Austin is \\$132,000\\.`));
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: null, cityBenchmark: null })))
-      .toMatch(/^Fewer than 5 listings from at least 3 employers in Austin disclose annual pay/);
+      .toMatch(/^This page does not publish a local figure until at least 5 listings from at least 3 employers in Austin disclose annual pay, with no single employer above 40% of them\./);
   });
 
   it('DIR-L3 card line and CO-C2 count sentence', () => {
@@ -520,8 +538,8 @@ describe('small blocks pluralize at one and carry no trend claims', () => {
   });
 
   it('SAL-S5 caption, SPEC CTA, CO-C1 footprint, DIR-L5 editorial', () => {
-    expect(keep(SALARY_NEARBY_NOT_PUBLISHED)).toBe('Not published (sample below minimum)');
-    expect(keep(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL))).toContain(`published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers`);
+    expect(keep(SALARY_NEARBY_NOT_PUBLISHED)).toBe('Not published (sample does not meet the rule)');
+    expect(keep(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL))).toContain(`published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`);
     expect(buildSpecialtyCtaLine({ label: 'Family Practice', total: 0 })).toBeNull();
     expect(keep(buildSpecialtyCtaLine({ label: 'Family Practice', total: 1 }))).toBe('1 Family Practice opening is live right now.');
     expect(keep(buildSpecialtyCtaLine({ label: 'Family Practice', total: 4 }))).toBe('4 Family Practice openings are live right now.');
@@ -597,6 +615,32 @@ describe('FAQ arrays drop an entry whenever its answer is missing', () => {
     ]);
     expect(full[0].answer).toBe('All 4 current Remote listings in Texas are posted by Alpha. The newest listing was posted on September 1, 2026.');
     expect(buildSettingStateFaqs({ label: 'Remote', stateName: 'Texas', slug: 'remote', facts: facts({ total: 4, salaryDisclosedCount: 2 }), physicianAnswer: null, nlcAnswer: null }).some((f) => /pay/.test(f.question))).toBe(false);
+  });
+
+  it('CS-S9 names an APRN-axis role without the NP suffix (CQ-06)', () => {
+    const anesthesia = keepFaqs(buildSettingStateFaqs({
+      label: 'Nurse Anesthetist', stateName: 'Texas', slug: 'anesthesia',
+      facts: facts({ total: 4, distinctEmployers: 2, topEmployers: emp([['Alpha', 3], ['Beta', 1]]), recency: recency({ last30: 1 }), benchmark: BENCH }),
+      physicianAnswer: null, nlcAnswer: null,
+    }));
+    expect(anesthesia.map((f) => f.question)).toEqual([
+      'How many Nurse Anesthetist jobs are open in Texas?',
+      'What do Nurse Anesthetist jobs in Texas pay?',
+    ]);
+    for (const { question } of anesthesia) expect(question).not.toContain(` ${NP} `);
+    const midwifery = keepFaqs(buildSettingStateFaqs({
+      label: 'Nurse Midwife', stateName: 'Ohio', slug: 'midwifery',
+      facts: facts({ total: 2, distinctEmployers: 1, topEmployers: emp([['Alpha', 2]]), recency: recency({ last30: 0 }) }),
+      physicianAnswer: null, nlcAnswer: null,
+    }));
+    expect(midwifery[0].question).toBe('How many Nurse Midwife jobs are open in Ohio?');
+    // An NP setting keeps the suffix.
+    const remote = keepFaqs(buildSettingStateFaqs({
+      label: 'Remote', stateName: 'Texas', slug: 'remote',
+      facts: facts({ total: 4, distinctEmployers: 2, topEmployers: emp([['Alpha', 3], ['Beta', 1]]), recency: recency({ last30: 1 }) }),
+      physicianAnswer: null, nlcAnswer: null,
+    }));
+    expect(remote[0].question).toBe(`How many Remote ${NP} jobs are open in Texas?`);
   });
 
   it('CC-K8 replaces the opinion question with the employers question, omitted below two employers', () => {
@@ -693,6 +737,35 @@ describe('titles print counts only at the display floor and stay inside the SERP
       .toBe(`6 outpatient ${NP} openings in Guam from 2 employers. Median posted pay $132K. Top city: Hagatna.`);
   });
 
+  it('CS-meta names an APRN-axis role without the NP suffix (CQ-06), and keeps it for NP settings', () => {
+    // With the slug, an APRN-axis label is the role itself.
+    expect(keep(buildSettingStateTitle({ titleLabel: 'Nurse Anesthetist', slug: 'anesthesia', stateName: 'Texas', total: 2 })))
+      .toBe('Nurse Anesthetist Jobs in Texas');
+    expect(keep(buildSettingStateTitle({ titleLabel: 'Nurse Midwife', slug: 'midwifery', stateName: 'Ohio', total: COUNT_DISPLAY_FLOOR })))
+      .toBe(`Nurse Midwife Jobs in Ohio: ${COUNT_DISPLAY_FLOOR} Openings`);
+    // An NP setting keeps the suffix, with or without the slug.
+    expect(keep(buildSettingStateTitle({ titleLabel: 'Remote', slug: 'remote', stateName: 'Texas', total: 2 }))).toBe(`Remote ${NP} Jobs in Texas`);
+    expect(keep(buildSettingStateTitle({ titleLabel: 'Remote', stateName: 'Texas', total: 2 }))).toBe(`Remote ${NP} Jobs in Texas`);
+
+    const anesthesia = keep(buildSettingStateDescription({
+      label: 'Nurse Anesthetist', slug: 'anesthesia', stateName: 'Texas',
+      facts: facts({ total: 4, distinctEmployers: 2, cities: [{ name: 'Austin', stateCode: 'TX', count: 3 }] }), statsAsOf: null,
+    }));
+    expect(anesthesia).toContain('4 nurse anesthetist openings in Texas from 2 employers.');
+    expect(anesthesia).not.toContain(` ${NP} `);
+    expect(anesthesia).not.toMatch(new RegExp(`anesthetist ${NP}`, 'i'));
+    const midwife = keep(buildSettingStateDescription({
+      label: 'Nurse Midwife', slug: 'midwifery', stateName: 'Ohio',
+      facts: facts({ total: 1, distinctEmployers: 1, cities: [{ name: 'Columbus', stateCode: 'OH', count: 1 }] }), statsAsOf: null,
+    }));
+    expect(midwife).toMatch(/^1 nurse midwife opening in Ohio from 1 employer\./);
+    // An NP setting keeps "{label} NP" in the description.
+    expect(keep(buildSettingStateDescription({
+      label: 'Outpatient', slug: 'outpatient', stateName: 'Texas',
+      facts: facts({ total: 6, distinctEmployers: 2, cities: [{ name: 'Austin', stateCode: 'TX', count: 4 }] }), statsAsOf: null,
+    }))).toMatch(new RegExp(`^6 outpatient ${NP} openings in Texas`));
+  });
+
   it('CC-K9, DIR-meta, METRO-meta', () => {
     expect(keep(buildCategoryCityTitle({ labelNoun: `Remote ${NP}`, city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1 }))).toBe(`Remote ${NP} Jobs in Austin, TX`);
     expect(keep(buildCategoryCityTitle({ labelNoun: 'Nurse Anesthetist', city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR }))).toBe(`Nurse Anesthetist Jobs in Austin, TX (${COUNT_DISPLAY_FLOOR} Open)`);
@@ -706,10 +779,15 @@ describe('titles print counts only at the display floor and stay inside the SERP
         .toBe(`3 active outpatient listings in Hagatna, ${stateCode}. Settings include Outpatient and Clinic.`);
     }
 
-    expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 1 }))).toBe(`${NP} Jobs by City in Texas: 1 City Hiring`);
-    expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 3 }))).toBe(`${NP} Jobs by City in Texas: 3 Cities Hiring`);
-    expect(keep(buildDirectoryDescription({ stateName: 'Texas', totalStateJobs: 12, trackedCities: 3, leadCities: ['Austin', 'Dallas', 'Houston'] })))
-      .toBe(`12 open ${NP_PROSE} roles across 3 Texas cities, led by Austin and Dallas. See live counts and employers city by city.`);
+    // M-05: the directory targets "which cities are hiring", never the hub's
+    // "NP jobs in {State}" and never the hub's job count.
+    expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 1 }))).toBe(`Texas Cities Hiring ${NP}s: 1 City with Openings`);
+    expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 3 }))).toBe(`Texas Cities Hiring ${NP}s: 3 Cities with Openings`);
+    const directoryDescription = keep(buildDirectoryDescription({ stateName: 'Texas', totalStateJobs: 12, trackedCities: 3, leadCities: ['Austin', 'Dallas', 'Houston'] }));
+    expect(directoryDescription)
+      .toBe(`3 Texas cities with open ${NP_PROSE} roles, led by Austin and Dallas. Employers and work mode for each city, with links to city job pages.`);
+    expect(directoryDescription).not.toContain('12');
+    expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 3 }))).not.toMatch(new RegExp(`^${NP} Jobs`));
 
     expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1, year: 2026 }))).toBe(`${NP} Jobs in Austin, TX (2026)`);
     expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, year: 2026 }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP} Jobs in Austin, TX (2026)`);
@@ -747,7 +825,7 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(keep(buildSpecialtyDescription({ role: 'Nurse Anesthetist (CRNA)', total: 4, benchmark: null, isNicheRole: false }))).toBe(`Nurse Anesthetist (CRNA) salary guide: 4 open roles on ${BRAND}.`);
     // The niche-role cite is the short inline form (agency plus vintage) derived from the stats entry.
     expect(keep(buildSpecialtyDescription({ role: 'FNP', total: 1, benchmark: null, isNicheRole: true })))
-      .toBe(`FNP salary guide: 1 open role on ${BRAND}. National all-${NP} median ${BLS} (BLS OEWS, May 2024).`);
+      .toBe(`FNP salary guide: 1 open role on ${BRAND}. National all-${NP} median ${BLS} (BLS OEWS, May 2025).`);
     const gatedSpecialty = keep(buildSpecialtyDescription({ role: 'Family Nurse Practitioner (FNP)', total: 1, benchmark: BENCH, isNicheRole: true }));
     expect(gatedSpecialty).toBe(`Family Nurse Practitioner (FNP) salary guide: 1 open role on ${BRAND}, board median $132,000 across 6 postings with disclosed pay.`);
     expect(gatedSpecialty.length).toBeLessThanOrEqual(DESCRIPTION_MAX);

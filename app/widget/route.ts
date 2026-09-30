@@ -310,7 +310,7 @@ function renderJobCard(job: RenderedJob, program: string | undefined): string {
 
   const directApplyBtn = job.tier === 'easy_apply'
     ? `<span class="pd-btn pd-btn--easy">⚡ Easy Apply</span>`
-    : `<span class="pd-btn pd-btn--direct">Direct Apply</span>`
+    : `<span class="pd-btn pd-btn--direct">Apply on employer site</span>`
 
   return `<a class="pd-row" href="${escape(jobUrl(job, program))}" target="_blank" rel="noopener" style="border:${featuredBorder};">
     <div class="pd-avatar-wrap">

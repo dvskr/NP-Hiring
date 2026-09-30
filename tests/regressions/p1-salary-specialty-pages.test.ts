@@ -41,6 +41,7 @@ import {
 } from '@/app/salary-guide/specialty/specialty-config';
 import {
     buildSpecialtyFaqs,
+    citedMedian,
     configRange,
     formatSalary,
     hasReportedRange,
@@ -49,6 +50,7 @@ import {
     specialtyNoun,
     specialtyNounPlural,
 } from '@/app/salary-guide/specialty/specialty-content';
+import { OCCUPATION_WAGES } from '@/lib/salary-guide-occupation-wages';
 import { TEMPLATE_REFERENCE_NICHE_TERMS } from './brand-leak-scan';
 
 const ROOT = process.cwd();
@@ -70,6 +72,7 @@ const PACKAGE_FILES = [
     'app/salary-guide/specialty/specialty-content.ts',
     'app/salary-guide/specialty/page.tsx',
     'app/salary-guide/specialty/[specialty]/page.tsx',
+    'lib/salary-guide-specialty.ts',
 ] as const;
 
 describe('P1 #7 — specialty config integrity', () => {
@@ -218,18 +221,27 @@ describe('P1 #7 / P9 #2c+#2d — live figures are gated medians, never means or 
 
     it('the page runs the gated analytics pipeline — no _avg mean survives (P9 #2c/#2d)', () => {
         const src = read('app/salary-guide/specialty/[specialty]/page.tsx');
-        // The hub/state-page pipeline: hygiene pool + NP-title gate + benchmark policy.
-        expect(src).toContain('npSalaryAnalyticsWhere');
-        expect(src).toContain('filterNpEligibleRows');
-        expect(src).toContain('summarizeBenchmarks');
+        // The loaders moved to lib/salary-guide-specialty.ts (CQ-09) so the
+        // page and the sitemap share one verdict; the pipeline is pinned
+        // there: hygiene pool + NP-title gate (fetchNpAnalyticsRows, which
+        // runs npSalaryAnalyticsWhere then filterNpEligibleRows) + the
+        // benchmark policy under the employer-share cap.
+        const lib = read('lib/salary-guide-specialty.ts');
+        expect(src).toContain("from '@/lib/salary-guide-specialty'");
+        expect(lib).toContain("import { fetchNpAnalyticsRows } from '@/lib/salary-analytics'");
+        expect(lib).toContain('summarizeCappedPool(npRows)');
+        expect(lib).toContain('summarizeCappedBenchmarks(npRows).states');
+        expect(read('lib/salary-analytics.ts')).toContain('where: { AND: [npSalaryAnalyticsWhere(), extra] }');
         expect(src).toContain('BENCHMARK_MIN_POSTINGS');
         expect(src).toContain('BENCHMARK_MIN_EMPLOYERS');
         expect(src).toContain('live.gatePassed');
         expect(src).toContain('hasReportedRange(live)');
-        // No mean-of-min/max aggregate remains on the page.
-        expect(src).not.toContain('_avg');
-        expect(src).not.toMatch(/normalizedMaxSalary\s*\|\|\s*0\s*\)?\s*\)\s*\/\s*2/);
-        expect(src).not.toContain('averageOfBounds');
+        // No mean-of-min/max aggregate remains on the page or its loaders.
+        for (const code of [src, lib]) {
+            expect(code).not.toContain('_avg');
+            expect(code).not.toMatch(/normalizedMaxSalary\s*\|\|\s*0\s*\)?\s*\)\s*\/\s*2/);
+            expect(code).not.toContain('averageOfBounds');
+        }
         // …and the content builders quote medians, never averages.
         const content = read('app/salary-guide/specialty/specialty-content.ts');
         expect(content).not.toContain('the average is');
@@ -251,8 +263,11 @@ describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', (
             expect(faqs.length, page.slug).toBeGreaterThanOrEqual(3);
             const joined = faqs.map((f) => `${f.q} ${f.a}`).join(' ');
             expect(joined).not.toMatch(/\$0\b|NaN|undefined/);
-            // The headline answer always cites the BLS median.
-            expect(faqs[0].a).toContain(STAT_SOURCES.averageSalary.formatted);
+            // The headline answer always cites a BLS median: the all-niche
+            // one on a niche page, the role's own occupation median on a
+            // CRNA or CNM page (CQ-09).
+            expect(faqs[0].a).toContain(citedMedian(page).formatted);
+            expect(faqs[0].a).toContain(citedMedian(page).source);
             // The certification answer names the config's certifying body text.
             expect(joined).toContain(page.certification);
         }
@@ -353,17 +368,31 @@ describe('P1 #7 — credential truth: CRNAs and CNMs are never rendered as the n
         }
     });
 
-    it('the cited median is disclosed as an excluding benchmark on non-niche pages', () => {
+    it('non-niche pages cite their own occupation median, never the all-niche one (CQ-09)', () => {
+        // WHY THIS PIN CHANGED: the pages used to show the all-niche median
+        // as an "excluding benchmark" and say no CRNA or CNM wage was cited.
+        // They now cite BLS OEWS 29-1151 and 29-1161 for the role itself, and
+        // the all-niche median is not quoted on them at all, so it can never
+        // be read as their pay. The disclosure that it excludes them stays.
+        const expected = {
+            anesthesia: OCCUPATION_WAGES.nurseAnesthetists,
+            midwifery: OCCUPATION_WAGES.nurseMidwives,
+        } as const;
         for (const slug of NON_NICHE_SLUGS) {
             const page = getSpecialtySalaryPage(slug)!;
+            const wage = expected[slug];
+            expect(citedMedian(page), slug).toBe(wage);
             const sentence = medianSentence(page);
-            expect(sentence).toContain(STAT_SOURCES.averageSalary.formatted);
+            expect(sentence).toContain(wage.formatted);
+            expect(sentence).toContain(wage.source);
+            expect(sentence).not.toContain(STAT_SOURCES.averageSalary.formatted);
             expect(sentence, slug).toMatch(/does not include them/);
-            // The headline pay FAQ leads with that disclosure and, with no
+            // The headline pay FAQ leads with that sentence and, with no
             // live inventory, quotes no other dollar figure at all.
             const faq = buildSpecialtyFaqs(page, null, [])[0];
             expect(faq.a.startsWith(sentence), slug).toBe(true);
-            expect(faq.a.match(/\$[\d,]+K?/g)).toEqual([STAT_SOURCES.averageSalary.formatted]);
+            expect(faq.a.match(/\$[\d,]+K?/g)).toEqual([wage.formatted]);
+            expect(faq.a).not.toMatch(/No national .* wage figure is cited/);
         }
         // On a niche page the median is the page's own cohort figure.
         const fp = getSpecialtySalaryPage('family-practice')!;
@@ -417,10 +446,15 @@ describe('P1 #7 — wiring: hub links, sitemap entries, page plumbing', () => {
         expect(src).toContain('href="/salary-guide/specialty"');
     });
 
-    it('the sitemap advertises the specialty pages from the same config array', () => {
+    it('the sitemap advertises the specialty pages the page verdict indexes (FB-2)', () => {
         const src = read('app/sitemap.ts');
-        expect(src).toContain("from '@/app/salary-guide/specialty/specialty-config'");
-        expect(src).toContain('SALARY_SPECIALTY_SLUGS.map');
+        // The list is the pages' own verdict over the same config array
+        // (lib/salary-guide-specialty.ts reads specialty-config), so a page
+        // that renders noindex is never listed.
+        expect(src).toContain("from '@/lib/salary-guide-specialty'");
+        expect(src).toContain('getIndexableSalarySpecialtySlugs');
+        expect(src).toContain('salarySpecialtySlugs.map');
+        expect(src).not.toContain('SALARY_SPECIALTY_SLUGS.map');
         expect(src).toContain('/salary-guide/specialty');
         // Included in both the healthy and the degraded-mode (catch) sitemap.
         expect(src.match(/\.\.\.salarySpecialtyPages,/g)?.length).toBe(2);

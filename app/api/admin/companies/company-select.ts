@@ -18,6 +18,9 @@ export function companySelect(now: Date = new Date()) {
         name: true,
         normalizedName: true,
         website: true,
+        // GFJ-08: the admin data pass fills website and logo for the
+        // JobPosting hiringOrganization (PATCH ./[id]/profile).
+        logoUrl: true,
         isVerified: true,
         claimVerifiedAt: true,
         recruitmentType: true,

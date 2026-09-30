@@ -142,9 +142,21 @@ describe('P5 reports — sample gates are shared constants, honestly rendered', 
 
     it('salary aggregation reuses the benchmark widget gates and excludes estimates', () => {
         expect(queries).toContain("from '@/components/tools/benchmark-model'");
-        expect(queries).toContain('summarizeBenchmarks');
+        // CQ-15: under the salary guide's employer-share cap as well.
+        expect(queries).toContain('summarizeCappedBenchmarks');
+        expect(code(queries)).not.toMatch(/\bsummarizeBenchmarks\(/);
         expect(queries).toContain('salaryIsEstimated: false');
         expect(queries).toContain('activeIndexableJobWhere');
+    });
+
+    it('a national pay row held by the employer-share cap says so, never "sample too small"', () => {
+        expect(queries).toContain('nationalHeldByEmployerShare: nationalHeld !== null');
+        expect(reportPage).toContain("import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';");
+        expect(reportPage).toMatch(/\) : snapshot\.salary\.nationalHeldByEmployerShare \? \(\s*<EmployerShareHoldNote \/>\s*\) : \(\s*<SampleTooSmallNote what="an advertised-pay distribution" \/>/);
+        expect(reportPage).toMatch(/Not published: one employer accounts for more than \{MAX_EMPLOYER_SHARE_PERCENT\}% of the\s+postings that state pay/);
+        // The pay intro, the methodology and the hub all state the cap.
+        expect(reportPage.match(/\{MAX_EMPLOYER_SHARE_PERCENT\}%/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+        expect(read('app/reports/page.tsx')).toMatch(/no single employer contributing\s+more than \{MAX_EMPLOYER_SHARE_PERCENT\}% of them/);
     });
 
     it('the trend cohort excludes the current partial month', () => {

@@ -23,9 +23,10 @@
  *   CC-K7 per-axis editorial (lib/pseo/category-axis-guide.ts);
  *   CC-K8 one FAQ array feeds the accordion and the FAQPage JSON-LD;
  *   CC-K9 labelNoun and labelSentence titles, H1 and hero stats.
- * Robots read shouldIndexLocalListingPage over the page count and the
- * cron's stored distinctEmployers (a facts fallback when no fresh row
- * exists), the same predicate the sitemaps use.
+ * Robots read shouldIndexLocalListingPage (the listing floor) over the page
+ * count less the exact duplicate rows the facts found, and the cron's stored
+ * distinctEmployers (a facts fallback when no fresh row exists), the same
+ * predicate and counts the cities sitemap reads.
  */
 import Link from 'next/link';
 import Image from 'next/image';
@@ -46,6 +47,7 @@ import {
   PSEO_STATS_MAX_AGE_HOURS,
   MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
+import { LISTING_PAGE_SIZE, listingCanonical, pageOffset } from './listing-pagination';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { brand } from '@/config/brand';
 import { LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
@@ -106,6 +108,8 @@ import { getPracticeEnvironment, isLicenseGuideLive } from './practice-environme
 // two are P2's builder/guard pair for that round-trip, and importing them here is
 // the same cross-import components/tools/city-picker-data.ts already makes.
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+// L-05: a curated metro's city slug only redirects to its metro guide.
+import { localJobsPath } from '@/lib/city-link-path';
 import { JobListViewTracker, PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
 import { CITY_EMPLOYER_LIMIT } from './city-employers';
@@ -265,8 +269,11 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     slug: 'contract',
     label: 'Contract',
     fullLabel: `Contract ${brand.niche.short}`,
-    heroSubtitle: `Contract & locum tenens ${brand.niche.short} assignments`,
-    keywords: ['contract np', 'locum tenens np', '1099 np', 'temp np'],
+    // The contract predicate is the contract tag only; a job typed Locum
+    // Tenens is not in it, so the subtitle does not promise locum roles
+    // (they have their own /jobs/locum-tenens/city pages).
+    heroSubtitle: `Contract & temp-to-perm ${brand.niche.short} positions`,
+    keywords: ['contract np', '1099 np', 'temp np'],
     faqCategory: 'travel',
     buildWhere: (stateName: string, cityName?: string) => ({
       isPublished: true,
@@ -917,7 +924,7 @@ interface CityStats {
   /**
    * When the count was actually computed: pseoStats.updatedAt for fresh
    * cached rows, "now" for live-count fallbacks, null when no data exists
-   * (the page redirects/404s before rendering in that case).
+   * (the page 404s before rendering in that case, TECH-07).
    */
   statsAsOf: Date | null;
 }
@@ -957,7 +964,7 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
 
     // Fallback: live count when the pseoStats cache is empty, zero, or stale.
     // A stale positive row is NOT trusted: if the live count is 0 the page
-    // correctly redirects instead of rendering frozen counts. The count reads
+    // correctly 404s instead of rendering frozen counts. The count reads
     // the canonical predicate (T0-1), the same one the cron wrote the row with.
     const where = withListingQuarantine(canonicalBucketWhere(config.buildWhere(city.state, city.name) as Prisma.JobWhereInput));
     const liveCount = await prisma.job.count({ where });
@@ -969,8 +976,8 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
   } catch (error) {
     console.error(`[category-city] Failed to fetch stats for ${config.slug}/${city.slug}:`, error);
     // If the live recount failed but we hold a (possibly stale) positive row,
-    // prefer it, with its REAL date, over redirecting a page that likely
-    // still has jobs. Transient DB errors must not 308 live pages away.
+    // prefer it, with its REAL date, over a 404 for a page that likely
+    // still has jobs. Transient DB errors must not remove live pages.
     if (cachedRow) {
       return { totalJobs: cachedRow.totalJobs, statsAsOf: cachedRow.updatedAt };
     }
@@ -978,11 +985,10 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
     // the try after a successful findUnique returning a positive row, so
     // reaching here means the FIRST query failed and we hold zero evidence
     // that this combo is empty. Returning EMPTY_STATS would make the caller
-    // permanentRedirect(): a 308 is a PERMANENT signal, cached by the route's
-    // `revalidate = 3600` and consolidated by Google, so a DB blip would fold
-    // the whole category x city surface into its parents. Rethrow: a 5xx is
-    // retried and never moves a URL. Absence of data is not evidence of an
-    // empty page.
+    // answer 404 (it used to 308 to the parent category), cached by the
+    // route's `revalidate = 3600`, so a DB blip would drop the whole
+    // category x city surface. Rethrow: a 5xx is retried and never removes a
+    // URL. Absence of data is not evidence of an empty page.
     throw error;
   }
 });
@@ -993,7 +999,7 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
  * getCityStats owns the only fatal read on this route: it rescues the count
  * from a stale-but-positive PseoStats row when the live recount fails, and
  * rethrows when it holds no row at all, so a DB outage surfaces as a 5xx
- * that crawlers retry instead of a cacheable 308 to the parent category.
+ * that crawlers retry instead of a cacheable 404 (TECH-07).
  *
  * computeListingFacts deliberately lets its own count throw
  * (lib/pseo/listing-facts.ts: "The count is the only query allowed to
@@ -1230,14 +1236,17 @@ export async function buildCategoryCityMetadata(
 
   // getCityStats falls back to a stale-but-positive cached row on failure, and
   // rethrows when it has none: a DB outage must surface as 5xx, never as a
-  // cacheable 308 to the parent category.
+  // cacheable 404 (TECH-07).
   const stats = await getCityStats(config, city);
 
-  // SEO: 308 permanent redirect for 0-job pages (metadata phase)
-  // The page component also redirects, but this catches the metadata call first
-  if (stats.totalJobs === 0) {
-    const { permanentRedirect } = await import('next/navigation');
-    permanentRedirect(`/jobs/${config.slug}`);
+  // TECH-07: a combination with no jobs is a 404, exactly like one with 1
+  // or 2 (the render floor below). A 308 to the landing told Google the page
+  // had moved for good, and a permanent redirect for a temporarily empty page
+  // contradicts itself as soon as jobs return. Permanent redirects stay for
+  // true renames only (next.config.ts). The page component checks too.
+  if (!shouldRenderCategoryCity(stats.totalJobs)) {
+    const { notFound } = await import('next/navigation');
+    notFound();
   }
 
   const basePath = `/jobs/${config.slug}/city/${citySlug}`;
@@ -1250,7 +1259,14 @@ export async function buildCategoryCityMetadata(
     readStoredCategoryCityRow(config.slug, city.slug),
   ]);
   const distinctEmployers = storedRow?.distinctEmployers ?? facts.distinctEmployers;
-  const shouldIndex = shouldIndexLocalListingPage({ activeJobs: stats.totalJobs, distinctEmployers, page });
+  // fixSoon 8: the gate counts distinct postings. The facts count the same
+  // bucket, so their duplicate rows come off the page count.
+  const duplicateRows = Math.max(0, facts.total - facts.distinctPostings);
+  const shouldIndex = shouldIndexLocalListingPage({
+    activeJobs: Math.max(0, stats.totalJobs - duplicateRows),
+    distinctEmployers,
+    page,
+  });
 
   const noun = labelNoun(config.slug, config.label);
   const sentenceLabel = labelSentence(config.label);
@@ -1272,9 +1288,10 @@ export async function buildCategoryCityMetadata(
   });
   const ogImage = `/api/og/city?${ogParams.toString()}`;
 
-  // Canonical: self on every rendered page 1 (noindex pages keep it, with
-  // follow); page N canonicals to page 1 of the same listing, never the
-  // parent category (that caused "Duplicate without canonical" in GSC).
+  // Canonical: every page is its own canonical (TECH-08): page 1 is the
+  // bare path (noindex pages keep it, with follow), page N is `?page=N` and
+  // answers noindex, follow like the middleware header. Never the parent
+  // category (that caused "Duplicate without canonical" in GSC).
   return {
     title,
     description,
@@ -1290,8 +1307,9 @@ export async function buildCategoryCityMetadata(
       images: [ogImage],
     },
     alternates: {
-      canonical: `${brand.baseUrl}${basePath}`,
+      canonical: listingCanonical(basePath, page),
     },
+    // shouldIndexLocalListingPage is false on page 2 and later.
     robots: { index: shouldIndex, follow: true },
   };
 }
@@ -1335,7 +1353,7 @@ const cellBody: CSSProperties = { fontSize: '14px', color: '#5A4A42', margin: 0,
 const NEARBY_CITY_LIMIT = 6;
 const ACROSS_STATE_LIMIT = 7;
 const EXPLORE_CARD_LIMIT = 12;
-const PAGE_SIZE = 10;
+const PAGE_SIZE = LISTING_PAGE_SIZE;
 
 /**
  * GA4 item_list_name for the listings on every category x city page. The
@@ -1428,25 +1446,21 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     notFound();
   }
 
-  const skip = (page - 1) * PAGE_SIZE;
+  const skip = pageOffset(page, PAGE_SIZE);
 
   // 1. Instantly fetch pre-calculated stats (single indexed row lookup ~2ms)
   const stats = await getCityStats(config, city!);
 
-  // ═══ SEO GUARD: 308 permanent redirect for 0-job pages ═══
-  // Instead of a hard 404 (which wastes crawl budget and loses link equity),
-  // 308 redirect to the parent category page so Google consolidates the signal.
-  if (stats.totalJobs === 0) {
-    const { permanentRedirect } = await import('next/navigation');
-    permanentRedirect(`/jobs/${config.slug}`);
-  }
-
-  // ═══ SEO GUARD (S4): hard 404 for thin doorway pages (1-2 jobs) ═══
-  // 0 jobs already redirected above. 1-2 jobs render near-identical content
-  // across thousands of URLs; meta-robots noindex alone is insufficient because
-  // Google still crawls and processes the 200. notFound() removes them from the
-  // crawl entirely. Threshold = 3 (shared with the city page, sitemap gate, and
-  // seo_threshold_decision.md).
+  // ═══ SEO GUARD (S4, TECH-07): hard 404 below the render floor ═══
+  // 0 jobs is a 404 too (TECH-07): it used to 308 to the category landing,
+  // a permanent signal for a page that is only temporarily empty, and
+  // redirecting missing content to a broader page is the soft-404 pattern.
+  // 1-2 jobs render near-identical content across thousands of URLs;
+  // meta-robots noindex alone is insufficient because Google still crawls
+  // and processes the 200. notFound() removes them from the crawl entirely.
+  // Threshold = 3 (shared with the city page, sitemap gate, and
+  // seo_threshold_decision.md). A DB outage never lands here: getCityStats
+  // rethrows (a 5xx is retried and never moves a URL).
   if (!shouldRenderCategoryCity(stats.totalJobs)) {
     const { notFound: notFoundFn } = await import('next/navigation');
     notFoundFn();
@@ -1483,9 +1497,10 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
   // "City"/"Village"/"Town", collapsed punctuation, folded diacritics) every
   // rendered category x city page carried an outbound link to a hard 404.
   // Build the ROUTE-shaped slug and emit the link only when the round-trip
-  // actually resolves; otherwise omit it. Never link a known 404.
+  // actually resolves; otherwise omit it. Never link a known 404. A curated
+  // metro links its guide directly (L-05), never the city form that 308s.
   const allCityJobsHref = cityLinkResolves(city!.name, city!.stateCode)
-    ? `/jobs/city/${buildCitySlug(city!.name, city!.stateCode)}`
+    ? localJobsPath(buildCitySlug(city!.name, city!.stateCode))
     : null;
 
   // CC-K6: practice environment for this state (AANP tier, compact status,

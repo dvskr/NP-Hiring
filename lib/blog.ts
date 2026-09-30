@@ -10,7 +10,7 @@ import type { BlogCategory } from '@/lib/blog-categories';
 import {
     getAllLicenseGuideSlugs,
     getLicenseGuidePost,
-    LICENSE_GUIDE_REVIEWED_AT,
+    getLicenseGuideReviewedAt,
 } from '@/lib/blog-license-guides';
 import { getAllMdxPosts, getMdxPost } from '@/lib/blog-mdx-posts';
 
@@ -303,24 +303,27 @@ export async function getPostCount(category?: string): Promise<number> {
 
 /**
  * True when a published blog_posts row for a license-guide slug was
- * reviewed BEFORE the generator's latest editorial review
- * (LICENSE_GUIDE_REVIEWED_AT), so the generated guide supersedes it.
+ * reviewed BEFORE the generator's latest editorial review of that state
+ * (getLicenseGuideReviewedAt: LICENSE_GUIDE_REVIEWED_AT, or the later date
+ * the state's licensing facts were checked), so the generated guide
+ * supersedes it.
  *
  * WHY: scripts/sync-blog-to-db.ts --license-guides mirrors the generator
  * into blog_posts, and a published row normally wins (editorial override).
  * A mirror synced before a YMYL correction would therefore keep serving
  * the corrected-away copy, here the tier-derived physician claims the
  * 2026-09 practice-authority pass removed, until someone reruns that sync
- * against the production database. The sync stamps reviewed_at with
- * LICENSE_GUIDE_REVIEWED_AT, so a row dated earlier predates the current
- * reviewed text. A row with no review date, or one an editor dated on or
+ * against the production database. The sync stamps reviewed_at with the
+ * generated guide's own review date, so a row dated earlier predates the
+ * current reviewed text (including licensing facts added since it synced). A row with no review date, or one an editor dated on or
  * after the series review, still wins; rerunning the sync restores DB
  * precedence with identical content.
  */
 export function isSupersededLicenseGuideRow(row: Pick<BlogPost, 'slug' | 'reviewed_at'>): boolean {
-    if (!LICENSE_GUIDE_SERIES_PUBLISHED || !LICENSE_GUIDE_SLUG_REGEX.test(row.slug)) return false;
+    const match = LICENSE_GUIDE_SERIES_PUBLISHED ? row.slug.match(LICENSE_GUIDE_SLUG_REGEX) : null;
+    if (!match) return false;
     const reviewed = row.reviewed_at ? Date.parse(row.reviewed_at) : Number.NaN;
-    return Number.isFinite(reviewed) && reviewed < Date.parse(LICENSE_GUIDE_REVIEWED_AT);
+    return Number.isFinite(reviewed) && reviewed < Date.parse(getLicenseGuideReviewedAt(match[1]));
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
@@ -483,7 +486,8 @@ export async function getAllPublishedSlugs(): Promise<
         const suppressed = new Set(await fetchLicenseGuideDbSlugs(true));
         for (const slug of getAllLicenseGuideSlugs()) {
             if (!seen.has(slug) && !suppressed.has(slug)) {
-                rows.push({ slug, updated_at: LICENSE_GUIDE_REVIEWED_AT });
+                const stateSlug = slug.match(LICENSE_GUIDE_SLUG_REGEX)?.[1] ?? '';
+                rows.push({ slug, updated_at: getLicenseGuideReviewedAt(stateSlug) });
                 seen.add(slug);
             }
         }

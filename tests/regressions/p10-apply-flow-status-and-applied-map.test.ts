@@ -103,10 +103,12 @@ describe('P10 defect 4: focus restore never targets a detached node', () => {
         expect(src).toMatch(/active === document\.body\)\s*\{\s*applyButtonRef\.current\?\.focus\(\);/);
     });
 
-    it('an Easy Apply click before auth resolves is held, never swapping the button for the gate', () => {
+    it('an Apply click before auth resolves is held, never swapping the button for the gate', () => {
         const src = read('components/ApplyButton.tsx');
-        expect(src).toMatch(/if \(applyOnPlatform && !authResolved\) \{\s*setPendingPlatformApply\(true\);\s*return;/);
-        expect(src).toContain('}, [pendingPlatformApply, authResolved, authed, jobId]);');
+        // Every job needs an account now (owner decision 2026-09), so the
+        // hold covers external jobs as well as Easy Apply.
+        expect(src).toMatch(/if \(step === 'wait-for-auth'\) \{\s*setPendingApply\(true\);\s*return;/);
+        expect(src).toContain('}, [pendingApply, authResolved, authed, applyOnPlatform, jobId]);');
     });
 
     it('the trap effect no longer re-arms on every onEscape identity change', () => {

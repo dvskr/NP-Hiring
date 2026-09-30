@@ -15,8 +15,19 @@ const STICKER_FILLS = ['#B9EBD6', '#FFFFFF', '#D5F5F1', '#FBCFE8', '#FDE3C8'];
 /* Alternating tilts, sticker-slap style. */
 const STICKER_TILTS = [-1.5, 1, -1, 1.5, -2];
 
+/** One employer sticker: display name, live job count, and where it links. */
+export interface EmployerChip {
+    name: string;
+    count: number;
+    /**
+     * The company profile when it is indexable, else a keyword search
+     * (components/EmployerTrustSection.tsx buildEmployerChips decides).
+     */
+    href: string;
+}
+
 interface ClayDoughStripProps {
-    employers: { name: string; count: number }[];
+    employers: EmployerChip[];
     /** e.g. "1000+" — rendered in the eyebrow line above the tape. */
     jobCountDisplay?: string;
 }
@@ -33,7 +44,9 @@ export default function ClayDoughStrip({ employers, jobCountDisplay }: ClayDough
 
     if (unique.length === 0) return null;
 
-    // Double for seamless infinite loop (tape translates -50%)
+    // Double for seamless infinite loop (tape translates -50%). The second
+    // copy is a visual echo only: hidden from assistive tech and out of the
+    // tab order, so a keyboard or screen-reader user meets each employer once.
     const doubled = [...unique, ...unique];
 
     return (
@@ -87,8 +100,10 @@ export default function ClayDoughStrip({ employers, jobCountDisplay }: ClayDough
                     {doubled.map((emp, i) => (
                         <Link
                             key={`${emp.name}-${i}`}
-                            href={`/jobs?q=${encodeURIComponent(emp.name)}`}
+                            href={emp.href}
                             aria-label={`Browse ${emp.count} jobs at ${emp.name}`}
+                            aria-hidden={i >= unique.length ? true : undefined}
+                            tabIndex={i >= unique.length ? -1 : undefined}
                             className="cds-tag"
                             style={{
                                 background: STICKER_FILLS[i % STICKER_FILLS.length],

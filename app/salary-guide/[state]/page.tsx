@@ -105,6 +105,7 @@ import {
     NLC_VERIFIED_LABEL,
 } from '@/lib/pseo/practice-environment';
 import {
+    isSettingStateIndexable,
     MIN_JOBS_FOR_LINK_LIST_ROW,
     pseoStatsFreshnessThreshold,
     shouldIndexSalaryGuideState,
@@ -115,8 +116,10 @@ import {
     getGatedLocationSalary,
     getGatedStateBenchmarks,
     type GatedSalary,
+    type GatedSalaryDetail,
     type LabeledBenchmarkRow,
 } from '@/lib/salary-analytics';
+import { buildEmployerShareHoldSentence, MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-gate';
 import { withTagFallback, type CategoryTag } from '@/lib/pseo/category-tagger';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
@@ -125,6 +128,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 // P3 #9: /jobs/city/[slug] resolves by re-parsing the slug into a city NAME, so a
 // link built from a lossy slug can be a guaranteed 404. Guard before emitting.
 import { buildCitySlug, cityLinkResolves, MIN_CITY_JOBS_FOR_LINK } from '@/app/jobs/locations/[state]/directory';
+import { localJobsPath } from '@/lib/city-link-path';
 import {
     ArrowRight,
     Banknote,
@@ -171,6 +175,13 @@ Object.keys(STATE_CODES).forEach((name) => {
 
 const ALL_STATE_SLUGS = Object.keys(SLUG_TO_STATE);
 
+/**
+ * Category tags that restate a work arrangement. SAL-S4 already gives the
+ * structured remote, hybrid and on-site split in its sentence, so a tile
+ * counting the same thing from tags could only disagree with it.
+ */
+const WORK_ARRANGEMENT_TAG_SLUGS: ReadonlySet<string> = new Set(['remote']);
+
 // ── Data fetching ───────────────────────────────────────────────────────────
 // generateMetadata and the page handler run in the same request, so every
 // loader below is cached: getListingFacts keys on its primitive scope key,
@@ -182,8 +193,11 @@ function loadFacts(stateName: string, slug: string): Promise<ListingFacts> {
     return getListingFacts(`salary-state:${slug}`, { state: stateName });
 }
 
-/** The state's own gated figure, from the pool getPublishableSalaryGuideStates reads. */
-const loadSalary = cache((stateName: string): Promise<GatedSalary> =>
+/**
+ * The state's own gated figure, from the pool getPublishableSalaryGuideStates
+ * reads, with the employer split so a cap hold can be named (CQ-15).
+ */
+const loadSalary = cache((stateName: string): Promise<GatedSalaryDetail> =>
     getGatedLocationSalary({ state: stateName }));
 
 /** Board-wide gated median (BOARD_MEDIAN_LABEL), never called "national". */
@@ -498,7 +512,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
     // ── SAL-S2 rows and their gated links ───────────────────────────────
     const paySlugByLabel = new Map(payRowSpecs(stateName).map((spec) => [spec.label, spec.slug]));
     const indexableSettings = new Set(
-        settingRows.filter((row) => row.indexable).map((row) => row.categorySlug),
+        settingRows.filter((row) => isSettingStateIndexable(row.indexable)).map((row) => row.categorySlug),
     );
     const payScale = payRows.reduce((max, row) => Math.max(max, row.median), 0);
 
@@ -511,17 +525,27 @@ export default async function StateSalaryPage({ params }: PageProps) {
         return {
             name: city.name,
             count: city.count,
-            href: linkable ? `/jobs/city/${buildCitySlug(city.name, code)}` : null,
+            // L-05: a curated metro links its guide directly; its city form
+            // only redirects there.
+            href: linkable ? localJobsPath(buildCitySlug(city.name, code)) : null,
             medianK: gated?.medianK ?? null,
         };
     });
 
     // ── SAL-S4 category rows, linked only where the target page indexes ──
-    const categoryRows = settingRows.slice(0, 8).map((row) => ({
+    // The work-arrangement split is stated in the sentence above from each
+    // posting's structured work mode, so the tag-derived "remote" tile is
+    // left out: the indexing audit found "Remote 23" printed beside "1
+    // remote, 21 hybrid" on /salary-guide/virginia (the tag matches
+    // description keywords; see CQ-05).
+    const categoryRows = settingRows
+        .filter((row) => !WORK_ARRANGEMENT_TAG_SLUGS.has(row.categorySlug))
+        .slice(0, 8)
+        .map((row) => ({
         slug: row.categorySlug,
         label: categoryLabelOf(row.categorySlug),
         count: row.totalJobs,
-        href: row.indexable && STATE_ELIGIBLE_CATEGORY_SLUGS.includes(row.categorySlug)
+        href: isSettingStateIndexable(row.indexable) && STATE_ELIGIBLE_CATEGORY_SLUGS.includes(row.categorySlug)
             ? `/jobs/${row.categorySlug}/${stateSlug}`
             : null,
     }));
@@ -554,10 +578,25 @@ export default async function StateSalaryPage({ params }: PageProps) {
     // schema and the visible content cannot diverge. No answer asserts a
     // board-derived figure below the publishing gate: buildHubPayParagraph
     // states the sample honestly and cites the BLS median instead.
+    // CQ-15: a sample that cleared the benchmark gate but not the employer
+    // share cap is not "too small"; the answer and the tile name the real
+    // condition with the sample's own counts, and cite BLS instead.
+    const employerShareHold = salaryData.heldByEmployerShare
+        ? buildEmployerShareHoldSentence({
+            scopeName: stateName,
+            concentration: {
+                postings: salaryData.postings,
+                employers: salaryData.employers,
+                topEmployerPostings: salaryData.topEmployerPostings,
+            },
+        })
+        : null;
     const stateFaqs = [
         {
             question: `What is the median ${brand.niche.short} salary in ${stateName}?`,
-            answer: buildHubPayParagraph({ scopeName: stateName, scopeNoun: 'state', facts: payFacts }),
+            answer: employerShareHold
+                ? `${employerShareHold} The national median for ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`
+                : buildHubPayParagraph({ scopeName: stateName, scopeNoun: 'state', facts: payFacts }),
         },
         {
             question: `How many ${brand.niche.short} jobs are open in ${stateName}?`,
@@ -585,12 +624,19 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     ? `${formatCount(benchmark.postings, 'posting')}, ${comparison}`
                     : `${formatCount(benchmark.postings, 'posting')} with disclosed pay`,
             }
-            : {
-                key: 'median',
-                label: 'Median posted pay',
-                value: 'Sample too small',
-                sub: `Published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers`,
-            },
+            : salaryData.heldByEmployerShare
+                ? {
+                    key: 'median',
+                    label: 'Median posted pay',
+                    value: 'Not published',
+                    sub: `One employer posts ${salaryData.topEmployerPostings} of ${salaryData.postings}; published when none exceeds ${MAX_EMPLOYER_SHARE_PERCENT}%`,
+                }
+                : {
+                    key: 'median',
+                    label: 'Median posted pay',
+                    value: 'Sample too small',
+                    sub: `Published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, none above ${MAX_EMPLOYER_SHARE_PERCENT}%`,
+                },
         ...(benchmark
             ? [{
                 key: 'spread',
@@ -810,7 +856,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 <Band
                     eyebrow="Pay breakdown"
                     title="Pay by work arrangement and employment type"
-                    lede={`Each row is a median over ${stateName} postings that disclose annual pay, published only at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers. Rows overlap, because a posting can be both remote and full time.`}
+                    lede={`Each row is a median over ${stateName} postings that disclose annual pay, published only at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. Rows overlap, because a posting can be both remote and full time.`}
                 >
                     <ClayCard chip="Arrangement" index={1} icon={Banknote} title={`${stateName} posted medians`} headingLevel={3}>
                         <ul className="pseo-clay-list" style={clayList}>
@@ -865,7 +911,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         />
                         {cityRows.length > 0 && (
                             <ClayTable
-                                caption={`Cities by open ${brand.niche.short} roles on ${brand.name}. A city links its own page at ${MIN_CITY_JOBS_FOR_LINK} or more roles, and a median is published at ${BENCHMARK_MIN_POSTINGS} or more postings with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS} or more employers.`}
+                                caption={`Cities by open ${brand.niche.short} roles on ${brand.name}. A city links its own page at ${MIN_CITY_JOBS_FOR_LINK} or more roles, and a median is published at ${BENCHMARK_MIN_POSTINGS} or more postings with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`}
                                 columns={['City', { label: 'Open roles', numeric: true }, { label: 'Posted median', numeric: true }]}
                                 rows={cityRows.map((city) => [
                                     city.href ? <Link href={city.href} style={clayLink}>{city.name}</Link> : city.name,
@@ -947,7 +993,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         index={2}
                         icon={BarChart3}
                         title="Pay across every state"
-                        desc={`The board-wide medians, the states that publish one, and how the ${BENCHMARK_MIN_POSTINGS} posting publishing gate works.`}
+                        desc="The board-wide medians, the states that publish one, and how the publishing gate works."
                         action="Open the salary guide"
                         headingLevel={3}
                     />

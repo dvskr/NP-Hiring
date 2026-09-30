@@ -147,6 +147,7 @@ describe('P1 #8 — /editorial-policy page', () => {
         expect(src).toContain('STAT_SOURCES');
         // No hardcoded figures — every number renders from the source file.
         expect(src).not.toMatch(/129,?210/);
+        expect(src).not.toMatch(/132,?300/);
         expect(src).not.toContain('90 million');
         expect(src).not.toMatch(/\b45%/);
         expect(src).not.toMatch(/\b27 states/);
@@ -158,10 +159,17 @@ describe('P1 #8 — /editorial-policy page', () => {
     });
 
     it('scopes the licensure-detail promise to the generated guide series', () => {
-        // The license guide series genuinely never quotes fees / CE hours /
-        // renewal cycles / processing times (see the truth-rules docblock in
-        // lib/blog-license-guides.ts) and answers each with a board link.
+        // The license guide series quotes fees / CE / renewal cycles /
+        // processing times only from lib/license-guide-facts.ts, in a cited
+        // facts section (see the truth-rules docblock in
+        // lib/blog-license-guides.ts), and answers everything else with a
+        // board link. The page carries both forms and renders the one that
+        // matches the data: "never quotes them" only while no guide has facts.
         // The promise is pinned to THAT series, not to the whole site.
+        // Rendered wording: tests/regressions/editorial-policy-license-facts.test.ts.
+        expect(src).toContain('getLicenseGuideStatesWithFacts().length');
+        expect(text).toContain('{guidesWithFacts > 0 ? (');
+        expect(text).toContain('state license guide series quotes application fees, the continuing education required for renewal, renewal cycles and processing times only in a cited licensing facts section');
         expect(text).toContain('state license guide series never quotes them');
         expect(text).toContain('board of nursing');
     });
@@ -470,9 +478,17 @@ describe('P1 #8 — blog template wiring', () => {
         expect(src).toMatch(/licenseSlugMatch\s*=\s*slug\.match\(LICENSE_GUIDE_SLUG_REGEX\)/);
     });
 
-    it('spreads editorialSchemaFields() into the BlogPosting JSON-LD', () => {
-        expect(src).toContain('...editorialSchemaFields(),');
+    it('spreads editorialSchemaFields() into the BlogPosting JSON-LD, never on a generated guide', () => {
+        // CQ-12: named people attach to hand-written posts only. The license
+        // guides are generated from repo data, so no person wrote or
+        // reviewed them and they keep the Organization author.
+        expect(src).toContain('const namedPeople = licenseSlugMatch ? {} : editorialSchemaFields();');
+        expect(src).toContain('...namedPeople,');
         expect(src).toMatch(/from '@\/components\/EditorialByline'/);
+        // After the Organization author, so a configured Person replaces it.
+        const jsonLd = src.slice(src.indexOf('const jsonLd = {'));
+        expect(jsonLd.indexOf("'@type': 'Organization'")).toBeGreaterThan(-1);
+        expect(jsonLd.indexOf('...namedPeople,')).toBeGreaterThan(jsonLd.indexOf("author: {"));
     });
 
     it('keeps Organization authorship inline (no fabricated Person in this file)', () => {

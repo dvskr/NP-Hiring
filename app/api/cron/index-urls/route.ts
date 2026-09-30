@@ -6,22 +6,37 @@ import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
 import { brand } from '@/config/brand';
+import {
+    INDEX_URLS_CRON,
+    isSubmittableJobPosting,
+    planSubmissionWindow,
+    readLastWindowEnd,
+    submissionWhere,
+    type SubmissionWindow,
+} from './window';
 
-export const maxDuration = 300; // 5 minutes — submits 200+ URLs to search engines
+export const maxDuration = 300; // 5 minutes: Google publishes are paced one at a time
 
 const BASE_URL = brand.baseUrl;
 
 /**
- * Daily cron: submit recently created/updated job URLs to
- * Google Indexing API, Bing Webmaster API, and IndexNow.
+ * Daily cron: submit new and content-changed job URLs to the Google Indexing
+ * API, Bing Webmaster API and IndexNow.
  *
- * - Fetches jobs created or updated in the last 25 hours (overlap buffer)
+ * - Selects jobs created, or whose content changed, since the newest
+ *   successful run's window ended, and only live pages that emit a valid
+ *   JobPosting item (./window.ts explains the window and both filters). An
+ *   unchanged job is never sent again, so no URL is resubmitted day after day.
  * - Google: job detail pages only, at most the new-content lane's per-run
  *   grant (GOOGLE_INDEXING_LANES['new-content'].perInvocation in
- *   lib/search-indexing.ts); pingAllSearchEnginesBatch enforces both, and
- *   the rest of a large day waits for the sitemap and Google's own crawl
+ *   lib/search-indexing.ts), newest first; pingAllSearchEnginesBatch enforces
+ *   both, and the rest of a large day waits for the sitemap and Google's own
+ *   crawl
  * - Bing: batch up to 500 at once
  * - IndexNow: batch up to 10,000 at once
+ *
+ * Every successful run records its window end in cron_runs.metrics, including
+ * a run that found nothing, because the next run resumes from it.
  */
 export async function GET(request: NextRequest) {
     // Verify cron secret
@@ -32,19 +47,12 @@ export async function GET(request: NextRequest) {
     console.log('[CRON:index-urls] Starting daily search engine indexing');
 
     try {
-        return await withCronTracking('index-urls', async () => {
-            // Fetch jobs from the last 25 hours (1 hour overlap to avoid missing any)
-            const since = new Date();
-            since.setHours(since.getHours() - 25);
+        return await withCronTracking(INDEX_URLS_CRON, async () => {
+            const now = new Date();
+            const window = planSubmissionWindow(await readLastWindowEnd(), now);
 
-            const recentJobs = await prisma.job.findMany({
-                where: {
-                    isPublished: true,
-                    OR: [
-                        { createdAt: { gte: since } },
-                        { updatedAt: { gte: since } },
-                    ],
-                },
+            const candidates = await prisma.job.findMany({
+                where: submissionWhere(window, now),
                 select: {
                     id: true,
                     title: true,
@@ -52,21 +60,40 @@ export async function GET(request: NextRequest) {
                     // selected — without it the `job.slug ||` fallback below
                     // always fires and every URL is re-derived from the title.
                     slug: true,
+                    // Everything isSubmittableJobPosting reads.
+                    employer: true,
+                    description: true,
+                    location: true,
+                    mode: true,
+                    isRemote: true,
+                    isHybrid: true,
+                    city: true,
+                    state: true,
+                    stateCode: true,
+                    country: true,
                 },
-                orderBy: { createdAt: 'desc' },
+                // New jobs first: a content-changed job was created before the
+                // window, so it sorts after every job created inside it.
+                orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
             });
+            // A page that emits no JobPosting item is not sent to an API that
+            // only accepts job posting pages (./window.ts).
+            const recentJobs = candidates.filter(isSubmittableJobPosting);
+            const skippedNoJobPosting = candidates.length - recentJobs.length;
 
             if (recentJobs.length === 0) {
-                console.log('[CRON:index-urls] No new/updated jobs to index');
+                console.log('[CRON:index-urls] No new or changed jobs to index');
                 return {
                     response: NextResponse.json({
                         success: true,
-                        message: 'No new jobs to index',
+                        message: 'No new or changed jobs to index',
                         jobCount: 0,
+                        skippedNoJobPosting,
+                        window: windowSummary(window),
                         duration: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
                         timestamp: new Date().toISOString(),
                     }),
-                    metrics: { jobCount: 0 },
+                    metrics: { jobCount: 0, skippedNoJobPosting, ...windowMetrics(window) },
                 };
             }
 
@@ -100,6 +127,8 @@ export async function GET(request: NextRequest) {
             const summary = {
                 success: true,
                 jobCount: urls.length,
+                skippedNoJobPosting,
+                window: windowSummary(window),
                 google: { submitted: googleSuccess, failed: googleFailed },
                 bing: { submitted: bingSuccess, failed: bingFailed },
                 indexNow: { submitted: indexNowSuccess, failed: indexNowFailed },
@@ -113,6 +142,8 @@ export async function GET(request: NextRequest) {
                 response: NextResponse.json(summary),
                 metrics: {
                     jobCount: urls.length,
+                    skippedNoJobPosting,
+                    ...windowMetrics(window),
                     googleSubmitted: googleSuccess,
                     googleFailed,
                     bingSubmitted: bingSuccess,
@@ -123,7 +154,7 @@ export async function GET(request: NextRequest) {
             };
         });
     } catch (error) {
-        await sendCronFailureAlert('index-urls', error);
+        await sendCronFailureAlert(INDEX_URLS_CRON, error);
         console.error('[CRON:index-urls] Error:', error);
 
         return NextResponse.json(
@@ -136,4 +167,13 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
+}
+
+function windowSummary(window: SubmissionWindow): { since: string; until: string } {
+    return { since: window.since.toISOString(), until: window.until.toISOString() };
+}
+
+/** windowEnd is the resume point the next run reads back (./window.ts). */
+function windowMetrics(window: SubmissionWindow): { windowStart: string; windowEnd: string } {
+    return { windowStart: window.since.toISOString(), windowEnd: window.until.toISOString() };
 }

@@ -4,8 +4,9 @@
 //
 // NP HIRING RE-SOURCING (2026-07-03): the PMHNP-era donor values were
 // replaced with NP-wide figures:
-//   - averageSalary: BLS OEWS May 2024, Nurse Practitioners (29-1171),
-//     median annual wage $129,210 (replaces the PMHNP-era $155,000).
+//   - averageSalary: BLS OEWS May 2025, Nurse Practitioners (29-1171),
+//     median annual wage $132,300 (refreshed 2026-09-30 from the May 2024
+//     $129,210, which had replaced the PMHNP-era $155,000).
 //     RESOLVED 2026-07-18 (citation-trust sweep B4/B51): the UI constants
 //     in config/niche/stats.ts now DERIVE from this entry (they had been
 //     retuned to an earlier OEWS vintage), so the two families cannot
@@ -117,30 +118,68 @@ export const STATS_LAST_REVIEWED = '2026-08-21';
 export const STAT_SOURCES = {
     /** Median annual NP salary, US-wide (BLS OEWS, all nurse practitioners). */
     averageSalary: {
-        value: '129210',
-        formatted: '$129,210',
+        value: '132300',
+        formatted: '$132,300',
         // Single verifiable point figure (the OEWS median). Kept equal to
         // `formatted` so surfaces that render `range` cite the same number
         // instead of an invented spread.
-        range: '$129,210',
-        source: 'BLS OEWS, Nurse Practitioners (29-1171), median annual wage, May 2024',
+        range: '$132,300',
+        source: 'BLS OEWS, Nurse Practitioners (29-1171), median annual wage, May 2025',
         sourceUrl: 'https://www.bls.gov/oes/current/oes291171.htm',
-        asOf: '2024-05',
+        asOf: '2025-05',
         vintageNote:
-            'The May 2024 OEWS release is the newest NP median this repo holds. ' +
-            'No later release is present in repo data, so the vintage was left ' +
-            'as-is rather than guessed. LINK-DRIFT HAZARD (same one documented ' +
+            'Refreshed 2026-09-30 to the May 2025 OEWS release: the national ' +
+            '29-1171 annual median wage is $132,300, read from the BLS public data ' +
+            'API series OEUN000000000000029117113 (national, all industries, ' +
+            'annual median). The prior vintage was May 2024, $129,210. On that ' +
+            'date the /oes/current/ page answered with the OEWS table directory, ' +
+            'which links the May 2025 national data. LINK-DRIFT HAZARD (same one documented ' +
             'on blsGrowth2034): sourceUrl points at /oes/current/, which BLS ' +
             'repoints to the LATEST release every year — so this entry and the ' +
             'link a reader clicks drift apart silently, and the citation starts ' +
             'naming a vintage the page no longer shows. Re-check it whenever BLS ' +
             'publishes (May data, released the following spring); the archived ' +
-            'permalink for this vintage is /oes/2024/may/oes291171.htm if the ' +
+            'permalink pattern is /oes/<year>/may/oes291171.htm if the ' +
             'live figure ever needs pinning. To refresh: pull the current ' +
             '29-1171 median from the sourceUrl, update value/formatted/range/' +
             'source/asOf here, and re-run ' +
             'tests/regressions/aeo-content-citation-stats.test.ts — ' +
             'config/niche/stats.ts derives from this entry and follows automatically.',
+    },
+
+    /**
+     * The 10th and 90th percentile annual wages for nurse practitioners, the
+     * same OEWS release and occupation as averageSalary. The salary guide's
+     * "Lowest 10%" and "Top 10%" figures render from these, so a percentile
+     * claim is never typed by hand (HANDOFFS 181). Refresh all three
+     * together: a new OEWS vintage moves every percentile at once.
+     */
+    salaryPercentile10: {
+        value: '101340',
+        formatted: '$101,340',
+        source: 'BLS OEWS, Nurse Practitioners (29-1171), 10th percentile annual wage, May 2025',
+        sourceUrl: 'https://www.bls.gov/oes/current/oes291171.htm',
+        asOf: '2025-05',
+        vintageNote:
+            'Read 2026-09-30 from the BLS public data API, series ' +
+            'OEUN000000000000029117111 (national, all industries, annual 10th ' +
+            'percentile wage). Same LINK-DRIFT hazard as averageSalary: the ' +
+            '/oes/current/ URL moves to the latest release each spring. Refresh ' +
+            'with averageSalary and salaryPercentile90, from the same release.',
+    },
+
+    salaryPercentile90: {
+        value: '174420',
+        formatted: '$174,420',
+        source: 'BLS OEWS, Nurse Practitioners (29-1171), 90th percentile annual wage, May 2025',
+        sourceUrl: 'https://www.bls.gov/oes/current/oes291171.htm',
+        asOf: '2025-05',
+        vintageNote:
+            'Read 2026-09-30 from the BLS public data API, series ' +
+            'OEUN000000000000029117115 (national, all industries, annual 90th ' +
+            'percentile wage). Same LINK-DRIFT hazard as averageSalary: the ' +
+            '/oes/current/ URL moves to the latest release each spring. Refresh ' +
+            'with averageSalary and salaryPercentile10, from the same release.',
     },
 
     /**

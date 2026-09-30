@@ -74,6 +74,7 @@ const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
 const revalidated = () => revalidatePathMock.mock.calls.map((call) => call[0]);
 
 const COMPANY_LOOKUP = {
+    name: 'E2E Behavioral Health',
     normalizedName: 'e2e behavioral health',
     jobs: [{ slug: 'pmhnp-role-one' }, { slug: 'pmhnp-role-two' }],
 };
@@ -85,10 +86,13 @@ beforeEach(() => {
 });
 
 describe('companyPublicPaths', () => {
-    it('covers the hub, the kebab profile URL and each job page, deduped', () => {
-        expect(companyPublicPaths('life stance', ['a', null, '', 'a', undefined, 'b'])).toEqual([
+    it('covers the hub, the served profile URL and each job page, deduped', () => {
+        // L-01: the profile path is the display-name slug the page serves
+        // (lib/company-slug.ts companyProfilePath), not the old
+        // normalizedName form, which only 308s there.
+        expect(companyPublicPaths({ name: 'LifeStance Health', normalizedName: 'life stance' }, ['a', null, '', 'a', undefined, 'b'])).toEqual([
             '/companies',
-            '/companies/life-stance',
+            '/companies/lifestance-health',
             '/jobs/a',
             '/jobs/b',
         ]);

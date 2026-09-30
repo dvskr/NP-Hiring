@@ -61,6 +61,10 @@ function matchesField(field: unknown, cond: Record<string, unknown>): boolean {
       } else if (fieldValue === v) {
         return false;
       }
+    } else if (op === 'lt') {
+      // Needed since /jobs search carries the dead-link gate
+      // (healthConsecutiveMissing < DEAD_LINK_MISS_THRESHOLD).
+      if (typeof field !== 'number' || !(field < Number(v))) return false;
     } else {
       throw new Error(`evaluator: unsupported operator "${op}" — extend the mock`);
     }
@@ -127,12 +131,25 @@ const hybridColoradoNP: Row = {
   isRemote: false, isHybrid: true, isPublished: true,
 };
 
-const SEED: Row[] = [remoteTexasNP, onsiteTexasNP, remoteCaliforniaNP, hybridColoradoNP];
+// Every stored row carries the dead-link counter (a non-null column, default 0).
+const SEED: Row[] = [remoteTexasNP, onsiteTexasNP, remoteCaliforniaNP, hybridColoradoNP]
+  .map((row) => ({ healthConsecutiveMissing: 0, ...row }));
 
-function runSearch(search: string, extra: Partial<typeof DEFAULT_FILTERS> = {}): Row[] {
+function runSearch(search: string, extra: Partial<typeof DEFAULT_FILTERS> = {}, rows: Row[] = SEED): Row[] {
   const where = buildWhereClause({ ...DEFAULT_FILTERS, ...extra, search });
-  return SEED.filter((row) => matchesWhere(row, where));
+  return rows.filter((row) => matchesWhere(row, where));
 }
+
+describe('dead links never reach /jobs search (EDGE-CRONS handoff 20)', () => {
+  it('a job at the dead-link threshold is dropped; one miss short of it stays', () => {
+    const dead = { ...remoteTexasNP, id: 'dead-tx', healthConsecutiveMissing: 5 };
+    const flaky = { ...remoteTexasNP, id: 'flaky-tx', healthConsecutiveMissing: 4 };
+    const found = ids(runSearch('remote nurse practitioner jobs in Texas', {}, [...SEED, dead, flaky]));
+    expect(found).not.toContain('dead-tx');
+    expect(found).toContain('flaky-tx');
+    expect(found).toContain('remote-tx');
+  });
+});
 const ids = (rows: Row[]) => rows.map((r) => r.id).sort();
 
 /* ─── The reviewer's exact query ────────────────────────────────────────── */

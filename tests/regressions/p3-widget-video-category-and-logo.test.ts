@@ -228,12 +228,15 @@ describe('P3 #1: the empty video map advertises nothing', () => {
         expect(sitemapSrc).not.toContain('getAllPageVideos');
         // It advertises only YouTube-backed blog posts.
         expect(sitemapSrc).toContain('youtube_video_id');
-        // …and robots.ts can therefore keep listing the route unconditionally:
-        // with zero rows it still emits a well-formed empty <urlset>.
+        // With zero rows it still emits a well-formed empty <urlset>, so a URL
+        // Google already knows answers a valid file…
         expect(sitemapSrc).toContain('<urlset');
         expect(sitemapSrc).toContain('blogEntries.join');
+        // …but robots.txt no longer lists it (indexing audit CS-07, TECH-11):
+        // an advertised sitemap with no entries is only noise in Search
+        // Console. Re-list it once a post's main content is a video.
         const robotsSrc = fs.readFileSync(path.join(ROOT, 'app/robots.ts'), 'utf8');
-        expect(robotsSrc).toContain('/video-sitemap.xml');
+        expect(robotsSrc).not.toContain('`${baseUrl}/video-sitemap.xml`');
     });
 
     it('video-seo.ts documents the drop-in contract for a human recorder', () => {

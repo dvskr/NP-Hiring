@@ -31,10 +31,16 @@
  *     'employer'/'direct' rows the stored mode is passed as structuredMode,
  *     so this script never overrides what an employer explicitly selected.
  *   • Never publishes/unpublishes, never deletes — only mode, isRemote,
- *     isHybrid on rows whose derived values differ.
+ *     isHybrid on rows whose derived values differ, plus contentChangedAt on
+ *     those rows so the corrected pages are resubmitted.
  *   • Re-running after --apply plans zero changes and exits 0.
  *
- * RUN (a human runs this; it is not wired into CI or any cron)
+ * RUN (a human runs this). The same check runs daily without it: the
+ * job-posting-integrity cron (app/api/cron/job-posting-integrity, the
+ * 'daily' batch in config/cron-schedule.ts) plans every published row with
+ * lib/work-mode-integrity.ts planWorkModeRepair, reads only, and posts a
+ * Discord alert while stale rows survive (indexing audit GFJ-01). Both
+ * env branches below read the repo .env, which is the PRODUCTION database.
  * ───────────────────────────────────────────────────────────
  *   # 1. dry run against dev — prints the plan + writes the CSV, changes nothing
  *   node_modules/.bin/ts-node --transpile-only -r tsconfig-paths/register \
@@ -87,8 +93,11 @@ if (ENV === 'prod') {
 // construction time, so a top-level import would bind the wrong database.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { prisma } = require('@/lib/prisma') as typeof import('@/lib/prisma');
-import { parseLocation } from '@/lib/location-parser';
-import { detectMode, reconcileWorkMode } from '@/lib/job-normalizer';
+import {
+    planWorkModeRepair,
+    type PlannedWorkModeRepair,
+    type WorkModeRow,
+} from '@/lib/work-mode-integrity';
 
 const APPLY = process.argv.includes('--apply');
 const CHECK_ONLY = process.argv.includes('--check');
@@ -97,82 +106,19 @@ const CSV_PATH =
     process.argv.find((a) => a.startsWith('--csv='))?.split('=')[1] ||
     `backfill-remote-flags.${ENV}.csv`;
 
-// Employer-declared modes come from the post-job form's required work-mode
-// field — structured input, authoritative over any keyword inference.
-const STRUCTURED_MODE_SOURCE_TYPES = new Set(['employer', 'direct']);
-
-interface JobRow {
-    readonly id: string;
-    readonly title: string;
-    readonly employer: string;
-    readonly location: string | null;
-    readonly description: string | null;
-    readonly mode: string | null;
-    readonly isRemote: boolean;
-    readonly isHybrid: boolean;
-    readonly isPublished: boolean;
-    readonly sourceType: string | null;
-}
-
-export interface PlannedRepair {
-    readonly id: string;
-    readonly title: string;
-    readonly employer: string;
-    readonly location: string;
-    readonly sourceType: string;
-    readonly isPublished: boolean;
-    readonly oldMode: string | null;
-    readonly newMode: string | null;
-    readonly oldIsRemote: boolean;
-    readonly newIsRemote: boolean;
-    readonly oldIsHybrid: boolean;
-    readonly newIsHybrid: boolean;
-}
+type JobRow = WorkModeRow;
+export type PlannedRepair = PlannedWorkModeRepair;
 
 /**
  * Pure planner: run one stored row through the fixed ingest-time derivation
- * and report the repair when the stored values differ. Exported for tests.
+ * and report the repair when the stored values differ. It lives in
+ * lib/work-mode-integrity.ts (planWorkModeRepair) so the daily
+ * job-posting-integrity cron runs the same check as --check (indexing audit
+ * GFJ-01: drift fails loudly). Employer-declared modes stay authoritative
+ * there (STRUCTURED_MODE_SOURCE_TYPES). Exported for tests.
  */
 export function planRow(row: JobRow): PlannedRepair | null {
-    const parsed = parseLocation(row.location || '');
-    const structuredMode = STRUCTURED_MODE_SOURCE_TYPES.has(row.sourceType || '')
-        ? row.mode
-        : null;
-    const derived = reconcileWorkMode({
-        title: row.title,
-        // Same input shape the normalizer scans at ingest: title + description
-        // + LOCATION (job-normalizer builds `${title} ${fullDescription}
-        // ${location}`). The location matters: detectMode's token set is wider
-        // than parseLocation's REMOTE_LOCATION_RE — 'Telecommute'/'Telework'
-        // and 'Office Based - …' are mode proof ONLY via detectMode, so
-        // omitting the location here derived null where a fresh ingest derives
-        // Remote/In-Person, and --apply wrote values the next renewal
-        // re-ingest immediately reverted (flip-flop).
-        detectedMode: detectMode(`${row.title} ${row.description || ''} ${row.location || ''}`),
-        locationIsRemote: parsed.isRemote,
-        locationIsHybrid: parsed.isHybrid,
-        structuredMode,
-    });
-
-    const modeChanged = derived.mode !== row.mode;
-    const flagsChanged =
-        derived.isRemote !== row.isRemote || derived.isHybrid !== row.isHybrid;
-    if (!modeChanged && !flagsChanged) return null;
-
-    return {
-        id: row.id,
-        title: row.title,
-        employer: row.employer,
-        location: row.location || '',
-        sourceType: row.sourceType || 'unknown',
-        isPublished: row.isPublished,
-        oldMode: row.mode,
-        newMode: derived.mode,
-        oldIsRemote: row.isRemote,
-        newIsRemote: derived.isRemote,
-        oldIsHybrid: row.isHybrid,
-        newIsHybrid: derived.isHybrid,
-    };
+    return planWorkModeRepair(row);
 }
 
 const BATCH_SIZE = 500;
@@ -289,7 +235,13 @@ async function main(): Promise<void> {
     }
 
     // Chunked transactions: each chunk either fully lands or fully rolls back.
+    // mode, isRemote and isHybrid are rendered fields (lib/job-content-change.ts
+    // RENDERED_JOB_FIELDS: the work-mode chip, the <title> and the JobPosting
+    // jobLocationType), so every corrected row stamps contentChangedAt, as the
+    // scripts/indexing-fixes repairs do: the sitemap lastmod moves and the
+    // index-urls cron resubmits the corrected page.
     const CHUNK = 100;
+    const contentChangedAt = new Date();
     let applied = 0;
     for (let i = 0; i < repairs.length; i += CHUNK) {
         const chunk = repairs.slice(i, i + CHUNK);
@@ -297,7 +249,7 @@ async function main(): Promise<void> {
             chunk.map((r) =>
                 prisma.job.update({
                     where: { id: r.id },
-                    data: { mode: r.newMode, isRemote: r.newIsRemote, isHybrid: r.newIsHybrid },
+                    data: { mode: r.newMode, isRemote: r.newIsRemote, isHybrid: r.newIsHybrid, contentChangedAt },
                 }),
             ),
         );

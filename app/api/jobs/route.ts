@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
           // applyOnPlatform is a boolean flag (no scrape value) and is
           // needed by JobCard to render the Easy Apply CTA.
           applyOnPlatform: true,
-          // sourceType lets JobCard show "Direct Apply" (vs generic "Apply")
+          // sourceType lets JobCard label an employer post "Apply on employer site"
           // for jobs posted directly by employers on our platform.
           sourceType: true,
           // Phase 1 experience chip — see comment in the lite-mode SELECT

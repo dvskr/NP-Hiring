@@ -127,9 +127,11 @@ const featuredGuides = [
   {
     href: '/resources/fpa-guide',
     title: 'Full Practice Authority Guide',
-    desc: 'All 50 states classified. See which states allow independent practice and how FPA affects pay.',
+    // CQ-13: the guide explains the concept; the state by state rules live
+    // on /scope-of-practice.
+    desc: 'What full practice authority means and how the three AANP classifications differ. Your own state\'s rule is in the scope of practice explorer.',
     icon: ShieldCheck,
-    badge: '50 States',
+    badge: 'Practice Rules',
     badgeColor: '#6366F1',
   },
   {
@@ -226,7 +228,7 @@ export default async function ResourcesPage() {
         url: `${brand.baseUrl}/resources`,
         publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
         hasPart: [
-          { '@type': 'Article', name: `${brand.niche.short} Full Practice Authority Guide`, url: `${brand.baseUrl}/resources/fpa-guide` },
+          { '@type': 'Article', name: `What Full Practice Authority Means for ${brand.niche.short}s`, url: `${brand.baseUrl}/resources/fpa-guide` },
           { '@type': 'Article', name: `1099 vs W2 for ${brand.niche.short}s: Compensation Comparison`, url: `${brand.baseUrl}/resources/1099-vs-w2` },
           { '@type': 'Article', name: `How to Start an ${brand.niche.short} Private Practice`, url: `${brand.baseUrl}/resources/private-practice-guide` },
         ],

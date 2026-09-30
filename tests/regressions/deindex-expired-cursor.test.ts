@@ -20,6 +20,15 @@
  * lib/ingestion-service.ts sees expired jobs on every ingest run, so it is
  * guarded to leave them untouched, and section 4 pins those guards. The other
  * tests have no second writer; the last test in section 2 models one.
+ *
+ * Section 5 covers jobs dead at their source (CS-06): source presence keeps
+ * writing a published dead-link job, so the cron remembers the ones it sent
+ * and sends each one once per death, not once per write.
+ *
+ * Section 6 covers jobs source-presence-unpublish took down below the
+ * dead-link threshold (normally at 3 or 4 misses, with their expiry still
+ * ahead): the cron sends each once, and reads the unpublish cron's threshold
+ * the same way that cron does.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
@@ -49,15 +58,22 @@ import {
     resetGoogleIndexingBudget,
 } from '@/lib/search-indexing';
 import {
+    DEFAULT_PRESENCE_UNPUBLISH_MIN_MISSES,
     MAX_LOOKBACK_MS,
+    MAX_REMEMBERED_DEAD_LINKS,
     SETTLE_MS,
     advanceCursor,
     cursorFromMetrics,
+    isPresenceClosedJob,
     parseCursor,
     planWindow,
+    presenceUnpublishMinMisses,
+    rememberRemovedDeadLinks,
+    removedDeadLinksFromMetrics,
     type DeindexCursor,
     type OfferedJob,
 } from '@/app/api/cron/deindex-expired/cursor';
+import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
 
 const ROOT = process.cwd();
 const ROUTE = 'app/api/cron/deindex-expired/route.ts';
@@ -78,8 +94,11 @@ interface JobRow {
     slug: string | null;
     updatedAt: Date;
     isPublished: boolean;
+    isManuallyUnpublished: boolean;
+    sourceType: string | null;
     sourceProvider: string | null;
     expiresAt: Date | null;
+    healthConsecutiveMissing: number;
 }
 
 interface RunRow {
@@ -129,6 +148,8 @@ function fieldMatches(value: unknown, condition: unknown): boolean {
     return Object.entries(condition as Where).every(([op, operand]) => {
         if (op === 'not') return !fieldMatches(value, operand);
         if (value === null || value === undefined) return false;
+        if (op === 'in') return (operand as unknown[]).some((item) => compare(value, item) === 0);
+        if (op === 'notIn') return !(operand as unknown[]).some((item) => compare(value, item) === 0);
         const order = compare(value, operand);
         if (op === 'gt') return order > 0;
         if (op === 'gte') return order >= 0;
@@ -217,10 +238,29 @@ function expiredJob(i: number, updatedAt: Date, overrides: Partial<JobRow> = {})
         slug: `expired-role-${i}-${id}`,
         updatedAt,
         isPublished: false,
+        isManuallyUnpublished: false,
+        // What lib/job-normalizer.ts stamps on every aggregated row.
+        sourceType: 'external',
         sourceProvider: 'test-feed',
         expiresAt: new Date(updatedAt.getTime() - HOUR),
+        healthConsecutiveMissing: 0,
         ...overrides,
     };
+}
+
+/**
+ * A job still published and unexpired whose source stopped listing it: source
+ * presence has counted it missing DEAD_LINK_MISS_THRESHOLD runs in a row.
+ */
+function deadLinkJob(i: number, updatedAt: Date, overrides: Partial<JobRow> = {}): JobRow {
+    return expiredJob(i, updatedAt, {
+        title: `Dead link role ${i}`,
+        slug: `dead-link-role-${i}-${jobUuid(i)}`,
+        isPublished: true,
+        expiresAt: at(30 * DAY),
+        healthConsecutiveMissing: DEAD_LINK_MISS_THRESHOLD,
+        ...overrides,
+    });
 }
 
 const urlOf = (job: JobRow): string => `${brand.baseUrl}/jobs/${job.slug}`;
@@ -247,7 +287,14 @@ function armGoogle(): void {
     });
 }
 
-const INDEXING_KEYS = ['GOOGLE_INDEXING_CREDENTIALS', 'INDEXNOW_KEY', 'INDEXNOW_API_KEY'] as const;
+// JOB_HEALTH_MIN_PRESENCE_MISSES is cleared too, so every test starts from the
+// unpublish cron's default threshold whatever the shell exports.
+const INDEXING_KEYS = [
+    'GOOGLE_INDEXING_CREDENTIALS',
+    'INDEXNOW_KEY',
+    'INDEXNOW_API_KEY',
+    'JOB_HEALTH_MIN_PRESENCE_MISSES',
+] as const;
 const savedEnv = new Map<string, string | undefined>();
 
 interface NetworkOptions {
@@ -281,6 +328,7 @@ let fetchMock: ReturnType<typeof mockNetwork>;
 // suite run that took longer than vitest's 10 second hook default.
 beforeAll(async () => {
     await import('@/app/api/cron/deindex-expired/route');
+    await import('@/app/api/cron/source-presence-unpublish/route');
 }, 60_000);
 
 beforeEach(() => {
@@ -777,8 +825,10 @@ describe('deindex-expired sends each expired job once, oldest first', () => {
         expect((await runCron(at(6 * HOUR))).google).toEqual([urlOf(waiting)]);
     });
 
-    it('offers only jobs the expiry path unpublished', async () => {
+    it('offers only jobs the expiry path unpublished, and jobs dead at their source', async () => {
         const eligible = expiredJob(1, at(-2 * HOUR));
+        const deadPublished = deadLinkJob(7, at(-2 * HOUR));
+        const deadUnpublished = deadLinkJob(8, at(-2 * HOUR), { isPublished: false });
         jobs = [
             eligible,
             expiredJob(2, at(-2 * HOUR), { isPublished: true }),
@@ -786,9 +836,18 @@ describe('deindex-expired sends each expired job once, oldest first', () => {
             expiredJob(4, at(-2 * HOUR), { slug: null }),
             expiredJob(5, at(-2 * HOUR), { expiresAt: at(DAY) }),
             expiredJob(6, at(-2 * HOUR), { expiresAt: null }),
+            deadPublished,
+            deadUnpublished,
+            // One miss short of the threshold is still a live listing.
+            deadLinkJob(9, at(-2 * HOUR), { healthConsecutiveMissing: DEAD_LINK_MISS_THRESHOLD - 1 }),
+            // Employer posts and rows with no public URL stay out, as for expiry.
+            deadLinkJob(10, at(-2 * HOUR), { sourceProvider: null }),
+            deadLinkJob(11, at(-2 * HOUR), { slug: null }),
         ];
 
-        expect((await runCron(NOW)).google).toEqual([urlOf(eligible)]);
+        const run = await runCron(NOW);
+        expect(run.google).toEqual([eligible, deadPublished, deadUnpublished].map(urlOf));
+        expect(run.body.deadLinkCount).toBe(2);
     });
 
     it('offers a sent job again after each write another writer makes to it, and never skips it', async () => {
@@ -838,9 +897,14 @@ describe('the deindex-expired route', () => {
     });
 
     it('resumes from the stored cursor and records one on every successful run', () => {
-        expect(src).toContain('await readLastCursor()');
+        expect(src).toContain('await readLastRun()');
         expect(src).toContain('advanceCursor(previous, offered, results.google)');
         expect(src).toMatch(/metrics: \{[\s\S]*cursor: run\.cursor/);
+    });
+
+    it('carries the remembered dead-link removals forward in the same metrics', () => {
+        expect(src).toMatch(/metrics: \{[\s\S]*removedDeadLinks: \[\.\.\.removedDeadLinks\]/);
+        expect(src).toContain('pendingJobsWhere(window, now, removedDeadLinks)');
     });
 });
 
@@ -871,5 +935,314 @@ describe('ingest renewal does not re-stamp expired jobs', () => {
         expect(guard).toBeGreaterThan(-1);
         expect(revive).toBeGreaterThan(guard);
         expect(renewJob.slice(guard, revive)).toMatch(/\{\s*return;\s*\}/);
+    });
+});
+
+// ─── 5. Jobs dead at their source (CS-06) ───────────────────────────────────
+
+describe('deindex-expired sends each dead-link job once', () => {
+    /** A source presence run that finds the job missing once more. */
+    const presenceMiss = (id: string, when: Date): void => {
+        jobs = jobs.map((job) =>
+            job.id === id
+                ? { ...job, healthConsecutiveMissing: job.healthConsecutiveMissing + 1, updatedAt: when }
+                : job,
+        );
+    };
+    const lastMetrics = (): unknown =>
+        sortRows(runs.filter((row) => row.success), { startedAt: 'desc' })[0]?.metrics;
+
+    it('sends a published dead-link job once, although every ingest run writes it again', async () => {
+        const dead = deadLinkJob(1, at(-3 * HOUR));
+        const expired = expiredJob(2, at(-2 * HOUR));
+        jobs = [dead, expired];
+
+        const first = await runCron(NOW);
+        expect(first.google).toEqual([dead, expired].map(urlOf));
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([dead.id]);
+
+        // Two ingest runs a day keep counting it missing, and each write moves
+        // updatedAt past the cursor. None of them sends it again.
+        presenceMiss(dead.id, at(2 * HOUR));
+        expect((await runCron(at(6 * HOUR))).google).toEqual([]);
+        presenceMiss(dead.id, at(13 * HOUR));
+        presenceMiss(dead.id, at(22 * HOUR));
+        const later = expiredJob(3, at(23 * HOUR));
+        jobs = [...jobs, later];
+        expect((await runCron(at(DAY))).google).toEqual([urlOf(later)]);
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([dead.id]);
+    });
+
+    it('does not send a remembered dead-link job again when it later expires', async () => {
+        const dead = deadLinkJob(1, at(-3 * HOUR));
+        jobs = [dead];
+        expect((await runCron(NOW)).google).toEqual([urlOf(dead)]);
+
+        jobs = jobs.map((job) => ({ ...job, isPublished: false, expiresAt: at(HOUR), updatedAt: at(2 * HOUR) }));
+        expect((await runCron(at(6 * HOUR))).google).toEqual([]);
+    });
+
+    it('sends it again after it came back to life and died again', async () => {
+        const dead = deadLinkJob(1, at(-3 * HOUR));
+        jobs = [dead];
+        expect((await runCron(NOW)).google).toEqual([urlOf(dead)]);
+
+        // The source lists it again: presence resets the counter, so the next
+        // run forgets it.
+        jobs = jobs.map((job) => ({ ...job, healthConsecutiveMissing: 0, updatedAt: at(HOUR) }));
+        expect((await runCron(at(6 * HOUR))).google).toEqual([]);
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([]);
+
+        // Then it drops out of the feed for good: a new removal.
+        jobs = jobs.map((job) => ({ ...job, healthConsecutiveMissing: DEAD_LINK_MISS_THRESHOLD, updatedAt: at(3 * DAY) }));
+        expect((await runCron(at(3 * DAY + HOUR))).google).toEqual([urlOf(dead)]);
+    });
+
+    it('remembers only dead-link jobs Google gave a final answer for', async () => {
+        const dead = deadLinkJob(1, at(-3 * HOUR));
+        jobs = [dead];
+        fetchMock.mockRestore();
+        fetchMock = mockNetwork({ googleStatus: () => 503 });
+
+        const refused = await runCron(NOW);
+        expect(refused.body.hold).toBe('google-rejected-every-url');
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([]);
+
+        fetchMock.mockRestore();
+        fetchMock = mockNetwork();
+        presenceMiss(dead.id, at(HOUR));
+        expect((await runCron(at(6 * HOUR))).google).toEqual([urlOf(dead)]);
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([dead.id]);
+    });
+
+    it('keeps the remembered list through a run without the Google key', async () => {
+        const dead = deadLinkJob(1, at(-3 * HOUR));
+        jobs = [dead];
+        await runCron(NOW);
+        delete process.env.GOOGLE_INDEXING_CREDENTIALS;
+        presenceMiss(dead.id, at(HOUR));
+
+        const unarmed = await runCron(at(6 * HOUR));
+        expect(unarmed.body.hold).toBe('google-not-configured');
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([dead.id]);
+
+        armGoogle();
+        expect((await runCron(at(DAY))).google).toEqual([]);
+    });
+
+    it('forgets a remembered job once it falls behind the lookback floor', async () => {
+        const dead = deadLinkJob(1, at(-3 * HOUR), { isPublished: false });
+        jobs = [dead];
+        await runCron(NOW);
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([dead.id]);
+
+        // Unpublished rows are not written again, so it ages out of the window.
+        await runCron(at(MAX_LOOKBACK_MS));
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([]);
+    });
+
+    it('reads the remembered list defensively, and caps what it carries', () => {
+        expect(removedDeadLinksFromMetrics({ removedDeadLinks: ['a', 'a', '', 7, 'b'] })).toEqual(['a', 'b']);
+        expect(removedDeadLinksFromMetrics({ cursor: null })).toEqual([]);
+        expect(removedDeadLinksFromMetrics(null)).toEqual([]);
+
+        const many = Array.from({ length: MAX_REMEMBERED_DEAD_LINKS }, (_, i) => `kept-${i}`);
+        const next = rememberRemovedDeadLinks(many, ['new-1', 'new-2']);
+        expect(next).toHaveLength(MAX_REMEMBERED_DEAD_LINKS);
+        expect(next.slice(-2)).toEqual(['new-1', 'new-2']);
+        expect(next[0]).toBe('kept-2');
+        expect(rememberRemovedDeadLinks(['a'], ['a', 'b'])).toEqual(['a', 'b']);
+    });
+});
+
+// ─── 6. Jobs source-presence-unpublish took down (CS-06) ────────────────────
+
+describe('deindex-expired sends each job source-presence-unpublish took down once', () => {
+    const lastMetrics = (): unknown =>
+        sortRows(runs.filter((row) => row.success), { startedAt: 'desc' })[0]?.metrics;
+
+    /**
+     * What the unpublish cron leaves behind for a job that closed early at its
+     * source: an aggregated row, unpublished at the cron's default threshold,
+     * whose expiresAt is still weeks ahead. Presence counts published rows only,
+     * so the count stays there and never reaches DEAD_LINK_MISS_THRESHOLD.
+     */
+    function presenceClosedJob(i: number, updatedAt: Date, overrides: Partial<JobRow> = {}): JobRow {
+        return expiredJob(i, updatedAt, {
+            title: `Closed at source role ${i}`,
+            slug: `closed-at-source-role-${i}-${jobUuid(i)}`,
+            isPublished: false,
+            expiresAt: at(30 * DAY),
+            healthConsecutiveMissing: DEFAULT_PRESENCE_UNPUBLISH_MIN_MISSES,
+            ...overrides,
+        });
+    }
+
+    it('keeps the unpublish threshold below the dead-link threshold, the gap this closes', () => {
+        expect(DEFAULT_PRESENCE_UNPUBLISH_MIN_MISSES).toBe(3);
+        expect(DEFAULT_PRESENCE_UNPUBLISH_MIN_MISSES).toBeLessThan(DEAD_LINK_MISS_THRESHOLD);
+    });
+
+    it('sends a job unpublished at 3 misses with its expiry still ahead, once', async () => {
+        const closed = presenceClosedJob(1, at(-3 * HOUR));
+        const expired = expiredJob(2, at(-2 * HOUR));
+        jobs = [closed, expired];
+
+        const first = await runCron(NOW);
+        expect(first.google).toEqual([closed, expired].map(urlOf));
+        expect(first.indexNow).toEqual(first.google);
+        expect(first.body.presenceClosedCount).toBe(1);
+        expect(first.body.deadLinkCount).toBe(0);
+        expect(first.body.completed).toBe(2);
+        // Nothing rewrites it, so the cursor alone keeps it sent; it is not
+        // remembered with the dead-link jobs.
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([]);
+
+        expect((await runCron(at(6 * HOUR))).google).toEqual([]);
+        expect((await runCron(at(DAY))).google).toEqual([]);
+    });
+
+    it('does not send it again when its expiresAt later passes without a write', async () => {
+        const closed = presenceClosedJob(1, at(-3 * HOUR), { expiresAt: at(DAY) });
+        jobs = [closed];
+        expect((await runCron(NOW)).google).toEqual([urlOf(closed)]);
+
+        const afterExpiry = await runCron(at(2 * DAY));
+        expect(afterExpiry.google).toEqual([]);
+        expect(afterExpiry.body.backlog).toBe(0);
+    });
+
+    it('also sends one taken down at 4 misses, and one taken down after it reached the dead-link threshold', async () => {
+        const atFour = presenceClosedJob(1, at(-4 * HOUR), { healthConsecutiveMissing: 4 });
+        const pastThreshold = presenceClosedJob(2, at(-3 * HOUR), {
+            healthConsecutiveMissing: DEAD_LINK_MISS_THRESHOLD + 1,
+        });
+        jobs = [atFour, pastThreshold];
+
+        const run = await runCron(NOW);
+        expect(run.google).toEqual([atFour, pastThreshold].map(urlOf));
+        expect(run.body.presenceClosedCount).toBe(1);
+        expect(run.body.deadLinkCount).toBe(1);
+    });
+
+    it('leaves out rows the unpublish cron would not have taken down', async () => {
+        const closed = presenceClosedJob(1, at(-3 * HOUR));
+        jobs = [
+            closed,
+            // An admin hid it; the unpublish cron never touches these.
+            presenceClosedJob(2, at(-3 * HOUR), { isManuallyUnpublished: true }),
+            // Not an aggregated 'external' row (a legacy source type).
+            presenceClosedJob(3, at(-3 * HOUR), { sourceType: null }),
+            presenceClosedJob(4, at(-3 * HOUR), { sourceType: 'employer' }),
+            // Still live: the unpublish cron has not run since the third miss.
+            presenceClosedJob(5, at(-3 * HOUR), { isPublished: true }),
+            // Unpublished below the threshold, as after a check-dead-links flip
+            // that fp-recovery may still undo.
+            presenceClosedJob(6, at(-3 * HOUR), {
+                healthConsecutiveMissing: DEFAULT_PRESENCE_UNPUBLISH_MIN_MISSES - 1,
+            }),
+            // No public URL, or not aggregated, as for every other removal.
+            presenceClosedJob(7, at(-3 * HOUR), { slug: null }),
+            presenceClosedJob(8, at(-3 * HOUR), { sourceProvider: null }),
+        ];
+
+        const run = await runCron(NOW);
+        expect(run.google).toEqual([urlOf(closed)]);
+        expect(run.body.presenceClosedCount).toBe(1);
+    });
+
+    it('sends it again after its source listed it again and it closed again', async () => {
+        const closed = presenceClosedJob(1, at(-3 * HOUR));
+        jobs = [closed];
+        expect((await runCron(NOW)).google).toEqual([urlOf(closed)]);
+
+        // renewJob publishes it again (and stamps contentChangedAt, so
+        // index-urls sends URL_UPDATED); presence resets its count.
+        jobs = jobs.map((job) => ({ ...job, isPublished: true, healthConsecutiveMissing: 0, updatedAt: at(HOUR) }));
+        expect((await runCron(at(6 * HOUR))).google).toEqual([]);
+
+        // Three more misses, and the unpublish cron takes it down again.
+        jobs = jobs.map((job) => ({ ...job, isPublished: false, healthConsecutiveMissing: 3, updatedAt: at(2 * DAY) }));
+        expect((await runCron(at(2 * DAY + HOUR))).google).toEqual([urlOf(closed)]);
+    });
+
+    it('does not send a remembered dead-link job again when the unpublish cron finally takes it down', async () => {
+        // The unpublish cron missed a day, so the job was still published when
+        // it reached the dead-link threshold, and was sent and remembered then.
+        const dead = deadLinkJob(1, at(-3 * HOUR));
+        jobs = [dead];
+        expect((await runCron(NOW)).google).toEqual([urlOf(dead)]);
+
+        jobs = jobs.map((job) => ({
+            ...job,
+            isPublished: false,
+            healthConsecutiveMissing: DEAD_LINK_MISS_THRESHOLD + 1,
+            updatedAt: at(HOUR),
+        }));
+        expect((await runCron(at(6 * HOUR))).google).toEqual([]);
+        expect(removedDeadLinksFromMetrics(lastMetrics())).toEqual([dead.id]);
+    });
+
+    it('follows JOB_HEALTH_MIN_PRESENCE_MISSES the way the unpublish cron reads it', async () => {
+        process.env.JOB_HEALTH_MIN_PRESENCE_MISSES = '4';
+        const atThree = presenceClosedJob(1, at(-3 * HOUR), { healthConsecutiveMissing: 3 });
+        const atFour = presenceClosedJob(2, at(-2 * HOUR), { healthConsecutiveMissing: 4 });
+        jobs = [atThree, atFour];
+
+        expect((await runCron(NOW)).google).toEqual([urlOf(atFour)]);
+    });
+
+    it('matches the in-memory check to the same rule', () => {
+        const row = {
+            isPublished: false,
+            isManuallyUnpublished: false,
+            sourceType: 'external',
+            healthConsecutiveMissing: 3,
+        };
+        expect(isPresenceClosedJob(row)).toBe(true);
+        expect(isPresenceClosedJob({ ...row, healthConsecutiveMissing: 2 })).toBe(false);
+        expect(isPresenceClosedJob({ ...row, isPublished: true })).toBe(false);
+        expect(isPresenceClosedJob({ ...row, isManuallyUnpublished: true })).toBe(false);
+        expect(isPresenceClosedJob({ ...row, sourceType: null })).toBe(false);
+        expect(isPresenceClosedJob(row, 4)).toBe(false);
+    });
+
+    /**
+     * The unpublish cron's readThreshold is private to its route, so parity is
+     * checked on the threshold that route reports. Until both read one shared
+     * helper, this keeps them from drifting apart.
+     */
+    it('reads the threshold exactly as source-presence-unpublish does', async () => {
+        const cases: ReadonlyArray<readonly [string | undefined, number]> = [
+            [undefined, 3],
+            ['', 3],
+            ['3', 3],
+            ['4', 4],
+            ['1', 1],
+            ['0', 3],
+            ['-2', 3],
+            ['abc', 3],
+            ['2.7', 2],
+            ['5 misses', 5],
+        ];
+        const { GET } = await import('@/app/api/cron/source-presence-unpublish/route');
+
+        for (const [raw, expected] of cases) {
+            if (raw === undefined) delete process.env.JOB_HEALTH_MIN_PRESENCE_MISSES;
+            else process.env.JOB_HEALTH_MIN_PRESENCE_MISSES = raw;
+            const label = JSON.stringify(raw) ?? 'unset';
+
+            expect(presenceUnpublishMinMisses(), `cursor reading the env, ${label}`).toBe(expected);
+            expect(presenceUnpublishMinMisses(raw), `cursor given the value, ${label}`).toBe(expected);
+
+            const res = await GET(
+                new Request('https://example.com/api/cron/source-presence-unpublish', {
+                    headers: { authorization: 'Bearer test' },
+                }),
+            );
+            const body = (await res.json()) as { threshold?: number };
+            expect(res.status).toBe(200);
+            expect(body.threshold, `source-presence-unpublish, ${label}`).toBe(expected);
+        }
     });
 });

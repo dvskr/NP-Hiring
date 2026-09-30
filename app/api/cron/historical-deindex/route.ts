@@ -63,7 +63,10 @@ const GONE_STATUSES: ReadonlySet<number> = new Set([404, 410]);
  * URL drainage cron.
  *
  * WHY THIS EXISTS:
- *   The deindex-expired cron only handles jobs unpublished in the last 48h.
+ *   The deindex-expired cron only handles current removals within its seven
+ *   day lookback: jobs that expired, and jobs whose source stopped listing
+ *   them (unpublished by source-presence-unpublish, or at the dead-link
+ *   threshold; app/api/cron/deindex-expired/cursor.ts lists exactly which).
  *   This cron drains the legacy backlog (~25k pre-Mar-19 URLs) seeded into
  *   the deindex_queue table from GSC bulk exports + sitemap-diff scrapers.
  *

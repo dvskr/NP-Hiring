@@ -5,7 +5,8 @@
  *
  * Receives already-aggregated rows from the server component; it never sees
  * per-employer data. See ./benchmark-model.ts for the public-safety rules
- * (minimum postings AND minimum distinct employers per published row).
+ * (minimum postings AND minimum distinct employers per published row) and
+ * lib/salary-guide-gate.ts for the employer-share cap the server applies.
  *
  * Accessibility: labelled select + labelled number input, keyboard operable,
  * the result region is always mounted so nothing shifts as the selection
@@ -17,7 +18,17 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BarChart3, Info } from 'lucide-react';
 import { brand } from '@/config/brand';
-import { classifyOffer, parseOfferInput, type BenchmarkRow, type OfferStanding } from './benchmark-model';
+import {
+  BENCHMARK_MIN_EMPLOYERS,
+  BENCHMARK_MIN_POSTINGS,
+  classifyOffer,
+  parseOfferInput,
+  type BenchmarkRow,
+  type OfferStanding,
+} from './benchmark-model';
+// The cap's value only: lib/salary-guide-policy.ts is import free. Never
+// import lib/salary-guide-gate.ts here; it pulls Prisma into the client bundle.
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 import ToolStyles from './ToolStyles';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle, selectStyle } from './tool-theme';
 
@@ -73,9 +84,10 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
           Not enough posted pay data to publish a benchmark yet
         </p>
         <p style={{ fontSize: '13.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-          We only publish a figure once enough employers have posted disclosed ranges that no single one can be
-          identified from the aggregate. Until then we would rather show nothing than a number built from a
-          handful of listings.
+          We only publish a figure once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
+          {BENCHMARK_MIN_EMPLOYERS} or more employers disclose ranges, with no single employer contributing more
+          than {MAX_EMPLOYER_SHARE_PERCENT}% of them. Until then we would rather show nothing than a number built
+          from a handful of listings.
         </p>
       </div>
     );
@@ -180,9 +192,11 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
       <div style={{ display: 'flex', gap: '9px', alignItems: 'flex-start', padding: '14px 16px', borderRadius: '13px', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.05)' }}>
         <Info size={15} color="#64748B" aria-hidden="true" style={{ flexShrink: 0, marginTop: '1px' }} />
         <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-          Aggregates only. A state appears here only once enough employers have posted disclosed ranges that no
-          single employer is identifiable from the figure, and listings whose pay was inferred rather than
-          posted are excluded entirely. This is posted pay, not accepted offers or total compensation.
+          Aggregates only. A state appears here only once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
+          {BENCHMARK_MIN_EMPLOYERS} or more employers disclose ranges, with no single employer contributing more
+          than {MAX_EMPLOYER_SHARE_PERCENT}% of them, so no figure restates one employer&apos;s pay band. Listings
+          whose pay was inferred rather than posted are excluded entirely. This is posted pay, not accepted offers
+          or total compensation.
         </p>
       </div>
 

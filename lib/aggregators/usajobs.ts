@@ -22,6 +22,7 @@
 import { USAJOBS_SEARCH_QUERIES as SEARCH_QUERIES } from './search-terms/usajobs';
 import { RateLimiter } from './types';
 import { htmlToReadableText } from '@/lib/sanitize';
+import { resolveCountryValue } from '@/lib/location-parser';
 
 interface UsaJobsPositionLocation {
     LocationName?: string;
@@ -113,13 +114,35 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** A position location in the United States (or one that names no country). */
+function isUsOrUnknownPlace(loc: UsaJobsPositionLocation): boolean {
+    const country = resolveCountryValue(loc.CountryCode ?? null);
+    return country === null || country === 'US';
+}
+
 /**
- * Build "City, State" from PositionLocation[0], falling back to
- * PositionLocationDisplay (which is already formatted but sometimes
+ * Every CountryCode the posting's locations carry ("United States",
+ * "Germany"), for the normalizer's non-US gate, or undefined when none is
+ * given. A posting open at an overseas base and a US medical center is a US
+ * job (owner decision), so the whole list is passed, not only the first.
+ */
+export function usaJobsCountries(d: Pick<UsaJobsDescriptor, 'PositionLocation'>): string[] | undefined {
+    const codes = (d.PositionLocation ?? [])
+        .map((l) => (typeof l.CountryCode === 'string' ? l.CountryCode.trim() : ''))
+        .filter(Boolean);
+    const unique = [...new Set(codes)];
+    return unique.length > 0 ? unique : undefined;
+}
+
+/**
+ * Build "City, State" from the first US PositionLocation (a posting that
+ * lists an overseas base first is filed under its US place), falling back
+ * to PositionLocationDisplay (which is already formatted but sometimes
  * "Location Negotiable After Selection" for fully-remote roles).
  */
-function buildLocation(d: UsaJobsDescriptor): string {
-    const first = d.PositionLocation?.[0];
+export function usaJobsLocation(d: Pick<UsaJobsDescriptor, 'PositionLocation' | 'PositionLocationDisplay'>): string {
+    const places = d.PositionLocation ?? [];
+    const first = places.find(isUsOrUnknownPlace) ?? places[0];
     if (first) {
         const city = first.CityName?.split(',')[0]?.trim();
         const state = first.CountrySubDivisionCode?.trim();
@@ -278,7 +301,7 @@ export async function fetchUsaJobs(): Promise<Array<Record<string, unknown>>> {
                     allJobs.push({
                         title: d.PositionTitle,
                         employer: d.OrganizationName || d.DepartmentName || 'Federal Government',
-                        location: buildLocation(d),
+                        location: usaJobsLocation(d),
                         description: buildDescription(d),
                         minSalary: salary.minSalary,
                         maxSalary: salary.maxSalary,
@@ -289,6 +312,12 @@ export async function fetchUsaJobs(): Promise<Array<Record<string, unknown>>> {
                         sourceProvider: 'usajobs',
                         sourceSite: 'usajobs',
                         postedAt: d.PublicationStartDate || d.PositionStartDate,
+                        // Overseas federal posts (e.g. Landstuhl, Germany)
+                        // carry a non-US CountryCode; the normalizer's
+                        // non-US gate reads every location's code (owner
+                        // decision: US jobs only, and a posting that lists a
+                        // US location is a US job).
+                        country: usaJobsCountries(d),
                     });
                 }
 

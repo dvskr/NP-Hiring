@@ -45,13 +45,14 @@ import { prisma } from '@/lib/prisma';
 import { getGatedBenchmark } from '@/lib/salary-analytics';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
-import { emptyListingFacts, type ListingFactRow, type ListingFacts } from '@/lib/pseo/listing-facts';
+import type { ListingFactRow } from '@/lib/pseo/listing-facts';
 import type { BenchmarkRow } from '@/components/tools/benchmark-model';
 import {
     buildSettingStateMetadata,
     resolveSettingStateIndexable,
-    settingStateIndexFacts,
 } from '@/lib/pseo/setting-state-template';
+import { SETTING_STATE_INDEXING_ENABLED } from '@/lib/pseo/render-gate';
+import { LISTING_PAGE_SIZE } from '@/lib/pseo/listing-pagination';
 
 const ROOT = path.resolve(__dirname, '../..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -217,42 +218,36 @@ describe('buildSettingStateMetadata prints a figure only from the gated benchmar
 
     it('keeps a self canonical and follow on every page, including noindex ones', async () => {
         arrange({ rows: inventory(1), benchmark: null });
+        const first = await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1);
+        expect(first.alternates?.canonical).toMatch(/\/jobs\/inpatient\/texas$/);
+        expect(first.robots).toEqual({ index: false, follow: true });
 
-        const meta = await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 2);
-
-        expect(meta.alternates?.canonical).toMatch(/\/jobs\/inpatient\/texas$/);
-        expect(meta.robots).toEqual({ index: false, follow: true });
+        // TECH-08: page N is its own canonical (never page 1) and noindex, follow.
+        arrange({ rows: inventory(LISTING_PAGE_SIZE + 1), benchmark: null });
+        const second = await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 2);
+        expect(second.alternates?.canonical).toMatch(/\/jobs\/inpatient\/texas\?page=2$/);
+        expect(second.robots).toEqual({ index: false, follow: true });
     });
 });
 
 // ─── 3. behaviour: robots ────────────────────────────────────────────────────
 
-describe('robots read the stored PseoStats verdict while fresh, the live facts otherwise', () => {
-    it('indexes page 1 from the live facts when no row is stored', async () => {
-        // 3 jobs, 2 employers, 2 named cities, all posted now: 3 signals.
+describe('robots read the stored strict verdict through the FB-1 switch, and fail closed', () => {
+    it('with the switch off (the shipped state) a fresh true verdict still answers noindex, follow', async () => {
+        arrange({ rows: inventory(3), benchmark: null, stored: { indexable: true, updatedAt: new Date() } });
+        expect((await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1)).robots).toEqual({ index: false, follow: true });
+    });
+
+    it('no stored row answers noindex: the page never re-derives the strict gate from live facts', async () => {
         arrange({ rows: inventory(3), benchmark: null });
         const meta = await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1);
-        expect(meta.robots).toEqual({ index: true, follow: true });
+        expect(meta.robots).toEqual({ index: false, follow: true });
     });
 
-    it('a fresh stored verdict wins over the live facts in both directions', async () => {
-        arrange({ rows: inventory(3), benchmark: null, stored: { indexable: false, updatedAt: new Date() } });
-        expect((await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1)).robots).toEqual({ index: false, follow: true });
-
-        arrange({ rows: inventory(1), benchmark: null, stored: { indexable: true, updatedAt: new Date() } });
-        expect((await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1)).robots).toEqual({ index: true, follow: true });
-    });
-
-    it('a stale stored verdict is ignored and the live facts decide', async () => {
-        const stale = new Date(Date.now() - 40 * HOUR_MS);
-        arrange({ rows: inventory(1), benchmark: null, stored: { indexable: true, updatedAt: stale } });
-        expect((await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1)).robots).toEqual({ index: false, follow: true });
-    });
-
-    it('a failed verdict read falls back to the live facts instead of failing the page', async () => {
+    it('a failed verdict read answers noindex instead of failing the page', async () => {
         arrange({ rows: inventory(3), benchmark: null });
         db.$queryRaw.mockRejectedValue(new Error('gate column unavailable'));
-        expect((await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1)).robots).toEqual({ index: true, follow: true });
+        expect((await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1)).robots).toEqual({ index: false, follow: true });
     });
 
     it('a failed total count still rethrows (a 5xx never deindexes a URL)', async () => {
@@ -262,42 +257,23 @@ describe('robots read the stored PseoStats verdict while fresh, the live facts o
     });
 });
 
-describe('resolveSettingStateIndexable and settingStateIndexFacts', () => {
+describe('resolveSettingStateIndexable', () => {
     const now = Date.now();
-    const facts = (over: Partial<ListingFacts> = {}): ListingFacts => ({ ...emptyListingFacts(new Date(now)), ...over });
-    const qualifying = settingStateIndexFacts(SETTING_KEY, facts({
-        total: 3,
-        distinctEmployers: 2,
-        cities: [{ name: 'Austin', stateCode: 'TX', count: 2 }, { name: 'Dallas', stateCode: 'TX', count: 1 }],
-    }));
-    const thin = settingStateIndexFacts(SETTING_KEY, facts({ total: 3, distinctEmployers: 1 }));
+    const fresh = { indexable: true, updatedAt: new Date(now) };
 
-    it('maps the facts exactly as the cron does', () => {
-        const mapped = settingStateIndexFacts(SETTING_KEY, facts({
-            total: 7,
-            distinctEmployers: 4,
-            cities: [{ name: 'Austin', stateCode: 'TX', count: 7 }],
-            benchmark: BENCHMARK,
-            recency: { total: 7, datedCount: 7, last7: 1, last30: 5, newestPostedAt: new Date(now) },
-        }));
-        expect(mapped).toEqual({
-            totalJobs: 7,
-            employerCount: 4,
-            namedCityCount: 1,
-            hasBenchmark: true,
-            postedLast30Days: 5,
-            roleSetupRenders: false,
-        });
+    it('never indexes while SETTING_STATE_INDEXING_ENABLED is off', () => {
+        expect(SETTING_STATE_INDEXING_ENABLED).toBe(false);
+        expect(resolveSettingStateIndexable({ stored: fresh, page: 1, now })).toBe(false);
     });
 
     it('never indexes a paginated view', () => {
-        expect(resolveSettingStateIndexable({ stored: { indexable: true, updatedAt: new Date(now) }, indexFacts: qualifying, page: 2, now })).toBe(false);
+        expect(resolveSettingStateIndexable({ stored: fresh, page: 2, now, indexingEnabled: true })).toBe(false);
     });
 
-    it('uses the stored verdict only while the row is fresh', () => {
-        expect(resolveSettingStateIndexable({ stored: { indexable: false, updatedAt: new Date(now) }, indexFacts: qualifying, page: 1, now })).toBe(false);
-        expect(resolveSettingStateIndexable({ stored: { indexable: true, updatedAt: new Date(now - 40 * HOUR_MS) }, indexFacts: thin, page: 1, now })).toBe(false);
-        expect(resolveSettingStateIndexable({ stored: null, indexFacts: qualifying, page: 1, now })).toBe(true);
-        expect(resolveSettingStateIndexable({ stored: null, indexFacts: thin, page: 1, now })).toBe(false);
+    it('once switched on, uses the stored verdict only while the row is fresh, else fails closed', () => {
+        expect(resolveSettingStateIndexable({ stored: fresh, page: 1, now, indexingEnabled: true })).toBe(true);
+        expect(resolveSettingStateIndexable({ stored: { indexable: false, updatedAt: new Date(now) }, page: 1, now, indexingEnabled: true })).toBe(false);
+        expect(resolveSettingStateIndexable({ stored: { indexable: true, updatedAt: new Date(now - 40 * HOUR_MS) }, page: 1, now, indexingEnabled: true })).toBe(false);
+        expect(resolveSettingStateIndexable({ stored: null, page: 1, now, indexingEnabled: true })).toBe(false);
     });
 });

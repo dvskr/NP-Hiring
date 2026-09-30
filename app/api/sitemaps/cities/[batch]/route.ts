@@ -23,7 +23,15 @@ import { CITIES } from '@/lib/pseo/city-data/cities';
 import { getAllSettingSlugs, getAllStateSlugs } from '@/lib/pseo/setting-state-config';
 import { brand } from '@/config/brand';
 import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
-import { pseoStatsFreshnessThreshold, shouldIndexLocalListingPage } from '@/lib/pseo/render-gate';
+import {
+  isSettingStateIndexable,
+  pseoStatsFreshnessThreshold,
+  SETTING_STATE_INDEXING_ENABLED,
+  shouldIndexLocalListingPage,
+} from '@/lib/pseo/render-gate';
+import { lastmodTag } from '@/app/api/sitemaps/lastmod';
+import { listingContentDates, type ListingUrlKey } from '@/app/api/sitemaps/listing-lastmod';
+import { SITEMAP_CACHE_CONTROL } from '@/app/api/sitemaps/cache-control';
 
 // Category set comes from the drift-guarded registry. The category x city
 // surface is CITY-eligible (all 45 slugs, see taxonomy-registry.ts), not
@@ -53,10 +61,15 @@ const SITEMAP_CATEGORY_SET = new Set(SITEMAP_CATEGORIES);
 // DYNAMIC SITEMAP PRUNING
 // Only emit URLs that clear the page-level index gate, read from the SAME
 // function or stored verdict the page robots use (PLAN C.2):
-//   Category x City: shouldIndexLocalListingPage over the row's totalJobs
-//     and distinctEmployers (3 or more jobs from 2 or more employers).
-//   Setting x State: the row's `indexable` flag, the cron's stored verdict
-//     of shouldIndexSettingState (3 or more jobs plus two data signals).
+//   Category x City: the row's stored `indexable` verdict (the cron counts
+//     distinct postings) AND shouldIndexLocalListingPage over the row's
+//     totalJobs and distinctEmployers (the listing floor: 5 or more jobs
+//     from 3 or more employers), so a row written before a floor change
+//     can never admit a URL the page now noindexes.
+//   Setting x State: nothing while SETTING_STATE_INDEXING_ENABLED is off
+//     (FB-1: the section is not even read); once it is on, the row's stored
+//     strict verdict through isSettingStateIndexable, the function the page
+//     robots call.
 //   City population >= MIN_SITEMAP_POPULATION (defense-in-depth).
 //   PseoStats row must be fresh: pseoStatsFreshnessThreshold() from
 //     lib/pseo/render-gate.ts (PSEO_STATS_MAX_AGE_HOURS, 36h) is the one
@@ -72,45 +85,35 @@ interface PseoStatsRow {
   totalJobs: number;
   distinctEmployers: number;
   indexable: boolean;
-  updatedAt: Date;
 }
 
 /**
- * Fresh PseoStats rows of one type.
+ * Fresh PseoStats rows of one type, in a stable order, so a URL keeps its
+ * batch from one request to the next and the index can date each batch.
  *
  * WHY RAW: the generated Prisma client predates the `distinctEmployers` and
  * `indexable` columns (prisma/migrations/20260916120000_pseo_stats_index_gate)
  * and must not be regenerated on this branch, so the two gate columns are
  * only reachable through a $queryRaw tagged template (parameterized; the
  * column names are literals). A non-array result (an unmocked client in
- * tests) reads as no rows.
+ * tests) reads as no rows. updatedAt is the freshness filter only: it is the
+ * cron's heartbeat, never a lastmod (see app/api/sitemaps/listing-lastmod.ts).
  */
 async function readFreshStatsRows(filter: { type: StatsRowType }): Promise<PseoStatsRow[]> {
   const rows = await prisma.$queryRaw<PseoStatsRow[]>`
-    SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable", "updatedAt"
+    SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable"
     FROM "PseoStats"
     WHERE "type" = ${filter.type}
-      AND "updatedAt" >= ${pseoStatsFreshnessThreshold()}`;
+      AND "updatedAt" >= ${pseoStatsFreshnessThreshold()}
+    ORDER BY "categorySlug", "locationSlug"`;
   return Array.isArray(rows) ? rows : [];
 }
-
-// One sitemap entry: canonical URL + the PseoStats row's real refresh time.
-interface SitemapEntry {
-  loc: string;
-  lastmod: string; // YYYY-MM-DD
-}
-
-// B27: lastmod comes from the PseoStats row's updatedAt (when the aggregator
-// last recomputed that page's inventory) instead of "today" on every request.
-// Fabricated always-fresh lastmod erodes Google's trust in the signal
-// site-wide and burns crawl budget re-fetching pages that never changed.
-const toLastmod = (d: Date): string => d.toISOString().split('T')[0];
 
 // Generate only URLs whose page indexes, plus state-level pSEO URLs. All
 // gating is driven by PseoStats so the sitemap never disagrees with the
 // page-level noindex gate.
-async function getActiveCategoryCityUrls(): Promise<SitemapEntry[]> {
-  const urls: SitemapEntry[] = [];
+async function getActiveCategoryCityUrls(): Promise<ListingUrlKey[]> {
+  const urls: ListingUrlKey[] = [];
   const validStateSlugs = new Set(getAllStateSlugs());
   const settingSlugs = new Set(getAllSettingSlugs());
 
@@ -123,16 +126,14 @@ async function getActiveCategoryCityUrls(): Promise<SitemapEntry[]> {
   try {
     const categoryCityRows = await readFreshStatsRows({ type: 'category-city' });
     for (const row of categoryCityRows) {
+      if (!row.indexable) continue;
       if (!shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers })) continue;
       // Defense in depth against stale aggregator rows whose slugs were
       // retired or whose underlying city no longer meets the population gate.
       if (!SITEMAP_CATEGORY_SET.has(row.categorySlug)) continue;
       const population = CITY_POPULATION_LOOKUP.get(row.locationSlug);
       if (population === undefined || population < MIN_SITEMAP_POPULATION) continue;
-      urls.push({
-        loc: `${BASE_URL}/jobs/${row.categorySlug}/city/${row.locationSlug}`,
-        lastmod: toLastmod(row.updatedAt),
-      });
+      urls.push({ type: 'category-city', categorySlug: row.categorySlug, locationSlug: row.locationSlug });
     }
   } catch (err) {
     // If PseoStats is empty/unreachable, skip category x city URLs entirely.
@@ -140,29 +141,35 @@ async function getActiveCategoryCityUrls(): Promise<SitemapEntry[]> {
     console.error('[sitemaps/cities] PseoStats category-city lookup failed; omitting category x city URLs:', err);
   }
 
-  // Setting x State URLs, gated by the row's stored `indexable` verdict.
+  // Setting x State URLs. FB-1: while SETTING_STATE_INDEXING_ENABLED is off
+  // the whole section is skipped (every such page renders noindex, follow).
+  // Once it is on, a row is emitted only when isSettingStateIndexable
+  // accepts its stored strict verdict (shouldIndexSettingState, written by
+  // the cron), the same call the page robots make.
   // GSC Fix (P1.1): previously emitted all settings x 51 states
   // unconditionally. Most had 0 matching jobs and 404'd, polluting GSC with
-  // "Not found" entries. The gate then moved to >= 1 and later >= 3 jobs;
-  // the page now also requires two data signals beyond the count
-  // (shouldIndexSettingState), and the cron stores that verdict per row, so
-  // the sitemap reads the flag instead of re-deriving a count floor.
+  // "Not found" entries.
+  if (!SETTING_STATE_INDEXING_ENABLED) return urls;
   try {
     const settingStateRows = await readFreshStatsRows({ type: 'setting-state' });
     for (const row of settingStateRows) {
-      if (!row.indexable) continue;
+      if (!isSettingStateIndexable(row.indexable)) continue;
       if (!settingSlugs.has(row.categorySlug)) continue;
       if (!validStateSlugs.has(row.locationSlug)) continue;
-      urls.push({
-        loc: `${BASE_URL}/jobs/${row.categorySlug}/${row.locationSlug}`,
-        lastmod: toLastmod(row.updatedAt),
-      });
+      urls.push({ type: 'setting-state', categorySlug: row.categorySlug, locationSlug: row.locationSlug });
     }
   } catch (err) {
     console.error('[sitemaps/cities] PseoStats setting-state lookup failed; omitting setting x state URLs:', err);
   }
 
   return urls;
+}
+
+/** The public URL of a listed page. */
+function locOf(key: ListingUrlKey): string {
+  return key.type === 'category-city'
+    ? `${BASE_URL}/jobs/${key.categorySlug}/city/${key.locationSlug}`
+    : `${BASE_URL}/jobs/${key.categorySlug}/${key.locationSlug}`;
 }
 
 export async function GET(
@@ -188,21 +195,22 @@ export async function GET(
   const end = Math.min(start + BATCH_SIZE, allUrls.length);
   const batchUrls = allUrls.slice(start, end);
 
-  // B27: per-URL lastmod from PseoStats.updatedAt, see toLastmod above.
+  // CS-02: each URL is dated by the newest content change among the jobs its
+  // page lists (listingContentDates), not by PseoStats.updatedAt, which the
+  // cron rewrites every six hours whether or not the listing changed. No
+  // changefreq or priority: Google ignores both (GFJ-10).
+  const lastmods = await listingContentDates(batchUrls);
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${batchUrls.map(entry => `  <url>
-    <loc>${entry.loc}</loc>
-    <lastmod>${entry.lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
+${batchUrls.map((key, i) => `  <url>
+    <loc>${locOf(key)}</loc>${lastmodTag(lastmods[i])}
   </url>`).join('\n')}
 </urlset>`;
 
   return new NextResponse(xml, {
     headers: {
       'Content-Type': 'application/xml',
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      'Cache-Control': SITEMAP_CACHE_CONTROL,
     },
   });
 }

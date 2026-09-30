@@ -82,4 +82,12 @@ describe('index-pseo cron submits only pages its own render gate serves', () => 
     expect(src()).toMatch(/"updatedAt" >= \$\{pseoStatsFreshnessThreshold\(\)\}/);
     expect(src()).not.toMatch(/const MIN_JOBS = /);
   });
+  it('reads and honours the stored category x city verdict, as the cities sitemap does', () => {
+    expect(src()).toContain('SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable"');
+    // The verdict check comes before the count gate, like the sitemap route.
+    const verdict = src().indexOf('if (!row.indexable) continue;');
+    expect(verdict).toBeGreaterThan(-1);
+    expect(verdict).toBeLessThan(src().indexOf('shouldIndexLocalListingPage({ activeJobs: row.totalJobs'));
+    expect(read('app/api/sitemaps/cities/[batch]/route.ts')).toContain('if (!row.indexable) continue;');
+  });
 });

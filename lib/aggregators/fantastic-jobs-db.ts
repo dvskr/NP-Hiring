@@ -154,6 +154,8 @@ export interface FantasticJobOutput {
     minSalary?: number | null;
     maxSalary?: number | null;
     salaryPeriod?: string | null;
+    /** countries_derived, for the non-US gate (owner decision: US jobs only). */
+    countries?: string[];
 }
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
@@ -301,8 +303,38 @@ function isCoveredByNativeAdapter(applyUrl: string | null | undefined, source: s
     return false;
 }
 
-function formatLocation(job: FantasticJobApiResponse): string {
+/**
+ * countries_derived, for the normalizer's non-US gate (owner decision: US
+ * jobs only), or undefined when the API names none. The whole list is
+ * passed: a posting that lists the United States among other countries is
+ * a US job.
+ */
+export function fantasticCountries(job: Pick<FantasticJobApiResponse, 'countries_derived'>): string[] | undefined {
+    if (!Array.isArray(job.countries_derived)) return undefined;
+    const names = job.countries_derived
+        .map((c) => (typeof c === 'string' ? c.trim() : ''))
+        .filter(Boolean);
+    return names.length > 0 ? names : undefined;
+}
+
+/** A derived location string in the United States ("Vestavia Hills, Alabama, United States"). */
+const US_DERIVED_LOCATION_RE = /,\s*(?:United States|USA|US)\s*$/i;
+
+/**
+ * Where a posting is. When it names the United States and another country,
+ * the first US entry of locations_derived is used, so a posting open in
+ * Canada and the United States is filed under its US place.
+ */
+export function fantasticLocation(
+    job: Pick<FantasticJobApiResponse, 'remote_derived' | 'cities_derived' | 'regions_derived' | 'locations_derived' | 'countries_derived'>,
+): string {
     if (job.remote_derived) return 'Remote';
+
+    const countries = fantasticCountries(job) ?? [];
+    if (countries.length > 1) {
+        const usPlace = (job.locations_derived ?? []).find((l) => typeof l === 'string' && US_DERIVED_LOCATION_RE.test(l));
+        if (usPlace) return usPlace;
+    }
 
     // Use the most specific derived location
     const city = job.cities_derived?.[0];
@@ -595,7 +627,7 @@ async function runPass(
                 externalId: `fantasticjobs-${job.source || 'unknown'}-${job.id}`,
                 title: job.title,
                 company: job.organization || 'Unknown',
-                location: formatLocation(job),
+                location: fantasticLocation(job),
                 // BUGFIX 2026-05-06: when we pass description_type=text to
                 // the API (BASE_FILTERS.description_type = 'text'), the
                 // plain-text body lands in `description_text` and
@@ -612,6 +644,7 @@ async function runPass(
                 minSalary: salary.minSalary,
                 maxSalary: salary.maxSalary,
                 salaryPeriod: salary.salaryPeriod,
+                ...(fantasticCountries(job) ? { countries: fantasticCountries(job) } : {}),
             });
         }
 

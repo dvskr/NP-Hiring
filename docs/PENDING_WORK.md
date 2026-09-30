@@ -82,6 +82,23 @@ files. Optional, from the August wishlist: per-benefit and explore-card icon set
 - Why: production is the only copy of the data.
 - Where: Supabase Dashboard.
 
+**1.12 Indexing data repairs (indexing readiness audit).** Every script below only reads and prints by
+default, and writes only with `--apply`, in one transaction. The exact command sits in each script's header.
+Run each as a dry run, review the output, then repeat the same command with `--apply`.
+1. After the deploy that adds `jobs.content_changed_at`: `scripts/indexing-fixes/backfill-content-changed-at.ts`.
+2. The job-row fixes, in the order of `RUN_ORDER` in `scripts/indexing-fixes/lib/runtime.ts`:
+   unpublish-misrepresented-jobs, unpublish-non-us-jobs, hold-stub-description-jobs, backfill-job-locations,
+   correct-location-and-pay, collapse-duplicate-jobs, rederive-job-type, then retag-category-tags. After
+   the last one, let the aggregate-pseo cron run so the landing verdicts are recomputed.
+3. `scripts/backfill-remote-flags.ts`: dry run, `--apply`, then `--check` (exit 0 when clean). Until then,
+   /jobs/remote can list a job whose own page does not call it Remote; the daily job-posting-integrity cron
+   reports those rows. Once `--check` passes and the cron reports zero work-mode violations, CLAUDE moves
+   `scripts/indexing-fixes/sql/work-mode-check-constraints.sql` into `prisma/migrations` (steps in its header).
+4. `scripts/indexing-fixes/populate-company-website-logo.ts`: dry run, dry run with `--fetch`, then `--apply`;
+   fill the UNRESOLVED list it prints by hand on /admin/companies.
+- Why: the code fixes stop new bad rows; these repair the rows already stored.
+- Where: a terminal on a trusted machine. The repo `.env` is the production database.
+
 ## 2. Engineering (CLAUDE)
 
 **2.1 Ladder copy before 2027-01-01.** /pricing, /for-employers and /faq print "Free through December 31, 2026"
@@ -130,6 +147,9 @@ the NLC member set is wrong and must not be used, although it was fixed and veri
 `components/tools/MultiStatePlanner.tsx`, `app/tools/licensure-checker/page.tsx` and
 `app/resources/fpa-guide/page.tsx`. Update the comments; those pages may now use the verified set
 (`lib/metro-data.ts` already does).
+
+**2.11 Guest Easy Apply: closed.** Closed (owner decision 2026-09): applying requires an NP Hiring account
+for external and Easy Apply jobs alike; guest Easy Apply will not be built; JobPosting directApply stays false.
 
 ## 3. Decisions (DECISION)
 

@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import CategoryLandingPage, { buildCategoryLandingMetadata } from '@/lib/pseo/category-landing-template';
+import { parseListingPage } from '@/lib/pseo/listing-pagination';
 
 export const revalidate = 3600;
 
@@ -15,6 +16,6 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
 export default async function PainManagementJobsPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const page = Math.max(1, parseInt(sp.page || '1', 10) || 1);
+  const page = parseListingPage(sp.page);
   return <CategoryLandingPage slug={CATEGORY_SLUG} page={page} />;
 }

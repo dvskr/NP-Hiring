@@ -8,10 +8,14 @@
  * slugs in the canonical taxonomy (lib/pseo/taxonomy-registry.ts).
  *
  * TRUTH RULES (audit B51 lineage — do not violate):
- *   - The only national dollar anchor is STAT_SOURCES.averageSalary
- *     (lib/stats-sources.ts). Premium percentages MIRROR the specialty
- *     premium table already published on /salary-guide — never invent new
- *     ones. Estimated ranges are computed (median × premium), not typed.
+ *   - The national dollar anchors are cited BLS OEWS medians:
+ *     STAT_SOURCES.averageSalary (lib/stats-sources.ts, all NPs) for the
+ *     niche roles, and the role's OWN occupation median
+ *     (lib/salary-guide-occupation-wages.ts) for the two non-niche APRN
+ *     roles, which the all-NP median does not include (indexing audit
+ *     CQ-09). Premium percentages MIRROR the specialty premium table
+ *     already published on /salary-guide — never invent new ones.
+ *     Estimated ranges are computed (median × premium), not typed.
  *   - NO OTHER dollar band is published from config. Nothing here may read
  *     config/niche/salary.ts: `normalizer.annualMax` is the GLOBAL ingest
  *     clamp applied to EVERY job at normalization time (see that file's
@@ -42,6 +46,7 @@
 import { brand } from '@/config/brand';
 import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 import type { CategoryTag } from '@/lib/pseo/category-tagger';
+import { OCCUPATION_WAGES, type OccupationWageSource } from '@/lib/salary-guide-occupation-wages';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -78,11 +83,17 @@ interface SpecialtySalaryPageBase {
  * A page entry, discriminated on whether the board's niche noun describes
  * the role (see CREDENTIAL TRUTH in the header). A non-niche role must
  * declare a credential: it becomes the group noun everywhere, because
- * `label + brand.niche.short` would misstate the credential.
+ * `label + brand.niche.short` would misstate the credential. It must also
+ * carry its own cited occupation median: the all-niche median excludes the
+ * role, so without one the page would have no national pay figure to cite.
  */
 export type SpecialtySalaryPage =
     | (SpecialtySalaryPageBase & { isNicheRole: true })
-    | (SpecialtySalaryPageBase & { isNicheRole: false; credential: string });
+    | (SpecialtySalaryPageBase & {
+        isNicheRole: false;
+        credential: string;
+        occupationWage: OccupationWageSource;
+    });
 
 // ─── Psych entry (registry-derived — see header note) ───────────────────────
 
@@ -157,10 +168,11 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         credential: 'CRNA',
         shortTitle: 'CRNA (Certified Registered Nurse Anesthetist)',
         certification: 'NBCRNA (CRNA)',
-        // NO wage band: the board publishes no cited CRNA wage figure, and
-        // the ingest clamp in config/niche/salary.ts is not one (header
-        // truth rule #2). Live postings with disclosed pay are the only
-        // CRNA dollar figures this page can show.
+        // NO wage band: the ingest clamp in config/niche/salary.ts is not
+        // wage evidence (header truth rule #2). The cited figure is the BLS
+        // OEWS median for the occupation itself (29-1151); live postings
+        // with disclosed pay add a posted median when they clear the gate.
+        occupationWage: OCCUPATION_WAGES.nurseAnesthetists,
         blurb:
             'CRNAs administer anesthesia in hospital ORs, ambulatory surgery centers, and ' +
             'anesthesia groups.',
@@ -175,6 +187,8 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         credential: 'CNM',
         shortTitle: 'CNM (Certified Nurse Midwife)',
         certification: 'AMCB (CNM)',
+        // The BLS OEWS median for the occupation itself (29-1161).
+        occupationWage: OCCUPATION_WAGES.nurseMidwives,
         blurb:
             'CNMs manage pregnancy, birth, and well-person gynecologic care in hospital ' +
             'labor-and-delivery units, birth centers, and OB/GYN practices.',

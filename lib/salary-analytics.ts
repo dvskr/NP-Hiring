@@ -8,7 +8,10 @@
  *            scoped to NP-eligible titles (interim deterministic heuristic
  *            until the professionClass column lands), and
  *   figure = a TRUE MEDIAN under the benchmark widget's publishing gate
- *            (n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS).
+ *            (n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS)
+ *            AND the employer-share cap (lib/salary-guide-gate.ts: no
+ *            single employer above MAX_EMPLOYER_SHARE_PERCENT of the
+ *            postings behind the median, indexing audit CQ-15).
  *
  * Below the gate there is NO figure — callers omit the section or fall back
  * to a cited stat (STAT_SOURCES), never a posting mean. The old per-page
@@ -28,10 +31,15 @@ import {
     type NpSalaryAnalyticsRow,
 } from '@/lib/salary-utils';
 import {
-    summarizeBenchmarks,
     type BenchmarkInputRow,
     type BenchmarkRow,
 } from '@/components/tools/benchmark-model';
+import {
+    employerConcentration,
+    summarizeCappedBenchmarks,
+    summarizeCappedPool,
+    type EmployerConcentration,
+} from '@/lib/salary-guide-gate';
 
 /**
  * Fetch the NP-eligible analytics rows for a sub-pool. `extra` is composed
@@ -50,16 +58,27 @@ export async function fetchNpAnalyticsRows(
 
 /**
  * Gated benchmark for a sub-pool as a whole (e.g. one category tag).
- * Rows without a state still count. Returns null below the publishing gate.
+ * Rows without a state still count. Returns null below the publishing gate
+ * or the employer-share cap.
  */
 export async function getGatedBenchmark(
     extra: Prisma.JobWhereInput = {},
 ): Promise<BenchmarkRow | null> {
-    const npRows = await fetchNpAnalyticsRows(extra);
-    const { national } = summarizeBenchmarks(
-        npRows.map((r) => ({ ...r, state: r.state ?? 'Unknown' })),
-    );
-    return national;
+    return (await getGatedBenchmarkDetail(extra)).benchmark;
+}
+
+/**
+ * getGatedBenchmark plus WHY a figure is missing: `heldByEmployerShare` is
+ * the sample's employer split when the benchmark gate passed and the
+ * employer-share cap alone withheld the median (CQ-15), else null. Surfaces
+ * that explain a missing figure use it so a large, one-employer sample is
+ * never described as too small.
+ */
+export async function getGatedBenchmarkDetail(
+    extra: Prisma.JobWhereInput = {},
+): Promise<{ benchmark: BenchmarkRow | null; heldByEmployerShare: EmployerConcentration | null }> {
+    const { national, nationalHeld } = summarizeCappedPool(await fetchNpAnalyticsRows(extra));
+    return { benchmark: national, heldByEmployerShare: nationalHeld };
 }
 
 /**
@@ -82,7 +101,7 @@ export async function getGatedMedianKForWhere(
  */
 export async function getGatedStateBenchmarks(): Promise<BenchmarkRow[]> {
     const npRows = await fetchNpAnalyticsRows({ state: { not: null } });
-    return summarizeBenchmarks(npRows).states;
+    return summarizeCappedBenchmarks(npRows).states;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -107,7 +126,10 @@ export interface GatedSalary {
     postings: number;
     /** Distinct employers behind them. */
     employers: number;
-    /** n >= BENCHMARK_MIN_POSTINGS (5) from >= BENCHMARK_MIN_EMPLOYERS (3). */
+    /**
+     * n >= BENCHMARK_MIN_POSTINGS (5) from >= BENCHMARK_MIN_EMPLOYERS (3),
+     * with no employer above MAX_EMPLOYER_SHARE_PERCENT of them (CQ-15).
+     */
     gatePassed: boolean;
     /** Whole dollars (BenchmarkRow units); null below the gate. */
     median: number | null;
@@ -117,6 +139,22 @@ export interface GatedSalary {
     medianK: number | null;
     p25K: number | null;
     p75K: number | null;
+}
+
+/**
+ * A GatedSalary plus how its sample splits between employers (CQ-15), for
+ * the pages that must name WHY no figure is published. It is a subtype, so
+ * every GatedSalary consumer accepts it unchanged.
+ */
+export interface GatedSalaryDetail extends GatedSalary {
+    /** Postings from the single largest employer in the sample (alias merged). */
+    topEmployerPostings: number;
+    /**
+     * True when the sample cleared the benchmark gate (n and employer count)
+     * and the employer-share cap ALONE withheld the median. False whenever a
+     * figure is published, and whenever the sample is simply too small.
+     */
+    heldByEmployerShare: boolean;
 }
 
 /** A gated benchmark row labeled by the caller's key (a table row label). */
@@ -159,30 +197,40 @@ function countBenchmarkSample(rows: readonly BenchmarkInputRow[]): { postings: n
     return { postings: eligible.length, employers: employers.size };
 }
 
+/** The employer-split fields of a GatedSalaryDetail. */
+function shareFacts(
+    held: EmployerConcentration | null,
+    rows: readonly BenchmarkInputRow[],
+): Pick<GatedSalaryDetail, 'topEmployerPostings' | 'heldByEmployerShare'> {
+    const concentration = held ?? employerConcentration(rows);
+    return { topEmployerPostings: concentration.topEmployerPostings, heldByEmployerShare: held !== null };
+}
+
 /**
  * Collapse one scope's NP-eligible rows into a GatedSalary. Pure: the rows
  * are treated as one pool regardless of their state (stateless rows count,
- * as in getGatedBenchmark). Exported for tests and for callers that already
- * hold the rows.
+ * as in getGatedBenchmark). The pooled figure passes only under the
+ * benchmark gate AND the employer-share cap. Exported for tests and for
+ * callers that already hold the rows.
  */
-export function summarizeGatedSalary(rows: readonly BenchmarkInputRow[]): GatedSalary {
+export function summarizeGatedSalary(rows: readonly BenchmarkInputRow[]): GatedSalaryDetail {
     const { postings, employers } = countBenchmarkSample(rows);
-    const { national } = summarizeBenchmarks(
-        rows.map((row) => ({ ...row, state: row.state ?? 'Unknown' })),
-    );
-    if (!national) return { postings, employers, ...BELOW_GATE };
-    return fromBenchmarkRow(national);
+    const { national, nationalHeld } = summarizeCappedPool(rows);
+    const split = shareFacts(nationalHeld, rows);
+    if (!national) return { postings, employers, ...BELOW_GATE, ...split };
+    return { ...fromBenchmarkRow(national), ...split };
 }
 
 /**
  * Gated figure for one location scope: `{ state: stateName }` for a state
  * or salary-guide page, `metroScopeWhere(metro)` for a metro (the analytics
  * where already carries the published and expiry clauses), or any sub-pool
- * where. `{ gatePassed: false }` with null figures below the gate.
+ * where. `{ gatePassed: false }` with null figures below the gate or the
+ * employer-share cap; `heldByEmployerShare` says which.
  */
 export async function getGatedLocationSalary(
     extra: Prisma.JobWhereInput = {},
-): Promise<GatedSalary> {
+): Promise<GatedSalaryDetail> {
     return summarizeGatedSalary(await fetchNpAnalyticsRows(extra));
 }
 
@@ -201,7 +249,7 @@ export async function getGatedCitySalaries(stateName: string): Promise<Map<strin
         select: NP_CITY_SALARY_ANALYTICS_SELECT,
     });
     const npRows = filterNpEligibleRows(rows);
-    const { states: cities } = summarizeBenchmarks(
+    const { states: cities } = summarizeCappedBenchmarks(
         npRows.map((row) => ({ ...row, state: row.city?.trim() || null })),
     );
     return new Map(cities.map((row) => [row.scope, fromBenchmarkRow(row)]));

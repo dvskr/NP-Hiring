@@ -13,7 +13,7 @@ async function get(path) {
   const locs = (body.match(/<loc>([^<]+)<\/loc>/g) || []).map(s => s.replace(/<\/?loc>/g, '').replace(BASE, ''));
   return { path, status: r.status(), locCount: locs.length, sitemapChildren: (body.match(/<sitemap>/g) || []).length, sample: locs.slice(0, 3) };
 }
-for (const u of ['/robots.txt', '/sitemap.xml', '/api/sitemaps/index', '/api/sitemaps/jobs/0', '/api/sitemaps/cities/0', '/image-sitemap.xml', '/video-sitemap.xml']) {
+for (const u of ['/robots.txt', '/sitemap.xml', '/api/sitemaps/index', '/api/sitemaps/jobs/0', '/api/sitemaps/cities/0']) {
   console.log(JSON.stringify(await get(u)));
 }
 console.log('\nCHECK: /api/sitemaps/jobs/0 locCount MUST equal published-job count (db-analysis). If much higher → unpublished jobs are leaking into the sitemap.');

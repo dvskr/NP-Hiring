@@ -6,7 +6,9 @@ import { prisma } from './prisma';
 // lib/health/chunked-presence.ts and the cron schedule in config/cron-schedule.ts.)
 import { getLastRunDiagnostics as getFantasticJobsDiag } from './aggregators/fantastic-jobs-db';
 import { normalizeJobWithReason } from './job-normalizer';
-import { checkDuplicate, buildJobIdentityKey, buildApplyUrlPathKey } from './deduplicator';
+import { checkDuplicate, buildJobIdentityKey, buildSiteIdentityKey, buildApplyUrlPathKey } from './deduplicator';
+import { parseLocation } from './location-parser';
+import { storedLocality } from './location-fallback';
 import { getOrCreateCompany } from './company-normalizer';
 import { recordIngestionStats } from './source-analytics';
 import { classifyRelevance } from './utils/job-filter';
@@ -19,6 +21,7 @@ import {
 } from './profession-classifier';
 import { computeCompleteness } from './job-normalizer';
 import { extractWithLLM, type LLMExtractResult } from './llm-enrichment';
+import { classifyJobTags, type CategoryTag } from './pseo/category-tagger';
 import { collectEmployerEmails } from './employer-email-collector';
 import { mineAndPersistFromJob } from './lead-persistence';
 import { recordSourcePresence, loadHistoricalAvgFetched } from './health/source-presence';
@@ -49,6 +52,9 @@ let globalApplyLinkMap: Map<string, string> | null = null; // buildApplyUrlPathK
 // candidates shared a title prefix (LifeStance had 27× duplicates of one
 // identity). Memory-resident lookup eliminates that cap.
 let globalTitleKeyMap: Map<string, string> | null = null; // identityKey -> jobId
+// 2026-09-28 (indexing audit CQ-10): the same key over the PARSED work site,
+// so "Denver, CO" and "Denver, Colorado, United States" are one posting.
+let globalSiteKeyMap: Map<string, string> | null = null; // buildSiteIdentityKey -> jobId
 import { pingAllSearchEnginesBatch } from './search-indexing';
 import { computeQualityScore } from './utils/quality-score';
 import { inngest } from './inngest/client';
@@ -221,15 +227,101 @@ export function normalizeIngestedTitle(title: string): string {
 }
 
 /**
+ * The stored columns the category tagger reads (indexing audit CQ-05). The
+ * same mapping as scripts/indexing-fixes/retag-category-tags.ts, so a tag
+ * recomputed at ingest or renewal matches what the re-tag script writes.
+ */
+export interface CategoryTagInputs {
+  title: string;
+  description?: string | null;
+  descriptionSummary?: string | null;
+  jobType?: string | null;
+  isRemote?: boolean | null;
+  isHybrid?: boolean | null;
+  setting?: string | null;
+  population?: string | null;
+  newGradFriendly?: boolean | null;
+  minYearsExperience?: number | null;
+  employer?: string | null;
+}
+
+/**
+ * Fields whose change can move a job's category tags. `mode` is listed
+ * because isRemote and isHybrid follow it.
+ */
+export const CATEGORY_TAG_INPUT_FIELDS = [
+  'title',
+  'description',
+  'descriptionSummary',
+  'jobType',
+  'mode',
+  'isRemote',
+  'isHybrid',
+  'setting',
+  'population',
+  'newGradFriendly',
+  'minYearsExperience',
+  'employer',
+] as const;
+
+/** The category tags for a row, from every structured input the tagger reads. */
+export function categoryTagsForRow(row: CategoryTagInputs): CategoryTag[] {
+  return classifyJobTags({
+    title: row.title,
+    description: row.description,
+    descriptionSummary: row.descriptionSummary,
+    jobType: row.jobType,
+    isRemote: row.isRemote,
+    isHybrid: row.isHybrid,
+    setting: row.setting,
+    population: row.population,
+    newGradFriendly: row.newGradFriendly,
+    minYearsExperience: row.minYearsExperience,
+    employer: row.employer,
+  });
+}
+
+/** True when an update writes any field the category tagger reads. */
+export function touchesCategoryTagInputs(update: Record<string, unknown>): boolean {
+  return CATEGORY_TAG_INPUT_FIELDS.some((field) => Object.prototype.hasOwnProperty.call(update, field));
+}
+
+function sameTags(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((tag, i) => tag === b[i]);
+}
+
+/**
+ * The categoryTags a renewal write must carry, or null when the tags stand.
+ * A delta that fills or repairs a tagger input (the job type, the work mode,
+ * setting, population or a longer description) re-derives the tags from
+ * the updated row, so the listing pages and PseoStats never count a job
+ * under a category its stored fields no longer support (CQ-05). Exported
+ * for tests.
+ */
+export function renewalCategoryTags(
+  existing: CategoryTagInputs & { categoryTags: readonly string[] },
+  delta: Record<string, unknown>,
+): CategoryTag[] | null {
+  if (!touchesCategoryTagInputs(delta)) return null;
+  const tags = categoryTagsForRow({ ...existing, ...delta } as CategoryTagInputs);
+  return sameTags(tags, existing.categoryTags) ? null : tags;
+}
+
+/**
  * Merge LLM-extracted fields into a normalized job WITHOUT overwriting
  * already-present values. Used by the inline-rescue path for borderline-
  * completeness jobs.
  *
  * Convention matches the enrich-jobs cron's update-data construction —
  * if either codepath changes its merge logic, update the other to match.
+ *
+ * CQ-05: the LLM can fill the job type, the work mode, setting and
+ * population, all inputs of the category tagger, so when any of them
+ * changes the tags the normalizer computed are recomputed from the merged
+ * row. Exported for tests.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mergeLlmIntoNormalized(job: any, llm: LLMExtractResult): any {
+export function mergeLlmIntoNormalized(job: any, llm: LLMExtractResult): any {
   const next = { ...job };
 
   // Salary — only fill when the regex pass came up empty. Salary_min from
@@ -271,12 +363,18 @@ function mergeLlmIntoNormalized(job: any, llm: LLMExtractResult): any {
     }
   }
 
-  if (llm.city && !next.city) next.city = llm.city;
-
   if (llm.state && !next.state) {
     next.state = llm.state;
     const code = STATE_NAME_TO_CODE[llm.state.toLowerCase()];
     if (code && !next.stateCode) next.stateCode = code;
+  }
+
+  // The model's city goes through the same guard as every ingested city
+  // (indexing audit CQ-02): digits, street fragments, facility words and
+  // sentence fragments are never stored as a town.
+  if (llm.city && !next.city) {
+    const llmCity = storedLocality(llm.city, (next.stateCode as string | null | undefined) ?? null);
+    if (llmCity) next.city = llmCity;
   }
 
   if (llm.experience_level && !next.experienceLevel) {
@@ -293,6 +391,10 @@ function mergeLlmIntoNormalized(job: any, llm: LLMExtractResult): any {
     (!next.benefits || next.benefits.length === 0)
   ) {
     next.benefits = llm.benefits;
+  }
+
+  if (CATEGORY_TAG_INPUT_FIELDS.some((field) => next[field] !== job[field])) {
+    next.categoryTags = categoryTagsForRow(next);
   }
 
   return next;
@@ -482,6 +584,16 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
             setting: true,
             population: true,
             benefits: true,
+            location: true,
+            isRemote: true,
+            isHybrid: true,
+            // The remaining category tagger inputs and the stored tags
+            // (CQ-05: renewalCategoryTags below).
+            title: true,
+            employer: true,
+            newGradFriendly: true,
+            minYearsExperience: true,
+            categoryTags: true,
           },
         });
         if (!existing) return;
@@ -540,9 +652,19 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           isPublished: true,
           updatedAt: new Date(),
         };
-        if (fresh) {
-          Object.assign(update, buildRenewalEnrichmentDelta(existing, fresh));
+        const delta = fresh ? buildRenewalEnrichmentDelta(existing, fresh) : {};
+        Object.assign(update, delta);
+        // contentChangedAt (sitemap lastmod, the page's "Last updated") moves
+        // only when the visible posting changes: a non-empty enrichment delta,
+        // or a row coming back from unpublished. A plain "still listed"
+        // renewal leaves it alone (indexing audit CS-02 / fixSoon 5).
+        if (shouldStampContentChange(delta, existing.isPublished)) {
+          update.contentChangedAt = new Date();
         }
+        // CQ-05: a delta that rewrites a tagger input re-derives the tags
+        // from the updated row in the same write.
+        const categoryTags = renewalCategoryTags(existing, delta);
+        if (categoryTags) update.categoryTags = categoryTags;
         await prisma.job.update({ where: { id }, data: update });
       } catch (e) {
         console.error(`[${source.toUpperCase()}] Failed to renew job ${id}:`, e);
@@ -696,9 +818,11 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
             externalId: normalizedJob.externalId ?? undefined,
             sourceProvider: normalizedJob.sourceProvider ?? undefined,
             applyLink: normalizedJob.applyLink ?? undefined,
+            description: normalizedJob.description ?? null,
           },
           {
             globalTitleKeyMap: globalTitleKeyMap ?? undefined,
+            globalSiteKeyMap: globalSiteKeyMap ?? undefined,
             globalApplyLinkMap: globalApplyLinkMap ?? undefined,
           },
         );
@@ -865,6 +989,9 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
             slug,
             companyId,
             qualityScore,
+            // A new posting's content is new now (sitemap lastmod, "Last
+            // updated"). Later bookkeeping writes never move it.
+            contentChangedAt: new Date(),
             professionClass: profession.professionClass,
             professionConfidence: profession.confidence,
             ...(professionQuarantineReason
@@ -951,6 +1078,10 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
         if (globalTitleKeyMap && normalizedJob.title && normalizedJob.employer && normalizedJob.location) {
           const idKey = buildJobIdentityKey(normalizedJob.title, normalizedJob.employer, normalizedJob.location);
           if (!globalTitleKeyMap.has(idKey)) globalTitleKeyMap.set(idKey, savedJob.id);
+        }
+        if (globalSiteKeyMap && normalizedJob.title && normalizedJob.employer && normalizedJob.location) {
+          const siteKey = buildSiteIdentityKey(normalizedJob.title, normalizedJob.employer, normalizedJob.location);
+          if (siteKey && !globalSiteKeyMap.has(siteKey)) globalSiteKeyMap.set(siteKey, savedJob.id);
         }
 
         // Quarantined rows are unpublished — pinging search engines with a
@@ -1154,7 +1285,9 @@ function countRejectionsByReason(
  * up rather than waiting for the LLM enrichment cron).
  *
  * Conservative — never replaces a non-null with another non-null value
- * except for description (where longer wins) and benefits (set union).
+ * except for description (where longer wins), benefits (set union), a
+ * location text that names no place (replaced by one that does), and the
+ * work-mode flags (kept consistent with the stored mode).
  * Lifecycle fields (originalPostedAt, expiresAt) and identity/audit
  * fields (title, employer, applyLink, externalId, isPublished, counters)
  * are deliberately out of scope.
@@ -1179,6 +1312,9 @@ export function buildRenewalEnrichmentDelta(
     setting: string | null;
     population: string | null;
     benefits: string[];
+    location?: string | null;
+    isRemote?: boolean;
+    isHybrid?: boolean;
   },
   fresh: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -1222,7 +1358,47 @@ export function buildRenewalEnrichmentDelta(
     }
   }
 
+  // Location text that names no place ("2 Locations", "United States") is
+  // replaced once the source supplies one that does. The Workday detail
+  // fix resolves these at fetch time; this heals rows ingested before it
+  // (indexing audit CS-03 / fixSoon 6). city/state/stateCode are filled
+  // by fillIfNull above from the same fresh parse.
+  const freshLocation = typeof fresh.location === 'string' ? fresh.location.trim() : '';
+  if (existing.location !== undefined && freshLocation && freshLocation !== existing.location) {
+    const before = parseLocation(existing.location ?? '');
+    const after = parseLocation(freshLocation);
+    const beforeNamesPlace = !!(before.city || before.stateCode || before.isRemote || before.isHybrid);
+    const afterNamesPlace = !!(after.city || after.stateCode);
+    if (!beforeNamesPlace && afterNamesPlace) delta.location = freshLocation;
+  }
+
+  // Work-mode flags follow the mode. Rows written before workModeFlagsFor
+  // existed can carry isRemote and isHybrid together, or a flag that
+  // contradicts their mode, and renewal only ever filled nulls, so they never
+  // healed (indexing audit GFJ-01 / fixSoon 6). The mode itself is not
+  // re-inferred here; only the flags are made to agree with it.
+  if (existing.isRemote !== undefined && existing.isHybrid !== undefined) {
+    const finalMode = (delta.mode as string | undefined) ?? existing.mode;
+    const canonical = finalMode === 'Remote' || finalMode === 'Hybrid' || finalMode === 'In-Person';
+    const flags = canonical
+      ? workModeFlagsFor(finalMode)
+      : planExclusiveWorkModeRepair({ mode: finalMode, isRemote: existing.isRemote, isHybrid: existing.isHybrid });
+    if (flags && (flags.isRemote !== existing.isRemote || flags.isHybrid !== existing.isHybrid)) {
+      delta.isRemote = flags.isRemote;
+      delta.isHybrid = flags.isHybrid;
+    }
+  }
+
   return delta;
+}
+
+/**
+ * Whether a renewal write changes what the posting shows, and so must move
+ * contentChangedAt: a non-empty enrichment delta, or a row coming back from
+ * unpublished. Exported for tests.
+ */
+export function shouldStampContentChange(delta: Record<string, unknown>, wasPublished: boolean): boolean {
+  return Object.keys(delta).length > 0 || !wasPublished;
 }
 
 /**
@@ -1259,6 +1435,7 @@ export async function ingestJobs(
     globalExternalIdMap = new Map();
     globalApplyLinkMap = new Map();
     globalTitleKeyMap = new Map();
+    globalSiteKeyMap = new Map();
     for (const job of allJobs) {
       if (job.externalId) {
         globalExternalIdMap.set(job.externalId, {
@@ -1280,17 +1457,21 @@ export async function ingestJobs(
         // First-write wins so we point new dupes at the original job we'll
         // renew. (Map.set replaces, so guard explicitly.)
         if (!globalTitleKeyMap.has(key)) globalTitleKeyMap.set(key, job.id);
+        const siteKey = buildSiteIdentityKey(normalizeIngestedTitle(job.title), job.employer, job.location);
+        if (siteKey && !globalSiteKeyMap.has(siteKey)) globalSiteKeyMap.set(siteKey, job.id);
       }
     }
     console.log(
       `[Dedup] Loaded ${globalExternalIdMap.size} externalIds, ` +
-      `${globalApplyLinkMap.size} applyLinks, ${globalTitleKeyMap.size} identityKeys`,
+      `${globalApplyLinkMap.size} applyLinks, ${globalTitleKeyMap.size} identityKeys, ` +
+      `${globalSiteKeyMap.size} siteKeys`,
     );
   } catch (e) {
     console.error('[Dedup] Failed to pre-load global maps, falling back to per-source:', e);
     globalExternalIdMap = null;
     globalApplyLinkMap = null;
     globalTitleKeyMap = null;
+    globalSiteKeyMap = null;
   }
 
   const results: IngestionResult[] = [];
@@ -1312,6 +1493,7 @@ export async function ingestJobs(
   globalExternalIdMap = null;
   globalApplyLinkMap = null;
   globalTitleKeyMap = null;
+  globalSiteKeyMap = null;
 
   // Calculate totals
   const totals = results.reduce(

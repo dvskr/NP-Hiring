@@ -122,7 +122,11 @@ describe('Stripe webhook — charge.dispute.closed', () => {
             where: { id: 'ej1', paymentStatus: 'disputed' },
             data: { paymentStatus: 'paid' },
         });
-        expect(prisma.job.update).toHaveBeenCalledWith({ where: { id: 'job1' }, data: { isPublished: true } });
+        // A revival stamps contentChangedAt (indexing audit fixSoon 5).
+        expect(prisma.job.update).toHaveBeenCalledWith({
+            where: { id: 'job1' },
+            data: { isPublished: true, contentChangedAt: expect.any(Date) },
+        });
     });
 
     it('WON: restores paid but does not re-publish an expired posting', async () => {

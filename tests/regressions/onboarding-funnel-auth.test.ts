@@ -36,8 +36,12 @@ describe('B77 — /auth/confirm routes fresh candidates through the interstitial
     expect(src).toMatch(
       /requestedNext === '\/dashboard'\s*\?\s*'\/onboarding\/professional'\s*:\s*requestedNext/
     );
-    // Both confirmation success paths still push the computed target.
-    const pushes = src.match(/router\.push\(nextPath\)/g) ?? [];
+    // Both confirmation success paths still push the computed target. Since
+    // the apply package (owner decision 2026-09) it goes through
+    // confirmDestination, which keeps nextPath unless no explicit ?next=
+    // arrived and the sign-up stashed an apply return path.
+    expect(src.match(/confirmDestination\(nextPath, hasExplicitNext,/g) ?? []).toHaveLength(2);
+    const pushes = src.match(/router\.push\(destination\)/g) ?? [];
     expect(pushes.length).toBeGreaterThanOrEqual(2);
   });
 });

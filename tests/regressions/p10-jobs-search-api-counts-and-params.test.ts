@@ -71,6 +71,8 @@ function job(overrides: Partial<MemoryRow>): MemoryRow {
     stateCode: 'TX',
     city: 'Austin',
     location: 'Austin, TX',
+    // A non-null column (default 0): /jobs search reads the dead-link gate.
+    healthConsecutiveMissing: 0,
     ...overrides,
   };
 }
@@ -139,6 +141,15 @@ function bruteForceCounts(filters: FilterState): FilterCounts {
 
 const F = (overrides: Partial<FilterState>): FilterState => ({ ...DEFAULT_FILTERS, ...overrides });
 
+describe('the /jobs base where drops dead links (EDGE-CRONS handoff 20)', () => {
+  it('a row at the dead-link threshold is not counted; one miss short of it is', () => {
+    const where = buildWhereClause(F({}));
+    expect(isMemoryEvaluable(where, ALL_COLUMNS)).toBe(true);
+    expect(matchesWhere(where, job({ healthConsecutiveMissing: 5 }))).toBe(false);
+    expect(matchesWhere(where, job({ healthConsecutiveMissing: 4 }))).toBe(true);
+  });
+});
+
 const CASES: Array<[string, FilterState]> = [
   ['no filters', F({})],
   ['remote', F({ workMode: ['remote'] })],
@@ -158,7 +169,10 @@ describe('#1 filter-counts in-memory tally equals the per-facet COUNT formula', 
     const all = bruteForceCounts(F({}));
     expect(all.total).toBe(FIXTURE.length - 1); // only the OB/GYN row is excluded
     expect(all.workMode.remote).toBeGreaterThan(1);
-    expect(all.specialty.Telehealth).toBe(2);
+    // CQ-05 / fixSoon 11: Telehealth is the telehealth category predicate, a
+    // telehealth title on a FULLY remote job, never a description keyword:
+    // the hybrid "Mix of telemedicine and in person" row no longer counts.
+    expect(all.specialty.Telehealth).toBe(1);
     expect(bruteForceCounts(F({ workMode: ['remote'], jobType: ['Full-Time'] })).total).toBe(3);
   });
 
@@ -179,8 +193,10 @@ describe('#1 filter-counts in-memory tally equals the per-facet COUNT formula', 
     expect(counts).toEqual(bruteForceCounts(filters));
     expect(findRows).toHaveBeenCalledTimes(1);
     expect(findIds).toHaveBeenCalledTimes(plan.dbClauses.length);
-    // The Telehealth badge reads `description`, which the row SELECT omits.
-    expect(plan.dbClauses).toContain(plan.options.telehealth);
+    // The Telehealth badge no longer reads `description` (CQ-05): it tallies
+    // in memory from title, tags and the work mode like every other badge.
+    expect(plan.dbClauses).not.toContain(plan.options.telehealth);
+    expect(plan.dbClauses).not.toContain(plan.options.travel);
     // Query budget: one row fetch plus a handful of id lookups, not ~21 COUNTs.
     expect(plan.dbClauses.length).toBeLessThanOrEqual(3);
   });

@@ -20,8 +20,10 @@ import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { canonicalActiveJobWhere } from '@/lib/canonical-counts';
 import {
     isPseoStatsFresh,
-    MIN_JOBS_FOR_INDEX,
+    isSettingStateIndexable,
+    MIN_POSTINGS_FOR_LISTING_INDEX,
     PSEO_STATS_MAX_AGE_HOURS,
+    SETTING_STATE_INDEXING_ENABLED,
     shouldIndexSettingState,
     type SettingStateIndexFacts,
 } from '@/lib/pseo/render-gate';
@@ -156,38 +158,38 @@ describe('#3 activeIndexableJobWhere applies the profession quarantine', () => {
 describe('#5 setting x state sitemap entries clear the noindex gate', () => {
     /*
      * PLAN C.2 moved the count floor out of the template and into
-     * shouldIndexSettingState(), which robots, the aggregate-pseo cron and
-     * both sitemap routes now share. The literal this used to grep for
-     * ('stats.totalJobs < 3') no longer exists, so the floor is pinned on
-     * the function itself: a stronger guard than the string, because it
-     * also fails if the constant moves.
+     * shouldIndexSettingState(), which the aggregate-pseo cron stores and
+     * both sitemap routes read. The 2026-09 indexing audit (CQ-01) replaced
+     * the "3 jobs plus 2 soft signals" rule with the strict gate, and FB-1
+     * put every setting x state page behind SETTING_STATE_INDEXING_ENABLED.
+     * The literal this used to grep for ('stats.totalJobs < 3') no longer
+     * exists, so the floor is pinned on the function itself: a stronger
+     * guard than the string, because it also fails if a constant moves.
      */
-    const RICH_SIGNALS = {
-        employerCount: 9,
-        namedCityCount: 9,
-        hasBenchmark: true,
-        postedLast30Days: 9,
-        roleSetupRenders: true,
-    } as const;
-    const gateFacts = (over: Partial<SettingStateIndexFacts> = {}): SettingStateIndexFacts =>
-        ({ totalJobs: MIN_JOBS_FOR_INDEX, ...RICH_SIGNALS, ...over });
+    const PASSING: SettingStateIndexFacts = {
+        postings: 9,
+        employers: 5,
+        roleClusters: 6,
+        topEmployerPostings: 3,
+        hubIndexable: true,
+        hubPostings: 30,
+        postedLast30Days: 4,
+    };
+    const gateFacts = (over: Partial<SettingStateIndexFacts> = {}): SettingStateIndexFacts => ({ ...PASSING, ...over });
 
-    it('the shared gate noindexes below MIN_JOBS_FOR_INDEX however rich the page is', () => {
-        expect(shouldIndexSettingState(gateFacts({ totalJobs: 0 }))).toBe(false);
-        expect(shouldIndexSettingState(gateFacts({ totalJobs: MIN_JOBS_FOR_INDEX - 1 }))).toBe(false);
+    it('the shared gate noindexes below the listing floor however rich the page is', () => {
+        expect(shouldIndexSettingState(gateFacts({ postings: 0 }))).toBe(false);
+        expect(shouldIndexSettingState(gateFacts({ postings: MIN_POSTINGS_FOR_LISTING_INDEX - 1, topEmployerPostings: 1 }))).toBe(false);
         expect(shouldIndexSettingState(gateFacts())).toBe(true);
-        // The count alone is no longer enough: two data signals are required.
-        expect(shouldIndexSettingState({
-            totalJobs: 99, employerCount: 1, namedCityCount: 1,
-            hasBenchmark: false, postedLast30Days: 0, roleSetupRenders: false,
-        })).toBe(false);
+        // The count alone is not enough: one employer never indexes.
+        expect(shouldIndexSettingState(gateFacts({ postings: 99, employers: 1, roleClusters: 1, topEmployerPostings: 99, hubPostings: 400 }))).toBe(false);
         // Paginated views never index, so the sitemap's page-1-only URLs hold.
-        expect(shouldIndexSettingState(gateFacts({ totalJobs: 99 }), 2)).toBe(false);
+        expect(shouldIndexSettingState(gateFacts(), 2)).toBe(false);
     });
 
-    it('the template resolves robots through the shared gate, not a local count floor', () => {
+    it('the template resolves robots through the stored verdict and the switch, not a local count floor', () => {
         const src = read('lib/pseo/setting-state-template.tsx');
-        expect(src).toContain('shouldIndexSettingState');
+        expect(src).toContain('isSettingStateIndexable');
         expect(src).toContain('resolveSettingStateIndexable({');
         // The retired local floor must not come back alongside the gate.
         expect(src).not.toMatch(/stats\.totalJobs\s*<\s*3/);
@@ -195,52 +197,47 @@ describe('#5 setting x state sitemap entries clear the noindex gate', () => {
 
     /*
      * The defect this describe block exists for: a sitemap URL must never
-     * be a page that answers noindex. Both sides now read ONE row. The
-     * sitemap emits it when it is fresh and `indexable`; the page returns
-     * `stored.indexable` over the same freshness window. This drives the
-     * page's real resolver with live facts that FAIL the gate, so the first
-     * assertion can only pass if the stored verdict is what wins.
+     * be a page that answers noindex. Both sides read ONE row through ONE
+     * function (isSettingStateIndexable), and while the FB-1 switch is off
+     * neither side indexes anything. The switch is passed explicitly here
+     * so the stored-verdict path stays pinned for the day it is turned on.
      */
     it('page robots and the sitemap reach the same verdict for the same PseoStats row', () => {
-        const thin: SettingStateIndexFacts = {
-            totalJobs: 1, employerCount: 1, namedCityCount: 0,
-            hasBenchmark: false, postedLast30Days: 0, roleSetupRenders: false,
-        };
         const fresh = new Date(Date.now() - 60 * 60 * 1000);
         const stale = new Date(Date.now() - (PSEO_STATS_MAX_AGE_HOURS + 1) * 60 * 60 * 1000);
 
         expect(isPseoStatsFresh(fresh)).toBe(true);
-        expect(resolveSettingStateIndexable({
-            stored: { indexable: true, updatedAt: fresh }, indexFacts: thin, page: 1,
-        })).toBe(true);
-        expect(resolveSettingStateIndexable({
-            stored: { indexable: false, updatedAt: fresh }, indexFacts: gateFacts(), page: 1,
-        })).toBe(false);
+        // Switched off (the shipped state): nothing indexes.
+        expect(SETTING_STATE_INDEXING_ENABLED).toBe(false);
+        expect(resolveSettingStateIndexable({ stored: { indexable: true, updatedAt: fresh }, page: 1 })).toBe(false);
+        expect(isSettingStateIndexable(true)).toBe(false);
+
+        // Switched on: the stored verdict decides, on both sides.
+        expect(resolveSettingStateIndexable({ stored: { indexable: true, updatedAt: fresh }, page: 1, indexingEnabled: true })).toBe(true);
+        expect(isSettingStateIndexable(true, true)).toBe(true);
+        expect(resolveSettingStateIndexable({ stored: { indexable: false, updatedAt: fresh }, page: 1, indexingEnabled: true })).toBe(false);
+        expect(isSettingStateIndexable(false, true)).toBe(false);
 
         // A stale row is dropped by the sitemap's updatedAt filter, and the
-        // page stops trusting it at the same hour and recomputes from live
-        // facts. Neither side can advertise what the other noindexes.
+        // page fails closed at the same hour (the strict gate needs the
+        // parent hub, which only the cron computes). A missing row too.
         expect(isPseoStatsFresh(stale)).toBe(false);
-        expect(resolveSettingStateIndexable({
-            stored: { indexable: true, updatedAt: stale }, indexFacts: thin, page: 1,
-        })).toBe(false);
-        expect(resolveSettingStateIndexable({
-            stored: null, indexFacts: gateFacts(), page: 1,
-        })).toBe(true);
+        expect(resolveSettingStateIndexable({ stored: { indexable: true, updatedAt: stale }, page: 1, indexingEnabled: true })).toBe(false);
+        expect(resolveSettingStateIndexable({ stored: null, page: 1, indexingEnabled: true })).toBe(false);
         // Page 2 is never in the sitemap and never indexes, stored row or not.
-        expect(resolveSettingStateIndexable({
-            stored: { indexable: true, updatedAt: fresh }, indexFacts: gateFacts(), page: 2,
-        })).toBe(false);
+        expect(resolveSettingStateIndexable({ stored: { indexable: true, updatedAt: fresh }, page: 2, indexingEnabled: true })).toBe(false);
     });
 
-    // The gate moved from a count floor to the cron's stored verdict
-    // (PseoStats.indexable, written from shouldIndexSettingState); both
-    // sitemap routes read the flag through the same raw projection.
+    // The gate is the cron's stored verdict (PseoStats.indexable, written
+    // from shouldIndexSettingState), read through isSettingStateIndexable,
+    // and skipped entirely while the FB-1 switch is off; both sitemap routes
+    // read the flag through the same raw projection.
     for (const file of ['app/api/sitemaps/cities/[batch]/route.ts', 'app/api/sitemaps/index/route.ts']) {
-        it(`${file} gates setting-state rows on the stored indexable verdict`, () => {
+        it(`${file} gates setting-state rows on the stored indexable verdict and the switch`, () => {
             const src = read(file);
             expect(src).toContain('"indexable"');
-            expect(src).toContain('if (!row.indexable) continue;');
+            expect(src).toContain('if (!isSettingStateIndexable(row.indexable)) continue;');
+            expect(src).toContain('SETTING_STATE_INDEXING_ENABLED');
             expect(src).not.toContain('MIN_SETTING_STATE_SITEMAP_JOBS');
             // Same freshness window as resolveSettingStateIndexable (PLAN C.2).
             expect(src).toContain('pseoStatsFreshnessThreshold()');

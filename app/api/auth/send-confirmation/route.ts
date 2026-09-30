@@ -9,6 +9,7 @@ import {
 } from '@/lib/email-templates-v2'
 import { sendAndLog } from '@/lib/email-service'
 import { brand } from '@/config/brand'
+import { safeInternalPath } from '@/lib/auth/safe-redirect'
 
 import { getConfirmationEligibility, isValidEmailAddress } from './confirmation-eligibility'
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
   })
   if (rateLimitResult) return rateLimitResult
 
-  let body: { email?: unknown } | null
+  let body: { email?: unknown; next?: unknown } | null
   try {
     body = await request.json()
   } catch {
@@ -48,6 +49,16 @@ export async function POST(request: NextRequest) {
   }
 
   const normalizedEmail = email.toLowerCase().trim()
+  // The page the resent link should return to (for example the job being
+  // applied for). The log-in, sign-up and /auth/confirm resend buttons send
+  // it. Only a safe same-origin path is kept; anything else is dropped, so
+  // the endpoint can never be used to mint a link that redirects off site.
+  // An explicit ?next= wins in /auth/confirm; the return path stored in the
+  // auth metadata at sign up stays a fallback only.
+  const next = safeInternalPath(body?.next, '')
+  const redirectTo = next
+    ? `${BASE_URL}/auth/confirm?next=${encodeURIComponent(next)}`
+    : `${BASE_URL}/auth/confirm`
 
   try {
     // Only an existing, unconfirmed account gets a link. Unknown and
@@ -69,7 +80,7 @@ export async function POST(request: NextRequest) {
       type: 'magiclink',
       email: normalizedEmail,
       options: {
-        redirectTo: `${BASE_URL}/auth/confirm`,
+        redirectTo,
       },
     })
 

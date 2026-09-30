@@ -20,6 +20,7 @@ import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS, type BenchmarkRow } from '@/components/tools/benchmark-model';
+import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 import { formatCount, indefiniteArticle, isAre, joinWithAnd, pluralize, wasWere } from '@/lib/display-text';
 import {
   getAuthorityLabel, getStatePracticeAuthority, STATE_PRACTICE_AUTHORITY, type PracticeAuthority,
@@ -28,7 +29,7 @@ import { MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { CATEGORY_AXES } from './taxonomy-registry';
 import { CODE_TO_STATE } from './setting-state-config';
 import { getCategoryAxis } from './category-axis-guide';
-import { assembleDescription, TITLE_PAGE_PART_MAX } from './category-metadata';
+import { assembleDescription, labelNoun, TITLE_PAGE_PART_MAX } from './category-metadata';
 import {
   nlcMembershipPhrase, nlcSentence, nlcShort, type PracticeEnvironment,
 } from './practice-environment';
@@ -538,10 +539,60 @@ export function buildRecencySentence(recency: RecencyFacts): string | null {
 
 // ─── Pay (HUB-S7, METRO-M2, CS-S4, LAND-L4, CITY-C5, CC-K3, DIR-L3, CO-C2) ───
 
-type PayFacts = Pick<ListingFacts, 'benchmark' | 'salaryDisclosedCount'>;
+type PayFacts = Pick<ListingFacts, 'benchmark' | 'salaryDisclosedCount'> &
+  Partial<Pick<ListingFacts, 'salaryDisclosedEmployers'>>;
 
+/**
+ * CQ-15: every published median also needs no single employer above
+ * MAX_EMPLOYER_SHARE_PERCENT of its postings (lib/salary-guide-gate.ts
+ * applies it on every getGated* read). Copy that states the publishing rule
+ * names the cap with this clause. The number comes from the import-free
+ * lib/salary-guide-policy.ts, never from the gate module, which reaches the
+ * Prisma client; this builder stays pure.
+ */
+const CAP_CLAUSE = `, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them`;
+
+/**
+ * The below-gate pay sentence names the condition that actually failed
+ * (CQ-08: "13 postings in Illinois state a salary, which is below the
+ * minimum of 5 postings" read as false, because the posting count passed and
+ * the employer count did not). Three cases:
+ *   - fewer disclosing postings than the posting floor;
+ *   - enough postings, too few employers behind them;
+ *   - both counts clear, yet the gate still fails, because it counts only
+ *     annual pay on NP postings (hourly, estimated and non-NP pay excluded)
+ *     or because one employer holds more than the cap (CQ-15). The facts
+ *     cannot tell those two apart, so the sentence states the whole rule
+ *     and claims neither.
+ * Without an employer count only the posting case can be told apart.
+ */
+function belowGatePaySentence(input: { scopeName: string; scopeNoun: 'state' | 'metro'; facts: PayFacts }): string {
+  const { scopeName, scopeNoun, facts } = input;
+  const d = facts.salaryDisclosedCount;
+  // Zero employers behind one or more postings cannot happen in real facts;
+  // treat it as unknown rather than print "only 0 employers".
+  const e = facts.salaryDisclosedEmployers !== undefined && facts.salaryDisclosedEmployers >= 1
+    ? facts.salaryDisclosedEmployers
+    : undefined;
+  const requirement = `at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers`;
+  const lead = `${formatCount(d, 'posting')} in ${scopeName} ${d === 1 ? 'states' : 'state'} a salary`;
+  if (d < BENCHMARK_MIN_POSTINGS) {
+    return `${lead}. This site publishes a ${scopeNoun} figure only once ${requirement} do${CAP_CLAUSE}.`;
+  }
+  if (e !== undefined && e < BENCHMARK_MIN_EMPLOYERS) {
+    const from = e === 1 ? 'only 1 employer' : `only ${e} employers`;
+    return `${lead}, but they come from ${from}, and this site publishes a ${scopeNoun} figure only once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do.`;
+  }
+  const from = e !== undefined ? ` from ${formatCount(e, 'employer')}` : '';
+  return `${lead}${from}, but this site publishes a ${scopeNoun} figure only once ${requirement} list annual pay for an ${NP} role${CAP_CLAUSE}, and that is not met yet.`;
+}
+
+/**
+ * The local figure is withheld: too few listings disclose annual pay, or one
+ * employer holds more than the cap. States the whole rule, claims neither.
+ */
 function gateFailClause(scope: string): string {
-  return `Fewer than ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers ${scope} disclose annual pay, so this page does not publish a local figure.`;
+  return `This page does not publish a local figure until at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers ${scope} disclose annual pay${CAP_CLAUSE}.`;
 }
 
 function medianClause(row: BenchmarkRow, scope: string, subject = 'listings'): string {
@@ -564,7 +615,7 @@ export function buildHubPayParagraph(
   const d = facts.salaryDisclosedCount;
   const bls = `The national median for ${NP_PROSE_PLURAL} is ${BLS_REFERENCE}.`;
   if (d < 1) return `No current posting in ${scopeName} states a salary, so this site publishes no ${scopeNoun} figure. ${bls}`;
-  return `${formatCount(d, 'posting')} in ${scopeName} ${d === 1 ? 'states' : 'state'} a salary, which is below the minimum of ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} employers this site requires before publishing a ${scopeNoun} figure. ${bls}`;
+  return `${belowGatePaySentence({ scopeName, scopeNoun, facts })} ${bls}`;
 }
 
 /** CS-S4 and LAND-L4: benchmark branch, else a cited BLS sentence, else nothing. */
@@ -576,7 +627,7 @@ export function buildPostedPaySentence(input: { slug: string; facts: PayFacts & 
   }
   const d = facts.salaryDisclosedCount;
   if (d < 1 || !receivesNpMedian(slug)) return null;
-  return `${d} of ${formatCount(facts.total, 'listing')} ${d === 1 ? 'states' : 'state'} an annual salary. This site publishes a median only once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do, so compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`;
+  return `${d} of ${formatCount(facts.total, 'listing')} ${d === 1 ? 'states' : 'state'} an annual salary. This site publishes a median only once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do${CAP_CLAUSE}, so compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`;
 }
 
 /** CITY-C5: always one paragraph, two branches, national reference in both. */
@@ -594,7 +645,9 @@ export function buildCategoryCityPayParagraph(
   const reference = receivesNpMedian(slug) ? ` ${NATIONAL_REFERENCE_SENTENCE}` : '';
   if (categoryBenchmark) return `${medianClause(categoryBenchmark, `in ${city}`, `${labelSentence} listings`)}${reference}`;
   if (cityBenchmark) {
-    return `Not enough ${labelSentence} listings disclose pay. ${medianClause(cityBenchmark, `across all ${NP} listings in ${city}`)}${reference}`;
+    // Too few category listings disclose pay, or one employer holds more
+    // than the cap (CQ-15): the sentence claims neither reason.
+    return `No median is published for ${labelSentence} listings alone. ${medianClause(cityBenchmark, `across all ${NP} listings in ${city}`)}${reference}`;
   }
   return `${gateFailClause(`in ${city}`)}${reference}`;
 }
@@ -806,12 +859,17 @@ export function buildHiringForSentence(
   ].filter(Boolean).join(' ');
 }
 
-/** SAL-S5 table cell for states below the gate. */
-export const SALARY_NEARBY_NOT_PUBLISHED = 'Not published (sample below minimum)';
+/**
+ * SAL-S5 table cell for states whose median is withheld. Since CQ-15 a state
+ * can be withheld with a full sample (one employer above the cap), so the
+ * cell points at the rule the caption states instead of claiming a small
+ * sample.
+ */
+export const SALARY_NEARBY_NOT_PUBLISHED = 'Not published (sample does not meet the rule)';
 
 /** SAL-S5 table caption. */
 export function buildSalaryNearbyCaption(nlcVerifiedLabel: string): string {
-  return `Practice classifications from AANP; compact status verified against the NCSBN roster on ${nlcVerifiedLabel}; medians from ${brand.name} postings with disclosed pay, published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers.`;
+  return `Practice classifications from AANP; compact status verified against the NCSBN roster on ${nlcVerifiedLabel}; medians from ${brand.name} postings with disclosed pay, published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers${CAP_CLAUSE}.`;
 }
 
 /** SPEC CTA line, count based; null at 0. */
@@ -938,11 +996,12 @@ export interface SettingStateFaqInput {
 export function buildSettingStateFaqs(input: SettingStateFaqInput): FaqEntry[] {
   const { label, stateName, slug, facts, physicianAnswer, nlcAnswer } = input;
   const scope = `in ${stateName}`;
+  const noun = labelNoun(slug, label);
   const howMany = [buildScopedEmployersSentence({ label, scope, facts }), buildRecencySentence(facts.recency)]
     .filter(Boolean).join(' ');
   return compact([
-    faq(`How many ${label} ${NP} jobs are open in ${stateName}?`, howMany || null),
-    faq(`What do ${label} ${NP} jobs in ${stateName} pay?`, facts.benchmark ? buildPostedPaySentence({ slug, facts }) : null),
+    faq(`How many ${noun} jobs are open in ${stateName}?`, howMany || null),
+    faq(`What do ${noun} jobs in ${stateName} pay?`, facts.benchmark ? buildPostedPaySentence({ slug, facts }) : null),
     // The same question the license guide answers ("collaborating or
     // supervising"): its verdict ("Yes." for Texas, Georgia or Tennessee,
     // whose details name supervision) must never read as a yes to a
@@ -1143,9 +1202,12 @@ export function buildCityDescription(input: { displayName: string; stateName: st
 }
 
 /** CS-meta title: "{Label} NP Jobs in {State}" plus the count at the floor when it fits. */
-export function buildSettingStateTitle(input: { titleLabel: string; stateName: string; total: number }): string {
-  const { titleLabel, stateName, total } = input;
-  const base = `${titleLabel} ${NP} Jobs in ${stateName}`;
+export function buildSettingStateTitle(input: { titleLabel: string; stateName: string; total: number; slug?: string }): string {
+  const { titleLabel, stateName, total, slug } = input;
+  // APRN-axis labels already name the role: "Nurse Anesthetist Jobs", never
+  // "Nurse Anesthetist NP Jobs" (CQ-06).
+  const noun = slug ? labelNoun(slug, titleLabel) : `${titleLabel} ${NP}`;
+  const base = `${noun} Jobs in ${stateName}`;
   if (total < COUNT_DISPLAY_FLOOR) return base;
   for (const candidate of [`${base}: ${total} Openings`, `${base} (${total})`]) {
     if (candidate.length <= TITLE_PAGE_PART_MAX) return candidate;
@@ -1159,8 +1221,9 @@ export function buildSettingStateDescription(input: {
 } & RetiredAuthorityText): string {
   const { label, slug, stateName, facts, statsAsOf } = input;
   const topCity = facts.cities[0] && slug !== 'remote' && slug !== 'telehealth' ? facts.cities[0].name : null;
+  const noun = labelNoun(slug, label) === label ? label.toLowerCase() : `${label.toLowerCase()} ${NP}`;
   return assembleDescription([
-    `${facts.total} ${label.toLowerCase()} ${NP} ${facts.total === 1 ? 'opening' : 'openings'} in ${stateName} from ${formatCount(facts.distinctEmployers, 'employer')}.`,
+    `${facts.total} ${noun} ${facts.total === 1 ? 'opening' : 'openings'} in ${stateName} from ${formatCount(facts.distinctEmployers, 'employer')}.`,
     facts.benchmark ? `Median posted pay ${formatK(facts.benchmark.median)}.` : null,
     topCity ? `Top city: ${topCity}.` : null,
     aanpClassificationClause(aanpTierOf(stateName)),
@@ -1193,17 +1256,27 @@ export function buildCategoryCityDescription(input: {
   ]);
 }
 
-/** DIR-meta title (the count that the description and stat tile also use). */
+/**
+ * DIR-meta title (the count that the description and stat tile also use).
+ * M-05: the directory answers "which cities are hiring", a different intent
+ * from the state hub's "NP jobs in {State}", so the title leads with the
+ * cities and never repeats the hub's job count.
+ */
 export function buildDirectoryTitle(input: { stateName: string; trackedCities: number }): string {
-  return `${NP} Jobs by City in ${input.stateName}: ${formatCount(input.trackedCities, 'City', 'Cities')} Hiring`;
+  return `${input.stateName} Cities Hiring ${NP}s: ${formatCount(input.trackedCities, 'City', 'Cities')} with Openings`;
 }
 
-/** DIR-meta description. */
+/**
+ * DIR-meta description (M-05): the city spread and the per-city detail, not
+ * the state job count the hub's description opens with. `totalStateJobs` is
+ * accepted for call-site compatibility and no longer printed.
+ */
 export function buildDirectoryDescription(input: { stateName: string; totalStateJobs: number; trackedCities: number; leadCities: readonly string[] }): string {
-  const { stateName, totalStateJobs, trackedCities, leadCities } = input;
+  const { stateName, trackedCities, leadCities } = input;
+  const lead = leadCities.length ? `, led by ${joinWithAnd(leadCities.slice(0, 2))}` : '';
   return assembleDescription([
-    `${formatCount(totalStateJobs, `open ${NP_PROSE} role`)} across ${formatCount(trackedCities, `${stateName} city`, `${stateName} cities`)}${leadCities.length ? `, led by ${joinWithAnd(leadCities.slice(0, 2))}` : ''}.`,
-    'See live counts and employers city by city.',
+    `${formatCount(trackedCities, `${stateName} city`, `${stateName} cities`)} with open ${NP_PROSE} roles${lead}.`,
+    'Employers and work mode for each city, with links to city job pages.',
   ]);
 }
 
@@ -1262,7 +1335,7 @@ export function buildSalaryStateDescription(input: { env: PracticeEnvironment; f
     `${formatCount(facts.total, `open ${NP} role`)} in ${env.stateName} from ${formatCount(facts.distinctEmployers, 'employer')}.`,
     aanpClassificationClause(env.authority),
     `${env.stateName} ${nlcMembershipPhrase(env.nlcStatus)} the Nurse Licensure Compact.`,
-    `Pay median published at ${BENCHMARK_MIN_POSTINGS} or more disclosed postings.`,
+    `Pay median published at ${BENCHMARK_MIN_POSTINGS} or more disclosed postings${CAP_CLAUSE}.`,
   ]);
 }
 

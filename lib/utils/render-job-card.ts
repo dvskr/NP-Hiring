@@ -42,9 +42,19 @@ function chip(text: string, bg: string, fg: string, border: string): string {
   return `<span style="display:inline-block;padding:5px 14px;border-radius:20px;font-family:${SANS};font-size:11px;font-weight:600;letter-spacing:0.3px;background:${bg};color:${fg};border:1px solid ${border};">${escapeHtml(text)}</span>`;
 }
 
+// Outlook's VML button has a fixed width, so it grows with the label
+// ("Apply on employer site" does not fit the 140px that "Apply Now" needs).
+const VML_MIN_WIDTH_PX = 140;
+const VML_PX_PER_CHAR = 9;
+const VML_PADDING_PX = 12;
+
+function vmlButtonWidth(label: string): number {
+  return Math.max(VML_MIN_WIDTH_PX, label.length * VML_PX_PER_CHAR + VML_PADDING_PX);
+}
+
 function applyButtonHtml(url: string, label: string): string {
   return `<!--[if mso]>
-  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:42px;v-text-anchor:middle;width:140px;" arcsize="40%" stroke="f" fillcolor="#BE185D">
+  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:42px;v-text-anchor:middle;width:${vmlButtonWidth(label)}px;" arcsize="40%" stroke="f" fillcolor="#BE185D">
     <w:anchorlock/>
     <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">${label}</center>
   </v:roundrect>
@@ -59,7 +69,7 @@ export function renderJobCardHtml(job: JobCardData, index: number, isLast: boole
   const applyLabel = job.applyOnPlatform
     ? '⚡ Easy Apply'
     : job.sourceType === 'employer'
-      ? 'Direct Apply'
+      ? 'Apply on employer site'
       : 'Apply Now ↗';
 
   // Chip row excludes location — that now sits inline with the salary badge.

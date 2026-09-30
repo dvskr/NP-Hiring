@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
+import { liveLinkWhere } from '@/lib/dead-link-threshold';
 
 /**
  * Profession quarantine for pSEO listing queries.
@@ -18,6 +19,12 @@ import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
  * a sibling key: callers keep their `OR` (state name OR state code), and a
  * caller spreading the result beside extra scalar keys
  * (`{ ...where, city: { not: null } }`) keeps the quarantine.
+ *
+ * The dead-link gate rides along (EDGE-CRONS handoff 20): a job at
+ * DEAD_LINK_MISS_THRESHOLD consecutive source misses answers 410 on its own
+ * URL, so no listing built here may still link it. The job detail route
+ * classifies such a row as closed before it runs this predicate, so its own
+ * page is unaffected.
  */
 export function withListingQuarantine<T extends Prisma.JobWhereInput>(where: T): T & { AND: Prisma.JobWhereInput[] } {
   const existing = where.AND;
@@ -31,6 +38,7 @@ export function withListingQuarantine<T extends Prisma.JobWhereInput>(where: T):
     AND: [
       ...existingAnd,
       ...GLOBAL_EXCLUSIONS.map((exclusion): Prisma.JobWhereInput => ({ NOT: exclusion })),
+      liveLinkWhere(),
     ],
   };
 }

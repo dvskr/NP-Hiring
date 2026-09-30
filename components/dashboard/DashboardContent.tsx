@@ -1178,7 +1178,7 @@ export default function DashboardContent() {
 
                 {/* ── How this platform works — explainer for the badge system on
                        the recommendation cards. Pinned to the top of the sidebar
-                       so candidates can decode the Easy Apply / Direct Apply tags. */}
+                       so candidates can decode the Easy Apply and employer site tags. */}
                 <HowItWorksSidebar />
 
                 {/* ── Rate + Share Your Story (combined) ── */}

@@ -42,7 +42,7 @@ function tierBadgeHtml(tier: DigestJob['tier']): string {
         return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#A7F3D0;color:#065F46;font-size:11px;font-weight:700;">⚡ Easy Apply</span>`;
     }
     if (tier === 'direct_apply') {
-        return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#FCE7F3;color:#9D174D;font-size:11px;font-weight:700;">↗ Direct Apply</span>`;
+        return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#FCE7F3;color:#9D174D;font-size:11px;font-weight:700;">↗ Apply on employer site</span>`;
     }
     return '';
 }

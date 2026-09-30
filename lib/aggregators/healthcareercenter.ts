@@ -28,6 +28,7 @@ import { HCC_SEARCH_QUERIES as QUERIES } from './search-terms/healthcareercenter
 import type { Aggregator, RawJobData } from './types';
 import { checkJobHealth, type HealthDecision } from '@/lib/health/check-job-health';
 import { htmlToReadableText } from '@/lib/sanitize';
+import { resolveCountryValue } from '@/lib/location-parser';
 
 const HCC_BASE = 'https://jobs.healthcareercenter.com';
 
@@ -60,6 +61,18 @@ function extractJobIds(html: string): string[] {
     return [...ids];
 }
 
+/** schema.org PostalAddress as job pages write it; addressCountry may be a Country object. */
+interface PostalAddressLd {
+    addressLocality?: string;
+    addressRegion?: string;
+    addressCountry?: string | { name?: string; '@type'?: string } | null;
+}
+
+/** One schema.org Place; JobPosting.jobLocation may hold one or a list. */
+interface PlaceLd {
+    address?: PostalAddressLd | null;
+}
+
 interface JobPostingLd {
     '@type'?: string;
     title?: string;
@@ -69,16 +82,37 @@ interface JobPostingLd {
     url?: string;
     employmentType?: string;
     hiringOrganization?: { name?: string };
-    jobLocation?: {
-        address?: {
-            addressLocality?: string;
-            addressRegion?: string;
-            addressCountry?: string;
-        };
-    };
+    jobLocation?: PlaceLd | PlaceLd[] | null;
     baseSalary?: {
         value?: { value?: string | number };
     };
+}
+
+/** The Places a JobPosting lists, one or many. */
+function placesOf(post: Pick<JobPostingLd, 'jobLocation'>): PlaceLd[] {
+    const loc = post.jobLocation;
+    if (!loc) return [];
+    return (Array.isArray(loc) ? loc : [loc]).filter((p): p is PlaceLd => !!p && typeof p === 'object');
+}
+
+/** The country text of an address: a plain string or a Country object's name. */
+function countryTextOf(addr: PostalAddressLd | null | undefined): string {
+    const c = addr?.addressCountry;
+    if (typeof c === 'string') return c.trim();
+    if (c && typeof c === 'object' && typeof c.name === 'string') return c.name.trim();
+    return '';
+}
+
+/**
+ * Every country the posting's JSON-LD jobLocation names, for the
+ * normalizer's non-US gate, or undefined when none is given. jobLocation may
+ * be one Place or a list, and addressCountry a string or a Country object;
+ * a posting that lists a US place among others is a US job (owner decision).
+ */
+export function hccCountries(post: Pick<JobPostingLd, 'jobLocation'>): string[] | undefined {
+    const codes = placesOf(post).map((p) => countryTextOf(p.address)).filter(Boolean);
+    const unique = [...new Set(codes)];
+    return unique.length > 0 ? unique : undefined;
 }
 
 /**
@@ -102,8 +136,17 @@ function extractJobPosting(html: string): JobPostingLd | null {
     return null;
 }
 
-function buildLocation(post: JobPostingLd): string {
-    const addr = post.jobLocation?.address;
+/**
+ * Where the posting is: "City, Region" from its first US Place (or the
+ * first Place when none is in the US), else "United States".
+ */
+export function hccLocation(post: Pick<JobPostingLd, 'jobLocation'>): string {
+    const places = placesOf(post);
+    const isUsOrUnknown = (p: PlaceLd): boolean => {
+        const country = resolveCountryValue(countryTextOf(p.address) || null);
+        return country === null || country === 'US';
+    };
+    const addr = (places.find(isUsOrUnknown) ?? places[0])?.address;
     if (addr) {
         const city = addr.addressLocality?.trim();
         const state = addr.addressRegion?.trim();
@@ -191,7 +234,7 @@ export async function fetchHealthCareerCenterJobs(): Promise<RawJobData[]> {
                         title: post.title,
                         company: post.hiringOrganization?.name || 'Company Not Listed',
                         employer: post.hiringOrganization?.name || 'Company Not Listed',
-                        location: buildLocation(post),
+                        location: hccLocation(post),
                         description,
                         applyLink,
                         postedDate: post.datePosted,
@@ -199,6 +242,8 @@ export async function fetchHealthCareerCenterJobs(): Promise<RawJobData[]> {
                         jobType: mapEmploymentType(post.employmentType) ?? undefined,
                         sourceProvider: 'healthcareercenter',
                         sourceSite: 'healthcareercenter',
+                        // For the non-US gate (owner decision: US jobs only).
+                        country: hccCountries(post),
                     } as RawJobData);
                     await sleep(DETAIL_GAP_MS);
                 }

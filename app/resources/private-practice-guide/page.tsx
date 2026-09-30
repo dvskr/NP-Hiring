@@ -172,8 +172,8 @@ export default function PrivatePracticeGuidePage() {
       // physician in place first", which the verified rows for AR, IL, KY,
       // NJ, WI, WV, CA, FL, OK and VA contradict. This string also feeds
       // the HowTo JSON-LD, so schema and page cannot diverge.
-      content: `Check your state's practice authority rules before anything else, because they decide whether, and when, you can run a practice without a collaborative or supervisory agreement. AANP classifies ${FULL_PRACTICE_STATE_COUNT} states plus Washington D.C. as Full Practice Authority jurisdictions (${STAT_SOURCES.fullPracticeStates.source}), but the tier alone does not answer the question. Several Full Practice states first require a transition period of collaborative or supervised practice. Most Reduced and Restricted states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience. Read your state's entry in the Full Practice Authority guide for its specific requirement.`,
-      link: { href: '/resources/fpa-guide', text: 'View FPA Guide →' },
+      content: `Check your state's practice authority rules before anything else, because they decide whether, and when, you can run a practice without a collaborative or supervisory agreement. AANP classifies ${FULL_PRACTICE_STATE_COUNT} states plus Washington D.C. as Full Practice Authority jurisdictions (${STAT_SOURCES.fullPracticeStates.source}), but the tier alone does not answer the question. Several Full Practice states first require a transition period of collaborative or supervised practice. Most Reduced and Restricted states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience. Read your state's entry in the scope of practice explorer for its specific requirement.`,
+      link: { href: '/scope-of-practice', text: 'View the Scope of Practice Explorer →' },
     },
     {
       number: 2,
@@ -260,7 +260,7 @@ export default function PrivatePracticeGuidePage() {
     },
     {
       question: `Can new grad ${brand.niche.short}s open a private practice?`,
-      answer: `It depends on the state, and newly licensed ${brand.niche.short}s face the tightest rules. Most Reduced and Restricted Practice states require a collaborative agreement or supervision, and several Full Practice Authority states require a transition period of collaborative or supervised practice before an ${brand.niche.short} practices independently, so check your state's entry in the Full Practice Authority guide first. Even where it is allowed, most experts suggest gaining 2 to 3 years of clinical experience in structured settings (community health centers, group practices) before opening a private practice. This builds clinical confidence, medication management skills, and a professional network for referrals.`
+      answer: `It depends on the state, and newly licensed ${brand.niche.short}s face the tightest rules. Most Reduced and Restricted Practice states require a collaborative agreement or supervision, and several Full Practice Authority states require a transition period of collaborative or supervised practice before an ${brand.niche.short} practices independently, so check your state's entry in the scope of practice explorer first. Even where it is allowed, clinical experience in structured settings (community health centers, group practices) before opening a private practice builds clinical confidence, medication management skills, and a professional network for referrals.`
     },
   ];
 
@@ -481,9 +481,15 @@ export default function PrivatePracticeGuidePage() {
           {/* Related Resources — P2 #22: full cross-linking across the
               /resources guide cluster plus the salary guide. */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {/* CQ-13: /scope-of-practice is the state by state reference;
+                /resources/fpa-guide explains the concept. */}
+            <Link href="/scope-of-practice" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Scope of practice by state</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Your state&apos;s practice rule and any transition period. Check this before anything else.</p>
+            </Link>
             <Link href="/resources/fpa-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Full Practice Authority guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Whether, and when, your state lets you practice without an agreement. Check this before anything else.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>What full practice authority means, and how the three AANP classifications differ.</p>
             </Link>
             <Link href="/resources/1099-vs-w2" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</h3>

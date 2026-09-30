@@ -20,11 +20,14 @@ export const metadata = {
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirectTo?: string }>
+  searchParams: Promise<{ redirectTo?: string; next?: string }>
 }) {
   const currentUser = await getCurrentUser()
   const params = await searchParams
-  const safeRedirect = safeInternalPath(params.redirectTo, '/dashboard')
+  // The auth forms honour ?next= as well as ?redirectTo=; so does this
+  // server redirect for a visitor who is already signed in (for example a
+  // job's Apply gate reached in a second tab after signing in).
+  const safeRedirect = safeInternalPath(params.redirectTo || params.next, '/dashboard')
   if (currentUser) {
     redirect(safeRedirect)
   }

@@ -15,7 +15,13 @@ import {
     PSEO_STALENESS_HOURS,
 } from '@/lib/gsc-coverage';
 import { GSC_DIMENSION_ROW_LIMIT, GSC_MAX_ROW_LIMIT } from '@/lib/gsc-client';
-import { MIN_EMPLOYERS_FOR_INDEX, MIN_JOBS_FOR_CATEGORY_CITY, PSEO_STATS_MAX_AGE_HOURS } from '@/lib/pseo/render-gate';
+import {
+    MIN_EMPLOYERS_FOR_LISTING_INDEX,
+    MIN_JOBS_FOR_CATEGORY_CITY,
+    MIN_POSTINGS_FOR_LISTING_INDEX,
+    PSEO_STATS_MAX_AGE_HOURS,
+    SETTING_STATE_INDEXING_ENABLED,
+} from '@/lib/pseo/render-gate';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const NOW = new Date('2026-07-28T12:00:00Z');
@@ -30,6 +36,7 @@ interface RowOverrides {
     locationSlug?: string;
     totalJobs?: number;
     distinctEmployers?: number;
+    indexable?: boolean;
     updatedAt?: Date;
 }
 
@@ -38,7 +45,8 @@ function coverageRow(overrides: RowOverrides = {}) {
         categorySlug: ELIGIBLE,
         locationSlug: 'big-city',
         totalJobs: 10,
-        distinctEmployers: MIN_EMPLOYERS_FOR_INDEX,
+        distinctEmployers: MIN_EMPLOYERS_FOR_LISTING_INDEX,
+        indexable: true,
         updatedAt: FRESH,
         ...overrides,
     };
@@ -71,16 +79,19 @@ describe('computeCategoryCityCoverage', () => {
 
     test('render gate boundary: rows below MIN_JOBS_FOR_CATEGORY_CITY never count', () => {
         const result = computeCategoryCityCoverage({
-            totalsByCategory: new Map([[ELIGIBLE, 2]]),
+            totalsByCategory: new Map([[ELIGIBLE, 3]]),
             renderableRows: [
                 coverageRow({ totalJobs: MIN_JOBS_FOR_CATEGORY_CITY - 1, locationSlug: 'big-city' }),
+                // Renders at the render floor, but the index gate is the
+                // listing floor (indexing audit fixSoon 1), so it does not index.
                 coverageRow({ totalJobs: MIN_JOBS_FOR_CATEGORY_CITY, locationSlug: 'floor-city' }),
+                coverageRow({ totalJobs: MIN_POSTINGS_FOR_LISTING_INDEX, locationSlug: 'floor-city' }),
             ],
             populationBySlug: POPULATIONS,
             now: NOW,
         });
 
-        expect(result.categories[0].renderable).toBe(1);
+        expect(result.categories[0].renderable).toBe(2);
         expect(result.categories[0].indexable).toBe(1);
     });
 
@@ -110,6 +121,28 @@ describe('computeCategoryCityCoverage', () => {
 
         expect(result.categories[0].renderable).toBe(1);
         expect(result.categories[0].indexable).toBe(0);
+    });
+
+    test('stored verdict: a row the cron marked indexable: false renders but is not indexable', () => {
+        // The cron counts distinct postings, so duplicates can hold a page
+        // under the floor that the raw counts admit; the cities sitemap then
+        // skips it (app/api/sitemaps/cities/[batch]/route.ts), and the panel
+        // must not count it either.
+        const result = computeCategoryCityCoverage({
+            totalsByCategory: new Map([[ELIGIBLE, 2]]),
+            renderableRows: [coverageRow({ indexable: false }), coverageRow({ locationSlug: 'floor-city' })],
+            populationBySlug: POPULATIONS,
+            now: NOW,
+        });
+
+        expect(result.categories[0]).toMatchObject({ renderable: 2, indexable: 1 });
+    });
+
+    test('the admin page reads the stored verdict with the row counts', () => {
+        const pageSource = readFileSync(path.join(process.cwd(), 'app', 'admin', 'seo-health', 'page.tsx'), 'utf-8');
+        expect(pageSource).toContain('SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable", "updatedAt"');
+        const libSource = readFileSync(path.join(process.cwd(), 'lib', 'gsc-coverage.ts'), 'utf-8');
+        expect(libSource).toMatch(/const isIndexable =\s*row\.indexable &&/);
     });
 
     test('state-ineligible categories render but never index', () => {
@@ -161,8 +194,20 @@ describe('computeSettingStateCoverage', () => {
                 { totalJobs: 5, indexable: false, updatedAt: FRESH }, // renderable only (verdict false)
             ],
             NOW,
+            true, // the verdict math with the FB-1 switch on
         );
         expect(result).toEqual({ total: 4, renderable: 3, indexable: 1 });
+    });
+
+    test('FB-1: while SETTING_STATE_INDEXING_ENABLED is off, no row counts as indexable', () => {
+        const rows = [{ totalJobs: 5, indexable: true, updatedAt: FRESH }];
+        expect(computeSettingStateCoverage(rows, NOW, false)).toEqual({ total: 1, renderable: 1, indexable: 0 });
+        // The default reads the switch, as the admin SEO health page does.
+        expect(computeSettingStateCoverage(rows, NOW)).toEqual({
+            total: 1,
+            renderable: 1,
+            indexable: SETTING_STATE_INDEXING_ENABLED ? 1 : 0,
+        });
     });
 });
 

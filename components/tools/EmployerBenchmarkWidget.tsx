@@ -22,15 +22,23 @@
  * publish a fabricated benchmark.
  */
 import EmployerBenchmarkPicker from './EmployerBenchmarkPicker';
-import { summarizeBenchmarkPool, type BenchmarkSummary } from './benchmark-model';
+import { type BenchmarkSummary } from './benchmark-model';
+import { summarizeCappedBenchmarkPool } from '@/lib/salary-guide-gate';
 import { fetchNpAnalyticsRows } from '@/lib/salary-analytics';
 import { logger } from '@/lib/logger';
 
 const EMPTY_SUMMARY: BenchmarkSummary = { national: null, states: [] };
 
+/**
+ * The same publishing policy as /salary-guide (indexing audit CQ-15): a
+ * state median, or the national one, appears only when it clears the
+ * benchmark gate AND no single employer contributes more than
+ * MAX_EMPLOYER_SHARE_PERCENT of the postings behind it. Uncapped, this
+ * widget could publish a state median /salary-guide withholds.
+ */
 export async function loadBenchmarkSummary(): Promise<BenchmarkSummary> {
   try {
-    return summarizeBenchmarkPool(await fetchNpAnalyticsRows());
+    return summarizeCappedBenchmarkPool(await fetchNpAnalyticsRows());
   } catch (error) {
     // A failed aggregation renders the widget's "not enough data" state
     // rather than taking down /for-employers.

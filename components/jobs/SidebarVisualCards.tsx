@@ -1,47 +1,24 @@
-'use client';
-
 import React from 'react';
-import Link from 'next/link';
-import { CAREER_PULSE_STATS } from '@/config/niche/stats';
-import { brand } from '@/config/brand';
+import { joinWithAnd } from '@/lib/display-text';
 
 /* ──────────────────────────────────────────────
  *  SidebarVisualCards
- *  Two clay cards with 3D diorama illustrations:
- *  A) PMHNP Career Pulse  — industry stats
- *  C) Application Tips    — contextual advice
+ *  Application Tips: advice drawn from THIS job's facts.
+ *
+ *  Indexing audit CQ-11 (plan fixSoon 14): the sidebar used to carry two
+ *  blocks identical on every job page, the "Career Pulse" national stats
+ *  card and a tips card padded with generic defaults. Identical filler
+ *  across hundreds of aggregated pages reads as automation, not added
+ *  value, so the stats card is gone and every tip below is conditioned on a
+ *  fact of the posting. A job with none of those facts gets no card.
  * ────────────────────────────────────────────── */
 
 /* ── Clay card wrapper ── */
 const clayShadow = '8px 8px 20px rgba(0,0,0,0.07), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)';
 const clayPebbleShadow = '4px 4px 10px rgba(0,0,0,0.06), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)';
 
-/* ── Stat Pebble ── */
-function StatPebble({ emoji, value, label, color }: { emoji: string; value: string; label: string; color: string }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '10px',
-      padding: '10px 14px', borderRadius: '16px',
-      backgroundColor: '#F0FAF8',
-      border: '1px solid rgba(255,255,255,0.5)',
-      boxShadow: clayPebbleShadow,
-      transition: 'all 0.2s ease',
-    }}>
-      <span style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: 32, height: 32, borderRadius: 10,
-        backgroundColor: color,
-        boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.04), 2px 2px 4px rgba(0,0,0,0.06)',
-        border: '1px solid rgba(255,255,255,0.6)',
-        fontSize: '14px',
-      }}>{emoji}</span>
-      <div>
-        <div style={{ fontSize: '16px', fontWeight: 700, color: '#1F2937', lineHeight: 1.2 }}>{value}</div>
-        <div style={{ fontSize: '11px', fontWeight: 500, color: '#6B7280', lineHeight: 1.3 }}>{label}</div>
-      </div>
-    </div>
-  );
-}
+/** Tips shown at most. */
+const MAX_TIPS = 3;
 
 /* ── Tip Pill ── */
 function TipPill({ icon, text }: { icon: string; text: string }) {
@@ -53,7 +30,7 @@ function TipPill({ icon, text }: { icon: string; text: string }) {
       border: '1px solid rgba(255,255,255,0.5)',
       boxShadow: clayPebbleShadow,
     }}>
-      <span style={{
+      <span aria-hidden="true" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         width: 26, height: 26, borderRadius: 8, flexShrink: 0,
         backgroundColor: '#FDF2F8',
@@ -66,119 +43,75 @@ function TipPill({ icon, text }: { icon: string; text: string }) {
   );
 }
 
-/* ── Helper: pick tips based on job attributes ── */
-function getTips(props: {
-  isRemote?: boolean;
+export interface ApplicationTipsInput {
+  /** The verified work mode label (resolveWorkModeLabel), never the raw flag. */
+  workMode?: string | null;
   isTelehealth?: boolean;
   jobType?: string | null;
-  mode?: string | null;
-  isNewGrad?: boolean;
-}) {
-  const tips: { icon: string; text: string }[] = [];
+  /** Effective new-grad openness (lib/experience-label). */
+  newGradFriendly?: boolean;
+  /** The posting's stated minimum years of experience. */
+  minYearsExperience?: number | null;
+  /** States a remote posting restricts applicants to. */
+  remoteStates?: readonly string[];
+}
 
-  if (props.isRemote || props.isTelehealth) {
-    tips.push({ icon: '🖥️', text: 'Highlight telehealth platform experience (Zoom, Doxy.me) and any virtual prescribing workflows.' });
+export interface ApplicationTip {
+  icon: string;
+  text: string;
+}
+
+function lowerType(jobType: string | null | undefined): string {
+  return (jobType ?? '').toLowerCase().replace(/[^a-z]/g, '');
+}
+
+/**
+ * Tips for this posting, each tied to one of its facts. No generic
+ * defaults: with no applicable fact the list is empty and the card is
+ * omitted.
+ */
+export function getApplicationTips(input: ApplicationTipsInput): ApplicationTip[] {
+  const tips: ApplicationTip[] = [];
+  const type = lowerType(input.jobType);
+  const states = input.remoteStates ?? [];
+
+  if (input.workMode === 'Remote' && states.length > 0) {
+    tips.push({ icon: '✅', text: `This remote role is open to applicants in ${joinWithAnd([...states])}. Confirm your license there before you apply.` });
   }
-  if (props.mode?.toLowerCase().includes('contract') || props.jobType?.toLowerCase().includes('contract')) {
-    tips.push({ icon: '📋', text: 'Mention your malpractice insurance status and willingness to credential with new payers.' });
+  if (input.workMode === 'Remote' || input.isTelehealth) {
+    tips.push({ icon: '🖥️', text: 'Describe your telehealth experience: the platforms you have used, your visit volume and any virtual prescribing workflow.' });
   }
-  if (props.jobType?.toLowerCase().includes('full-time')) {
-    tips.push({ icon: '🏥', text: 'Ask about supervision ratios, patient panel size, and caseload expectations in your interview.' });
+  if (input.workMode === 'Hybrid') {
+    tips.push({ icon: '🗓️', text: 'Ask how many days a week are on site and which location you would report to.' });
   }
-  if (props.isNewGrad) {
-    tips.push({ icon: '🎓', text: 'Emphasize clinical rotation hours and any specialty electives in psych settings.' });
+  if (type === 'contract' || type === 'contractor' || type.startsWith('locum')) {
+    tips.push({ icon: '📋', text: 'State your malpractice coverage and how quickly you can credential with new payers.' });
+  }
+  if (type === 'perdiem' || type === 'prn') {
+    tips.push({ icon: '⏱️', text: 'List the shifts and days you can cover; per diem roles are filled around availability.' });
+  }
+  if (type === 'parttime') {
+    tips.push({ icon: '⏱️', text: 'Say which days and hours you can commit to each week.' });
+  }
+  if (type === 'fulltime') {
+    tips.push({ icon: '🏥', text: 'Ask about the collaboration arrangement, patient panel size and caseload expectations in your interview.' });
+  }
+  if (typeof input.minYearsExperience === 'number' && input.minYearsExperience > 0) {
+    const years = input.minYearsExperience;
+    tips.push({ icon: '📄', text: `The posting asks for ${years}+ year${years === 1 ? '' : 's'} of experience; lead your resume with your most relevant clinical roles.` });
+  } else if (input.newGradFriendly) {
+    tips.push({ icon: '🎓', text: 'New graduates are welcome here; lead with your clinical rotation hours and the settings you trained in.' });
   }
 
-  // Defaults
-  if (tips.length < 3) {
-    const defaults = [
-      { icon: '✨', text: 'Tailor your cover letter to mention the specific patient population this role serves.' },
-      { icon: '📄', text: 'Include your NPI number, active license states, and DEA registration on your resume.' },
-      { icon: '💬', text: 'Prepare 2 to 3 clinical case examples that show your diagnostic reasoning skills.' },
-    ];
-    for (const d of defaults) {
-      if (tips.length >= 3) break;
-      if (!tips.some(t => t.icon === d.icon)) tips.push(d);
-    }
-  }
-
-  return tips.slice(0, 3);
+  return tips.slice(0, MAX_TIPS);
 }
 
 /* ──────────────────────────────────────────────
- *  A) Career Pulse Card
+ *  Application Tips Card
  * ────────────────────────────────────────────── */
-export function CareerPulseCard() {
-  return (
-    <div style={{
-      backgroundColor: '#F7FBF8',
-      borderRadius: '22px',
-      border: '1px solid rgba(255,255,255,0.6)',
-      boxShadow: clayShadow,
-      padding: '0',
-      overflow: 'hidden',
-    }}>
-
-
-      {/* Content */}
-      <div style={{ padding: '18px 20px 20px' }}>
-        <h3 style={{
-          fontSize: '14px',
-          fontWeight: 700,
-          fontFamily: 'var(--font-lora), Georgia, serif',
-          color: '#1F2937',
-          margin: '0 0 4px',
-          letterSpacing: '-0.01em',
-        }}>
-          {brand.niche.short} Career Pulse
-        </h3>
-        <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 14px', lineHeight: 1.4 }}>
-          Why now is the best time to be an {brand.niche.medium}
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {CAREER_PULSE_STATS.map((s) => (
-            <StatPebble key={s.label} emoji={s.emoji} value={s.value} label={s.label} color={s.color} />
-          ))}
-        </div>
-
-        <Link href="/salary-guide" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-          marginTop: '14px',
-          padding: '9px 16px', borderRadius: '14px',
-          fontSize: '13px', fontWeight: 600,
-          color: '#9D174D',
-          backgroundColor: '#FDF2F8',
-          border: '1px solid rgba(255,255,255,0.5)',
-          boxShadow: clayPebbleShadow,
-          textDecoration: 'none',
-          transition: 'all 0.2s ease',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.backgroundColor = '#FCE7F3'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.backgroundColor = '#FDF2F8'; }}
-        >
-          Explore Salary Guide →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-/* ──────────────────────────────────────────────
- *  C) Application Tips Card
- * ────────────────────────────────────────────── */
-export function ApplicationTipsCard({
-  isRemote,
-  isTelehealth,
-  jobType,
-  mode,
-}: {
-  isRemote?: boolean;
-  isTelehealth?: boolean;
-  jobType?: string | null;
-  mode?: string | null;
-}) {
-  const tips = getTips({ isRemote, isTelehealth, jobType, mode });
+export function ApplicationTipsCard(props: ApplicationTipsInput) {
+  const tips = getApplicationTips(props);
+  if (tips.length === 0) return null;
 
   return (
     <div style={{
@@ -189,9 +122,6 @@ export function ApplicationTipsCard({
       padding: '0',
       overflow: 'hidden',
     }}>
-
-
-      {/* Content */}
       <div style={{ padding: '18px 20px 20px' }}>
         <h3 style={{
           fontSize: '14px',
@@ -200,15 +130,15 @@ export function ApplicationTipsCard({
           color: '#1F2937',
           margin: '0 0 4px',
         }}>
-          Pro Tips for This Role
+          Tips for This Role
         </h3>
         <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 14px', lineHeight: 1.4 }}>
-          Stand out with these targeted suggestions
+          Based on the details of this posting
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {tips.map((tip, i) => (
-            <TipPill key={i} icon={tip.icon} text={tip.text} />
+          {tips.map((tip) => (
+            <TipPill key={tip.text} icon={tip.icon} text={tip.text} />
           ))}
         </div>
       </div>

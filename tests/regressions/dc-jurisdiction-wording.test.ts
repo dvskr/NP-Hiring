@@ -150,7 +150,7 @@ describe('3. the plain hub narrative names the jurisdiction', () => {
     it('says "in District of Columbia" and "a median", never "the state" or "a state median"', () => {
         const text = buildPlainStateNarrative({ ...base, stateName: DC, topCategoryLabels: ['Family Practice'], medianSalaryK: 0 });
         expect(text).toContain('Family Practice roles carry the deepest live inventory in District of Columbia.');
-        expect(text).toContain('Not enough District of Columbia postings disclose pay to publish a median,');
+        expect(text).toContain('No median is published for District of Columbia postings yet,');
         expect(text).not.toMatch(/\bin the state\b|\bstate median\b/);
     });
 

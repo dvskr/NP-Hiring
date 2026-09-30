@@ -20,6 +20,7 @@ import {
     cityLinkResolves,
     MIN_CITY_JOBS_FOR_LINK,
 } from '@/app/jobs/locations/[state]/directory';
+import { localJobsPath } from '@/lib/city-link-path';
 
 /**
  * Per-job location context module (P5 A5 — competitive teardown).
@@ -222,8 +223,10 @@ export function buildJobLocationContext(
             ? getStatePracticeAuthority(record.state)
             : null,
         professionNote: buildProfessionNote(input.professionClass),
+        // L-05: a curated metro links its guide directly (its city form only
+        // redirects there); any other city links its own page.
         cityJobsHref: canLinkCity
-            ? `/jobs/city/${buildCitySlug(record.name, record.stateCode)}`
+            ? localJobsPath(buildCitySlug(record.name, record.stateCode))
             : null,
         stateJobsHref: `/jobs/state/${stateSlug}`,
         salaryGuideHref: `/salary-guide/${stateSlug}`,

@@ -601,11 +601,13 @@ describe('gap 4: a card click can be joined back to the list impression', () => 
   it('imports trackJobClick and fires it from every route out of the card', () => {
     expect(src).toMatch(/import \{ trackJobClick \} from '@\/lib\/analytics'/);
     const cardClick = src.indexOf('const handleCardClick = () => {');
-    const easyApply = src.indexOf('const handleEasyApplyClick = (e: React.MouseEvent) => {');
+    // One Apply handler serves Easy Apply and external jobs: both land on the
+    // job detail page with the apply intent (owner decision 2026-09).
+    const applyClick = src.indexOf('const handleApplyClick = (e: React.MouseEvent) => {');
     expect(cardClick).toBeGreaterThan(-1);
-    expect(easyApply).toBeGreaterThan(-1);
+    expect(applyClick).toBeGreaterThan(-1);
     expect(src.slice(cardClick, src.indexOf('};', cardClick))).toContain('trackListClick()');
-    expect(src.slice(easyApply, src.indexOf('};', easyApply))).toContain('trackListClick()');
+    expect(src.slice(applyClick, src.indexOf('};', applyClick))).toContain('trackListClick()');
   });
 
   it('refuses to invent a list name or a position', () => {
