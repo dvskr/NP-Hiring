@@ -22,16 +22,37 @@
  * stay gone from every surface's VISIBLE text (comments may explain them),
  * and the plan and renewal answers, which also feed the FAQPage JSON-LD,
  * render the real lifecycle with the real config values.
+ *
+ * Since backlog 2.1 the promo-clock copy of /pricing, /for-employers and /faq
+ * is built per render by a sibling module of each page, so the copy pins
+ * call those builders on both sides of config.promoEndsAt: the lifecycle
+ * holds in both phases, and only the promo phase dates the plan price.
+ * tests/regressions/pricing-pages-phase-switch.test.ts covers the switch.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
+import {
+    PLAN_CANCEL_LINE,
+    PLAN_POSTS_LINE,
+    PLAN_TERMS,
+    RENEWAL_CAP_LINE,
+    RENEWAL_EFFECT_LINE,
+    RENEWAL_LINE,
+    pricingPageCopy,
+} from '@/app/pricing/pricing-page-copy';
+import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
+import { employerPricingFaqs } from '@/app/faq/faq-employer-copy';
 
 const ROOT = path.resolve(__dirname, '../..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+/** The last promo day and the switch instant: every copy pin runs in both phases. */
+const DURING_PROMO = new Date('2026-12-31T12:00:00.000Z');
+const LADDER_START = new Date(config.promoEndsAt);
+const PHASES = [['promo', DURING_PROMO], ['ladder', LADDER_START]] as const;
 
 /** Every string a visitor can see in a TS or TSX source: JSX text, string literals, template pieces. */
 function visibleText(rel: string): string {
@@ -58,27 +79,21 @@ function visibleText(rel: string): string {
     return out.join('\n');
 }
 
-/** Evaluate a source template literal against the real config and brand. */
-const render = (tpl: string): string =>
-    new Function('config', 'brand', `return \`${tpl}\`;`)(config, brand) as string;
-
-/** The body of `const NAME = \`...\`;` in a source file, rendered. */
-function renderConst(src: string, name: string): string {
-    const match = src.match(new RegExp(`const ${name} = \`([^\`]*)\`;`));
-    expect(match, `${name} is declared as a template literal`).not.toBeNull();
-    return render((match as RegExpMatchArray)[1]);
-}
-
 const PRICING = 'app/pricing/page.tsx';
 const FAQ = 'app/faq/page.tsx';
 const EMPLOYERS = 'app/for-employers/page.tsx';
 const TERMS = 'app/terms/page.tsx';
 const SURFACES = [
     PRICING,
+    'app/pricing/pricing-page-copy.ts',
     FAQ,
+    'app/faq/faq-employer-copy.ts',
     EMPLOYERS,
+    'app/for-employers/for-employers-copy.ts',
     TERMS,
+    'lib/pricing-copy.ts',
     'app/tools/cost-per-hire-calculator/page.tsx',
+    'app/tools/cost-per-hire-calculator/cost-per-hire-copy.ts',
     'components/tools/EmployerCostPerHireCalculator.tsx',
     'components/tools/cost-per-hire-model.ts',
 ] as const;
@@ -142,6 +157,26 @@ describe('no pricing surface repeats a claim the code does not back', () => {
         expect(found, found.join('\n')).toEqual([]);
     });
 
+    it('scans every sibling module a scanned page builds its copy in', () => {
+        // A Next.js page may export only Next's own names, so since backlog 2.1
+        // a page's copy builder sits in a sibling module, and the scan has to
+        // follow the copy there. The cost-per-hire page's method notes and FAQ
+        // (which also feed its FAQPage JSON-LD) moved into
+        // ./cost-per-hire-copy.ts while this list still named only the page.
+        const scanned = new Set<string>(SURFACES);
+        const pages = SURFACES.filter((rel) => rel.endsWith('/page.tsx'));
+        expect(pages.length).toBeGreaterThanOrEqual(5);
+        for (const page of pages) {
+            const dir = path.posix.dirname(page);
+            const siblings = [...read(page).matchAll(/from '\.\/([^']+)'/g)].map((match) => `${dir}/${match[1]}`);
+            for (const sibling of siblings) {
+                const file = [`${sibling}.ts`, `${sibling}.tsx`].find((candidate) => fs.existsSync(path.join(ROOT, candidate)));
+                expect(file, `${page} imports ${sibling}, which is not a source file`).toBeDefined();
+                expect(scanned.has(file as string), `${page} builds copy in ${file}, which the banned-claims scan does not read`).toBe(true);
+            }
+        }
+    });
+
     it('the banned list catches the reworded plan claims the listing cards used to carry', () => {
         const retired = [
             'Plan posts stay up while your plan is active.',
@@ -157,79 +192,91 @@ describe('no pricing surface repeats a claim the code does not back', () => {
 });
 
 describe('the listing cards state the plan post run the code gives', () => {
-    const PLAN_RUN = 'come down sooner only if the plan ends.';
+    const PLAN_RUN = `run the same ${config.durationDays} days and come down sooner only if the plan ends.`;
 
-    it('/pricing: every post runs durationDays; plan posts the same, shortened only by the plan ending', () => {
-        const text = visibleText(PRICING);
-        expect(text).toContain('Every post runs ');
-        expect(text).toContain(' days with no daily budget and no bidding, promo posts included. Plan posts run the same ');
-        expect(text).toContain(` days and ${PLAN_RUN}`);
+    it.each(PHASES)('/pricing (%s): every post runs durationDays; plan posts the same, shortened only by the plan ending', (_phase, now) => {
+        const run = pricingPageCopy(now).listingRun;
+        expect(run.startsWith(`Every post runs ${config.durationDays} days with no daily budget and no bidding`)).toBe(true);
+        expect(run).toContain(`Plan posts ${PLAN_RUN}`);
+        // The listing card prints the builder's sentence for the render clock.
+        expect(read(PRICING)).toContain('{copy.listingRun}');
     });
 
-    it('/for-employers: the same run for every job, plan posts shortened only by the plan ending', () => {
-        const text = visibleText(EMPLOYERS);
-        expect(text).toContain('Every job runs ');
-        expect(text).toContain('Promo posts get the same run and the same features; plan posts run the same ');
-        expect(text).toContain(` days and ${PLAN_RUN}`);
+    it.each(PHASES)('/for-employers (%s): the same run for every job, plan posts shortened only by the plan ending', (_phase, now) => {
+        const run = forEmployersCopy(now).listingRun;
+        expect(run.startsWith(`Every job runs ${config.durationDays} days with no daily budget and no bidding.`)).toBe(true);
+        expect(run).toMatch(new RegExp(`[Pp]lan posts ${PLAN_RUN.replace(/\./g, '\\.')}$`));
+        expect(read(EMPLOYERS)).toContain('{copy.listingRun}');
+    });
+
+    it('names promo posts in the run only while the promo runs', () => {
+        expect(pricingPageCopy(DURING_PROMO).listingRun).toContain(' days with no daily budget and no bidding, promo posts included. Plan posts run the same ');
+        expect(forEmployersCopy(DURING_PROMO).listingRun).toContain('Promo posts get the same run and the same features; plan posts run the same ');
+        expect(pricingPageCopy(LADDER_START).listingRun).not.toMatch(/promo/i);
+        expect(forEmployersCopy(LADDER_START).listingRun).not.toMatch(/promo/i);
     });
 });
 
-describe('the plan answers state the real lifecycle (they also feed FAQPage JSON-LD)', () => {
-    const lifecycle = (answer: string): void => {
+describe('the plan answers state the real lifecycle in both phases (they also feed FAQPage JSON-LD)', () => {
+    const lifecycle = (answer: string, now: Date): void => {
         expect(answer).toContain(`${config.planSlots} active job slots while you're subscribed.`);
         expect(answer).toContain('Swap jobs any time. Cancel any time.');
         expect(answer).toContain(`Each plan post runs ${config.durationDays} days.`);
         expect(answer).toContain('its slot opens up and you can post into it again at no extra charge.');
         expect(answer).toContain('Plan posts come down if the plan ends.');
         expect(answer).toContain(`or until their ${config.durationDays} days run out if that comes first.`);
-        expect(answer).toContain(`From ${config.ladderStartsLabel}`);
+        // The price is dated only while the ladder is still ahead.
+        if (config.isPromoActive(now)) {
+            expect(answer.startsWith(`From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. `)).toBe(true);
+        } else {
+            expect(answer.startsWith(`The Employer plan is $${config.planPrice}/month. `)).toBe(true);
+            expect(answer).not.toContain(config.ladderStartsLabel);
+        }
         expect(answer).not.toMatch(/[–—]|\s-\s/);
     };
 
-    it('/pricing builds its plan answer and plan card from the lifecycle sentences', () => {
+    it.each(PHASES)('/pricing (%s) builds its plan answer and plan card from the lifecycle sentences', (_phase, now) => {
+        const plan = pricingPageCopy(now).pricingFaqs.find((f) => f.q === 'How does the Employer plan work?');
+        expect(plan).toBeDefined();
+        lifecycle(plan!.a, now);
+        expect(plan!.a).toContain(` ${PLAN_TERMS} ${PLAN_POSTS_LINE} `);
+        expect(plan!.a.endsWith(PLAN_CANCEL_LINE)).toBe(true);
         const src = read(PRICING);
-        const planTerms = renderConst(src, 'PLAN_TERMS');
-        const planPosts = renderConst(src, 'PLAN_POSTS_LINE');
-        const planCancel = renderConst(src, 'PLAN_CANCEL_LINE');
-        const answer = src.match(/q: 'How does the Employer plan work\?', a: `([^`]*)`/);
-        expect(answer).not.toBeNull();
-        const template = (answer as RegExpMatchArray)[1];
-        expect(template).toContain('From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. ${PLAN_TERMS} ${PLAN_POSTS_LINE}');
-        expect(template).toContain('${PLAN_CANCEL_LINE}');
-        lifecycle(`From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. ${planTerms} ${planPosts} ${planCancel}`);
         // The plan card note carries the same two sentences.
         expect(src).toMatch(/note: `Every slot is a Featured post[^`]*\$\{PLAN_POSTS_LINE\} \$\{PLAN_CANCEL_LINE\}`/);
-        // JSON-LD republishes the same array.
+        // JSON-LD republishes the same array the accordion renders.
         expect(src).toMatch(/mainEntity: faqs\.map/);
+        expect(src).toContain('const faqs = [...copy.pricingFaqs, ...EVERGREEN_FAQS];');
     });
 
-    it('/faq renders the same lifecycle', () => {
-        const match = read(FAQ).match(/question: "How does the Employer plan work\?",\s*answer: `([^`]*)`/);
-        expect(match).not.toBeNull();
-        lifecycle(render((match as RegExpMatchArray)[1]));
+    it.each(PHASES)('/faq (%s) renders the same lifecycle', (_phase, now) => {
+        const plan = employerPricingFaqs(now).find((f) => f.question === 'How does the Employer plan work?');
+        expect(plan).toBeDefined();
+        lifecycle(plan!.answer, now);
         expect(read(FAQ)).toMatch(/mainEntity: \[\.\.\.jobSeekerFaqs, \.\.\.employerFaqs/);
+        expect(read(FAQ)).toContain('...employerPricingFaqs(new Date()),');
     });
 
-    it('/for-employers renders the same lifecycle', () => {
-        const match = read(EMPLOYERS).match(/q: 'How does the Employer plan work\?',\s*a: `([^`]*)`/);
-        expect(match).not.toBeNull();
-        lifecycle(render((match as RegExpMatchArray)[1]));
+    it.each(PHASES)('/for-employers (%s) renders the same lifecycle', (_phase, now) => {
+        const plan = forEmployersCopy(now).pricingFaqs.find((f) => f.q === 'How does the Employer plan work?');
+        expect(plan).toBeDefined();
+        lifecycle(plan!.a, now);
         expect(read(EMPLOYERS)).toMatch(/mainEntity: employerFaqs\.map/);
+        expect(read(EMPLOYERS)).toContain('const employerFaqs = [...copy.pricingFaqs, ...EVERGREEN_FAQS];');
     });
 });
 
 describe('the renewal answers say what a renewal does, and nothing more', () => {
     it('/pricing: +durationDays, no new unlocks or InMails, plan posts reposted, the cap stated', () => {
-        const src = read(PRICING);
-        expect(renderConst(src, 'RENEWAL_LINE')).toBe(
+        expect(RENEWAL_LINE).toBe(
             `Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days).`,
         );
-        const effect = renderConst(src, 'RENEWAL_EFFECT_LINE');
-        expect(effect).toContain(`A renewal adds ${config.durationDays} days to the post`);
-        expect(effect).toContain('It does not add unlocks or InMails');
-        expect(renderConst(src, 'RENEWAL_CAP_LINE')).toBe(
+        expect(RENEWAL_EFFECT_LINE).toContain(`A renewal adds ${config.durationDays} days to the post`);
+        expect(RENEWAL_EFFECT_LINE).toContain('It does not add unlocks or InMails');
+        expect(RENEWAL_CAP_LINE).toBe(
             `Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`,
         );
+        const src = read(PRICING);
         const answer = src.match(/q: 'What does renewal cost\?', a: `([^`]*)`/);
         expect(answer).not.toBeNull();
         const template = (answer as RegExpMatchArray)[1];

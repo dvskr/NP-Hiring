@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * GET /api/employer/profile-snapshot
@@ -43,10 +44,7 @@ export async function GET() {
     // an early post has the data and later edits stripped it.
     const employerJobs = await prisma.employerJob.findMany({
       where: {
-        OR: [
-          { userId: user.id },
-          { userId: null, contactEmail: user.email },
-        ],
+        OR: employerJobOwnershipBranches(user),
       },
       include: {
         job: {

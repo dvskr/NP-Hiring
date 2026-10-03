@@ -361,18 +361,37 @@ describe('licensure checker + multi-state planner (P2 #6)', () => {
   /**
    * THE COMPACT-MEMBERSHIP EMBARGO.
    *
-   * LICENSE_GUIDE_NLC_NON_MEMBERS (lib/blog-license-guides.ts, mirrored in
-   * lib/pseo/state-narrative.ts) is wrong in both directions as of 2026-07: it
-   * omits Alaska, which is not an NLC member, and lists Connecticut, Rhode
-   * Island and Washington as non-members when all three are members. NCSBN put
-   * the count at 43 member jurisdictions; the set implies 38 of 51. The drift
-   * test guarding it compares the two copies to each other, so it proves
-   * consistency, not accuracy.
+   * How it started: in 2026-07, LICENSE_GUIDE_NLC_NON_MEMBERS
+   * (lib/blog-license-guides.ts, mirrored in lib/pseo/state-narrative.ts) was
+   * wrong in both directions: it omitted Alaska, which is not an NLC member,
+   * and listed Connecticut, Rhode Island and Washington as non-members when
+   * all three were members. NCSBN then put the count at 43 member
+   * jurisdictions; the set implied 38 of 51. The drift test guarding it
+   * compared the two copies to each other, so it proved consistency, not
+   * accuracy, and the planner's per-state verdicts came out rather than ship
+   * on that data.
    *
-   * The data is not this package's to fix, but turning it into a per-state
-   * "no separate RN application" verdict IS this package's doing, and that is
-   * personalized licensure advice on a YMYL surface. These tests keep it out
-   * until the owner re-verifies the dataset against NCSBN.
+   * The set was corrected and verified against NCSBN on 2026-08-11
+   * (NLC_ROSTER_VERIFIED_AT in lib/blog-license-guides.ts records the latest
+   * check), with Massachusetts, enacted but not yet implemented, moved to
+   * LICENSE_GUIDE_NLC_ENACTED_PENDING. These tests now keep a per-state
+   * verdict off the checker route and out of the planner by choice: "no
+   * separate RN application" for a named state is personalized licensure
+   * advice on a YMYL surface, only as current as the last roster check. The
+   * header of components/tools/MultiStatePlanner.tsx says what lifting the
+   * embargo would take.
+   *
+   * Banning the roster import (@/lib/blog-license-guides) alone left a side
+   * door: the state pages read the same roster as a three-way status,
+   * getPracticeEnvironment(...).nlcStatus from @/lib/pseo/practice-environment.
+   * So neither surface's code may name that module or the nlcStatus field,
+   * which also covers the same field on the /scope-of-practice rows.
+   *
+   * And a second one: the mirror this comment names. lib/pseo/state-narrative.ts
+   * exports the same roster as NLC_NON_MEMBER_STATES and
+   * NLC_ENACTED_PENDING_STATES, so a route could import those two sets and
+   * derive a per-state flag under a name of its own without tripping any
+   * check above. Neither surface's code may name that module or either set.
    */
   describe('publishes no per-state compact-membership claim', () => {
     const surfaces = [routeFile('/tools/licensure-checker'), PLANNER];
@@ -380,6 +399,20 @@ describe('licensure checker + multi-state planner (P2 #6)', () => {
     it.each(surfaces)('%s does not import the membership set', (file) => {
       expect(readCode(file)).not.toContain('LICENSE_GUIDE_NLC_NON_MEMBERS');
       expect(readCode(file)).not.toContain("from '@/lib/blog-license-guides'");
+    });
+
+    it.each(surfaces)('%s reads no compact status through the practice-environment model', (file) => {
+      // readCode: the planner's header names lib/pseo/practice-environment.ts
+      // while explaining which surfaces read the roster; only code may not.
+      const code = readCode(file);
+      expect(code).not.toContain('pseo/practice-environment');
+      expect(code).not.toMatch(/\bnlcStatus\b/i);
+    });
+
+    it.each(surfaces)('%s reads no roster from the state-narrative mirror', (file) => {
+      // readCode again: the planner's header names lib/pseo/state-narrative.ts
+      // as the mirror of the set it stopped using.
+      expect(readCode(file)).not.toMatch(/pseo\/state-narrative|NLC_NON_MEMBER_STATES|NLC_ENACTED_PENDING_STATES/);
     });
 
     it('keeps membership out of the planner\'s per-state type', () => {

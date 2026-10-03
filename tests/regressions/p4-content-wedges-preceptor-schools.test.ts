@@ -3,11 +3,13 @@
  * decision guide (brief #3).
  *
  * Both ship through the mechanism P1 established and P2/P3 extended: .mdx
- * in content/blog/, published by scripts/sync-blog-to-db.ts (which extracts
- * the visible "Frequently asked questions" section into faq_json → the
- * FAQPage JSON-LD emitted by app/blog/[slug]/page.tsx), bylined by
- * components/EditorialByline.tsx, and wired into the job-page sidebar slots
- * in config/niche/content-map.ts.
+ * in content/blog/, served from the file by lib/blog.ts with or without a
+ * blog_posts row (lib/blog-mdx-posts.ts, and scripts/sync-blog-to-db.ts for
+ * a synced row, extract the visible "Frequently asked questions" section
+ * into faq_json → the FAQPage JSON-LD emitted by
+ * app/blog/[slug]/page.tsx), bylined by components/EditorialByline.tsx,
+ * and wired into the job-page sidebar slots in
+ * config/niche/content-map.ts.
  *
  * WHY THIS SUITE EXISTS
  * Each of these pages is the DELIBERATELY NARROW slice of a much bigger
@@ -156,9 +158,10 @@ describe('post shape', () => {
             // Hoisted into the .ed-quick-answer callout by app/blog/[slug]/page.tsx.
             expect(body).toMatch(/\*\*Quick answer:\*\*/);
 
-            // scripts/sync-blog-to-db.ts extracts THIS exact heading into
-            // faq_json, the only source of the FAQPage JSON-LD — so schema
-            // can never diverge from visible content.
+            // lib/blog-mdx-posts.ts (and scripts/sync-blog-to-db.ts, for a
+            // synced row) extracts THIS exact heading into faq_json, the
+            // only source of the FAQPage JSON-LD — so schema can never
+            // diverge from visible content.
             expect(body).toMatch(/^## Frequently asked questions/m);
             const faqSection = body.split(/^## Frequently asked questions/m)[1];
             const questions = faqSection.match(/^### .+$/gm) ?? [];
@@ -197,20 +200,24 @@ describe('post shape', () => {
 /**
  * REACHABILITY on /resources.
  *
- * app/resources/page.tsx splits DB posts on `state_spotlight` (those go to
- * the licensure grid, where every slug must match LICENSE_GUIDE_SLUG_REGEX
- * or it is dropped by .filter(Boolean) and appears NOWHERE). Everything else
- * falls through to the article grid, which groups by category and styles
- * each group from CATEGORY_CONFIG — a category with no entry there renders
- * under its raw id.
+ * app/resources/page.tsx splits the posts it lists on `state_spotlight`
+ * (those go to the licensure grid, where every slug must match
+ * LICENSE_GUIDE_SLUG_REGEX or it is skipped and appears NOWHERE).
+ * Everything else that is not itself a license guide falls through to the
+ * article grid, which groups by category and styles each group from
+ * CATEGORY_CONFIG — a category with no entry there renders under its raw
+ * id.
  *
  * On top of that automatic path this package adds ONE band ("Before you
- * apply"), and it resolves its cards against the DB rows the page already
- * fetches rather than hardcoding /blog/<slug> hrefs — those would be live
- * internal 404s in the window between deploying the file and running
- * scripts/sync-blog-to-db.ts against prod (the hazard
- * config/niche/content-map.ts documents for HOMEPAGE_FEATURED_POSTS, and
- * the reason lib/blog.ts's code fallback covers the license series ONLY).
+ * apply"), and it resolves its cards against the posts the page already
+ * reads rather than hardcoding /blog/<slug> hrefs. Since backlog 2.2 that
+ * read is the /blog listing (lib/blog.ts getPublishedPosts), which carries
+ * a post exactly when /blog/<slug> renders it, whether or not blog_posts
+ * has rows: a hardcoded href would still 404 for a guide an editor took
+ * down or renamed. A guide the band shows still counts toward its category
+ * group in the article grid but is not repeated as a card there. Rendered
+ * behaviour is pinned by
+ * tests/regressions/resources-programs-blog-from-code.test.ts.
  */
 describe('reachable from /resources', () => {
     const resources = read('app/resources/page.tsx');
@@ -292,11 +299,14 @@ describe('reachable from /resources', () => {
         }
     });
 
-    it('the education band lists both wedges and is gated on the DB rows', () => {
+    it('the education band lists both wedges and is gated on the /blog listing', () => {
         for (const slug of P4_SLUGS) {
             expect(resources, `${slug} missing from EDUCATION_WEDGE_SLUGS`).toContain(`'${slug}'`);
         }
-        // Resolved against the already-fetched published rows…
+        // Resolved against the posts the page already reads, which is the
+        // listing /blog renders, never a direct blog_posts read…
+        expect(resources).toContain('getPublishedPosts(1, RESOURCES_POST_SCAN_LIMIT)');
+        expect(resources, 'a direct table read hid the band while blog_posts was empty').not.toMatch(/prisma\.blogPost/);
         expect(resources).toContain('const educationWedge = EDUCATION_WEDGE_SLUGS');
         expect(resources).toContain('blogPosts.find(p => p.slug === slug)');
         // …and the band renders only when at least one resolved.
@@ -304,16 +314,18 @@ describe('reachable from /resources', () => {
         // No literal blog href anywhere on the page: that is the 404 hazard.
         expect(
             resources.match(/href="\/blog\/[a-z]/g) ?? [],
-            'hardcoded /blog/<slug> href on /resources — 404s until the sync script runs',
+            'hardcoded /blog/<slug> href on /resources — a live 404 once the post is renamed or an editor unpublishes it',
         ).toEqual([]);
     });
 
     /**
      * No sitemap change is needed and none was made: blog URLs come from
-     * getAllPublishedSlugs() (a DB read), so both posts enter the sitemap
-     * the moment the sync script publishes them.
+     * getAllPublishedSlugs() (lib/blog.ts: published blog_posts rows plus
+     * the posts served from code), so both posts are in the sitemap whether
+     * or not the sync script has copied them into the table. Pinned so a
+     * future move to a hardcoded route list does not silently drop them.
      */
-    it('blog sitemap entries stay DB-derived (no hardcoded route list to update)', () => {
+    it('blog sitemap entries stay derived from getAllPublishedSlugs (no hardcoded route list to update)', () => {
         const sitemap = read('app/sitemap.ts');
         expect(sitemap).toContain("import { getAllPublishedSlugs } from '@/lib/blog'");
         expect(sitemap).toContain('await getAllPublishedSlugs()');
@@ -323,19 +335,21 @@ describe('reachable from /resources', () => {
 /**
  * The /for-programs flywheel. That page is the program-DIRECTOR side of the
  * same market; the schools guide is the applicant side. The link is gated
- * on a published DB row for the same 404 reason as the /resources band.
+ * on getPostBySlug, the lookup /blog/<slug> renders with, for the same 404
+ * reason as the /resources band (backlog 2.2: a direct blog_posts read hid
+ * the card while the table was empty).
  */
 describe('/for-programs cross-link', () => {
     const forPrograms = read('app/for-programs/page.tsx');
 
-    it('links the schools guide via a DB lookup, not a hardcoded href', () => {
+    it('links the schools guide via getPostBySlug, not a hardcoded href or a table read', () => {
         expect(forPrograms).toContain(`const PROGRAM_GUIDE_SLUG = '${SCHOOLS_SLUG}'`);
-        expect(forPrograms).toContain('slug: PROGRAM_GUIDE_SLUG');
-        expect(forPrograms).toContain("status: 'published'");
+        expect(forPrograms).toContain('getPostBySlug(PROGRAM_GUIDE_SLUG)');
+        expect(forPrograms, 'a direct table read hid the card while blog_posts was empty').not.toMatch(/prisma\.blogPost/);
         expect(forPrograms).toContain('{programGuide && (');
         expect(
             forPrograms.match(/href="\/blog\/[a-z]/g) ?? [],
-            'hardcoded /blog/<slug> href on /for-programs — 404s until the sync script runs',
+            'hardcoded /blog/<slug> href on /for-programs — a live 404 once the post is renamed or an editor unpublishes it',
         ).toEqual([]);
     });
 
@@ -776,11 +790,13 @@ describe('internal links resolve to real routes', () => {
 
 /**
  * FAQ → schema, one source. The sync script extracts the visible FAQ into
- * faq_json and the post page emits FAQPage JSON-LD from faq_json ONLY, so
- * invisible FAQ markup (a spam-policy violation) is structurally
- * impossible. Asserted by reading source rather than importing, because
- * scripts/sync-blog-to-db.ts throws at module load without
- * PROD_DATABASE_URL.
+ * faq_json for a synced row (lib/blog-mdx-posts.ts does the same for a post
+ * served from its file; tests/regressions/p10-blog-mdx-fallback.test.ts
+ * pins the two to each other) and the post page emits FAQPage JSON-LD from
+ * faq_json ONLY, so invisible FAQ markup (a spam-policy violation) is
+ * structurally impossible. Asserted by reading source rather than
+ * importing, because scripts/sync-blog-to-db.ts throws at module load
+ * without PROD_DATABASE_URL.
  */
 describe('FAQPage schema derives from the visible FAQ', () => {
     it('the sync script extracts the same heading these posts use', () => {

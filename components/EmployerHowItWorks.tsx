@@ -139,7 +139,19 @@ const css = `
     }
 `;
 
-export default function EmployerHowItWorks() {
+interface EmployerHowItWorksProps {
+    /**
+     * Whether the launch promo is running, decided by the server page for
+     * its own render clock (config.isPromoActive(now)). This is a client
+     * component: reading the clock here instead lets the hydrating browser
+     * disagree with server HTML rendered before config.promoEndsAt (an ISR
+     * page can be an hour old), which is a hydration mismatch on the CTA.
+     * Omitted, it falls back to the clock at render.
+     */
+    promoActive?: boolean;
+}
+
+export default function EmployerHowItWorks({ promoActive: promoActiveProp }: EmployerHowItWorksProps) {
     // B60: honor prefers-reduced-motion for JS-driven framer entrance
     // animations. `initial={false}` renders elements in their visible
     // resting state so whileInView never moves them.
@@ -147,7 +159,7 @@ export default function EmployerHowItWorks() {
     // The CTA carries the pricing hook: "free through <date>" while the
     // launch promo runs, a plain "Post a Job" once the ladder is live. The
     // date comes from lib/config so this cannot outlive the promo by mistake.
-    const promoActive = config.isPromoActive();
+    const promoActive = promoActiveProp ?? config.isPromoActive();
 
     return (
         <LazyMotion features={domAnimation}>

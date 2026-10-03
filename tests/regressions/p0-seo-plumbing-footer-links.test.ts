@@ -102,3 +102,31 @@ describe('P0 #7 — /for-programs is footer-linked (orphan-page fix)', () => {
         expect(FOOTER).toContain("href: '/for-programs'");
     });
 });
+
+/**
+ * Backlog 2.10: /scope-of-practice is in the sitemap and, since audit CQ-13,
+ * the one state-by-state practice reference, but no header or footer link
+ * reached it. The footer carries it in the job-seeker column beside the
+ * salary guide, with the page's own H1 as the anchor text.
+ */
+describe('Backlog 2.10 — /scope-of-practice is footer-linked', () => {
+    /** One Footer.tsx column's literal link list, up to its closing bracket. */
+    const footerColumn = (title: string): string => {
+        const start = FOOTER.indexOf(`title: '${title}'`);
+        expect(start, `footer column "${title}" not found`).toBeGreaterThan(-1);
+        return FOOTER.slice(start, FOOTER.indexOf('],', start));
+    };
+
+    it('the For Job Seekers column links it', () => {
+        expect(extractHrefs(footerColumn('For Job Seekers'))).toContain('/scope-of-practice');
+    });
+
+    it("the anchor text is the page's own H1, built from the same brand token", () => {
+        const page = fs.readFileSync(path.join(ROOT, 'app/scope-of-practice/page.tsx'), 'utf8');
+        const h1 = page.match(/<h1[^>]*>\s*([^<]+?)\s*<\/h1>/)?.[1];
+        expect(h1).toBe('{brand.niche.short} Scope of Practice by State');
+        expect(footerColumn('For Job Seekers')).toContain(
+            "{ label: `${brand.niche.short} Scope of Practice by State`, href: '/scope-of-practice' }",
+        );
+    });
+});

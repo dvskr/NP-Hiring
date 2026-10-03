@@ -15,15 +15,19 @@
  *                  cheaper
  *   promo_repost — no renewal on sale during the promo: post again free
  *                  through config.promoEndsLabel
- *   none         — no renewal on sale after the promo: no offer at all
+ *   paid_repost  — no renewal on sale after the promo, but new posts can be
+ *                  bought: post again at the ladder price, present tense
+ *                  (backlog 2.1: the free wording stops at config.promoEndsAt)
+ *   none         — nothing on sale after the promo: no offer at all
  *   plan         — each plan post runs config.durationDays; when it ends,
  *                  post again into the free slot at no extra charge
  *
  * The REAL email-service runs (the global setup mocks it); Resend is mocked
  * to capture the HTML and the plain-text part sendAndLog derives from it.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import type { ExpiryWarningOptions } from '@/lib/email-service';
+import { LADDER_PRICES } from '@/lib/pricing-copy';
 
 vi.unmock('@/lib/email-service');
 
@@ -40,6 +44,10 @@ import { config } from '@/lib/config';
 
 const DURING_PROMO = new Date('2026-11-21T12:00:00.000Z');
 const AFTER_PROMO = new Date('2027-03-01T12:00:00.000Z');
+const LAST_PROMO_SECOND = new Date('2027-01-01T09:59:59.000Z');
+const LADDER_START = new Date(config.promoEndsAt);
+/** Free posting offered as a current deal: never true once the promo is over. */
+const FREE_REPOST = /free through|for free|at no charge|launch (period|promo)/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TITLE = 'Nurse Practitioner, Primary Care';
 const RENEWAL = `$${config.renewalPrice}`;
@@ -71,6 +79,13 @@ function loggedMetadata(): Record<string, unknown> {
 function parts(sent: Sent): string[] {
     return [sent.subject, sent.html, sent.text];
 }
+
+// The first import of the real email service is a cold transform of its
+// whole module graph (it outran the first test's 30s budget on a loaded
+// machine); pay for it once, in a hook with its own budget.
+beforeAll(async () => {
+    await import('@/lib/email-service');
+}, 120_000);
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -161,6 +176,58 @@ describe('expiry warning: after the promo, paid posting off', () => {
     });
 });
 
+describe('expiry warning: after the promo, a row the renewal checkout refuses', () => {
+    it('is offered a paid repost at the ladder price while new posts can be bought', async () => {
+        const sent = await sendWarning({ paymentStatus: 'free', renewalPurchasable: true, postingPurchasable: true, now: AFTER_PROMO });
+        expect(sent.text).toContain(`You can post this role again as a fresh listing. It runs ${config.durationDays} days with a fresh ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. ${LADDER_PRICES}`);
+        expect(sent.html).toContain('/post-job');
+        expect(sent.html).toMatch(/>\s*Post a New Job\s*</);
+        for (const part of parts(sent)) {
+            expect(part).not.toContain(RENEWAL);
+            expect(part).not.toMatch(FREE_REPOST);
+            // Present tense: no start date that has already passed.
+            expect(part).not.toContain(config.ladderStartsLabel);
+        }
+        expect(loggedMetadata()).toMatchObject({ offer: 'paid_repost', paymentStatus: 'free' });
+    });
+
+    it('gets no offer when new posts cannot be bought either', async () => {
+        const sent = await sendWarning({ paymentStatus: 'free', renewalPurchasable: false, postingPurchasable: false, now: AFTER_PROMO });
+        expect(sent.html).not.toContain('/post-job');
+        expect(loggedMetadata()).toMatchObject({ offer: 'none' });
+    });
+
+    it('during the promo the free repost still wins over the paid one', async () => {
+        await sendWarning({ paymentStatus: 'free', renewalPurchasable: false, postingPurchasable: true, now: DURING_PROMO });
+        expect(loggedMetadata()).toMatchObject({ offer: 'promo_repost' });
+    });
+});
+
+describe('expiry warning: the free wording stops exactly at config.promoEndsAt', () => {
+    it('paid posting off: free repost in the last promo second, no offer from the next instant', async () => {
+        const last = await sendWarning({ paymentStatus: 'promo', renewalPurchasable: false, postingPurchasable: false, now: LAST_PROMO_SECOND });
+        expect(last.text).toContain(`Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`);
+        expect(last.html).toMatch(/>\s*Post a New Job for Free\s*</);
+        expect(loggedMetadata()).toMatchObject({ offer: 'promo_repost' });
+
+        const first = await sendWarning({ paymentStatus: 'promo', renewalPurchasable: false, postingPurchasable: false, now: LADDER_START });
+        for (const part of parts(first)) expect(part).not.toMatch(FREE_REPOST);
+        expect(first.html).not.toContain('Post a New Job for Free');
+        expect(loggedMetadata()).toMatchObject({ offer: 'none' });
+    });
+
+    it('paid posting on: the renewal drops its free alternative at the same instant', async () => {
+        const options = { paymentStatus: 'promo', renewalPurchasable: true, postingPurchasable: true, nextPostPrice: config.introPrice };
+        const last = await sendWarning({ ...options, now: LAST_PROMO_SECOND });
+        expect(last.text).toContain(`Or post this role again as a fresh listing, free through ${config.promoEndsLabel}.`);
+
+        const first = await sendWarning({ ...options, now: LADDER_START });
+        expect(first.text).toContain(`Renew for ${RENEWAL}`);
+        for (const part of parts(first)) expect(part).not.toMatch(FREE_REPOST);
+        expect(loggedMetadata()).toMatchObject({ offer: 'renew' });
+    });
+});
+
 describe('expiry warning: plan posts', () => {
     it('each plan post runs its days; when it ends, post again into the free slot', async () => {
         for (const now of [DURING_PROMO, AFTER_PROMO]) {
@@ -179,6 +246,7 @@ describe('expiry warning: every variant renders and keeps house style', () => {
         ['renew in promo', { paymentStatus: 'promo', renewalPurchasable: true, now: DURING_PROMO }],
         ['renew after promo', { paymentStatus: 'paid', renewalPurchasable: true, nextPostPrice: config.introPrice, now: AFTER_PROMO }],
         ['no offer', { paymentStatus: 'paid', renewalPurchasable: false, now: AFTER_PROMO }],
+        ['paid repost', { paymentStatus: 'free', renewalPurchasable: false, postingPurchasable: true, now: AFTER_PROMO }],
         ['plan', { paymentStatus: 'plan', now: AFTER_PROMO }],
     ];
 

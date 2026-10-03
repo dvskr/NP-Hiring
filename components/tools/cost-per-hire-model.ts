@@ -21,7 +21,10 @@
  *   - 'promo'    — through config.promoEndsLabel every post is free. A plan
  *                  modelled here costs $0 on our side, which is a real price
  *                  for a dated window, not a comparison — the widget says so
- *                  and points the reader at the ladder.
+ *                  and points the reader at the ladder. Offered only while
+ *                  the promo runs: once it has ended nobody can buy a promo
+ *                  post, so flatFeeModeOptions('ladder') leaves it out and
+ *                  the ladder options lose their start date (PricingPhase).
  *   - 'per-post' — from config.ladderStartsLabel: the FIRST PAID post per
  *                  employer email DOMAIN is config.introPrice, every post
  *                  after it is config.postingPrice. The intro price is scoped
@@ -128,12 +131,61 @@ export const RENEWAL_SCOPE_NOTE =
 export const PLAN_NO_RENEWALS_NOTE =
     `plan posts are not renewed: each runs ${FLAT_FEE_PRICING.durationDays} days, and when it ends you can post the role again into its slot at no extra charge`;
 
-/** Which rung the flat-fee channel is priced on, for the widget's labels. */
-export const FLAT_FEE_MODE_LABELS: Record<FlatFeeMode, string> = {
-    promo: `Launch promo: free through ${FLAT_FEE_PRICING.promoEndsLabel}`,
-    'per-post': `Per post, from ${FLAT_FEE_PRICING.ladderStartsLabel}`,
-    plan: `Employer plan, from ${FLAT_FEE_PRICING.ladderStartsLabel}`,
-};
+/**
+ * The pricing phase the calculator is offered in: 'promo' while
+ * config.isPromoActive(), 'ladder' from config.promoEndsAt. The server page
+ * decides it per render (pricingPhase(now)) and hands it to the client
+ * widget as a prop, so the server HTML and the hydrated widget agree and
+ * nothing decides it at module load (lib/pricing-copy.ts explains why).
+ */
+export type PricingPhase = 'promo' | 'ladder';
+
+/** The pricing phase at `now`. Call it per render, never at module load. */
+export function pricingPhase(now: Date = new Date()): PricingPhase {
+    return config.isPromoActive(now) ? 'promo' : 'ladder';
+}
+
+/** One way to buy from us, as the widget's select offers it. */
+export interface FlatFeeModeOption {
+    mode: FlatFeeMode;
+    label: string;
+}
+
+/** While the promo runs: the promo, then the two ladder options dated from their start. */
+const PROMO_PHASE_MODE_OPTIONS: readonly FlatFeeModeOption[] = [
+    { mode: 'promo', label: `Launch promo: free through ${FLAT_FEE_PRICING.promoEndsLabel}` },
+    { mode: 'per-post', label: `Per post, from ${FLAT_FEE_PRICING.ladderStartsLabel}` },
+    { mode: 'plan', label: `Employer plan, from ${FLAT_FEE_PRICING.ladderStartsLabel}` },
+];
+
+/** Once the ladder is live: the two ways anyone can still buy, with no start date. */
+const LADDER_PHASE_MODE_OPTIONS: readonly FlatFeeModeOption[] = [
+    { mode: 'per-post', label: 'Per post' },
+    { mode: 'plan', label: 'Employer plan' },
+];
+
+/**
+ * The ways to buy the widget offers in `phase`; the first is the one it
+ * opens on. A promo post cannot be bought once the promo has ended, so the
+ * ladder phase does not offer it at all rather than pricing it at $0.
+ */
+export function flatFeeModeOptions(phase: PricingPhase): readonly FlatFeeModeOption[] {
+    return phase === 'promo' ? PROMO_PHASE_MODE_OPTIONS : LADDER_PHASE_MODE_OPTIONS;
+}
+
+/**
+ * The way to buy the widget prices in `phase`: the one the reader selected
+ * while `phase` still offers it, else the phase's first. The widget seeds its
+ * selection once, at mount, but the server can hand a mounted widget a new
+ * phase (a tab held open across the promo end, then a soft navigation), and
+ * a selection of 'promo' would then keep pricing a post nobody can buy,
+ * under a select that has no such option. Derived on every render, so the
+ * selection and everything else the reader entered are kept.
+ */
+export function offeredFlatFeeMode(selected: FlatFeeMode, phase: PricingPhase): FlatFeeMode {
+    const options = flatFeeModeOptions(phase);
+    return options.some((option) => option.mode === selected) ? selected : options[0].mode;
+}
 
 /**
  * Default applicant volume for the flat-fee column.
@@ -421,27 +473,28 @@ export function rankByCostPerHire(results: readonly ChannelResult[]): readonly C
 }
 
 /**
- * The mode the widget opens on: the promo while it runs, the per-post ladder
- * once it has ended. Evaluated at module load, which is fine for a marketing
- * calculator — the widget lets the reader switch either way.
+ * Defaults the widget opens on in `phase`. Every non-zero value is documented
+ * above. The mode is the phase's first way to buy: the promo while it runs,
+ * the per-post ladder once it has ended, so the widget never opens on a $0
+ * price nobody can buy. A module-scope default (it used to be one) would be
+ * decided once per server instance, and once at build for a static page.
  */
-export const DEFAULT_FLAT_FEE_MODE: FlatFeeMode = config.isPromoActive() ? 'promo' : 'per-post';
-
-/** Defaults the widget opens on. Every non-zero value is documented above. */
-export const DEFAULT_INPUTS: CostPerHireInputs = {
-    roles: 1,
-    renewalsPerRole: 0,
-    flatFeeMode: DEFAULT_FLAT_FEE_MODE,
-    useIntroPrice: true,
-    planMonths: DEFAULT_PLAN_MONTHS,
-    hiresPerRole: 1,
-    flatFeeApplicantsPerRole: DEFAULT_APPLICANTS_PER_ROLE,
-    flatFeeTimeToFillDays: DEFAULT_TIME_TO_FILL_DAYS,
-    cpcSpendPerRole: 0,
-    cpcApplicantsPerRole: 0,
-    cpcTimeToFillDays: DEFAULT_TIME_TO_FILL_DAYS,
-    agencyFeePct: 0,
-    firstYearBase: DEFAULT_FIRST_YEAR_BASE,
-    agencyTimeToFillDays: DEFAULT_TIME_TO_FILL_DAYS,
-    dailyVacancyCost: 0,
-};
+export function defaultInputs(phase: PricingPhase): CostPerHireInputs {
+    return {
+        roles: 1,
+        renewalsPerRole: 0,
+        flatFeeMode: flatFeeModeOptions(phase)[0].mode,
+        useIntroPrice: true,
+        planMonths: DEFAULT_PLAN_MONTHS,
+        hiresPerRole: 1,
+        flatFeeApplicantsPerRole: DEFAULT_APPLICANTS_PER_ROLE,
+        flatFeeTimeToFillDays: DEFAULT_TIME_TO_FILL_DAYS,
+        cpcSpendPerRole: 0,
+        cpcApplicantsPerRole: 0,
+        cpcTimeToFillDays: DEFAULT_TIME_TO_FILL_DAYS,
+        agencyFeePct: 0,
+        firstYearBase: DEFAULT_FIRST_YEAR_BASE,
+        agencyTimeToFillDays: DEFAULT_TIME_TO_FILL_DAYS,
+        dailyVacancyCost: 0,
+    };
+}

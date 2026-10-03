@@ -435,8 +435,12 @@ model EmployerPlan {
   stripeCustomerId     String?  @map("stripe_customer_id")
   stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
   source               String   @default("stripe") // 'stripe' | 'admin'
-  // `created` timestamp of the newest subscription event applied to this row;
-  // older (out-of-order) events are ignored.
+  // When the state last applied to this row was observed; an older observation
+  // is ignored. Subscription events and the reconciliation sweep write the
+  // time their live read of the subscription was sent (this server's clock,
+  // milliseconds: plan-subscription.ts#applySubscriptionEvent). Plan checkout
+  // writes the Stripe event's `created` (Stripe's clock, whole seconds). Stamp
+  // a manual repair with the current time, never with an event's `created`.
   lastStripeEventAt    DateTime? @map("last_stripe_event_at")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")

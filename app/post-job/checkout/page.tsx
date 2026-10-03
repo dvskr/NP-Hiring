@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { config } from '@/lib/config';
+import { currentQuote } from '@/lib/next-post-quote';
+import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 import { trackBeginCheckout } from '@/lib/analytics';
 
 interface ScreeningQuestion {
@@ -100,7 +102,7 @@ export default function CheckoutPage() {
   // stripeConfigured). null = unknown → fail open; the create-checkout API
   // still returns a stable 503 code if payment is attempted anyway.
   const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
-  const [quote, setQuote] = useState<PricingQuote | null>(null);
+  const [fetchedQuote, setFetchedQuote] = useState<PricingQuote | null>(null);
   const [quoteFetch, setQuoteFetch] = useState<QuoteFetch>('loading');
 
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function CheckoutPage() {
         }
         const data = (await res.json()) as PricingQuote;
         if (!cancelled) {
-          setQuote(data);
+          setFetchedQuote(data);
           setQuoteFetch('loaded');
         }
       } catch {
@@ -170,8 +172,13 @@ export default function CheckoutPage() {
   // ─── Quoted amount ────────────────────────────────────────────────────
   // An eligible+free answer (promo / plan) means this page was reached with
   // a stale draft: the banner below sends the employer back to the preview
-  // and no Pay button renders, so nothing can be charged from here.
-  const quoteView = toQuoteView(quoteFetch, quote);
+  // and no Pay button renders, so nothing can be charged from here. A promo
+  // answer only counts while the promo is running on this render
+  // (currentQuote): fetched before config.promoEndsAt and shown after it, it
+  // reads as no quote, because the server now charges this post. The hook
+  // renders a page left open over that instant again, so the banner goes.
+  useRerenderAtPromoEnd();
+  const quoteView = toQuoteView(quoteFetch, currentQuote(fetchedQuote));
   const isIntroRung = quoteView.kind === 'paid' && quoteView.isIntro;
   const nextPostIsFree = quoteView.kind === 'free';
 
@@ -403,9 +410,14 @@ export default function CheckoutPage() {
         <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 mb-6">
           <p className="text-pink-800 text-sm">
             Good news: your next post doesn&apos;t need a payment
+            {/* The promo reason only for a promo quote, which currentQuote
+                keeps only while the promo runs; a free quote without a
+                mode states no reason rather than a promo it cannot vouch for. */}
             {quoteView.mode === 'plan'
               ? ' (it uses a slot on your Employer plan)'
-              : ` (every post is free through ${config.promoEndsLabel})`}
+              : quoteView.mode === 'promo'
+                ? ` (every post is free through ${config.promoEndsLabel})`
+                : ''}
             .{' '}
             <Link href="/post-job/preview" className="font-semibold underline">
               Go back to the preview and post it

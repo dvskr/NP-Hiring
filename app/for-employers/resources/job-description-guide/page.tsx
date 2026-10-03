@@ -15,7 +15,14 @@
  * TRUTH RULES: no statistics on this page. Advice is framed as
  * recommendation, never as invented data ("X% more applicants").
  * Certification bodies named correctly (AANP/ANCC for NPs). Article
- * dateModified renders the LAST_REVIEWED constant — never new Date().
+ * dateModified renders the LAST_REVIEWED constant — never new Date(). The
+ * only clock read is the launch-promo check for the post-a-job button,
+ * which picks a label and dates nothing.
+ *
+ * The guide states no price. Its one link to /post-job carries the button
+ * label of the other resources pages (../post-job-cta.ts), read per render:
+ * "Post a Job: Free" while the launch promo runs, "Post a Job" once it has
+ * ended. The page re-renders hourly so the label switches without a deploy.
  */
 import { brand } from '@/config/brand';
 import { indefiniteArticle } from '@/lib/display-text';
@@ -26,6 +33,12 @@ import { JD_TEMPLATES } from '@/lib/jd-templates';
 import {
   PenLine, CheckCircle, XCircle, ArrowRight, ClipboardList,
 } from 'lucide-react';
+import { postJobCta } from '../post-job-cta';
+
+// Without this the page is fully static: built once, it would keep the
+// button's promo label until the next deploy. The metadata names no price,
+// so it stays a static export.
+export const revalidate = 3600;
 
 // Bump on each editorial review pass (repo pattern:
 // app/resources/1099-vs-w2/page.tsx).
@@ -167,6 +180,8 @@ const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 export default function JobDescriptionGuidePage() {
+  // Decided per render, never at module load (lib/pricing-copy.ts).
+  const cta = postJobCta(new Date());
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <script
@@ -335,7 +350,7 @@ export default function JobDescriptionGuidePage() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm bg-white"
                 style={{ color: '#831843', border: '1px solid rgba(190,24,93,0.3)' }}
               >
-                Post a Job: Free
+                {cta.button}
               </Link>
             </div>
           </div>

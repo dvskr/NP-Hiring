@@ -22,6 +22,7 @@ import { categoryFilterLabel } from '@/lib/filters';
 import JdStarterPanel from '@/components/post-job/JdStarterPanel';
 import ConfirmDialog, { type ConfirmConfig } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -32,6 +33,7 @@ import {
   shouldDismissResumeBanner,
   type DraftValues,
 } from './_lib/draft-hydration';
+import { postJobPricingCopy } from './_lib/post-job-pricing-copy';
 
 const workModes = ['Remote', 'Hybrid', 'In-Person'] as const;
 const jobTypes = ['Full-Time', 'Part-Time', 'Contract', 'Per Diem'] as const;
@@ -330,6 +332,10 @@ function PostJobContent() {
   // form that paid posting isn't open yet — instead of 503ing at Pay.
   const [paidGateLoading, setPaidGateLoading] = useState(true);
   const [showPaidComingSoon, setShowPaidComingSoon] = useState(false);
+  // The pricing sentences are decided as the wizard renders
+  // (postJobPricingCopy below); this gives a wizard left open over
+  // config.promoEndsAt the render that switches them.
+  useRerenderAtPromoEnd();
 
   const {
     register,
@@ -965,6 +971,10 @@ function PostJobContent() {
     );
   };
 
+  // The promo or the ladder, decided on this render (never at module load),
+  // so the wizard stops saying "free" at config.promoEndsAt with no deploy.
+  const pricingCopy = postJobPricingCopy();
+
   return (
     <>
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '16px 16px 120px' }}>
@@ -977,12 +987,11 @@ function PostJobContent() {
         </h1>
         {/* Pricing subtitle is time-aware: the launch promo (every post free)
             runs through config.promoEndsLabel, after which the per-post ladder
-            applies. Both strings are built from lib/config tokens so this
-            cannot drift from what the preview / checkout actually charge. */}
+            applies. Both strings come from postJobPricingCopy, built from
+            lib/config tokens, so this cannot drift from what the preview /
+            checkout actually charge. */}
         <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 20px' }}>
-          {config.isPromoActive()
-            ? `Free through ${config.promoEndsLabel}. Every feature included, no credit card required.`
-            : `Every feature included. Your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`}
+          {pricingCopy.subtitle}
         </p>
 
         {/* Resume banner — shown ONLY on initial hydration of an
@@ -1507,7 +1516,7 @@ function PostJobContent() {
               <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
                 Your Posting Includes
               </h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Every job post gets the full package, free or paid</p>
+              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>{pricingCopy.packageIntro}</p>
 
               <div style={{
                 ...cardBase, padding: '20px',
@@ -1525,9 +1534,7 @@ function PostJobContent() {
                   <div>
                     <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>Full Package for Every Post</h3>
                     <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>
-                      {config.isPromoActive()
-                        ? `Free through ${config.promoEndsLabel}`
-                        : `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`}
+                      {pricingCopy.packagePrice}
                     </p>
                   </div>
                 </div>

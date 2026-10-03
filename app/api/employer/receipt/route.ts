@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * GET /api/employer/receipt?jobId=...&[chargeId=...]&[token=...]
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         // P5.A (2026-06-01): contactEmail fallback restricted to legacy
         // rows without a claimed userId — blocks signup-with-existing-
         // employer-email impersonation.
-        where: { jobId, OR: [{ userId: user.id }, { userId: null, contactEmail: user.email! }] },
+        where: { jobId, OR: employerJobOwnershipBranches(user) },
       });
     }
 

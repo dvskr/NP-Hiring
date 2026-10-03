@@ -27,8 +27,8 @@
  *   - Salary / growth figures: lib/stats-sources.ts, cited inline. Live
  *     state-level numbers render in the page's market snapshot
  *     (components/blog/LicenseGuideMarketSnapshot.tsx, gated on the
- *     target pages rendering), never in this static markdown, which is
- *     also synced into the DB and cannot carry live conditions.
+ *     target pages rendering), never in this static markdown, which can
+ *     also be synced into blog_posts and so cannot carry live conditions.
  *   - State rule text: STATE_PRACTICE_AUTHORITY[state].details, quoted
  *     verbatim (LIC-L1), so guides in the same authority tier differ.
  *   - Board contact: the NCSBN member-board directory. Fees, CE hours,
@@ -49,9 +49,12 @@
  * as a fallback when no DB row exists, so once
  * LICENSE_GUIDE_SERIES_PUBLISHED is flipped, all 51 posts render
  * deterministically — the all-or-nothing gate can never 404 a subset.
+ * The listings, the post count and the sitemap merge the series in the
+ * same way (lib/blog.ts), so it is listed with blog_posts empty too.
  * scripts/sync-blog-to-db.ts --license-guides upserts the same output
- * into the blog_posts table (single transaction) so DB-reading surfaces
- * (/resources state grid, /blog index) list the series too.
+ * into the blog_posts table (single transaction). A guide needs that row
+ * to be edited or unpublished in the admin blog editor, not to render or
+ * be listed; the script's header lists what a row changes.
  */
 // Relative imports (not '@/') so scripts/sync-blog-to-db.ts can load this
 // module under plain tsx/ts-node without tsconfig-path registration.

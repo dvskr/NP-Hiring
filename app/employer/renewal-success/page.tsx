@@ -1,16 +1,28 @@
 'use client';
 
 import { brand } from '@/config/brand';
+import { config } from '@/lib/config';
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
+/** What GET /api/verify-renewal-session answers for a paid renewal. */
 interface RenewalData {
   jobTitle: string;
   jobSlug: string;
-  dashboardToken: string;
+  /**
+   * Only for the browser that started the renewal (the checkout cookie). A
+   * signed in owner without it gets no token: the link went out by email.
+   */
+  dashboardToken?: string;
   tier: string;
+  /**
+   * Set when the post is archived. The renewal is applied all the same, but
+   * a renewal never puts an archived post back live: the employer restores
+   * it first.
+   */
+  archivedAt?: string | null;
 }
 
 function RenewalSuccessContent() {
@@ -105,7 +117,15 @@ function RenewalSuccessContent() {
     );
   }
 
-  const daysExtended = 60;
+  const daysExtended = config.durationDays;
+  // The payment is applied either way. An archived post is not live, so the
+  // page must not say it is: no "live" badge, no link to a job page that is
+  // not public, and no confirmation email (that email says the listing is
+  // live, so an archived post gets Stripe's receipt only).
+  const isArchived = Boolean(renewalData.archivedAt);
+  const dashboardHref = renewalData.dashboardToken
+    ? `/employer/dashboard/${renewalData.dashboardToken}`
+    : '/employer/dashboard';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-pink-50 flex items-center justify-center p-4">
@@ -119,7 +139,7 @@ function RenewalSuccessContent() {
 
         {/* Heading */}
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-          Job Renewed Successfully! 🎉
+          {isArchived ? 'Renewal Payment Applied' : 'Job Renewed Successfully! 🎉'}
         </h1>
 
         {/* Job Title */}
@@ -127,41 +147,63 @@ function RenewalSuccessContent() {
           {renewalData.jobTitle}
         </p>
 
-        {/* Description */}
-        <p className="text-lg text-gray-600 mb-8">
-          Your job posting has been extended for another {daysExtended} days.
-          <span className="block mt-2 text-green-700 font-semibold">
-            ✨ Featured placement reactivated.
-          </span>
-        </p>
+        {isArchived ? (
+          <>
+            {/* Description */}
+            <p className="text-lg text-gray-600 mb-8">
+              Your payment was received and the renewal has been applied to this post.
+            </p>
 
-        {/* Success Badge */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
-          <p className="text-green-800 text-sm">
-            ✓ Your job is now live and visible to candidates.
-          </p>
-        </div>
+            {/* Archived notice */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8">
+              <p className="text-amber-900 text-sm">
+                This post is archived, so it is not live yet. To put it back in front of candidates, restore it from the Archived tab of your dashboard, then republish it.
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Description */}
+            <p className="text-lg text-gray-600 mb-8">
+              Your job posting has been extended for another {daysExtended} days.
+              <span className="block mt-2 text-green-700 font-semibold">
+                ✨ Featured placement reactivated.
+              </span>
+            </p>
+
+            {/* Success Badge */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+              <p className="text-green-800 text-sm">
+                ✓ Your job is now live and visible to candidates.
+              </p>
+            </div>
+          </>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href={`/employer/dashboard/${renewalData.dashboardToken}`}
+            href={dashboardHref}
             className="bg-pink-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-pink-800 transition shadow-md hover:shadow-lg"
           >
             Go to Dashboard
           </Link>
-          <Link
-            href={`/jobs/${renewalData.jobSlug}`}
-            className="bg-white text-pink-700 border-2 border-pink-700 px-8 py-3 rounded-lg font-semibold hover:bg-pink-50 transition"
-          >
-            View Your Job
-          </Link>
+          {!isArchived && (
+            <Link
+              href={`/jobs/${renewalData.jobSlug}`}
+              className="bg-white text-pink-700 border-2 border-pink-700 px-8 py-3 rounded-lg font-semibold hover:bg-pink-50 transition"
+            >
+              View Your Job
+            </Link>
+          )}
         </div>
 
         {/* Additional Info */}
         <div className="mt-10 pt-8 border-t border-gray-200">
           <p className="text-sm text-gray-500 mb-2">
-            A confirmation email has been sent to your inbox.
+            {isArchived
+              ? 'Your payment receipt has been sent to your inbox.'
+              : 'A confirmation email has been sent to your inbox.'}
           </p>
           <p className="text-sm text-gray-500">
             Need help?{' '}

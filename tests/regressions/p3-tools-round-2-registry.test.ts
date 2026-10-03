@@ -55,8 +55,6 @@ import {
 import {
   DEFAULT_APPLICANTS_PER_ROLE,
   DEFAULT_FIRST_YEAR_BASE,
-  DEFAULT_FLAT_FEE_MODE,
-  DEFAULT_INPUTS,
   DEFAULT_PLAN_MONTHS,
   DEFAULT_TIME_TO_FILL_DAYS,
   FLAT_FEE_COST_PER_DAY,
@@ -66,10 +64,20 @@ import {
   PLAN_NO_RENEWALS_NOTE,
   RENEWAL_SCOPE_NOTE,
   compareChannels,
+  defaultInputs,
+  flatFeeModeOptions,
   flatFeeSpend,
+  pricingPhase,
   rankByCostPerHire,
   type CostPerHireInputs,
+  type PricingPhase,
 } from '@/components/tools/cost-per-hire-model';
+import {
+  costPerHireAssumptions,
+  costPerHireFaqs,
+  postRoleBlurb,
+} from '@/app/tools/cost-per-hire-calculator/cost-per-hire-copy';
+import { LADDER_PRICES } from '@/lib/pricing-copy';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -99,6 +107,10 @@ const NEW_MODELS = [
 
 const routeFile = (toolPath: string) => `app${toolPath}/page.tsx`;
 const GUIDE_FILE = 'app/resources/private-practice-guide/page.tsx';
+/** The cost-per-hire page's method notes and FAQ, built per pricing phase (backlog 2.1). */
+const CPH_COPY = 'app/tools/cost-per-hire-calculator/cost-per-hire-copy.ts';
+/** Both pricing phases, so every cost-per-hire default is checked in each. */
+const PHASES: readonly PricingPhase[] = ['promo', 'ladder'];
 
 /** Removes jsonLd(...) calls so what remains is markup a reader sees. */
 function stripJsonLd(src: string): string {
@@ -665,33 +677,134 @@ describe('cost per hire — prices come from the pricing config', () => {
     }
   });
 
-  it('derives its only two non-zero defaults from repo data', () => {
+  it.each(PHASES)('derives its only two non-zero defaults from repo data (%s phase)', (phase) => {
+    const defaults = defaultInputs(phase);
     // Applicant volume: a plan feature, stated as such — not a response-rate benchmark.
     expect(DEFAULT_APPLICANTS_PER_ROLE).toBe(config.limits.candidateUnlocksPerPosting);
+    expect(defaults.flatFeeApplicantsPerRole).toBe(DEFAULT_APPLICANTS_PER_ROLE);
     // Time to fill: the posting window, applied identically to every channel.
     expect(DEFAULT_TIME_TO_FILL_DAYS).toBe(config.durationDays);
-    expect(DEFAULT_INPUTS.flatFeeTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
-    expect(DEFAULT_INPUTS.cpcTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
-    expect(DEFAULT_INPUTS.agencyTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
+    expect(defaults.flatFeeTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
+    expect(defaults.cpcTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
+    expect(defaults.agencyTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
     // First-year base: the cited median, the only salary figure this board asserts.
     expect(DEFAULT_FIRST_YEAR_BASE).toBe(Number(STAT_SOURCES.averageSalary.value));
-    expect(DEFAULT_INPUTS.firstYearBase).toBe(DEFAULT_FIRST_YEAR_BASE);
+    expect(defaults.firstYearBase).toBe(DEFAULT_FIRST_YEAR_BASE);
     // Plan length: the posting window in whole billing months — a product
     // fact, not an estimate of how long anyone subscribes.
     expect(DEFAULT_PLAN_MONTHS).toBe(Math.ceil(config.durationDays / 30));
-    expect(DEFAULT_INPUTS.planMonths).toBe(DEFAULT_PLAN_MONTHS);
-    // Opening mode follows the promo clock, so the widget never opens on a
-    // $0 price once the launch window has closed.
-    expect(DEFAULT_FLAT_FEE_MODE).toBe(config.isPromoActive() ? 'promo' : 'per-post');
-    expect(DEFAULT_INPUTS.flatFeeMode).toBe(DEFAULT_FLAT_FEE_MODE);
-    expect(DEFAULT_INPUTS.useIntroPrice).toBe(true);
+    expect(defaults.planMonths).toBe(DEFAULT_PLAN_MONTHS);
+    expect(defaults.useIntroPrice).toBe(true);
   });
 
-  it('starts every unsourceable input at zero', () => {
-    expect(DEFAULT_INPUTS.cpcSpendPerRole).toBe(0);
-    expect(DEFAULT_INPUTS.cpcApplicantsPerRole).toBe(0);
-    expect(DEFAULT_INPUTS.agencyFeePct).toBe(0);
-    expect(DEFAULT_INPUTS.dailyVacancyCost).toBe(0);
+  it('opens on the promo while it runs and on the per-post ladder once it has ended (backlog 2.1)', () => {
+    // So the widget never opens on a $0 price once the launch window has closed.
+    expect(defaultInputs('promo').flatFeeMode).toBe('promo');
+    expect(defaultInputs('ladder').flatFeeMode).toBe('per-post');
+    expect(pricingPhase(new Date('2026-12-31T12:00:00Z'))).toBe('promo');
+    expect(pricingPhase(new Date(Date.parse(config.promoEndsAt) - 1))).toBe('promo');
+    expect(pricingPhase(new Date(config.promoEndsAt))).toBe('ladder');
+  });
+
+  it.each(PHASES)('starts every unsourceable input at zero (%s phase)', (phase) => {
+    const defaults = defaultInputs(phase);
+    expect(defaults.cpcSpendPerRole).toBe(0);
+    expect(defaults.cpcApplicantsPerRole).toBe(0);
+    expect(defaults.agencyFeePct).toBe(0);
+    expect(defaults.dailyVacancyCost).toBe(0);
+  });
+});
+
+/**
+ * Backlog 2.1: the promo is a way to buy only while it runs. Once
+ * config.promoEndsAt has passed nobody can buy a promo post, so the widget
+ * must not offer one, the ladder options must not be dated as a future
+ * price, and the page copy must state the ladder as the current price. The
+ * server page decides the phase per render and hands it to the client
+ * widget, so the widget's server HTML and its hydrated state agree.
+ */
+describe('cost per hire — the promo is offered only while it runs (backlog 2.1)', () => {
+  const PROMO_RUNNING = new Date('2026-12-31T12:00:00Z');
+  const LADDER_LIVE = new Date(config.promoEndsAt);
+
+  it('offers the promo and the dated ladder while it runs, exactly as before', () => {
+    expect(flatFeeModeOptions('promo')).toEqual([
+      { mode: 'promo', label: `Launch promo: free through ${config.promoEndsLabel}` },
+      { mode: 'per-post', label: `Per post, from ${config.ladderStartsLabel}` },
+      { mode: 'plan', label: `Employer plan, from ${config.ladderStartsLabel}` },
+    ]);
+    expect(pricingPhase(PROMO_RUNNING)).toBe('promo');
+  });
+
+  it('offers no promo mode once it has ended, and no option dates the ladder', () => {
+    const options = flatFeeModeOptions(pricingPhase(LADDER_LIVE));
+    expect(options.map((option) => option.mode)).toEqual(['per-post', 'plan']);
+    for (const { label } of options) {
+      expect(label).not.toMatch(/free|promo|\$0/i);
+      expect(label).not.toContain(config.ladderStartsLabel);
+      expect(label).not.toContain(config.promoEndsLabel);
+    }
+  });
+
+  it('takes the phase from the server page and decides nothing at module load', () => {
+    const widget = readCode(NEW_COMPONENTS[2]);
+    expect(widget).toContain('flatFeeModeOptions(phase)');
+    expect(widget).toContain('defaultInputs(phase)');
+    // A client component reading the clock would hydrate against the browser's
+    // clock and disagree with the server HTML around the switch.
+    expect(widget).not.toContain('isPromoActive');
+    expect(widget).not.toContain('new Date');
+    const model = readCode('components/tools/cost-per-hire-model.ts');
+    expect(model).not.toMatch(/^export const \w+(?::[^=]+)? = [^;]*isPromoActive\(/m);
+    expect(model).not.toContain('DEFAULT_FLAT_FEE_MODE');
+    const page = readCode(routeFile('/tools/cost-per-hire-calculator'));
+    expect(page).toContain('export const revalidate = 3600;');
+    expect(page).toContain('const phase = pricingPhase(new Date());');
+    expect(page).toContain('<EmployerCostPerHireCalculator phase={phase} />');
+    expect(page).toContain('const ASSUMPTIONS = costPerHireAssumptions(phase);');
+    expect(page).toContain('const FAQS = costPerHireFaqs(phase);');
+  });
+
+  it('prints the method notes, the FAQ and the card exactly as before while the promo runs', () => {
+    const assumptions = costPerHireAssumptions('promo');
+    expect(assumptions).toHaveLength(10);
+    expect(assumptions[1]).toBe(
+      `Our own prices are read from the pricing config the checkout charges against. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Every post runs ${config.durationDays} days and includes ${config.limits.candidateUnlocksPerPosting} candidate unlocks plus ${config.limits.inmailsPerPosting} direct messages. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}.`,
+    );
+    expect(assumptions[2]).toMatch(/^The promo result is a real price for a dated window/);
+    const faqs = costPerHireFaqs('promo');
+    expect(faqs).toHaveLength(7);
+    expect(faqs[2].a).toContain(`a posting is a fixed price that does not: free during the launch promo, then $${config.introPrice} for your first post and $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs.`);
+    expect(faqs[5].a).toBe(
+      `Every post (promo, intro, featured, or plan) runs ${config.durationDays} days, is featured, and includes ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks and ${config.limits.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}. Those are the prices in the calculator, read from the same config the checkout uses, so they cannot drift from what you would actually be charged.`,
+    );
+    expect(postRoleBlurb('promo')).toBe(`Free through ${config.promoEndsLabel}, every feature included.`);
+  });
+
+  it('states the ladder as the current price once the promo has ended, with promo posts only as history', () => {
+    const phase = pricingPhase(LADDER_LIVE);
+    const assumptions = costPerHireAssumptions(phase);
+    const faqs = costPerHireFaqs(phase);
+    // The promo-result note goes with the promo mode.
+    expect(assumptions).toHaveLength(9);
+    expect(assumptions.join('\n')).not.toMatch(/The promo result/);
+    expect(assumptions[1]).toContain(LADDER_PRICES);
+    expect(faqs[5].a).toContain(LADDER_PRICES);
+    expect(faqs[5].a).toContain('Every post (intro, featured, or plan)');
+    expect(faqs[2].a).toContain(`a posting is a fixed price that does not: $${config.introPrice} for your first post and $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs.`);
+    expect(postRoleBlurb(phase)).toBe(LADDER_PRICES);
+    // The only promo mention left is the history that keeps the intro price unspent.
+    const copy = [...assumptions, ...faqs.flatMap(({ q, a }) => [q, a]), postRoleBlurb(phase)]
+      .join('\n')
+      .replace(/Posts made free during the launch promo do not use (?:it|the intro price) up\./g, '');
+    expect(copy).not.toContain(config.promoEndsLabel);
+    expect(copy).not.toContain(config.ladderStartsLabel);
+    expect(copy).not.toMatch(/free through|launch promo|launch period|\$0\b/i);
+    expect(copy).not.toContain(FREE_POST_SCOPE_NOTE);
+    // The rules stay stated through their shared notes in both phases.
+    for (const note of [INTRO_PRICE_SCOPE_NOTE, RENEWAL_SCOPE_NOTE, PLAN_NO_RENEWALS_NOTE]) {
+      expect(copy).toContain(note);
+    }
   });
 });
 
@@ -720,6 +833,7 @@ describe('cost per hire — the promo and the intro price are stated from one st
     'components/tools/cost-per-hire-model.ts',
     NEW_COMPONENTS[2],
     routeFile('/tools/cost-per-hire-calculator'),
+    CPH_COPY,
   ] as const;
 
   it('states the promo as a dated window with the config duration, never per account', () => {
@@ -742,7 +856,9 @@ describe('cost per hire — the promo and the intro price are stated from one st
   });
 
   it('has every surface render both shared notes instead of paraphrasing them', () => {
-    for (const file of [NEW_COMPONENTS[2], routeFile('/tools/cost-per-hire-calculator')]) {
+    // The page's method notes and FAQ live in CPH_COPY (built per pricing
+    // phase, backlog 2.1), so that is where the page's notes are rendered.
+    for (const file of [NEW_COMPONENTS[2], CPH_COPY]) {
       for (const note of ['FREE_POST_SCOPE_NOTE', 'INTRO_PRICE_SCOPE_NOTE']) {
         // More than once: the import plus at least one interpolation. A surface
         // that imports the note and then writes its own wording would pass a
@@ -765,7 +881,7 @@ describe('cost per hire — the promo and the intro price are stated from one st
   });
 
   it('applies the intro price once per domain however many roles are modelled', () => {
-    const many = flatFeeSpend({ ...DEFAULT_INPUTS, roles: 5, flatFeeMode: 'per-post', useIntroPrice: true });
+    const many = flatFeeSpend({ ...defaultInputs('ladder'), roles: 5, flatFeeMode: 'per-post', useIntroPrice: true });
     expect(many.introPostings).toBe(1);
     expect(many.proPostings).toBe(4);
     // The five-recruiter case from the FAQ, priced.
@@ -798,6 +914,7 @@ describe('cost per hire — the renewal and plan rules are stated from one strin
     'components/tools/cost-per-hire-model.ts',
     NEW_COMPONENTS[2],
     routeFile('/tools/cost-per-hire-calculator'),
+    CPH_COPY,
   ] as const;
 
   it('scopes renewal to the posts the renewal checkout accepts, at the config price', () => {
@@ -819,7 +936,7 @@ describe('cost per hire — the renewal and plan rules are stated from one strin
   });
 
   it('has every surface render both notes instead of paraphrasing them', () => {
-    for (const file of [NEW_COMPONENTS[2], routeFile('/tools/cost-per-hire-calculator')]) {
+    for (const file of [NEW_COMPONENTS[2], CPH_COPY]) {
       for (const note of ['RENEWAL_SCOPE_NOTE', 'PLAN_NO_RENEWALS_NOTE']) {
         const uses = readCode(file).match(new RegExp(note, 'g')) ?? [];
         expect(uses.length, `${file} interpolates ${note}`).toBeGreaterThan(1);
@@ -863,7 +980,7 @@ describe('cost per hire — no unmeasured comparative claims', () => {
     /(much|far|significantly|dramatically|vastly)\s+cheaper/i,
   ];
 
-  it.each([NEW_COMPONENTS[2], routeFile('/tools/cost-per-hire-calculator')])(
+  it.each([NEW_COMPONENTS[2], routeFile('/tools/cost-per-hire-calculator'), CPH_COPY])(
     '%s asserts no typical margin over the channels we do not price',
     (file) => {
       const code = readCode(file);
@@ -882,7 +999,7 @@ describe('cost per hire — no unmeasured comparative claims', () => {
 
 describe('cost per hire — comparison', () => {
   const withNumbers: CostPerHireInputs = {
-    ...DEFAULT_INPUTS,
+    ...defaultInputs('ladder'),
     roles: 4,
     flatFeeMode: 'per-post',
     useIntroPrice: false,
@@ -931,7 +1048,7 @@ describe('cost per hire — comparison', () => {
     expect(spend.total).toBe(spend.planSpend);
   });
   it('reports an unfilled channel as not comparable rather than as zero', () => {
-    const results = compareChannels({ ...DEFAULT_INPUTS, roles: 2 });
+    const results = compareChannels({ ...defaultInputs('promo'), roles: 2 });
     const cpc = results.find((result) => result.key === 'cpc');
     const agency = results.find((result) => result.key === 'agency');
     expect(cpc?.isComparable).toBe(false);
@@ -992,8 +1109,8 @@ describe('cost per hire — comparison', () => {
     }
   });
 
-  it('excludes non-comparable channels from the ranking', () => {
-    const ranked = rankByCostPerHire(compareChannels({ ...DEFAULT_INPUTS, roles: 1 }));
+  it.each(PHASES)('excludes non-comparable channels from the ranking (%s phase defaults)', (phase) => {
+    const ranked = rankByCostPerHire(compareChannels({ ...defaultInputs(phase), roles: 1 }));
     expect(ranked.map((result) => result.key)).toEqual(['flatFee']);
   });
 });

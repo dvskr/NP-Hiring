@@ -104,7 +104,11 @@ describe('employer ownership fallback is always guarded with userId: null', () =
     expect(offenders, `Unguarded contactEmail OR-branches:\n${offenders.join('\n')}`).toEqual([]);
   });
 
-  it('the known guarded routes still carry the userId: null guard', () => {
+  // The guarded branch now comes from lib/employer-ownership.ts, which also
+  // drops it for a session with no email; tests/lib/employer-ownership.test.ts
+  // pins its shape and tests/regressions/employer-ownership-static.test.ts
+  // the full list of sites.
+  it('the known guarded routes build their ownership clause with the shared helper', () => {
     for (const f of [
       'app/api/employer/invoice/route.ts',
       'app/api/employer/billing/route.ts',
@@ -119,7 +123,7 @@ describe('employer ownership fallback is always guarded with userId: null', () =
       'app/api/employer/testimonials/route.ts',
       'app/api/employer/profile-snapshot/route.ts',
     ]) {
-      expect(read(f), `${f} missing userId: null guard`).toMatch(/userId:\s*null,\s*contactEmail:\s*user\.email/);
+      expect(read(f), `${f} missing the shared ownership clause`).toMatch(/OR:\s*employerJobOwnershipBranches\(user\)/);
     }
   });
 });

@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger';
 import { activatePaidJobCheckout } from './activate-paid-job';
 import { applyRenewalCheckout } from './apply-renewal';
 import { handlePlanAsyncPaymentFailed, handlePlanCheckout } from './plan-checkout';
-import { handlePlanInvoicePaymentFailed, handleSubscriptionChange } from './plan-subscription';
+import { applySubscriptionEvent, handlePlanInvoicePaymentFailed, type SubscriptionEventType } from './plan-subscription';
 import {
   alertWebhookFailure,
   claimEmailSend,
@@ -184,7 +184,7 @@ async function processEvent(stripe: Stripe, event: Stripe.Event, cleanupDedupe: 
       return handleCheckoutSessionPaymentFailed(event, event.data.object as Stripe.Checkout.Session, cleanupDedupe);
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
-      return handleSubscriptionEvent(event, event.data.object as Stripe.Subscription, cleanupDedupe);
+      return handleSubscriptionEvent(stripe, event, event.data.object as Stripe.Subscription, cleanupDedupe);
     case 'invoice.paid':
       return handleInvoicePaid(event, event.data.object as Stripe.Invoice, cleanupDedupe);
     case 'invoice.payment_failed':
@@ -280,6 +280,10 @@ async function handleCheckoutSessionPaid(
     if (activation.outcome === 'already_active') {
       logger.info('[Stripe] Checkout already activated by another path', { jobId, sessionId: session.id });
     }
+    // Paid and claimed, but archived while the checkout was open: not live
+    // until the employer restores it. Said in the acknowledgement, so the
+    // delivery log in Stripe shows it.
+    if (activation.leftArchived) return NextResponse.json({ received: true, leftArchived: true });
   } catch (activationErr) {
     logger.error('Error updating job in database', activationErr, { jobId });
     return failAndRetry(cleanupDedupe, 'New-post activation failed', activationErr, { eventId: event.id, jobId, sessionId: session.id }, 'Failed to update job');
@@ -311,7 +315,14 @@ async function handleRenewalPaid(
       });
       return NextResponse.json({ received: true, note: 'renewal on revoked posting — refund required' });
     }
-    return NextResponse.json({ received: true });
+    if (result.outcome === 'cap_reached') {
+      // The post is at its renewal cap, so nothing was applied. The charge
+      // is on the ledger and apply-renewal.ts raised the refund alert; keep
+      // the dedupe row so Stripe does not retry.
+      return NextResponse.json({ received: true, note: 'renewal at the renewal limit, not applied, refund required' });
+    }
+    // leftArchived: applied, but the post stays unpublished until restored.
+    return NextResponse.json({ received: true, ...(result.leftArchived && { leftArchived: true }) });
   } catch (renewalErr) {
     logger.error('Error renewing job in database', renewalErr, { jobId });
     return failAndRetry(cleanupDedupe, 'Renewal processing failed', renewalErr, { eventId: event.id, jobId, sessionId: session.id }, 'Failed to renew job');
@@ -347,19 +358,25 @@ async function handleCheckoutSessionPaymentFailed(
   }
 }
 
+/**
+ * customer.subscription.updated / .deleted. The plan takes the LIVE
+ * subscription, re-read from Stripe, not this payload: event.created has
+ * one-second precision, so same-second events cannot be ordered by it
+ * (plan-subscription.ts#applySubscriptionEvent). A failed read throws into
+ * the catch below: 500 and the dedupe row is dropped, so Stripe retries.
+ */
 async function handleSubscriptionEvent(
+  stripe: Stripe,
   event: Stripe.Event,
   subscription: Stripe.Subscription,
   cleanupDedupe: CleanupDedupe,
 ): Promise<NextResponse> {
   try {
-    const result = await handleSubscriptionChange(
+    const result = await applySubscriptionEvent(
+      stripe,
       subscription,
-      event.type as 'customer.subscription.updated' | 'customer.subscription.deleted',
-      {
-        eventId: event.id,
-        ...(typeof event.created === 'number' && { observedAt: new Date(event.created * 1000) }),
-      },
+      event.type as SubscriptionEventType,
+      { eventId: event.id },
     );
     return NextResponse.json({ received: true, plan: result.outcome, status: result.status });
   } catch (subErr) {
@@ -424,8 +441,43 @@ async function employerJobForCharge(employerJobId: string | null) {
 }
 
 /**
+ * Whether a full refund of this charge takes the posting down. It does when
+ * the posting is left with no payment to stand on, and it does not while
+ * another payment for it stands (one not refunded in full). The alerts "Two
+ * paid renewals for one posting" (apply-renewal.ts) and "second payment for
+ * one posting" above ask the operator for exactly that refund, and revoking
+ * on it took down a posting the employer had paid for twice.
+ *
+ *   A renewal: revokes only a 'paid' posting with no other payment standing.
+ *     An applied renewal always leaves the posting 'paid', so any other
+ *     status means this one was never applied (the renewal cap, or a posting
+ *     already revoked): refunding it changes nothing, which also keeps a
+ *     'disputed' marker from being overwritten.
+ *   A post fee: revokes unless the same fee was paid twice. A renewal alone
+ *     does not keep a posting whose own fee went back, as before.
+ *
+ * The days a refunded renewal added stay on the posting: the ledger does not
+ * record how many each renewal added (the renewal cap can shorten them).
+ */
+async function fullRefundRevokesPosting(
+  jobCharge: { id: string; type: string },
+  employerJob: { id: string; paymentStatus: string },
+): Promise<boolean> {
+  if (jobCharge.type === 'renewal' && employerJob.paymentStatus !== 'paid') return false;
+  const others = await prisma.jobCharge.findMany({
+    where: { employerJobId: employerJob.id, id: { not: jobCharge.id } },
+    select: { type: true, amountCents: true, refundedAmountCents: true },
+  });
+  const standing = others.filter((other) => (other.refundedAmountCents ?? 0) < other.amountCents);
+  return jobCharge.type === 'renewal'
+    ? standing.length === 0
+    : !standing.some((other) => other.type === jobCharge.type);
+}
+
+/**
  * Audit #28: charge.refunded — updates the JobCharge ledger, flips a FULL
- * refund to 'refunded' + unpublishes, and sends a confirmation email.
+ * refund to 'refunded' + unpublishes when no other payment for the posting
+ * stands (fullRefundRevokesPosting), and sends a confirmation email.
  */
 async function handleChargeRefunded(event: Stripe.Event, charge: Stripe.Charge, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
   try {
@@ -455,13 +507,21 @@ async function handleChargeRefunded(event: Stripe.Event, charge: Stripe.Charge, 
     });
 
     const employerJob = await employerJobForCharge(jobCharge.employerJobId);
+    let entitlementRetained = !isFullRefund;
     if (employerJob) {
       // Only a FULL refund revokes entitlement. A partial/goodwill refund
       // must leave paymentStatus='paid' — otherwise the customer keeps a live
       // job but loses invoice/receipt downloads and can never republish.
       if (isFullRefund) {
-        await prisma.employerJob.update({ where: { id: employerJob.id }, data: { paymentStatus: 'refunded' } });
-        await prisma.job.update({ where: { id: employerJob.jobId }, data: { isPublished: false } });
+        if (await fullRefundRevokesPosting(jobCharge, employerJob)) {
+          await prisma.employerJob.update({ where: { id: employerJob.id }, data: { paymentStatus: 'refunded' } });
+          await prisma.job.update({ where: { id: employerJob.jobId }, data: { isPublished: false } });
+        } else {
+          entitlementRetained = true;
+          logger.warn('charge.refunded: full refund of one payment, the posting keeps its entitlement', {
+            employerJobId: employerJob.id, jobChargeId: jobCharge.id, type: jobCharge.type, paymentStatus: employerJob.paymentStatus,
+          });
+        }
       } else if (isPartial) {
         logger.info('charge.refunded: partial refund — entitlement retained', {
           employerJobId: employerJob.id, refundedAmount, totalCents: jobCharge.amountCents,
@@ -492,7 +552,7 @@ async function handleChargeRefunded(event: Stripe.Event, charge: Stripe.Charge, 
       logger.warn('charge.refunded: JobCharge has no matching EmployerJob — orphaned ledger row', { jobChargeId: jobCharge.id });
     }
 
-    logger.info('Refund processed', { jobChargeId: jobCharge.id, refundedAmount, isPartial, isFullRefund, paymentIntentId });
+    logger.info('Refund processed', { jobChargeId: jobCharge.id, refundedAmount, isPartial, isFullRefund, entitlementRetained, paymentIntentId });
     return NextResponse.json({ received: true });
   } catch (refundErr) {
     logger.error('Error handling charge.refunded webhook', refundErr);

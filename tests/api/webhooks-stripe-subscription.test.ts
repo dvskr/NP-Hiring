@@ -14,14 +14,19 @@
  *     Employer plan price is fulfilled; a second live subscription is stored
  *     detached and alerted, never merged; a purchase while plan sales are
  *     closed is recorded and alerted for refund;
+ *   - `customer.subscription.updated` / `.deleted` apply the LIVE subscription
+ *     re-read from Stripe, not the payload (same-second ordering is pinned in
+ *     webhooks-stripe-subscription-live-read.test.ts), and always write
+ *     through upsertPlan's stale guard (`{ rejectStale: true }`, pinned
+ *     against a mocked Prisma in tests/lib/employer-plan-stale-write.test.ts);
  *   - `customer.subscription.deleted` keeps posts live through the paid period
  *     and tells the employer the date; `.updated` anchors past_due at the
- *     start of the unpaid period, resumes on 'active', ignores out-of-order
- *     events, and alerts on unknown subscriptions;
+ *     start of the unpaid period, resumes on 'active', ignores a read older
+ *     than the last one applied, and alerts on unknown subscriptions;
  *   - `invoice.payment_failed` sends one dunning email per attempt;
  *   - every 500 path rolls back the ProcessedStripeEvent dedupe row (C2).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 
@@ -78,6 +83,8 @@ const discordMocks = vi.hoisted(() => ({ sendDiscordMessage: vi.fn().mockResolve
 vi.mock('@/lib/discord-notifier', () => discordMocks);
 
 const EMAIL = 'Owner@Clinic.Example';
+/** upsertPlan's options on the subscription path: the compare-and-set stale guard. */
+const GUARDED = { rejectStale: true };
 const PERIOD_START_UNIX = 1_797_321_600; // 2026-12-15T08:00:00Z
 const PERIOD_END_UNIX = 1_800_000_000; // 2027-01-15T08:00:00Z
 const PERIOD_START = new Date(PERIOD_START_UNIX * 1000);
@@ -102,6 +109,11 @@ function liveSubscription(overrides: Record<string, unknown> = {}) {
         metadata: {},
         ...overrides,
     };
+}
+
+/** What stripe.subscriptions.retrieve answers: the state a subscription event applies. */
+function liveReads(status: string, overrides: Record<string, unknown> = {}) {
+    stripeMocks.subscriptionsRetrieve.mockResolvedValue(liveSubscription({ status, customer: 'cus_1', ...overrides }));
 }
 
 function subscriptionCheckout(overrides: Record<string, unknown> = {}, type = 'checkout.session.completed', id = 'evt_sub_checkout') {
@@ -163,6 +175,12 @@ async function post(body: object) {
 function discordText(): string {
     return JSON.stringify(discordMocks.sendDiscordMessage.mock.calls);
 }
+
+// Load the webhook's module graph once, outside the first test's 5 second
+// budget: under a loaded run the cold import alone came close to it.
+beforeAll(async () => {
+    await import('@/app/api/webhooks/stripe/route');
+}, 60_000);
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -446,10 +464,14 @@ describe('checkout.session.completed in subscription mode — plan activation', 
 
 describe('customer.subscription.deleted — cancellation honours the paid period', () => {
     it('keeps posts live through the paid period, and tells the employer the date they come down', async () => {
+        liveReads('canceled');
+        const readFrom = Date.now();
+
         const { res, json } = await post(subscriptionEvent('customer.subscription.deleted', 'canceled', 'evt_del_1'));
 
         expect(res.status).toBe(200);
         expect(json).toEqual({ received: true, plan: 'updated', status: 'cancelled' });
+        expect(stripeMocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_1');
         expect(planMocks.getPlanBySubscriptionId).toHaveBeenCalledWith('sub_1');
         expect(planMocks.upsertPlan).toHaveBeenCalledWith({
             userId: 'user-1',
@@ -461,8 +483,11 @@ describe('customer.subscription.deleted — cancellation honours the paid period
             stripeCustomerId: 'cus_1',
             stripeSubscriptionId: 'sub_1',
             source: 'stripe',
-            lastStripeEventAt: new Date(1_790_000_100 * 1000),
-        });
+            lastStripeEventAt: expect.any(Date),
+        }, GUARDED);
+        // Stamped with the time of the live read, not the event's whole-second `created`.
+        const stamp = (planMocks.upsertPlan.mock.calls[0][0] as { lastStripeEventAt: Date }).lastStripeEventAt;
+        expect(stamp.getTime()).toBeGreaterThanOrEqual(readFrom);
         expect(planMocks.pausePlanPosts).not.toHaveBeenCalled();
         expect(planMocks.resumePlanPosts).not.toHaveBeenCalled();
         expect(emailMocks.sendPlanPausedEmail).toHaveBeenCalledWith('owner@clinic.example', { reason: 'cancelled', pausedCount: 0, liveUntil: PERIOD_END });
@@ -472,33 +497,37 @@ describe('customer.subscription.deleted — cancellation honours the paid period
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
     });
 
-    it("forces 'cancelled' even if the payload still says active", async () => {
+    it("forces 'cancelled' even if the subscription still reads active", async () => {
+        liveReads('active');
         await post(subscriptionEvent('customer.subscription.deleted', 'active'));
-        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }));
+        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }), GUARDED);
     });
 
     it('pauses immediately when nothing paid is left (cancelled after failed renewals, anchor already past)', async () => {
         const anchoredPast = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
         planMocks.getPlanBySubscriptionId.mockResolvedValue({ ...existingPlan, status: 'past_due', currentPeriodEnd: anchoredPast });
+        liveReads('canceled');
 
         await post(subscriptionEvent('customer.subscription.deleted', 'canceled', 'evt_del_pd'));
 
         // Never the unpaid period's end: the stored paid-through anchor wins.
-        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled', currentPeriodEnd: anchoredPast }));
+        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled', currentPeriodEnd: anchoredPast }), GUARDED);
         expect(planMocks.pausePlanPosts).toHaveBeenCalledWith('user-1', expect.any(Date));
         expect(emailMocks.sendPlanPausedEmail).toHaveBeenCalledWith('owner@clinic.example', { reason: 'cancelled', pausedCount: 2 });
     });
 
-    it('keeps the existing period end when the payload has none', async () => {
+    it('keeps the existing period end when the subscription carries none', async () => {
+        stripeMocks.subscriptionsRetrieve.mockResolvedValue({ id: 'sub_1', status: 'canceled', customer: 'cus_1' });
         await post({ id: 'evt_del_2', type: 'customer.subscription.deleted', data: { object: { id: 'sub_1', status: 'canceled', customer: 'cus_1' } } });
-        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ currentPeriodEnd: existingPlan.currentPeriodEnd }));
+        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ currentPeriodEnd: existingPlan.currentPeriodEnd }), GUARDED);
     });
 
     it('does not pause or email for an unattached (userId null) row', async () => {
         planMocks.getPlanBySubscriptionId.mockResolvedValue({ ...existingPlan, userId: null });
+        liveReads('canceled');
         const { res } = await post(subscriptionEvent('customer.subscription.deleted', 'canceled'));
         expect(res.status).toBe(200);
-        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ userId: null, status: 'cancelled' }));
+        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ userId: null, status: 'cancelled' }), GUARDED);
         expect(planMocks.pausePlanPosts).not.toHaveBeenCalled();
         expect(emailMocks.sendPlanPausedEmail).not.toHaveBeenCalled();
     });
@@ -506,20 +535,23 @@ describe('customer.subscription.deleted — cancellation honours the paid period
 
 describe('customer.subscription.updated — keep status in step with Stripe', () => {
     it("'past_due' anchors entitlement at the START of the unpaid period and pauses nothing (grace window)", async () => {
+        liveReads('past_due');
         const { res, json } = await post(subscriptionEvent('customer.subscription.updated', 'past_due'));
         expect(res.status).toBe(200);
         expect(json).toEqual({ received: true, plan: 'updated', status: 'past_due' });
-        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'past_due', currentPeriodEnd: PERIOD_START }));
+        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'past_due', currentPeriodEnd: PERIOD_START }), GUARDED);
         expect(planMocks.pausePlanPosts).not.toHaveBeenCalled();
         expect(planMocks.resumePlanPosts).not.toHaveBeenCalled();
         expect(emailMocks.sendPlanPausedEmail).not.toHaveBeenCalled();
     });
 
     it('replaying renewal events in order — updated(active, new period) then updated(past_due) — never grants the unpaid cycle', async () => {
+        liveReads('active');
         await post(subscriptionEvent('customer.subscription.updated', 'active', 'evt_renew_ok'));
-        expect(planMocks.upsertPlan).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'active', currentPeriodEnd: PERIOD_END }));
+        expect(planMocks.upsertPlan).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'active', currentPeriodEnd: PERIOD_END }), GUARDED);
 
         planMocks.getPlanBySubscriptionId.mockResolvedValue({ ...existingPlan, status: 'active', currentPeriodEnd: PERIOD_END });
+        liveReads('past_due');
         await post(subscriptionEvent('customer.subscription.updated', 'past_due', 'evt_renew_fail'));
 
         const written = planMocks.upsertPlan.mock.calls.at(-1)?.[0] as { status: string; currentPeriodEnd: Date };
@@ -530,9 +562,10 @@ describe('customer.subscription.updated — keep status in step with Stripe', ()
 
     it("'active' (payment recovered) resumes paused plan posts", async () => {
         planMocks.getPlanBySubscriptionId.mockResolvedValue({ ...existingPlan, status: 'past_due' });
+        liveReads('active');
         const { json } = await post(subscriptionEvent('customer.subscription.updated', 'active'));
         expect(json.status).toBe('active');
-        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'active', currentPeriodEnd: PERIOD_END }));
+        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'active', currentPeriodEnd: PERIOD_END }), GUARDED);
         expect(planMocks.resumePlanPosts).toHaveBeenCalledWith('user-1');
         expect(planMocks.pausePlanPosts).not.toHaveBeenCalled();
         expect(emailMocks.sendPlanActivatedEmail).not.toHaveBeenCalled();
@@ -540,6 +573,7 @@ describe('customer.subscription.updated — keep status in step with Stripe', ()
 
     it("'pending' → 'active' promotes the plan and sends the welcome email once (subscription-scoped key)", async () => {
         planMocks.getPlanBySubscriptionId.mockResolvedValue({ ...existingPlan, status: 'pending' });
+        liveReads('active');
         await post(subscriptionEvent('customer.subscription.updated', 'active'));
         expect(planMocks.resumePlanPosts).toHaveBeenCalledWith('user-1');
         expect(prisma.emailSend.create).toHaveBeenCalledWith(expect.objectContaining({
@@ -548,10 +582,13 @@ describe('customer.subscription.updated — keep status in step with Stripe', ()
         expect(emailMocks.sendPlanActivatedEmail).toHaveBeenCalledOnce();
     });
 
-    it('ignores an out-of-order event older than the last one applied (a stale active cannot resurrect a cancelled plan)', async () => {
+    it('ignores a read older than the last one applied (a stale active cannot resurrect a cancelled plan)', async () => {
+        // A delivery processed alongside this one read the subscription later
+        // and has already written: this read must not overwrite it.
         planMocks.getPlanBySubscriptionId.mockResolvedValue({
-            ...existingPlan, status: 'cancelled', lastStripeEventAt: new Date(1_790_000_500 * 1000),
+            ...existingPlan, status: 'cancelled', lastStripeEventAt: new Date(Date.now() + 60_000),
         });
+        liveReads('active');
 
         const { json } = await post(subscriptionEvent('customer.subscription.updated', 'active', 'evt_stale'));
 
@@ -561,14 +598,16 @@ describe('customer.subscription.updated — keep status in step with Stripe', ()
     });
 
     it("'canceled' via .updated behaves like .deleted (posts stay live to period end + notice)", async () => {
+        liveReads('canceled');
         await post(subscriptionEvent('customer.subscription.updated', 'canceled'));
-        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }));
+        expect(planMocks.upsertPlan).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }), GUARDED);
         expect(planMocks.pausePlanPosts).not.toHaveBeenCalled();
         expect(emailMocks.sendPlanPausedEmail).toHaveBeenCalledWith('owner@clinic.example', { reason: 'cancelled', pausedCount: 0, liveUntil: PERIOD_END });
     });
 
     it('alerts (not just logs) on a live subscription that has no plan row', async () => {
         planMocks.getPlanBySubscriptionId.mockResolvedValue(null);
+        liveReads('active');
         const { res, json } = await post(subscriptionEvent('customer.subscription.updated', 'active'));
         expect(res.status).toBe(200);
         expect(json).toEqual({ received: true, plan: 'no-plan' });

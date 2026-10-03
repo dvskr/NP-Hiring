@@ -6,19 +6,24 @@
  * template page; the ItemList JSON-LD derives from the SAME registry the
  * cards render, so schema and visible content cannot diverge. These are
  * the exact templates the post-job wizard's starter panel offers.
+ *
+ * The post-a-job CTA follows the launch-promo clock (../post-job-cta.ts),
+ * read per render; the page re-renders hourly so it switches to the paid
+ * ladder without a deploy when the promo ends.
  */
 import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Breadcrumbs from '@/components/Breadcrumbs';
-// Launch-promo end date for the CTA (config token, never typed).
-import { config } from '@/lib/config';
 import {
   JD_TEMPLATES,
   TEMPLATE_CATEGORY_LABELS,
   type JdTemplateCategory,
 } from '@/lib/jd-templates';
 import { ClipboardList, ArrowRight } from 'lucide-react';
+import { postJobCta } from '../post-job-cta';
+
+export const revalidate = 3600;
 
 const PAGE_URL = `${brand.baseUrl}/for-employers/resources/job-description-templates`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Job Description Templates`)}&type=page`;
@@ -35,7 +40,9 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: `${JD_TEMPLATES.length} ${brand.niche.short} Job Description Templates`,
-    description: `Setting-specific ${brand.niche.short} job description skeletons, free to browse, customize, and post.`,
+    // Static, so it has to be true on both sides of the promo end: the
+    // templates are free, posting is free only while the promo runs.
+    description: `Setting-specific ${brand.niche.short} job description skeletons, free to browse and customize.`,
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job description templates` }],
   },
   twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
@@ -48,6 +55,7 @@ const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 export default function JdTemplateLibraryPage() {
+  const cta = postJobCta(new Date());
   const categories = (
     Object.keys(TEMPLATE_CATEGORY_LABELS) as JdTemplateCategory[]
   ).map((cat) => ({
@@ -150,14 +158,14 @@ export default function JdTemplateLibraryPage() {
               Use a template in your posting
             </h2>
             <p className="text-sm mb-5 max-w-lg mx-auto" style={{ color: '#9D174D' }}>
-              Open the post-job form and pick any of these {JD_TEMPLATES.length} starters from the description editor, and your practice name and location fill in automatically. Every post is free through {config.promoEndsLabel}.
+              Open the post-job form and pick any of these {JD_TEMPLATES.length} starters from the description editor, and your practice name and location fill in automatically. {cta.price}
             </p>
             <Link
               href="/post-job"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-white"
               style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)' }}
             >
-              Post a Job: Free <ArrowRight size={16} aria-hidden="true" />
+              {cta.button} <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
         </div>

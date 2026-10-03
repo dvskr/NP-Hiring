@@ -36,7 +36,9 @@ import { uniqueIp } from '../helpers/candidate';
  *   D5b the state-of-NP-hiring report does the same
  *       (app/reports/state-of-np-hiring-2026/page.tsx + lib/reports/queries.ts)
  *   D6  certification guides 404 / blog index omits live license guides
- *       (lib/blog.ts getPublishedPosts vs getAllPublishedSlugs)
+ *       (lib/blog.ts getPublishedPosts vs getAllPublishedSlugs). Fixed: lib/blog.ts
+ *       serves the .mdx guides from code and lists every code-served post, and
+ *       the two D6 tests now pin that behaviour
  *   D7  cost-per-hire parser strips the minus sign, so a negative spend is
  *       priced as positive (components/tools/EmployerCostPerHireCalculator.tsx)
  *   D8  benchmark offer parser does the same: a negative offer is graded
@@ -1103,8 +1105,9 @@ test.describe('/tools/private-practice-revenue-calculator', () => {
  * HEAD and STAT_SOURCES.averageSalary $132,300 (BLS OEWS, May 2025).
  *
  * Our side has three ways to buy, and the widget's #cph-flat-mode select is the
- * observable authority on which one it opens with (DEFAULT_FLAT_FEE_MODE is
- * 'promo' while config.isPromoActive(), 'per-post' afterwards). Every assertion
+ * observable authority on which one it opens with (defaultInputs(phase) opens
+ * on 'promo' while config.isPromoActive(), on 'per-post' afterwards, when the
+ * promo is not offered at all; backlog 2.1). Every assertion
  * below reads that control rather than a calendar date, so the suite stays true
  * on both sides of the promo:
  *   promo    — every post $0; renewals are still $179
@@ -1137,8 +1140,8 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await expect(page.locator('#cph-renewals')).toHaveValue('0');
         await expect(page.locator('#cph-flat-applicants')).toHaveValue('25');
         await expect(page.locator('#cph-base')).toHaveValue('132300');
-        // DEFAULT_FLAT_FEE_MODE opens on the launch promo while it runs and on the
-        // per-post ladder once it has ended. Read the control, never the calendar.
+        // The widget opens on the launch promo while it runs and on the per-post
+        // ladder once it has ended. Read the control, never the calendar.
         const mode = await page.locator('#cph-flat-mode').inputValue();
         if (mode === 'promo') {
             await expect(headline(page)).toHaveText('$0');
@@ -1158,11 +1161,15 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         // Each pricing rule has exactly one wording in the codebase and every
         // surface renders that constant: the promo is a dated window with no
         // per-account carve-out (FREE_POST_SCOPE_NOTE), and the intro price is
-        // scoped to the employer email DOMAIN (INTRO_PRICE_SCOPE_NOTE).
-        expect(
-            await page.getByText(/every post is free through \w+ \d{1,2}, \d{4} \(60 days, every feature, no card required\)/).count(),
-            'the promo note is shared by the widget and the page, not restated',
-        ).toBeGreaterThanOrEqual(2);
+        // scoped to the employer email DOMAIN (INTRO_PRICE_SCOPE_NOTE). Once
+        // the promo has ended no surface offers it (backlog 2.1).
+        const promoNotes = await page.getByText(/every post is free through \w+ \d{1,2}, \d{4} \(60 days, every feature, no card required\)/).count();
+        if (mode === 'promo') {
+            expect(promoNotes, 'the promo note is shared by the widget and the page, not restated').toBeGreaterThanOrEqual(2);
+        } else {
+            expect(promoNotes, 'no surface offers the promo once it has ended').toBe(0);
+            await expect(page.locator('#cph-flat-mode option[value="promo"]')).toHaveCount(0);
+        }
         const panel = page.locator('section[aria-labelledby="tool-assumptions-heading"]');
         await expect(panel).toContainText('one intro-priced post at $199 per employer email domain, lifetime, shared across everyone at your organization');
         await expect(panel).toContainText('every post after that is $299');
@@ -1691,10 +1698,13 @@ test.describe('/blog', () => {
         await expect(page.getByText(/verified against the live NCSBN roster/).first()).toBeVisible();
     });
 
-    // D6a — the four-post certification series ships in content/blog/*.mdx and is wired into
-    // config/niche/content-map.ts, but /blog/[slug] resolves only blog_posts rows (plus the
-    // license-guide code fallback in lib/blog.ts getPostBySlug). Until scripts/sync-blog-to-db.ts
-    // runs against this database every certification guide 404s.
+    // D6a (fixed; this test pins the fix) — the four-post certification series ships in
+    // content/blog/*.mdx and is wired into config/niche/content-map.ts. /blog/[slug] used to
+    // resolve only blog_posts rows (plus the license-guide code fallback), so every certification
+    // guide 404ed until scripts/sync-blog-to-db.ts ran against this database. lib/blog.ts
+    // getPostBySlug now also serves an authored .mdx post from code (lib/blog-mdx-posts.ts) when
+    // it has no published row, unless an unpublished row (an editorial takedown) exists, so the
+    // guides render in the unsynced state.
     test('DEFECT: certification guide /blog/pmhnp-certification-guide 404s in the unsynced state', async ({ page }) => {
         await gotoOk(page, '/blog/pmhnp-certification-guide');
         await expectPageBasics(page, '/blog/pmhnp-certification-guide');
@@ -1703,9 +1713,12 @@ test.describe('/blog', () => {
         await expect(page.locator('h1')).toContainText(/FNP|Certification/i);
     });
 
-    // D6b — lib/blog.ts getAllPublishedSlugs appends the 51 code-generated license guides to the
-    // sitemap, but getPublishedPosts (the index) does not, so /blog says "No blog posts published
-    // yet" while 51 guides are live and indexable.
+    // D6b (fixed; this test pins the fix) — lib/blog.ts getAllPublishedSlugs appended the 51
+    // code-generated license guides to the sitemap, but getPublishedPosts (the index) did not, so
+    // /blog said "No blog posts published yet" while 51 guides were live and indexable.
+    // getPublishedPosts and getPostCount now merge the code-served posts (the license guides with
+    // no blog_posts row, and the .mdx posts with none) into the listing and the count, the same
+    // rule the sitemap and getPostBySlug use, so the index lists every guide /blog/<slug> renders.
     test('DEFECT: blog index omits the 51 live license guides and claims nothing is published', async ({ page }) => {
         await gotoOk(page, '/blog?category=state_spotlight');
         // The index paginates 12 per page in alphabetical state order, so page 1 carries

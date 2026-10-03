@@ -5,6 +5,7 @@ import { canUnlockCandidate, getEmployerTier } from '@/lib/tier-limits'
 import { PricingTier } from '@/lib/config'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage'
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership'
 
 /**
  * Check whether an employer has at least one active FEATURED job posting.
@@ -126,10 +127,7 @@ export async function GET(
             const ownsPosting = await prisma.employerJob.findFirst({
                 where: {
                     id: requestedPostingId,
-                    OR: [
-                        { userId: user.id },
-                        { userId: null, contactEmail: user.email ?? '' },
-                    ],
+                    OR: employerJobOwnershipBranches(user),
                     job: { isPublished: true, expiresAt: { gt: new Date() } },
                 },
                 select: { id: true },

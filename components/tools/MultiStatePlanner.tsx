@@ -30,20 +30,34 @@
  * headline, all derived from LICENSE_GUIDE_NLC_NON_MEMBERS in
  * lib/blog-license-guides.ts (mirrored in lib/pseo/state-narrative.ts).
  *
- * That set is wrong in both directions as of 2026-07: it omits Alaska, which
- * is NOT an NLC member, and lists Connecticut, Rhode Island and Washington as
- * non-members when all three ARE members. The drift test between the two
- * copies only proves they agree with each other, not that either is accurate.
- * NCSBN's own compact site put the count at 43 member jurisdictions when this
- * was checked, against the 38-of-51 the set implied.
+ * In 2026-07 that set was wrong in both directions: it omitted Alaska, which
+ * is NOT an NLC member, listed Connecticut, Rhode Island and Washington as
+ * non-members when all three had implemented the compact, and listed
+ * Massachusetts as a non-member when it had enacted the compact and was
+ * awaiting implementation. NCSBN's own compact site put the count at 43
+ * member jurisdictions, against the 38-of-51 the set implied, and the drift
+ * test between the two copies only proved they agreed with each other. The
+ * verdicts came out rather than ship on that data.
  *
- * Membership is also not a single bit: some jurisdictions have enacted the
- * compact without an implementation date, and others are partially
- * implemented. Turning that into "no separate RN application needed" for a
- * named state is actionable, personalized advice on a YMYL surface, so it does
- * not ship until the shared dataset is re-verified against NCSBN by its owner.
- * Until then this planner states the compact RULES (which are stable and
- * correct) and links to NCSBN for the current member list.
+ * The data has since been fixed. On 2026-08-11 the set was corrected and
+ * verified against the live NCSBN roster, with Massachusetts moved to a new
+ * LICENSE_GUIDE_NLC_ENACTED_PENDING set; both live in
+ * lib/blog-license-guides.ts beside NLC_ROSTER_VERIFIED_AT, which records
+ * the latest verification. Membership is not a single bit, so the license
+ * guides, the state pages (through lib/pseo/practice-environment.ts) and
+ * /scope-of-practice read that roster as a three-way status (member;
+ * enacted, implementation pending; non-member), and /scope-of-practice
+ * prints the verification date beside it.
+ *
+ * This planner still states the compact RULES (which are stable and correct)
+ * and links to NCSBN for the current member list, by choice. "No separate RN
+ * application needed" for a named state is actionable, personalized advice
+ * on a YMYL surface, and it is only as current as the last roster check, so
+ * a per-state verdict here would need the roster re-verified on a fixed
+ * cadence (the quarterly check in docs/PENDING_WORK.md) and the verification
+ * date shown beside every verdict. The embargo tests in
+ * tests/regressions/p2-tools-calculators-routes.test.ts pin the omission;
+ * lifting it is a deliberate change to them too.
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';

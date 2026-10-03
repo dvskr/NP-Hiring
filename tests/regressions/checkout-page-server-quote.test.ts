@@ -11,13 +11,17 @@
  *   - a paid quote shows exactly the quoted amount (intro or featured);
  *   - no quote yet: no amount, Pay disabled; no usable quote: no amount,
  *     Pay says so, and Stripe shows the amount before anything is charged;
- *   - the page carries no list-price fallback for the amount.
+ *   - the page carries no list-price fallback for the amount;
+ *   - a promo quote counts only while the promo runs: fetched before
+ *     config.promoEndsAt and rendered after it, it reads as no quote, so
+ *     the page claims nothing free and Stripe shows the amount (backlog 2.1).
  *
  * The page is a client component whose state arrives through effects, which
  * do not run under renderToStaticMarkup, so each case seeds the page's
- * useState values directly (see renderPage for the order).
+ * useState values directly (see renderPage for the order). Every case runs
+ * at an explicit instant, so none depends on the day the suite runs.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
@@ -77,7 +81,7 @@ interface PageState {
 
 function renderPage(state: PageState): string {
     // The page's useState calls, in order: jobData, loading, error,
-    // paidPostingAvailable, quote, quoteFetch.
+    // paidPostingAvailable, fetchedQuote, quoteFetch.
     seeded.values = [JOB, false, null, state.paidPostingAvailable ?? true, state.quote ?? null, state.quoteFetch];
     seeded.index = 0;
     return renderToStaticMarkup(React.createElement(CheckoutPage));
@@ -85,6 +89,18 @@ function renderPage(state: PageState): string {
 
 const INTRO_AMOUNT = `$${config.introPrice}`;
 const FEATURED_AMOUNT = `$${config.postingPrice}`;
+
+const DURING_PROMO = new Date('2026-12-31T12:00:00.000Z');
+const LADDER_START = new Date(config.promoEndsAt);
+
+beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(DURING_PROMO);
+});
+
+afterEach(() => {
+    vi.useRealTimers();
+});
 
 describe('a free quote renders no Pay button', () => {
     it('launch promo: the way back to the preview, no Pay, no amount', () => {
@@ -171,5 +187,42 @@ describe('no amount is ever guessed', () => {
         expect(src).not.toContain('config.stripePriceInCents');
         expect(src).not.toMatch(/:\s*config\.postingPrice\b/);
         expect(src).not.toContain('quotedPrice');
+    });
+});
+
+describe('once the promo has ended, nothing free is claimed from a promo quote', () => {
+    it('a promo quote fetched before the boundary reads as no quote: Pay with no guessed amount', () => {
+        vi.setSystemTime(LADDER_START);
+        const html = renderPage({ quoteFetch: 'loaded', quote: PROMO });
+
+        expect(html).not.toContain('every post is free');
+        expect(html).not.toContain(config.promoEndsLabel);
+        expect(html).not.toContain('>Free<');
+        expect(html).not.toContain('Go back to the preview to post it');
+        expect(html).toMatch(/<button(?![^>]*disabled="")[^>]*>Proceed to Payment<\/button>/);
+        expect(html).toContain('Stripe shows the exact amount before you pay.');
+    });
+
+    it('the same quote one instant earlier still takes the free path', () => {
+        vi.setSystemTime(new Date(LADDER_START.getTime() - 1));
+        const html = renderPage({ quoteFetch: 'loaded', quote: PROMO });
+
+        expect(html).toContain(`every post is free through ${config.promoEndsLabel}`);
+        expect(html).not.toContain('Proceed to Payment');
+    });
+
+    it('plan and paid quotes render as they always have', () => {
+        vi.setSystemTime(LADDER_START);
+        expect(renderPage({ quoteFetch: 'loaded', quote: PLAN })).toContain('it uses a slot on your Employer plan');
+        expect(renderPage({ quoteFetch: 'loaded', quote: INTRO })).toContain(`Proceed to Payment: ${INTRO_AMOUNT}`);
+    });
+
+    it('a free quote without a mode states no promo reason, in either phase', () => {
+        for (const now of [DURING_PROMO, LADDER_START]) {
+            vi.setSystemTime(now);
+            const html = renderPage({ quoteFetch: 'loaded', quote: { eligible: true, willBeFree: true, price: 0, priceCents: 0 } });
+            expect(html).toContain('Go back to the preview to post it');
+            expect(html).not.toContain('every post is free');
+        }
     });
 });

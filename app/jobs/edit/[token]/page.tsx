@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { Job } from '@/lib/types';
 import { config } from '@/lib/config';
+import { renewalSavingsLine } from '@/lib/renewal-offer';
+import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 import { trackBeginCheckout } from '@/lib/analytics';
 import { AlertTriangle, CheckCircle, RefreshCw, Briefcase, FileText, DollarSign, Mail, Check, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 
@@ -103,20 +105,11 @@ interface EmployerJobData {
 }
 
 /**
- * The renewal savings line for this page, or null when no saving is true.
- * The edit page does not know the employer's quota domain, so it compares
- * with the standard post price and says so: the 'list-price' basis of
- * lib/pricing.ts#resolveRenewalOffer (this client page cannot import that
- * module: it loads the Prisma client). No claim while the launch promo
- * runs, because a new post is free.
+ * The job as GET /api/jobs/edit/[token] and POST /api/jobs/update answer it:
+ * the whole row, so it carries archivedAt (an ISO string over JSON), which
+ * the listing shape in lib/types.ts does not declare.
  */
-function listPriceSavingsLine(now: Date = new Date()): string | null {
-  if (config.isPromoActive(now)) return null;
-  const comparedWith = config.postingPrice;
-  if (comparedWith <= config.renewalPrice) return null;
-  const percent = Math.floor(((comparedWith - config.renewalPrice) / comparedWith) * 100);
-  return percent < 1 ? null : `Save ${percent}% vs. the $${comparedWith} post price`;
-}
+type EditableJob = Job & { archivedAt?: string | null };
 
 const workModes = ['Remote', 'Hybrid', 'In-Person'] as const;
 const jobTypes = ['Full-Time', 'Part-Time', 'Contract', 'Per Diem'] as const;
@@ -275,7 +268,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   const router = useRouter();
   const { toast } = useToast();
   const [token, setToken] = useState<string>('');
-  const [job, setJob] = useState<Job | null>(null);
+  const [job, setJob] = useState<EditableJob | null>(null);
   const [employerJob, setEmployerJob] = useState<EmployerJobData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -534,15 +527,30 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   // the "can't be renewed" modal below, so they stay "renewable" here.
   // Nothing is renewable while no renewal can be bought (paid posting off);
   // during the launch promo the page offers a free repost instead.
+  // An archived post is not renewable either until it is restored: a renewal
+  // republishes, so /api/create-renewal-checkout answers 409 for one and the
+  // dashboard hides Renew on it (lib/employer-dashboard-rules.ts).
   const isPlanPost = employerJob?.paymentStatus === 'plan';
-  const canRenew = !isPlanPost
+  const isArchived = !!job?.archivedAt;
+  const renewableStatus = !isPlanPost
     && employerJob?.paymentStatus !== 'pending'
     && employerJob?.paymentStatus !== 'refunded';
+  const canRenew = renewableStatus && !isArchived;
   const renewalPurchasable = paidPostingAvailable === true;
+  // The launch-promo phase for this render; every promo sentence below
+  // branches on it, so the page switches at config.promoEndsAt with no deploy.
+  // A page left open over that instant gets its render from the hook.
+  useRerenderAtPromoEnd();
   const promoActive = config.isPromoActive();
   const offerRenewal = canRenew && renewalPurchasable;
-  const offerPromoRepost = !isPlanPost && !offerRenewal && paidPostingAvailable !== null && promoActive;
-  const savingsLine = listPriceSavingsLine();
+  // Where Renew would be offered but for the archive, the page says to
+  // restore the post first; it never shows a Renew that can only fail.
+  const restoreToRenew = renewableStatus && isArchived && renewalPurchasable;
+  const offerPromoRepost = !isPlanPost && !offerRenewal && !restoreToRenew && paidPostingAvailable !== null && promoActive;
+  // The shared rule (lib/renewal-offer.ts). This page does not know the
+  // employer's quota domain, so it passes no next-post price and the line
+  // names the standard post price instead; no claim during the promo.
+  const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable });
 
   const handleRenewCheckout = async (tier: 'pro') => {
     if (!job || !renewalPurchasable) return;
@@ -682,9 +690,11 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       : ` Each plan post runs ${config.durationDays} days and isn't renewed. When it ends, post again into the free slot at no extra charge while you're subscribed.`)
                     : offerRenewal
                       ? (expired ? ' Renew to relist it.' : ' Renew now to keep it visible.')
-                      : offerPromoRepost
-                        ? ` Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`
-                        : ''}
+                      : restoreToRenew
+                        ? ' This post is archived. Restore it from the Archived tab of your dashboard before you renew it.'
+                        : offerPromoRepost
+                          ? ` Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`
+                          : ''}
                 </p>
                 {offerRenewal ? (
                   <button
@@ -701,6 +711,15 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                     <RefreshCw size={16} className={renewingTier ? 'animate-spin' : ''} />
                     {renewingTier ? 'Processing...' : 'Renew This Job'}
                   </button>
+                ) : restoreToRenew ? (
+                  <Link href="/employer/dashboard" style={{
+                    ...clayBtn,
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+                    border: 'none', textDecoration: 'none',
+                    boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  }}>
+                    Go to your dashboard
+                  </Link>
                 ) : (isPlanPost || offerPromoRepost) ? (
                   <Link href="/post-job" style={{
                     ...clayBtn,
@@ -1241,7 +1260,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               Renewals at ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing. This legacy free-trial post isn&apos;t one of them.
             </p>
             <p style={{ fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6, margin: '0 0 20px' }}>
-              {config.isPromoActive()
+              {promoActive
                 ? `You can post this role again as a fresh listing, free through ${config.promoEndsLabel}. It runs ${config.durationDays} days with its own ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`
                 : `You can post this role again as a fresh listing: $${config.introPrice} for your company's first paid post, $${config.postingPrice} after that. It runs ${config.durationDays} days with its own ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`}
             </p>
@@ -1253,7 +1272,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 border: 'none', padding: '12px 16px', fontWeight: 700,
                 boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}>
-                {config.isPromoActive() ? 'Post a New Job for Free' : 'Post a New Job'}
+                {promoActive ? 'Post a New Job for Free' : 'Post a New Job'}
               </Link>
               <button
                 onClick={() => setShowRenewModal(false)}

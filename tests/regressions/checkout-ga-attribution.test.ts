@@ -37,6 +37,8 @@ const hoisted = vi.hoisted(() => ({
   sessionsCreate: vi.fn(),
   sessionsRetrieve: vi.fn(),
   sessionsExpire: vi.fn(),
+  // The renewal route lists the post's open renewal sessions before it creates one (backlog 2.5).
+  sessionsList: vi.fn(),
   invoicesRetrieve: vi.fn(),
   after: vi.fn(),
   trackServerPurchase: vi.fn(),
@@ -51,6 +53,7 @@ vi.mock('stripe', () => ({
           create: hoisted.sessionsCreate,
           retrieve: hoisted.sessionsRetrieve,
           expire: hoisted.sessionsExpire,
+          list: hoisted.sessionsList,
         },
       },
       invoices: { retrieve: hoisted.invoicesRetrieve },
@@ -167,7 +170,17 @@ function paidSession(metadata: Record<string, string>): Stripe.Checkout.Session 
   } as unknown as Stripe.Checkout.Session;
 }
 
-const stripeClient = { invoices: { retrieve: hoisted.invoicesRetrieve } } as unknown as Stripe;
+/** A Checkout Session listing with nothing in it, in the shape the Stripe SDK returns (an async iterable). */
+const noSessions = () => ({ async *[Symbol.asyncIterator]() { /* empty */ } });
+
+// checkout.sessions.list: the renewal fulfilment lists the post's other
+// renewal sessions once it has applied a renewal (apply-renewal.ts). Without
+// it that best-effort step failed on every renewal hand-off and logged an
+// error with a stack trace.
+const stripeClient = {
+  invoices: { retrieve: hoisted.invoicesRetrieve },
+  checkout: { sessions: { list: noSessions } },
+} as unknown as Stripe;
 
 let loggerSpies: Array<{ mockRestore: () => void }> = [];
 
@@ -192,6 +205,8 @@ function mockRenewalFulfilment(): void {
     slug: null,
   } as never);
   vi.mocked(prisma.jobCharge.create).mockResolvedValue({} as never);
+  // No other renewal charge for the post on the ledger.
+  vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
   vi.mocked(prisma.job.update).mockResolvedValue({} as never);
   vi.mocked(prisma.emailSend.create).mockResolvedValue({} as never);
@@ -209,6 +224,8 @@ beforeEach(() => {
   });
   hoisted.trackServerPurchase.mockResolvedValue(SENT);
   hoisted.sessionsCreate.mockResolvedValue({ id: 'cs_1', url: 'https://checkout.stripe.test/cs_1' });
+  // No other Checkout Session, for the webhook route's renewal fulfilment too.
+  hoisted.sessionsList.mockImplementation(noSessions);
   hoisted.getUser.mockResolvedValue({ data: { user: { id: 'user-1', email: 'owner@clinic.example' } }, error: null });
   vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'user-1', role: 'employer', email: 'owner@clinic.example' } as never);
   vi.mocked(prisma.$transaction).mockImplementation(((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
@@ -343,8 +360,11 @@ describe('CAPTURE: /api/create-renewal-checkout', () => {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
       id: 'ej-1', jobId: 'job-1', editToken: 'edit-1', contactEmail: 'owner@clinic.example',
       paymentStatus: 'paid', pricingTier: 'pro',
-      job: { id: 'job-1', title: 'T', employer: 'Clinic Co', location: 'Remote', expiresAt: null },
+      job: { id: 'job-1', title: 'T', employer: 'Clinic Co', location: 'Remote', expiresAt: null, createdAt: new Date(Date.now() - 20 * 86_400_000) },
     } as never);
+    // No other renewal session for the post (the top-level default), and a
+    // session stamped by this request, which the route need not read back.
+    hoisted.sessionsCreate.mockImplementation(async () => ({ id: 'cs_1', url: 'https://checkout.stripe.test/cs_1', created: Math.floor(Date.now() / 1000) }));
   });
 
   async function renew(cookie: string) {
@@ -362,7 +382,8 @@ describe('CAPTURE: /api/create-renewal-checkout', () => {
   it('keeps metadata and key exactly as before without consent', async () => {
     const [params, options] = await renew(GA_COOKIES);
     expect(params.metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pro' });
-    expect(options.idempotencyKey).toMatch(/^renewal-ej-1-none-\d+$/);
+    // The tail is the fingerprint of the create parameters; no GA suffix.
+    expect(options.idempotencyKey).toMatch(/^renewal-v2-ej-1-none-\d+-[0-9a-f]{12}$/);
   });
 
   it('changes no other checkout parameter', async () => {
@@ -400,6 +421,8 @@ describe('HAND-OFF: every purchase call site forwards the stored ids', () => {
 
   it('renewal: applyRenewalCheckout passes the metadata ids to trackServerPurchase', async () => {
     mockRenewalFulfilment();
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    loggerSpies.push(errorSpy);
     const { applyRenewalCheckout } = await import('@/app/api/webhooks/stripe/apply-renewal');
 
     const result = await applyRenewalCheckout(stripeClient, paidSession({ jobId: 'job-1', type: 'renewal', tier: 'pro', ...GA_IDS }));
@@ -408,6 +431,9 @@ describe('HAND-OFF: every purchase call site forwards the stored ids', () => {
     expect(hoisted.trackServerPurchase).toHaveBeenCalledWith(expect.objectContaining({
       clientId: 'job-1', ...GA_IDS, type: 'renewal', tier: 'pro',
     }));
+    // The Stripe stub answers the fulfilment's own listing of the post's
+    // other renewal sessions, so that step fails nothing and logs nothing.
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it('a session without GA ids (no consent, or created before this change) falls back to the job UUID', async () => {

@@ -12,14 +12,15 @@
  * CTA: plain link to /post-job. The wizard's starter panel lists these
  * same templates; its page reads only a `resume` search param today
  * (checked app/post-job/page.tsx), and post-job belongs to another
- * workstream — so no template query param is invented here.
+ * workstream — so no template query param is invented here. Its price line
+ * follows the launch-promo clock (../../post-job-cta.ts), read per render;
+ * every template page re-renders hourly so it switches to the paid ladder
+ * without a deploy when the promo ends.
  */
 import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-// Launch-promo end date for the CTA (config token, never typed).
-import { config } from '@/lib/config';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   JD_TEMPLATES,
@@ -28,6 +29,9 @@ import {
   type JdTemplate,
 } from '@/lib/jd-templates';
 import { ArrowRight, Info } from 'lucide-react';
+import { postJobCta } from '../../post-job-cta';
+
+export const revalidate = 3600;
 
 const LIBRARY_PATH = '/for-employers/resources/job-description-templates';
 
@@ -75,6 +79,7 @@ export default async function JdTemplateDetailPage({ params }: Props) {
   const template = findTemplate(id);
   if (!template) notFound();
 
+  const cta = postJobCta(new Date());
   const pageUrl = `${brand.baseUrl}${LIBRARY_PATH}/${template.id}`;
   const pageTitle = `${template.label} | ${brand.niche.short} Job Description Template`;
   // Registry-authored HTML with the neutral token fallbacks applied.
@@ -152,14 +157,14 @@ export default async function JdTemplateDetailPage({ params }: Props) {
               Use this template in your posting
             </h2>
             <p className="text-sm mb-5 max-w-lg mx-auto" style={{ color: '#9D174D' }}>
-              Open the post-job form and pick &ldquo;{template.label}&rdquo; from the description editor&apos;s template starters. Every post is free through {config.promoEndsLabel}, with every feature included.
+              Open the post-job form and pick &ldquo;{template.label}&rdquo; from the description editor&apos;s template starters. {cta.offer}
             </p>
             <Link
               href="/post-job"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-white"
               style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)' }}
             >
-              Post a Job: Free <ArrowRight size={16} aria-hidden="true" />
+              {cta.button} <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
 

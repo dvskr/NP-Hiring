@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 import { buildEmployerJobUpdate, buildProfileUpdate, normalizeHttpUrl, parseEmployerSettings } from './validation';
 
 /**
@@ -32,10 +33,7 @@ export async function GET(req: NextRequest) {
     // Get latest company info from EmployerJob records
     const latestJob = await prisma.employerJob.findFirst({
         where: {
-            OR: [
-                { userId: user.id },
-                { userId: null, contactEmail: user.email! },
-            ],
+            OR: employerJobOwnershipBranches(user),
         },
         orderBy: { createdAt: 'desc' },
         select: {
@@ -119,10 +117,7 @@ export async function PATCH(req: NextRequest) {
         if (Object.keys(companyUpdate).length > 0) {
             await prisma.employerJob.updateMany({
                 where: {
-                    OR: [
-                        { userId: user.id },
-                        { userId: null, contactEmail: user.email! },
-                    ],
+                    OR: employerJobOwnershipBranches(user),
                 },
                 data: companyUpdate,
             });

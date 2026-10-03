@@ -391,6 +391,21 @@ describe('upsertPlan — one row per employer, lookup falls through', () => {
         expect(prisma.employerPlan.create).not.toHaveBeenCalled();
     });
 
+    it('with rejectStale the update is one compare-and-set through updateMany, which the shared Prisma mock (tests/setup.ts) carries', async () => {
+        const stamp = new Date(NOW.getTime() - 1000);
+        vi.mocked(prisma.employerPlan.findUnique).mockResolvedValueOnce(makePlan({ id: 'by-sub', status: 'past_due' }) as never);
+
+        // No updateMany answer is set here: the shared mock's own default says one row matched.
+        const written = await upsertPlan({ ...input, lastStripeEventAt: stamp }, { rejectStale: true });
+
+        expect(prisma.employerPlan.updateMany).toHaveBeenCalledWith({
+            where: { id: 'by-sub', OR: [{ lastStripeEventAt: null }, { lastStripeEventAt: { lte: stamp } }] },
+            data: expect.objectContaining({ status: 'active', lastStripeEventAt: stamp }),
+        });
+        expect(prisma.employerPlan.update).not.toHaveBeenCalled();
+        expect(written).toMatchObject({ id: 'by-sub', status: 'active', lastStripeEventAt: stamp });
+    });
+
     it('admin grant then Stripe checkout for the same employer UPDATES the grant instead of a P2002 on userId', async () => {
         vi.mocked(prisma.employerPlan.findUnique)
             .mockResolvedValueOnce(null as never) // no row for sub_1 yet

@@ -3,9 +3,10 @@
  * the three /compare/<slug> pages (P5 A2).
  *
  * NOT a route file. All three comparison routes render THIS component from
- * the SAME profile objects in lib/compare-data.ts, so the pages cannot drift
- * from each other or from the single review-date constant. JSON-LD derives
- * from the same profile object the visible sections render.
+ * profiles built by the SAME builder in lib/compare-data.ts (per render, so
+ * our price statements follow the launch-promo clock), so the pages cannot
+ * drift from each other or from the single review-date constant. JSON-LD
+ * derives from the same profile object the visible sections render.
  *
  * Competitor names appear as text only (nominative use) — no logos, no
  * competitor imagery. External competitor links carry rel="nofollow".

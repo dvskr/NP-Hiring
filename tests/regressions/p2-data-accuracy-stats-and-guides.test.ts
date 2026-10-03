@@ -121,11 +121,30 @@ describe('P2 #10 — SALARY_BANDS is the single source for published pay ranges'
  *
  * 2026-09-26: components/HomepageFAQ.tsx left the list. Its hand-typed pay
  * bands (and every other unsourced pay figure in that FAQ) were cut, and its
- * pay answers now quote only STAT_SOURCES.averageSalary. The six below are
- * the real remaining debt.
+ * pay answers now quote only STAT_SOURCES.averageSalary.
+ *
+ * 2026-10-01 (backlog 2.10): app/api/og/city/route.tsx left the list. It
+ * never printed a band of its own (it renders the `salary` string its callers
+ * format from the gated benchmark); the only match was an example query
+ * string in its doc comment, which no longer types a figure. The list
+ * carried it only to tolerate that comment. It left the list rather than
+ * moving to SCAN_EXEMPT, so the route stays inside the scan and a band typed
+ * into it fails the equality case below.
+ *
+ * WHAT THE FIVE BELOW ARE. Two still publish hand-typed bands, and they are
+ * the migration work that remains: app/salary-guide/page.tsx (its quick
+ * answer, experience and setting tables, and FAQ answers) and
+ * scripts/generate-salary-pdf.ts (the same tables and summary in the PDF).
+ * The other three publish none. The scan reads comments, and
+ * app/salary-guide/specialty/specialty-content.ts, lib/blog-formatter.ts and
+ * lib/pseo/category-landing-content.ts each match only on an example range
+ * inside a comment, as the OG route did; rewording the comment takes a file
+ * off the list, and the ceiling down with it. lib/stats-sources.ts says the
+ * same under MIGRATION STATUS. The split is pinned below
+ * (BAND_PUBLISHING_SURFACES), so a band typed into the code of one of the
+ * three cannot hide behind an entry that only tolerates a comment.
  * ────────────────────────────────────────────────────────────────────────*/
 const UNMIGRATED_SALARY_BAND_SURFACES: readonly string[] = [
-    'app/api/og/city/route.tsx',
     'app/salary-guide/page.tsx',
     'app/salary-guide/specialty/specialty-content.ts',
     'lib/blog-formatter.ts',
@@ -133,8 +152,17 @@ const UNMIGRATED_SALARY_BAND_SURFACES: readonly string[] = [
     'scripts/generate-salary-pdf.ts',
 ];
 
-/** The length after the homepage FAQ left the list. The ratchet may only shrink from here. */
-const SALARY_BAND_DEBT_CEILING = 6;
+/** The length after the OG city route left the list. The ratchet may only shrink from here. */
+const SALARY_BAND_DEBT_CEILING = 5;
+
+/** Left the ratchet on 2026-10-01; see the header above. */
+const OG_CITY_ROUTE = 'app/api/og/city/route.tsx';
+
+/**
+ * The listed surfaces that type a band in code or copy, which is what a
+ * reader sees. The rest of the list matches only inside a comment.
+ */
+const BAND_PUBLISHING_SURFACES: readonly string[] = [SALARY_HUB, SALARY_PDF];
 
 /**
  * Files the scan flags but which publish nothing: lib/stats-sources.ts
@@ -147,8 +175,8 @@ const SCAN_EXEMPT: readonly string[] = [
     'app/api/autofill/classify-fields/route.ts',
 ];
 
-function filesPrintingHandTypedBands(): string[] {
-    const dirs = ['app', 'lib', 'components', 'config', 'scripts'];
+/** True when `src` types an annual pay band by hand. */
+function typesSalaryBand(src: string): boolean {
     // "$95K-$160K" / "$95K–140K" / "$150,000 - $180,000", both bounds
     // salary-shaped so bonus and insurance-limit ranges do not match.
     const patterns = [
@@ -156,6 +184,19 @@ function filesPrintingHandTypedBands(): string[] {
         /\$(\d{2,3}),000\s*(?:-|–|—|\s+to\s+)\s*\$?(\d{2,3}),000/g,
     ];
     const salaryShaped = (n: number) => n >= 50 && n <= 500;
+    return patterns.some((re) => {
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(src))) {
+            const lo = Number(m[1]);
+            const hi = Number(m[2]);
+            if (salaryShaped(lo) && salaryShaped(hi) && lo < hi) return true;
+        }
+        return false;
+    });
+}
+
+function filesPrintingHandTypedBands(): string[] {
+    const dirs = ['app', 'lib', 'components', 'config', 'scripts'];
 
     const walk = function* (dir: string): Generator<string> {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -173,17 +214,7 @@ function filesPrintingHandTypedBands(): string[] {
     for (const dir of dirs) {
         for (const file of walk(path.join(ROOT, dir))) {
             const src = fs.readFileSync(file, 'utf8');
-            const matched = patterns.some((re) => {
-                re.lastIndex = 0;
-                let m: RegExpExecArray | null;
-                while ((m = re.exec(src))) {
-                    const lo = Number(m[1]);
-                    const hi = Number(m[2]);
-                    if (salaryShaped(lo) && salaryShaped(hi) && lo < hi) return true;
-                }
-                return false;
-            });
-            if (matched) hits.push(path.relative(ROOT, file).split(path.sep).join('/'));
+            if (typesSalaryBand(src)) hits.push(path.relative(ROOT, file).split(path.sep).join('/'));
         }
     }
     return hits.filter((f) => !SCAN_EXEMPT.includes(f)).sort();
@@ -225,6 +256,29 @@ describe('P2 #10 — the band migration is pinned as debt, not claimed as done',
         const guide = read(GUIDE_1099);
         expect(guide).toContain("from '@/lib/stats-sources'");
         expect(guide).toContain('SALARY_BANDS.contractorHourly');
+    });
+
+    it('the OG city route left the list and stayed inside the scan', () => {
+        // Exempting it would have kept the old comment and blinded the scan
+        // to the route; removing the typed example is what made it clean.
+        // With the equality case above, these two mean the scan reads the
+        // route and finds nothing in it.
+        expect(UNMIGRATED_SALARY_BAND_SURFACES).not.toContain(OG_CITY_ROUTE);
+        expect(SCAN_EXEMPT).not.toContain(OG_CITY_ROUTE);
+    });
+
+    it('two listed surfaces publish a band, and the other three only quote one in a comment', () => {
+        // With comments stripped, the matcher still sees a band typed in
+        // code and no longer sees one that sits in a comment.
+        expect(typesSalaryBand(stripComments("const range = '$120K to $165K';"))).toBe(true);
+        expect(typesSalaryBand(stripComments('// e.g. $120K to $165K\nconst n = 1;'))).toBe(false);
+        expect(typesSalaryBand(stripComments('/** Example: "$120K-$165K". */\nconst n = 1;'))).toBe(false);
+
+        // Listing a file for its comment must not let a band typed into its
+        // code go unnoticed: the equality case above cannot tell the two
+        // apart, because the file is already on the list.
+        const publishing = UNMIGRATED_SALARY_BAND_SURFACES.filter((rel) => typesSalaryBand(stripComments(read(rel))));
+        expect(publishing).toEqual([...BAND_PUBLISHING_SURFACES]);
     });
 });
 
@@ -624,15 +678,19 @@ describe('P2 #22 — the FPA guide publishes no NLC membership count', () => {
         // without making it true — and a derived number reads MORE
         // authoritative. Verified against the NLC's own site on 2026-07-29:
         // 43 member jurisdictions (41 states), and the repo's non-member set
-        // omits Alaska while wrongly listing Connecticut, Massachusetts,
-        // Rhode Island, and Washington.
+        // then omitted Alaska while wrongly listing Connecticut,
+        // Massachusetts, Rhode Island, and Washington. The set was corrected
+        // and verified against NCSBN on 2026-08-11 (NLC_ROSTER_VERIFIED_AT);
+        // the page still publishes no count, by choice (its P2 #22 header).
         expect(fpa).not.toContain('41 states');
         expect(fpa).not.toContain('38 states');
         expect(fpa).not.toContain('NLC_MEMBER_STATE_COUNT');
         expect(fpa).not.toContain('states are compact members');
     });
 
-    it('it does not depend on the compact dataset it cannot vouch for', () => {
+    it('it still derives nothing from the non-member set, verified or not', () => {
+        // A count here would only be as current as the last roster check;
+        // per-state status lives on /scope-of-practice with its date.
         expect(fpa).not.toContain('LICENSE_GUIDE_NLC_NON_MEMBERS');
     });
 

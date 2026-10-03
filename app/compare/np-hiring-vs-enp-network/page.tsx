@@ -3,24 +3,23 @@
  * renderer. All content lives in lib/compare-data.ts (single source, one
  * review date); see app/compare/comparison-shared.tsx.
  */
-import { getCompetitorProfile, type CompetitorProfile } from '@/lib/compare-data';
+import type { Metadata } from 'next';
+import { getCompetitorProfile, type CompetitorSlug } from '@/lib/compare-data';
 import ComparisonPageBody, { buildCompareMetadata } from '../comparison-shared';
 
-const SLUG = 'np-hiring-vs-enp-network';
+// Typed, so a folder name that is not a configured slug fails the type check
+// (tests/regressions/p5-comparison-pages-routes.test.ts checks the reverse).
+const SLUG: CompetitorSlug = 'np-hiring-vs-enp-network';
 
-const maybeProfile = getCompetitorProfile(SLUG);
-if (!maybeProfile) {
-    // Build-time invariant: the folder name must match a configured profile
-    // slug (tests/regressions/p5-comparison-pages-routes.test.ts enforces
-    // the reverse direction too).
-    throw new Error(`No competitor profile configured for slug "${SLUG}"`);
+// Our price statements follow the launch-promo clock (lib/compare-data.ts),
+// so the profile is read per render and the page re-renders hourly: it
+// states the paid ladder once the promo ends, without a deploy.
+export const revalidate = 3600;
+
+export async function generateMetadata(): Promise<Metadata> {
+    return buildCompareMetadata(getCompetitorProfile(SLUG, new Date()));
 }
-// Re-typed const: module-level narrowing does not flow into the component
-// closure, so hand the component an already-narrowed binding.
-const profile: CompetitorProfile = maybeProfile;
-
-export const metadata = buildCompareMetadata(profile);
 
 export default function NpHiringVsEnpNetworkPage() {
-    return <ComparisonPageBody profile={profile} />;
+    return <ComparisonPageBody profile={getCompetitorProfile(SLUG, new Date())} />;
 }

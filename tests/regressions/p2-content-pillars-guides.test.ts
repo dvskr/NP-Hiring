@@ -3,9 +3,11 @@
  * negotiation / CE-by-state) + P3 #5 partial.
  *
  * Five new pillars ship through the P1 mechanism: .mdx in content/blog/,
- * published by scripts/sync-blog-to-db.ts (which extracts the visible
- * "Frequently asked questions" section into faq_json → FAQPage JSON-LD),
- * wired into the job-page sidebar slots in config/niche/content-map.ts.
+ * served from the file by lib/blog.ts with or without a blog_posts row
+ * (lib/blog-mdx-posts.ts, and scripts/sync-blog-to-db.ts for a synced row,
+ * extract the visible "Frequently asked questions" section into faq_json →
+ * FAQPage JSON-LD), wired into the job-page sidebar slots in
+ * config/niche/content-map.ts.
  *
  * What these tests defend:
  *
@@ -13,7 +15,7 @@
  *      resolves to a real content/blog/<slug>.mdx (a linked slug with no
  *      file silently drops out of the sidebar; fork-preflight fails on it).
  *   2. SHAPE — frontmatter, a public category id, a Quick-answer opener,
- *      an FAQ section the sync script can extract, and an evergreen word
+ *      an FAQ section the FAQ extractor can read, and an evergreen word
  *      band.
  *   3. TRUTH RULES (YMYL career advice) — cited statistics match
  *      lib/stats-sources.ts with attribution, every dollar figure traces
@@ -185,9 +187,10 @@ describe('post shape', () => {
             // Hoisted into the styled callout by app/blog/[slug]/page.tsx.
             expect(body).toMatch(/\*\*Quick answer:\*\*/);
 
-            // The sync script extracts this exact heading into faq_json,
-            // which is the ONLY source of the FAQPage JSON-LD — so schema
-            // can never diverge from visible content.
+            // lib/blog-mdx-posts.ts (and the sync script, for a synced row)
+            // extracts this exact heading into faq_json, which is the ONLY
+            // source of the FAQPage JSON-LD — so schema can never diverge
+            // from visible content.
             expect(body).toMatch(/^## Frequently asked questions/m);
             const faqSection = body.split(/^## Frequently asked questions/m)[1];
             const questions = faqSection.match(/^### .+$/gm) ?? [];
@@ -540,9 +543,9 @@ describe('CE hub generator', () => {
     /**
      * REACHABILITY on /resources. The hub shipped as 'state_spotlight',
      * which made it invisible there: app/resources/page.tsx puts every
-     * state_spotlight post into `stateGuides`, maps each slug through
-     * LICENSE_GUIDE_SLUG_REGEX (`^np-license-`), and drops the non-matches
-     * with `.filter(Boolean)` — so a national hub filed that way lands in
+     * state_spotlight post into `stateGuides`, then keeps only the slugs
+     * that match LICENSE_GUIDE_SLUG_REGEX (`^np-license-`) and skips the
+     * rest (stateGuideTiles) — so a national hub filed that way lands in
      * neither the licensure grid nor the article grid. The other four
      * pillars surface automatically because their categories fall through
      * to `articles`. This asserts the same for the CE hub.
@@ -555,7 +558,8 @@ describe('CE hub generator', () => {
         ).not.toBe('state_spotlight');
         expect(LICENSE_GUIDE_SLUG_REGEX.test(CEU_GUIDE_SLUG)).toBe(false);
         expect(CATEGORY_IDS.has(CEU_GUIDE_CATEGORY), 'not a public category id').toBe(true);
-        // The frontmatter the sync script publishes must carry it too.
+        // The frontmatter lib/blog.ts serves (and the sync script copies)
+        // must carry it too.
         expect(parsePost(CEU_GUIDE_SLUG).fm.category).toBe(CEU_GUIDE_CATEGORY);
 
         // …and the /resources split it has to survive is still the one above.
@@ -768,42 +772,31 @@ describe('stale interview redirect', () => {
     });
 
     /**
-     * …and it is TEMPORARY until the destination is live in prod.
+     * …and it is PERMANENT, because its destination no longer depends on
+     * the sync script.
      *
-     * The redirect's destination is an authored .mdx, and authored posts
-     * render only from blog_posts: getPostBySlug() (lib/blog.ts) queries
-     * Supabase and falls back to a generator for the np-license-* series
-     * ONLY, so /blog/np-interview-questions 404s until
-     * `npx tsx scripts/sync-blog-to-db.ts` has run against prod.
-     * next.config.ts ships with the app, so the redirect goes live one
-     * deploy BEFORE the manual sync — a window this repo already documents
-     * for the other consumers of these posts (config/niche/content-map.ts:
-     * "run … against prod BEFORE deploying this file").
-     *
-     * A 301 through that window is the one irreversible version: the
-     * permanent target is recorded as a 404 and the binding is cached. A
-     * 307 leaves the legacy URL indexed and costs nothing once the sync
-     * lands. Flip this assertion and next.config.ts together, after
-     * confirming the destination returns 200 in prod.
+     * It was a 307 while authored posts rendered only from blog_posts: a
+     * 301 to /blog/np-interview-questions before `scripts/sync-blog-to-db.ts`
+     * had run would have recorded the legacy URL's permanent target as a
+     * 404. getPostBySlug() (lib/blog.ts) now falls back to the authored .mdx
+     * (getMdxPost) when no row exists, and the destination returned 200 in
+     * prod on 2026-10-01, so the redirect passes its equity for good. If the
+     * .mdx fallback is ever removed, this test fails and the redirect must
+     * go back to temporary until the destination is live again.
      */
-    it('the redirect stays temporary while its destination depends on the sync script', () => {
+    it('the redirect is permanent because its destination renders from code', () => {
         const src = read('next.config.ts');
         const entry = src.slice(src.indexOf("source: '/blog/pmhnp-interview-questions'"));
         const permanence = entry.match(/permanent:\s*(true|false)/)?.[1];
-        expect(
-            permanence,
-            'a 301 to a post that only exists after scripts/sync-blog-to-db.ts runs ' +
-            'permanently points the legacy URL at a 404 — keep it temporary until the ' +
-            'destination returns 200 in prod',
-        ).toBe('false');
+        expect(permanence).toBe('true');
 
-        // The dependency this rule rests on: no code fallback for authored
-        // slugs. If one is ever added, the redirect can safely go permanent.
+        // The dependency this rests on: getPostBySlug serves authored .mdx
+        // slugs from code, and the destination's .mdx exists.
         const blog = read('lib/blog.ts');
-        expect(blog).toContain('LICENSE_GUIDE_SLUG_REGEX');
         expect(
             blog.slice(blog.indexOf('export async function getPostBySlug')),
-            'getPostBySlug gained a non-license fallback — re-evaluate the 307',
-        ).toContain('LICENSE_GUIDE_SERIES_PUBLISHED');
+            'getPostBySlug lost its authored .mdx fallback: make the redirect temporary again',
+        ).toContain('getMdxPost(slug)');
+        expect(fs.existsSync(path.join(ROOT, 'content/blog/np-interview-questions.mdx'))).toBe(true);
     });
 });

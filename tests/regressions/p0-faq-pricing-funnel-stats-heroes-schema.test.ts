@@ -145,12 +145,19 @@ describe('P0 #15 — FAQPage JSON-LD on the employer funnel pages', () => {
     });
 
     it('/for-employers FAQ answers quote config-derived pricing, not literals', () => {
-        const src = read('app/for-employers/page.tsx');
         // The FAQ copy must interpolate lib/config values so a price change
-        // can never strand a stale dollar figure in the schema.
-        expect(src).toContain('$${config.postingPrice}');
-        expect(src).toContain('$${config.renewalPrice}');
-        expect(src).toContain('${config.durationDays}');
-        expect(src).toContain('${config.limits.candidateUnlocksPerPosting}');
+        // can never strand a stale dollar figure in the schema. Since backlog
+        // 2.1 the pricing answers are built per render in
+        // app/for-employers/for-employers-copy.ts from the lib/pricing-copy
+        // sentences, so the tokens are pinned where they now live.
+        const src = read('app/for-employers/page.tsx');
+        const builder = read('app/for-employers/for-employers-copy.ts');
+        expect(src).toContain('const employerFaqs = [...copy.pricingFaqs, ...EVERGREEN_FAQS];');
+        expect(builder).toContain('LADDER_PRICES');
+        expect(read('lib/pricing-copy.ts')).toContain('$${config.postingPrice}');
+        expect(builder).toContain('$${config.renewalPrice}');
+        expect(builder).toContain('${config.durationDays}');
+        expect(builder).toContain('${config.limits.candidateUnlocksPerPosting}');
+        expect(builder).not.toMatch(/\$\d/);
     });
 });

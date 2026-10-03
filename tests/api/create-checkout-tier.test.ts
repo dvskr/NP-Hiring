@@ -23,7 +23,7 @@
  *     (intent 'processing') or awaiting ACH microdeposit verification
  *     (intent 'requires_action') cannot be paid twice.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
@@ -97,6 +97,12 @@ function stripeSessionArg() {
         invoice_creation: { invoice_data: { description: string; metadata: Record<string, string> } };
     };
 }
+
+// Load the route graph once, outside any single test's time budget: on a
+// loaded machine the cold import outran the first test's 5 second default.
+beforeAll(async () => {
+    await import('@/app/api/create-checkout/route');
+}, 120_000);
 
 beforeEach(() => {
     vi.clearAllMocks();

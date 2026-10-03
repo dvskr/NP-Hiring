@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             title: true,
+            archivedAt: true,
           },
         },
       },
@@ -170,6 +171,11 @@ export async function GET(request: NextRequest) {
       jobTitle: employerJob.job.title,
       jobSlug: slugify(employerJob.job.title, employerJob.job.id),
       tier: tier || 'pro',
+      // A renewal never puts an archived post back live (apply-renewal.ts):
+      // the payment is applied and the expiry moves, and the post stays
+      // unpublished until the employer restores it. The success page reads
+      // this so it does not tell them the job is live.
+      archivedAt: employerJob.job.archivedAt?.toISOString() ?? null,
       ...(cookieMatches
         ? { dashboardToken: employerJob.dashboardToken }
         : { tokenDeliveredViaEmail: true }),

@@ -14,12 +14,28 @@ import {
   og,
   ogClamp,
 } from '../og-theme';
+import { resolveOgCitySalaryLabel } from './salary-label';
 
 export const runtime = 'edge';
 
 /**
  * Dynamic OG image for pSEO city pages.
- * URL: /api/og/city?category=Remote&city=New+York,+NY&jobs=142&salary=$120K-$165K
+ * URL: /api/og/city?category=Remote&city=New+York,+NY&jobs=142&salary=<p25>+to+<p75>
+ *
+ * `salary` arrives formatted and is printed as given (only clamped to the
+ * tile); this route never builds a figure. The city and category pages send
+ * the gated middle half of posted pay as formatK(p25) to formatK(p75)
+ * (formatK in lib/pseo/listing-narrative.ts), the metro guide sends the gated
+ * median alone, and every caller omits the param below the benchmark gate,
+ * which drops the tile. The example names no dollar figure on purpose: a
+ * typed band in this comment was the only thing the hand-typed band scan in
+ * tests/regressions/p2-data-accuracy-stats-and-guides.test.ts ever found in
+ * this file, and a "to" range would still match it.
+ *
+ * `label` names that figure on the tile, from the allow-list in
+ * ./salary-label.ts: "Salary Range" when absent or unknown (the range the
+ * city and category pages send), "Median Posted Pay" from the metro guide
+ * (the words that page's hero uses for the same median).
  *
  * P3 #8: the chrome (cream/clay ground, berry accents, clay tiles, domain
  * pill) now lives in ../og-theme and is shared with the general-purpose
@@ -33,6 +49,9 @@ export async function GET(request: NextRequest) {
   const city = searchParams.get('city') || 'United States';
   const jobs = searchParams.get('jobs') || '0';
   const salary = searchParams.get('salary') || '';
+  // Allow-listed, never printed as sent: the label is a claim about what the
+  // figure is, and free text would let any URL put its own claim on the card.
+  const salaryLabel = resolveOgCitySalaryLabel(searchParams.get('label'));
   const shortage = searchParams.get('shortage') === 'true';
 
   // Fetch logo
@@ -143,7 +162,7 @@ export async function GET(request: NextRequest) {
               <OgFactTile
                 icon="dollar"
                 iconTone="clay"
-                label="Salary Range"
+                label={salaryLabel}
                 value={ogClamp(salary, 18)}
               />
             ) : null}

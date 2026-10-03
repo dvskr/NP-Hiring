@@ -6,6 +6,15 @@
  * lib/config.ts. This route is metadata, schema, visible assumptions, and
  * cross-links only.
  *
+ * LAUNCH-PROMO CLOCK (backlog 2.1): the method notes, the FAQ (and its
+ * JSON-LD), the calculator's ways to buy and the post-a-role card state the
+ * promo while it runs and the ladder as the current price once it has
+ * ended, when the promo mode is not offered at all. The page decides the
+ * phase per render (pricingPhase), hands it to the client calculator so its
+ * server HTML and hydrated state agree, builds its copy from
+ * ./cost-per-hire-copy.ts, and re-renders hourly, so the switch needs no
+ * deploy.
+ *
  * TRUTH RULES
  *  - Only OUR prices are asserted, and they come from the same config the
  *    checkout charges against. Every alternative-channel figure is an employer
@@ -41,18 +50,15 @@ import { ArrowRight, Briefcase, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import EmployerCostPerHireCalculator from '@/components/tools/EmployerCostPerHireCalculator';
-import {
-  DEFAULT_PLAN_MONTHS,
-  DEFAULT_TIME_TO_FILL_DAYS,
-  FIRST_YEAR_BASE_SOURCE,
-  FLAT_FEE_PRICING,
-  FREE_POST_SCOPE_NOTE,
-  INTRO_PRICE_SCOPE_NOTE,
-  PLAN_NO_RENEWALS_NOTE,
-  RENEWAL_SCOPE_NOTE,
-} from '@/components/tools/cost-per-hire-model';
-import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard, formatUsd } from '@/components/tools/tool-theme';
+import { pricingPhase } from '@/components/tools/cost-per-hire-model';
+import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { costPerHireAssumptions, costPerHireFaqs, postRoleBlurb } from './cost-per-hire-copy';
+
+// The method notes, the FAQ and its JSON-LD, the calculator's ways to buy and
+// the post-a-role card follow the launch-promo clock: re-render hourly so they
+// switch to the paid ladder without a deploy when the promo ends.
+export const revalidate = 3600;
 
 const PAGE_PATH = '/tools/cost-per-hire-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
@@ -82,19 +88,6 @@ export const metadata: Metadata = {
   alternates: { canonical: PAGE_URL },
 };
 
-const ASSUMPTIONS: readonly string[] = [
-  `Cost per hire is total channel spend divided by hires. Cost per applicant is total channel spend divided by applicants. Nothing else is folded in.`,
-  `Our own prices are read from the pricing config the checkout charges against. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. Every post runs ${FLAT_FEE_PRICING.durationDays} days and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks plus ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}.`,
-  `The promo result is a real price for a dated window, not a rate: a plan modeled on the promo costs nothing on our side until the promo ends, so the calculator lets you price the same roles on the ${FLAT_FEE_PRICING.ladderStartsLabel} ladder or the Employer plan as well.`,
-  `The intro price is scoped to the employer's email domain rather than to a login: ${INTRO_PRICE_SCOPE_NOTE}. A five-recruiter health system therefore gets one intro-priced post between all five, not one each, so a multi-role plan modeled per post shows at most one intro post and prices every other post at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}. Posts made free during the promo do not use the intro price up.`,
-  `The Employer plan is modeled as enough concurrent plans to hold every role at once (${FLAT_FEE_PRICING.planSlots} active slots each) for the months you enter, which start at ${DEFAULT_PLAN_MONTHS}: our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months, not an estimate of how long anyone subscribes. Nothing is added for renewals, because ${PLAN_NO_RENEWALS_NOTE}.`,
-  `Every figure for the sponsored-ad and agency channels is yours. We publish no typical cost per click, no typical contingency rate, no typical time-to-fill, and no typical applicant-to-hire ratio. We sell one side of this comparison, and a benchmark from us would not be evidence.`,
-  `A channel with nothing entered is reported as not comparable, never as zero. A zero in a cost column would read as free.`,
-  `The applicant-volume default of ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} is the number of candidate unlocks a posting includes. It is a plan feature, not an expected response rate. Replace it with what your own postings draw.`,
-  `Time-to-fill defaults to ${DEFAULT_TIME_TO_FILL_DAYS} days, which is the posting's run length rather than a market average, and it is applied identically to all three channels so the default cannot tilt the result. The vacancy overlay only affects anything once you enter a cost per day unfilled, which starts at zero.`,
-  `First-year base, the figure an agency contingency rate is applied to, starts at the cited national median of ${STAT_SOURCES.averageSalary.formatted} (${FIRST_YEAR_BASE_SOURCE}). Replace it with your budgeted base.`,
-];
-
 const EXCLUSIONS: readonly string[] = [
   'Candidate quality and retention. A cheaper hire that leaves in four months is not cheaper, and this calculator cannot see that.',
   'Your own team\u2019s time. Screening, scheduling, and interviewing all cost money, and they differ sharply between channels: an agency fee buys screening work that a posting does not.',
@@ -103,41 +96,16 @@ const EXCLUSIONS: readonly string[] = [
   'Offer declines and backfills. Both raise real cost per hire, and both are specific to your process.',
 ];
 
-const FAQS = [
-  {
-    q: 'How is cost per hire calculated?',
-    a: `Total spend on a channel divided by the hires that channel produced. This calculator does that for three channels side by side and adds an optional overlay for the cost of the seat sitting empty: time-to-fill multiplied by what a day of vacancy costs you. It deliberately stops there. Formulas that fold in recruiter salaries, ATS licenses, and overhead produce a bigger number that is harder to check and impossible to compare between employers. If you want those included, add them to a channel's spend yourself.`,
-  },
-  {
-    q: 'Why does this not tell me the typical cost per hire in healthcare?',
-    a: `Because we sell one of the channels being compared, and a benchmark published by an interested party is not evidence. Every industry cost-per-hire figure you will find comes from a survey with its own definition of which costs count, and quoting one here would let us pick the definition that flatters us. The comparison is built entirely from prices we can prove (ours) plus numbers you read off your own invoices and ATS.`,
-  },
-  {
-    q: 'Is a flat-fee posting really cheaper than an agency?',
-    a: `Not in the abstract. We sell one side of that comparison and we have not measured the other, so any margin we quoted would be marketing rather than a finding. What we can hand you instead is the arithmetic. A contingency fee is a percentage of a first-year salary, so it scales with the salary; a posting is a fixed price that does not: free during the launch promo, then ${formatUsd(FLAT_FEE_PRICING.introPrice)} for your first post and ${formatUsd(FLAT_FEE_PRICING.postingPrice)} after, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. The calculator totals our side from our published rates on whichever of those you pick (posts, renewals, and the intro price if your domain still has it) and prints that as the cost per hire your other channels have to beat, then applies your own contingency rate to your own base. The verdict is yours and it is about your roles. Spend is also not the whole comparison. A contingency agency does the sourcing and first-pass screening, carries the risk of not placing anyone, and is paid only on a hire; a posting puts the role in front of candidates and leaves the screening with you. The right question is not which is cheaper but whether the fee difference is worth more to you than the work it buys, which is why the calculator prints the number and then tells you what the number leaves out.`,
-  },
-  {
-    q: 'What should I use for time-to-fill?',
-    a: `Your own history, from the day a role opened to the day an offer was accepted. The field starts at ${DEFAULT_TIME_TO_FILL_DAYS} days only because that is how long a posting runs. It is a product fact standing in for a number we do not have, and it is applied to all three channels equally so it cannot favor one. Time-to-fill has no effect on the result until you enter what a day of vacancy costs you.`,
-  },
-  {
-    q: 'How do I work out what a day of vacancy costs?',
-    a: `Start with what you are actually spending to cover the gap: locum or agency coverage day rates, overtime for the staff absorbing the work, or the visit revenue the empty schedule is not generating. Whatever you use, it is your figure and only yours. The default is zero, and while it stays at zero the vacancy columns remain switched off rather than showing an invented cost.`,
-  },
-  {
-    q: `What does a posting include, and what does it cost?`,
-    a: `Every post (promo, intro, featured, or plan) runs ${FLAT_FEE_PRICING.durationDays} days, is featured, and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate profile unlocks and ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}. Those are the prices in the calculator, read from the same config the checkout uses, so they cannot drift from what you would actually be charged.`,
-  },
-  {
-    q: `Who exactly gets the intro price?`,
-    a: `Your employer email domain does, not your login: ${INTRO_PRICE_SCOPE_NOTE}. It does not reset for each new recruiter who signs up. If a health system with five recruiters fills five roles on the per-post ladder, one of those posts is ${formatUsd(FLAT_FEE_PRICING.introPrice)} and the other four are ${formatUsd(FLAT_FEE_PRICING.postingPrice)} each. Posts made free during the launch promo do not use it up. That matters when you model a multi-role plan here, so uncheck the intro-price box in the calculator if anyone at your domain has already bought a post.`,
-  },
-] as const;
-
 const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 export default function CostPerHireCalculatorPage() {
+  // Decided per render, never at module load (lib/pricing-copy.ts explains
+  // why), and handed to the client calculator so its server HTML and its
+  // hydrated state agree. One FAQS list feeds the accordion and the JSON-LD.
+  const phase = pricingPhase(new Date());
+  const ASSUMPTIONS = costPerHireAssumptions(phase);
+  const FAQS = costPerHireFaqs(phase);
   return (
     <>
       <script
@@ -202,7 +170,7 @@ export default function CostPerHireCalculatorPage() {
 
       <section style={{ background: TOOL_PANEL_BG, padding: '44px 20px 56px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <EmployerCostPerHireCalculator />
+          <EmployerCostPerHireCalculator phase={phase} />
         </div>
       </section>
 
@@ -261,7 +229,7 @@ export default function CostPerHireCalculatorPage() {
               { href: '/tools/salary-benchmark', title: 'Salary benchmark', blurb: 'Median and quartile posted pay by state, before you set a range.' },
               { href: '/pricing', title: 'Pricing', blurb: 'The rates this calculator uses, in full.' },
               { href: '/for-employers/resources/how-to-hire', title: 'How to hire guide', blurb: 'Screening, interviewing, and offer mechanics for these roles.' },
-              { href: '/post-job', title: 'Post a role', blurb: `Free through ${FLAT_FEE_PRICING.promoEndsLabel}, every feature included.` },
+              { href: '/post-job', title: 'Post a role', blurb: postRoleBlurb(phase) },
               { href: '/for-employers', title: 'For employers', blurb: 'What the board does for hiring teams.' },
               { href: '/for-employers/resources', title: 'Employer resources', blurb: 'Templates, guides, and benchmarks in one place.' },
             ].map((l) => (

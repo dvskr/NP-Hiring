@@ -17,9 +17,17 @@
  * caller gets 'already_active' and does nothing. The publish flip happens
  * AFTER the claim so a refunded/disputed posting can never be silently
  * re-published by a late verify-page hit or a sweep run.
+ *
+ * Archived postings: a pending post the employer archived while its checkout
+ * was open is paid for and claimed as usual, but never published
+ * (publishUnlessArchived). It stays unpublished and archived, gets no "your
+ * listing is live" email and no search engine ping, and a warning names it
+ * so the employer can be pointed to the restore. The result carries
+ * leftArchived.
  */
 
 import type Stripe from 'stripe';
+import type { Job } from '@prisma/client';
 import { after } from 'next/server';
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
@@ -118,6 +126,8 @@ export type PaidJobActivationOutcome = 'activated' | 'already_active' | 'employe
 export interface PaidJobActivationResult {
   outcome: PaidJobActivationOutcome;
   jobId: string;
+  /** Paid and claimed, but the post is archived and stays unpublished until the employer restores it. */
+  leftArchived?: true;
 }
 
 function prismaErrorCode(err: unknown): string | undefined {
@@ -311,14 +321,9 @@ export async function activatePaidJobCheckout(
   }
 
   // Publish AFTER winning the claim — republish on webhook retry is
-  // idempotent, but a refunded/disputed row never reaches this line.
-  // contentChangedAt: the posting goes public now, so its content is new
-  // now (sitemap lastmod, the page's "Last updated"; indexing audit
-  // fixSoon 5). Only the claim winner reaches this write, once per payment.
-  const job = await prisma.job.update({
-    where: { id: jobId },
-    data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: new Date() },
-  });
+  // idempotent, but a refunded/disputed row never reaches this line, and an
+  // archived one is never put live (publishUnlessArchived).
+  const { job, published } = await publishUnlessArchived(jobId);
 
   // Audit #2: record JobCharge for the new-post payment.
   // Audit #28: also persist payment_intent so the refund webhook can
@@ -353,36 +358,45 @@ export async function activatePaidJobCheckout(
   // error (forwarded to Sentry) so the owner can refund the difference.
   await detectIntroDoubleCharge(employerJob.id, employerJob.quotaDomain, paidTier, jobId, session);
 
-  // Send confirmation email.
+  // Send confirmation email. It says the listing is live, so a post left
+  // archived gets none; Stripe's own receipt still reaches the employer.
   //
   // 2026-05-15 fix: this fires BEFORE Stripe transitions the invoice to
   // "paid". If we pass `invoicePdfUrl` directly, the recipient may download
   // an "amount due" PDF. Instead, link to our dashboard invoice endpoint —
   // it 302-redirects to whatever URL is currently in JobCharge.invoicePdfUrl.
   // The `invoice.paid` handler updates that URL within a few hundred ms.
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
-  const stableInvoiceUrl = baseUrl
-    ? `${baseUrl}/api/employer/invoice?jobId=${job.id}&token=${employerJob.dashboardToken}`
-    : null;
+  if (published) {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
+    const stableInvoiceUrl = baseUrl
+      ? `${baseUrl}/api/employer/invoice?jobId=${job.id}&token=${employerJob.dashboardToken}`
+      : null;
 
-  try {
-    await sendConfirmationEmail(
-      employerJob.contactEmail,
-      job.title,
-      job.id,
-      employerJob.dashboardToken,
-      undefined, // unsubscribeToken — sendConfirmationEmail looks it up by email
-      config.durationDays,
-      {
-        invoicePdfUrl: stableInvoiceUrl,
-        hostedInvoiceUrl: newPostInvoiceData.hostedInvoiceUrl,
-        invoiceNumber: newPostInvoiceData.invoiceNumber,
-      },
-      'paid', // mode — lets the template drop the promo / plan wording
-    );
-  } catch (emailError) {
-    logger.error('Failed to send confirmation email', emailError, { jobId });
-    // Don't throw - job already activated
+    try {
+      await sendConfirmationEmail(
+        employerJob.contactEmail,
+        job.title,
+        job.id,
+        employerJob.dashboardToken,
+        undefined, // unsubscribeToken — sendConfirmationEmail looks it up by email
+        config.durationDays,
+        {
+          invoicePdfUrl: stableInvoiceUrl,
+          hostedInvoiceUrl: newPostInvoiceData.hostedInvoiceUrl,
+          invoiceNumber: newPostInvoiceData.invoiceNumber,
+        },
+        'paid', // mode — lets the template drop the promo / plan wording
+      );
+    } catch (emailError) {
+      logger.error('Failed to send confirmation email', emailError, { jobId });
+      // Don't throw - job already activated
+    }
+  } else {
+    logger.warn('[Stripe] New post paid after it was archived: payment recorded, the post stays unpublished and archived until the employer restores it', {
+      jobId,
+      employerJobId: employerJob.id,
+      sessionId: session.id,
+    });
   }
 
   // Clean up any job drafts for this email (no longer needed)
@@ -399,7 +413,7 @@ export async function activatePaidJobCheckout(
     // Don't throw - job already activated
   }
 
-  logger.info('Job published', { jobId });
+  if (published) logger.info('Job published', { jobId });
 
   // P7: server-side purchase event. The GA ids are the ones /api/create-checkout
   // stored when the buyer had granted analytics consent; absent otherwise, and
@@ -418,13 +432,42 @@ export async function activatePaidJobCheckout(
     jobId,
   });
 
-  // Ping search engines for new job (fire-and-forget)
-  if (job.slug) {
+  // Ping search engines for new job (fire-and-forget); an archived post is
+  // not on the board, so there is nothing to index.
+  if (published && job.slug) {
     // Google only when the page carries a JobPosting (lib/job-page-indexing.ts).
     pingSearchEnginesForJobPage(`${brand.baseUrl}/jobs/${job.slug}`, job).catch((err) =>
       logger.error('[Stripe] Background indexing ping failed (new job)', err)
     );
   }
 
-  return { outcome: 'activated', jobId };
+  return { outcome: 'activated', jobId, ...(!published && { leftArchived: true as const }) };
+}
+
+/**
+ * Put the paid post live, unless it was archived while its checkout was
+ * open: the dashboard requires a restore before any republish, and the
+ * chargeback-won path in ./route.ts skips archived rows the same way. The
+ * archived check sits in the WHERE of the publish itself, so an archive
+ * landing at the same moment cannot be overtaken. When the publish matches
+ * nothing (Prisma P2025, as for the claim above), the post keeps isPublished
+ * false and gets only the verified flag its paid listing earns, which a
+ * restore and republish then shows. A job row that is gone fails that
+ * second write too, and the error reaches the caller as before.
+ */
+async function publishUnlessArchived(jobId: string): Promise<{ job: Job; published: boolean }> {
+  try {
+    // contentChangedAt: the posting goes public now, so its content is new
+    // now (sitemap lastmod, the page's "Last updated"; indexing audit
+    // fixSoon 5). Only the claim winner reaches this write, once per payment.
+    const job = await prisma.job.update({
+      where: { id: jobId, archivedAt: null },
+      data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: new Date() },
+    });
+    return { job, published: true };
+  } catch (publishErr) {
+    if (prismaErrorCode(publishErr) !== 'P2025') throw publishErr;
+    const job = await prisma.job.update({ where: { id: jobId }, data: { isVerifiedEmployer: true } });
+    return { job, published: false };
+  }
 }

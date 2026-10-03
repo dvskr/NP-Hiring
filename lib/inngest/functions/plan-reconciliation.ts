@@ -34,7 +34,7 @@ import { sendDiscordMessage } from '@/lib/discord-notifier';
 import { sanitizeForDiscord } from '@/lib/sanitize-for-discord';
 import { getPlanBySubscriptionId } from '@/lib/employer-plan';
 import { handlePlanCheckout, isEmployerPlanSubscription } from '@/app/api/webhooks/stripe/plan-checkout';
-import { handleSubscriptionChange, planStateFromSubscription } from '@/app/api/webhooks/stripe/plan-subscription';
+import { handleSubscriptionChange, isMissingStripeResource, planStateFromSubscription } from '@/app/api/webhooks/stripe/plan-subscription';
 
 const NEW_SUBSCRIPTION_LOOKBACK_SECONDS = 7 * 24 * 60 * 60;
 const MIN_SUBSCRIPTION_AGE_SECONDS = 2 * 60 * 60; // the webhook may still be in flight
@@ -52,11 +52,6 @@ function requireStripe(): Stripe {
     const stripe = getStripe();
     if (!stripe) throw new Error('STRIPE_SECRET_KEY not configured — cannot reconcile employer plans');
     return stripe;
-}
-
-function isMissingResource(err: unknown): boolean {
-    const e = err as { code?: string; statusCode?: number } | null;
-    return e?.code === 'resource_missing' || e?.statusCode === 404;
 }
 
 export const planReconciliationSweep = inngest.createFunction(
@@ -135,11 +130,16 @@ export const planReconciliationSweep = inngest.createFunction(
             const finding = await step.run(`sync-${row.id}`, async (): Promise<Finding | null> => {
                 try {
                     const stripe = requireStripe();
+                    // Stamped before the request goes out, like the webhook's
+                    // read (plan-subscription.ts#applySubscriptionEvent): stamped
+                    // on arrival, a slow answer would outrank a webhook that
+                    // read the subscription after this did.
+                    const observedAt = new Date();
                     let subscription: Stripe.Subscription;
                     try {
                         subscription = await stripe.subscriptions.retrieve(row.subscriptionId);
                     } catch (err) {
-                        if (isMissingResource(err)) {
+                        if (isMissingStripeResource(err)) {
                             return { subscriptionId: row.subscriptionId, kind: 'orphaned-row', detail: `plan ${row.id} tracks a subscription Stripe does not have` };
                         }
                         throw err;
@@ -155,8 +155,15 @@ export const planReconciliationSweep = inngest.createFunction(
                     if (!statusDrift && (!periodDrift || plan.status === 'cancelled')) return null;
                     const result = await handleSubscriptionChange(subscription, 'customer.subscription.updated', {
                         eventId: `plan-reconciliation:${row.id}`,
-                        observedAt: new Date(),
+                        observedAt,
                     });
+                    // A webhook wrote a fresher state between this read and the
+                    // write: nothing was applied here, and a delivery that just
+                    // landed is no sign of broken webhook delivery.
+                    if (result.outcome === 'stale') {
+                        logger.info('[PlanReconciliation] drift already corrected by a fresher webhook write; nothing applied', { planId: row.id });
+                        return null;
+                    }
                     return {
                         subscriptionId: row.subscriptionId,
                         kind: 'drift-applied',

@@ -34,7 +34,7 @@
  * including the Google OAuth exchange, so "Google was asked" is a real code
  * path in the tests that assert it rather than an assumption.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { generateKeyPairSync } from 'node:crypto';
@@ -133,6 +133,48 @@ const INDEXING_KEYS = [
 ] as const;
 
 const savedEnv = new Map<string, string | undefined>();
+
+/**
+ * The default 5s per test is smaller than the waiting this suite deliberately
+ * drives, which made the first describe block fail on the clock rather than on
+ * an assertion.
+ *
+ * Two real costs, neither of them a hang:
+ *
+ *  1. lib/search-indexing.ts paces Google publishes 100ms apart, to stay
+ *     inside the Indexing API's 600-requests-a-minute project limit. The tests
+ *     that pin the lane budget have to drive a FULL lane cap through that pace
+ *     to prove the cap holds, and the caps are real: 30 per invocation for
+ *     expired-job-removal, 25 for backlog-removal. So one such test sleeps
+ *     2.5s to 3.0s before its first assertion runs, and the widest of them
+ *     measured 4.95s, one millisecond under the old budget. That is why these
+ *     failures came and went between runs.
+ *  2. Each cron test reaches its route through a dynamic import(), so the
+ *     first one to run also paid for compiling the whole route graph
+ *     (next/server, prisma, the indexing libs) out of its own budget: ~5.1s
+ *     against ~0.5s of actual work. The beforeAll below moves that cost.
+ *
+ * Raising this is not a way of hiding a hang: 30s is roughly 6x the measured
+ * worst case, so a retry loop that stopped terminating would still fail here.
+ */
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
+/**
+ * Compile both cron route graphs once, before the clock is anyone's problem.
+ *
+ * Vitest does not cancel a test that times out, so when the first cron test
+ * died paying for this compile, its remaining HEAD requests and
+ * prisma.deindexQueue.update calls landed INSIDE the next test, against that
+ * test's own fresh fetch spy and freshly reset prisma mocks. The whole file
+ * then failed in a cascade that read like a defect in the cron: doubled
+ * deindexQueue.update counts, stray Google publishes in a batch that never
+ * made them, and "touched Google" in index-pseo, which has no Google leg at
+ * all. Every one of those was leakage from a neighbour, not behaviour.
+ */
+beforeAll(async () => {
+    await import('@/app/api/cron/historical-deindex/route');
+    await import('@/app/api/cron/index-pseo/route');
+});
 
 beforeEach(() => {
     // The budget is per invocation, so each test starts with a full lane.

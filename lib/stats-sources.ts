@@ -322,14 +322,20 @@ export const STAT_SOURCES = {
  * live postings — not a band.
  *
  * MIGRATION STATUS — READ BEFORE CITING THIS AS "DONE": exactly one
- * surface consumes SALARY_BANDS today (/resources/1099-vs-w2). The three
- * contradictory remote-NP bands named above are STILL PUBLISHED, as are
- * ~20 other hand-typed ranges across /jobs/* category pages, the pSEO
- * templates, /salary-guide and its PDF generator. Do not read the
- * existence of this constant as evidence the contradictions are resolved.
- * The remaining surfaces are enumerated in
+ * surface consumes SALARY_BANDS today (/resources/1099-vs-w2). The
+ * surfaces that printed the three contradictory remote-NP bands named
+ * above no longer print them, but not because they moved here: like most
+ * of the hand-typed ranges the audit found, they now print gated benchmark
+ * figures from live postings or a cited STAT_SOURCES figure instead.
+ * Hand-typed ranges are still published on /salary-guide (its quick
+ * answer, experience and setting tables, and FAQ answers) and in the PDF
+ * scripts/generate-salary-pdf.ts builds. Do not read the existence of this
+ * constant as evidence the migration is done. Every file the band scan
+ * still flags is enumerated in
  * tests/regressions/p2-data-accuracy-stats-and-guides.test.ts as
- * UNMIGRATED_SALARY_BAND_SURFACES; migrate one, delete it from that list.
+ * UNMIGRATED_SALARY_BAND_SURFACES, including files whose only match is an
+ * example in a comment (the scan reads comments); migrate one, delete it
+ * from that list.
  */
 
 /** "$110K" from 110_000. */

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import ComposeMessageModal from './ComposeMessageModal';
 import { config } from '@/lib/config';
+import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 
 interface CandidateProfile {
     id: string;
@@ -97,6 +98,10 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
     const [showCompose, setShowCompose] = useState(false);
     const [postingJobId, setPostingJobId] = useState<string | undefined>(undefined);
     const [postingJobTitle, setPostingJobTitle] = useState<string | undefined>(undefined);
+    // The upgrade card below reads the promo phase as it renders; this gives
+    // a profile left open over config.promoEndsAt the render that drops its
+    // "free through" line.
+    useRerenderAtPromoEnd();
 
     // Read the originating page from the URL (?fromPage=N, set by
     // CandidateCard when the user clicked through from the Talent Pool).

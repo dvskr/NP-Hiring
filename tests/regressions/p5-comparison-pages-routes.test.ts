@@ -9,7 +9,9 @@
  *   2. Reverse direction: every route folder under app/compare corresponds
  *      to a configured profile (no orphan comparison routes).
  *   3. The route files stay thin: they render the shared body from the
- *      shared data (single source — pages cannot drift from each other).
+ *      shared data (single source — pages cannot drift from each other),
+ *      read the profile per render and re-render hourly, because our price
+ *      statements follow the launch-promo clock (backlog 2.1).
  *   4. The shared renderer keeps the trust invariants: escaped JSON-LD,
  *      nofollow on competitor links, the trademark/no-affiliation notice,
  *      the corrections contact, the review-date label, and NO images
@@ -18,7 +20,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { COMPETITOR_PROFILES } from '@/lib/compare-data';
+import { COMPETITOR_SLUGS } from '@/lib/compare-data';
 
 const ROOT = path.resolve(__dirname, '../..');
 const COMPARE_DIR = path.join(ROOT, 'app', 'compare');
@@ -29,14 +31,14 @@ const read = (p: string): string => fs.readFileSync(p, 'utf-8');
 
 describe('compare routes: registry <-> filesystem drift', () => {
     it('every configured profile has a physical route folder with a page.tsx', () => {
-        for (const profile of COMPETITOR_PROFILES) {
-            const pagePath = path.join(COMPARE_DIR, profile.slug, 'page.tsx');
-            expect(fs.existsSync(pagePath), `missing route for slug "${profile.slug}"`).toBe(true);
+        for (const slug of COMPETITOR_SLUGS) {
+            const pagePath = path.join(COMPARE_DIR, slug, 'page.tsx');
+            expect(fs.existsSync(pagePath), `missing route for slug "${slug}"`).toBe(true);
         }
     });
 
     it('every route folder under app/compare is a configured profile slug', () => {
-        const slugs = new Set(COMPETITOR_PROFILES.map((p) => p.slug));
+        const slugs = new Set<string>(COMPETITOR_SLUGS);
         const folders = fs
             .readdirSync(COMPARE_DIR, { withFileTypes: true })
             .filter((e) => e.isDirectory())
@@ -47,15 +49,28 @@ describe('compare routes: registry <-> filesystem drift', () => {
     });
 
     it('each route file is a thin wrapper over the shared data + renderer', () => {
-        for (const profile of COMPETITOR_PROFILES) {
-            const src = read(path.join(COMPARE_DIR, profile.slug, 'page.tsx'));
-            expect(src).toContain(`'${profile.slug}'`);
+        for (const slug of COMPETITOR_SLUGS) {
+            const src = read(path.join(COMPARE_DIR, slug, 'page.tsx'));
+            // The slug is typed, so a folder name that is not configured fails tsc.
+            expect(src).toContain(`const SLUG: CompetitorSlug = '${slug}';`);
             expect(src).toContain('getCompetitorProfile');
             expect(src).toContain('buildCompareMetadata');
             expect(src).toContain('ComparisonPageBody');
-            expect(src).toContain('export const metadata');
             // Thin means thin: no page-local competitor copy blocks.
             expect(src.length).toBeLessThan(2000);
+        }
+    });
+
+    it('each route reads its profile per render and re-renders hourly (launch-promo clock)', () => {
+        for (const slug of COMPETITOR_SLUGS) {
+            const src = read(path.join(COMPARE_DIR, slug, 'page.tsx'));
+            expect(src, slug).toContain('export const revalidate = 3600;');
+            // Metadata and body both read the profile at render time; static
+            // metadata or a module-scope profile would be built once, at build.
+            expect(src, slug).toContain('export async function generateMetadata()');
+            expect(src, slug).not.toContain('export const metadata');
+            expect(src.match(/getCompetitorProfile\(SLUG, new Date\(\)\)/g) ?? [], slug).toHaveLength(2);
+            expect(src, slug).not.toMatch(/^const \w+ = getCompetitorProfile/m);
         }
     });
 });
@@ -87,7 +102,7 @@ describe('compare shared renderer: trust invariants', () => {
         const surfaces = [
             src,
             read(HUB),
-            ...COMPETITOR_PROFILES.map((p) => read(path.join(COMPARE_DIR, p.slug, 'page.tsx'))),
+            ...COMPETITOR_SLUGS.map((slug) => read(path.join(COMPARE_DIR, slug, 'page.tsx'))),
         ];
         for (const fileSrc of surfaces) {
             expect(fileSrc).not.toMatch(/<img\b/i);
@@ -99,13 +114,15 @@ describe('compare shared renderer: trust invariants', () => {
 describe('compare hub: single-source rendering', () => {
     const src = read(HUB);
 
-    it('derives its cards and schema from COMPETITOR_PROFILES', () => {
-        expect(src).toContain('COMPETITOR_PROFILES');
+    it('derives its cards and schema from the same profiles as the routes', () => {
+        expect(src).toContain('const profiles = competitorProfiles(new Date());');
+        expect(src).toContain('itemListElement: profiles.map(');
+        expect(src).toContain('{profiles.map((profile) => (');
         // Card links are built from the array, not hand-typed hrefs — a
         // hand-typed href is exactly how a hub advertises a 404.
         expect(src).toContain('COMPARE_HUB_PATH}/${profile.slug}');
-        for (const profile of COMPETITOR_PROFILES) {
-            expect(src).not.toContain(`href="/compare/${profile.slug}"`);
+        for (const slug of COMPETITOR_SLUGS) {
+            expect(src).not.toContain(`href="/compare/${slug}"`);
         }
     });
 

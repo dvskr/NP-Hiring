@@ -11,20 +11,25 @@
  * cards and the ItemList JSON-LD derive from the SAME arrays below so
  * schema and visible content cannot diverge (repo pattern:
  * app/for-employers/page.tsx employerFaqs).
+ *
+ * The post-a-job CTA follows the launch-promo clock (./post-job-cta.ts),
+ * read per render; the page re-renders hourly so it switches to the paid
+ * ladder without a deploy when the promo ends.
  */
 import { brand } from '@/config/brand';
 import { indefiniteArticle } from '@/lib/display-text';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Breadcrumbs from '@/components/Breadcrumbs';
-// Launch-promo end date for the CTA (config token, never typed).
-import { config } from '@/lib/config';
 import {
   JD_TEMPLATES,
   TEMPLATE_CATEGORY_LABELS,
   type JdTemplateCategory,
 } from '@/lib/jd-templates';
 import { BookOpen, PenLine, ClipboardList, ArrowRight, FileText } from 'lucide-react';
+import { postJobCta } from './post-job-cta';
+
+export const revalidate = 3600;
 
 const HUB_URL = `${brand.baseUrl}/for-employers/resources`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Employer Hiring Resources: Hire ${brand.niche.short}s`)}&type=page`;
@@ -74,6 +79,7 @@ const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 export default function EmployerResourcesHubPage() {
+  const cta = postJobCta(new Date());
   const categories = (
     Object.keys(TEMPLATE_CATEGORY_LABELS) as JdTemplateCategory[]
   ).map((cat) => ({
@@ -205,14 +211,14 @@ export default function EmployerResourcesHubPage() {
               Ready to post your {brand.niche.short} role?
             </h2>
             <p className="text-sm mb-5 max-w-lg mx-auto" style={{ color: '#9D174D' }}>
-              Every post is free through {config.promoEndsLabel}, with every feature included. The same {JD_TEMPLATES.length} templates are available inside the description editor.
+              {cta.offer} The same {JD_TEMPLATES.length} templates are available inside the description editor.
             </p>
             <Link
               href="/post-job"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-white"
               style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)' }}
             >
-              Post a Job: Free <ArrowRight size={16} aria-hidden="true" />
+              {cta.button} <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
         </div>

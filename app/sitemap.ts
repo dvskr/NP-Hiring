@@ -61,8 +61,10 @@ import { STATE_CODES } from '@/lib/pseo/setting-state-config'
 // The profile route's own slug (display name), so a listed URL never 308s.
 import { companyProfilePath, companySlugFor } from '@/lib/company-slug'
 // Content lastmod (indexing audit CS-02): jobs by Job.contentChangedAt,
-// code-authored pages by their copy dates; never a write or cron timestamp.
-import { JOB_CONTENT_DATE_FIELDS, jobContentDate, latestJobContentDate, latestOf, pageContentDate } from '@/app/api/sitemaps/lastmod'
+// code-authored pages by their copy dates (and by the launch promo's end once
+// it has passed, for the pages whose copy switches then); never a write or
+// cron timestamp.
+import { JOB_CONTENT_DATE_FIELDS, jobContentDate, latestJobContentDate, latestOf, pageContentDate, withPromoSwitch } from '@/app/api/sitemaps/lastmod'
 // FB-4 / fixSoon 15: the state artwork rides on the gated state entries.
 import { stateDioramaSitemapImages } from '@/lib/image-seo'
 // P2 #21: the budget guard pages the team channel, not only a log line.
@@ -253,9 +255,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // (notFound()s until a consented testimonial is featured) and
   // /jobs/new-grad (a registry category slug: categoryLandingPages emits it
   // when its landing indexes; a second static entry duplicated the <loc>).
-  // Code-authored pages carry their copy date (pageContentDate, CS-02).
+  // Code-authored pages carry their copy date (pageContentDate, CS-02). The
+  // homepage lists jobs but also renders the employer band, whose CTA drops
+  // its "free through" offer when the launch promo ends
+  // (components/EmployerHowItWorks.tsx), so once that has passed its date is
+  // never earlier than the switch (withPromoSwitch).
   const staticPages: MetadataRoute.Sitemap = [
-    { url: baseUrl, lastModified: latestJobDate, changeFrequency: 'daily', priority: 1.0 },
+    { url: baseUrl, lastModified: withPromoSwitch(latestJobDate, now), changeFrequency: 'daily', priority: 1.0 },
     { url: `${baseUrl}/jobs`, lastModified: latestJobDate, changeFrequency: 'hourly', priority: 0.9 },
     { url: `${baseUrl}/for-employers`, lastModified: pageContentDate('/for-employers'), changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/for-job-seekers`, lastModified: pageContentDate('/for-job-seekers'), changeFrequency: 'weekly', priority: 0.7 },
@@ -357,7 +363,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
   // A comparison page is dated by its claims review (COMPARE_REVIEW_DATE),
   // or by a later copy or link change recorded in PAGE_CONTENT_DATES (CQ-13
-  // relinked the Indeed and ENP Network licensure rows). The hub renders only
+  // relinked the Indeed and ENP Network licensure rows), or, once it has
+  // passed, by the launch promo's end, when its price statements switched to
+  // the ladder (pageContentDate, PROMO_SWITCH_PATHS). The hub renders only
   // each profile's meta title and description, so the review date holds.
   const P5_CONTENT_DATE = new Date(COMPARE_REVIEW_DATE)
   const comparePages: MetadataRoute.Sitemap = [

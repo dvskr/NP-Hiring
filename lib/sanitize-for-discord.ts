@@ -13,13 +13,38 @@
  * Patterns covered:
  *   - DB URLs with credentials (postgres / mongodb / mysql / redis)
  *   - Bearer tokens
+ *   - Webhook signing secrets (whsec_: Stripe's, and the base64 Svix format
+ *     the Resend webhook uses)
  *   - sk_/pk_/rk_ key prefixes (Stripe, RapidAPI, OpenAI-style)
  *   - JWT-shaped tokens (header.body.sig)
  *   - Email addresses (PII)
- *   - Long base64-ish blobs ≥ 32 chars (catches API keys we missed)
+ *   - Long base64-ish blobs ≥ 40 chars (catches API keys we missed), except
+ *     Stripe object ids (STRIPE_OBJECT_ID below)
  */
 
-const PATTERNS: ReadonlyArray<{ id: string; re: RegExp; replacement: string }> = [
+/**
+ * Stripe object ids stay readable: an alert names the session, payment or
+ * subscription a human has to look up or refund. A Checkout Session id
+ * (cs_live_ or cs_test_ plus about 58 characters) is long enough for
+ * long_token, which masked the sessionId in every Stripe webhook alert.
+ *
+ * Only an exact id is kept: a known prefix, then letters and digits only,
+ * as Stripe issues them. Secrets carry other prefixes (sk_ and rk_ are
+ * masked by api_key_prefix, whsec_ by webhook_secret, before long_token
+ * runs), and a client secret (pi_..._secret_...) or anything else joined on
+ * with an underscore fails the letters-and-digits body, so it stays masked.
+ */
+const STRIPE_OBJECT_ID = /^(?:cs_live|cs_test|pi|ch|in|sub|cus|evt|re|dp|price|prod|plink|seti|py)_[A-Za-z0-9]+$/;
+
+interface RedactionPattern {
+    id: string;
+    re: RegExp;
+    replacement: string;
+    /** A match this returns true for is left as it is. */
+    keep?: (match: string) => boolean;
+}
+
+const PATTERNS: ReadonlyArray<RedactionPattern> = [
     // Database URLs with embedded credentials
     {
         id: 'db_url',
@@ -31,6 +56,17 @@ const PATTERNS: ReadonlyArray<{ id: string; re: RegExp; replacement: string }> =
         id: 'bearer',
         re: /\bBearer\s+[A-Za-z0-9._\-+/=]{8,}/g,
         replacement: 'Bearer [REDACTED]',
+    },
+    // Webhook signing secrets (whsec_). A rule of their own for two reasons:
+    // one can be shorter than long_token's 40 character floor, and the body
+    // is not always letters and digits. Stripe's are, but a Svix secret (the
+    // Resend webhook's RESEND_WEBHOOK_SECRET) is base64 and can hold + / and
+    // =, where the key body class below would stop masking at the first + or
+    // /, or never start when one falls inside the first 16 characters.
+    {
+        id: 'webhook_secret',
+        re: /\bwhsec_[A-Za-z0-9+/=_-]{16,}/g,
+        replacement: '[REDACTED_API_KEY]',
     },
     // Stripe / OpenAI / RapidAPI / Anthropic key prefixes
     {
@@ -57,6 +93,7 @@ const PATTERNS: ReadonlyArray<{ id: string; re: RegExp; replacement: string }> =
         id: 'long_token',
         re: /\b[A-Za-z0-9_\-+]{40,}\b/g,
         replacement: '[REDACTED_TOKEN]',
+        keep: (match) => STRIPE_OBJECT_ID.test(match),
     },
 ];
 
@@ -69,7 +106,10 @@ export function sanitizeForDiscord(input: string | null | undefined): string {
     if (input === null || input === undefined) return '';
     let out = String(input);
     for (const p of PATTERNS) {
-        out = out.replace(p.re, p.replacement);
+        const keep = p.keep;
+        out = keep
+            ? out.replace(p.re, (match) => (keep(match) ? match : p.replacement))
+            : out.replace(p.re, p.replacement);
     }
     return out;
 }

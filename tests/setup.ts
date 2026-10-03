@@ -194,6 +194,9 @@ vi.mock('@/lib/prisma', () => {
                 findMany: vi.fn(),
                 create: vi.fn(),
                 update: vi.fn(),
+                // upsertPlan's rejectStale compare-and-set: one row matched, so the
+                // write applied. A test of a refused (stale) write answers { count: 0 }.
+                updateMany: vi.fn().mockResolvedValue({ count: 1 }),
                 count: vi.fn(),
             },
             $queryRaw: vi.fn(),

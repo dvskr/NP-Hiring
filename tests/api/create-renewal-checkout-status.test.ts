@@ -12,19 +12,31 @@
  *
  * Also pins that metadata.tier carries the ROW's own rung so the renewal
  * webhook (which writes pricingTier = metadata.tier) cannot rewrite an
- * 'intro' row as 'pro'.
+ * 'intro' row as 'pro'. A blocked row answers before any Stripe call, the
+ * open-session scan included (tests/api/create-renewal-checkout-single-payable.test.ts
+ * covers that scan).
+ *
+ * An archived post is refused with 409 too, whatever its status: a renewal
+ * publishes, and the dashboard requires a restore before any republish.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 
 const sessionsCreate = vi.fn();
+const sessionsList = vi.fn();
+const sessionsExpire = vi.fn();
 vi.mock('stripe', () => ({
     default: vi.fn().mockImplementation(() => ({
-        checkout: { sessions: { create: sessionsCreate } },
+        checkout: { sessions: { create: sessionsCreate, list: sessionsList, expire: sessionsExpire } },
     })),
 }));
+
+/** No other open renewal session for the post. */
+function noOpenSessions() {
+    return { async *[Symbol.asyncIterator]() { /* empty */ } };
+}
 
 vi.mock('@/lib/env', () => ({
     isFeatureEnabled: vi.fn((feature: string) => feature === 'paidPosting'),
@@ -46,7 +58,7 @@ function makeReq(body: object): NextRequest {
     });
 }
 
-function row(paymentStatus: string, pricingTier = 'pro') {
+function row(paymentStatus: string, pricingTier = 'pro', archivedAt: Date | null = null) {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
         id: 'ej-1',
         jobId: 'job-1',
@@ -54,9 +66,13 @@ function row(paymentStatus: string, pricingTier = 'pro') {
         contactEmail: 'owner@clinic.example',
         paymentStatus,
         pricingTier,
-        job: { id: 'job-1', title: 'PMHNP', employer: 'Clinic Co', location: 'Remote' },
+        // A post well inside its renewal cap (tests/api/create-renewal-checkout-cap.test.ts covers the cap).
+        job: { id: 'job-1', title: 'PMHNP', employer: 'Clinic Co', location: 'Remote', archivedAt, expiresAt: null, createdAt: new Date(Date.now() - 30 * 86_400_000) },
     } as never);
 }
+
+const ARCHIVED_AT = new Date('2026-09-30T12:00:00.000Z');
+const VISIBLE_DASH = /[–—]|\s-\s/;
 
 async function post() {
     const { POST } = await import('@/app/api/create-renewal-checkout/route');
@@ -64,10 +80,18 @@ async function post() {
     return { res, json: await res.json() };
 }
 
+// Load the route graph once, outside any single test's time budget (a cold
+// import under a loaded full suite run can outlast vitest's 5 second default).
+beforeAll(async () => {
+    await import('@/app/api/create-renewal-checkout/route');
+}, 60_000);
+
 beforeEach(() => {
     vi.clearAllMocks();
     process.env.STRIPE_SECRET_KEY = 'sk_test_x';
-    sessionsCreate.mockResolvedValue({ id: 'cs_r1', url: 'https://checkout.stripe.test/cs_r1' });
+    // `created`: stamped by this request, so the route need not read the session back.
+    sessionsCreate.mockImplementation(async () => ({ id: 'cs_r1', url: 'https://checkout.stripe.test/cs_r1', created: Math.floor(Date.now() / 1000) }));
+    sessionsList.mockImplementation(noOpenSessions);
 });
 
 describe('renewable rows', () => {
@@ -104,7 +128,10 @@ describe('renewable rows', () => {
         expect(arg).not.toHaveProperty('payment_method_types');
         expect(arg.success_url).toBe('http://localhost:3000/employer/renewal-success?session_id={CHECKOUT_SESSION_ID}');
         expect(arg.cancel_url).toBe('http://localhost:3000/employer/dashboard');
-        expect(options.idempotencyKey).toMatch(/^renewal-ej-1-none-\d+$/);
+        // 'v2' since the parameters gained expires_at (backlog 2.5); the tail is
+        // a fingerprint of the create parameters, so a reused key always
+        // carries the parameters it was first used with.
+        expect(options.idempotencyKey).toMatch(/^renewal-v2-ej-1-none-\d+-[0-9a-f]{12}$/);
         expect(sessionsCreate.mock.calls[1][1].idempotencyKey).toBe(options.idempotencyKey);
     });
 });
@@ -166,5 +193,51 @@ describe('blocked rows (409, no Stripe call)', () => {
         const { res } = await post();
         expect(res.status).toBe(404);
         expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(sessionsList).not.toHaveBeenCalled();
+    });
+
+    it.each(['plan', 'free', 'pending', 'expired', 'refunded', 'disputed'])(
+        "'%s' answers before any Stripe call: no session is listed, expired or created",
+        async (status) => {
+            row(status, status === 'plan' ? 'plan' : 'pro');
+            const { res } = await post();
+            expect(res.status).toBe(409);
+            expect(sessionsList).not.toHaveBeenCalled();
+            expect(sessionsExpire).not.toHaveBeenCalled();
+            expect(sessionsCreate).not.toHaveBeenCalled();
+        },
+    );
+});
+
+describe('archived posts (409: restore first, no Stripe call)', () => {
+    it.each(['paid', 'promo'])("an archived '%s' post is refused until it is restored", async (status) => {
+        row(status, 'pro', ARCHIVED_AT);
+        const { res, json } = await post();
+        expect(res.status).toBe(409);
+        expect(json.archived).toBe(true);
+        expect(json.error).toMatch(/archived/i);
+        expect(json.error).toMatch(/Restore it from the Archived tab/);
+        expect(json.error).not.toMatch(VISIBLE_DASH);
+        expect(sessionsList).not.toHaveBeenCalled();
+        expect(sessionsExpire).not.toHaveBeenCalled();
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(res.headers.get('set-cookie')).toBeNull();
+    });
+
+    it('loads archivedAt with the post, so the check reads the stored value', async () => {
+        row('paid');
+        const { res } = await post();
+        expect(res.status).toBe(200);
+        expect(prisma.employerJob.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+            include: { job: { select: expect.objectContaining({ archivedAt: true }) } },
+        }));
+    });
+
+    it('a status that can never renew keeps its own message when the post is archived as well', async () => {
+        row('refunded', 'pro', ARCHIVED_AT);
+        const { res, json } = await post();
+        expect(res.status).toBe(409);
+        expect(json.error).toMatch(/refunded/i);
+        expect(json.archived).toBeUndefined();
     });
 });

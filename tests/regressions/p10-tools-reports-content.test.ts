@@ -185,8 +185,12 @@ describe('D5 and D6 license guide listing', () => {
       const body = blog.slice(blog.indexOf(`export async function ${fn}`));
       expect(body.slice(0, 2000), fn).toContain('licenseGuideFallbackSlugs(');
     }
+    // The checker reads getAllPublishedSlugs(), which lists a generated
+    // guide by the same rule (no blog_posts row of any status), rather than
+    // re-deriving it from its own Prisma read.
     const checker = read('app/tools/licensure-checker/page.tsx');
-    expect(checker).toContain('licenseGuideFallbackSlugs(');
+    expect(checker).toContain('await getAllPublishedSlugs()');
+    expect(checker).not.toContain('prisma.blogPost');
   });
 });
 

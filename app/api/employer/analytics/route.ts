@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getEmployerTier, getEmployerActivePostings } from '@/lib/tier-limits';
 import { PricingTier } from '@/lib/config';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * GET /api/employer/analytics
@@ -50,10 +51,7 @@ export async function GET(req: NextRequest) {
     // Get all job IDs owned by this employer
     const employerJobs = await prisma.employerJob.findMany({
         where: {
-            OR: [
-                { userId: user.id },
-                { userId: null, contactEmail: user.email! },
-            ],
+            OR: employerJobOwnershipBranches(user),
         },
         select: { jobId: true, job: { select: { id: true, title: true, viewCount: true, applyClickCount: true } } },
     });

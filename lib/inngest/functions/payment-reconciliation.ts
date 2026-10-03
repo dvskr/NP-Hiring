@@ -30,7 +30,12 @@
  *      session older than 2h with no JobCharge for its session id is
  *      fulfilled through the webhook's shared applyRenewalCheckout (its
  *      JobCharge-first transaction prevents a double extension) and reported
- *      in the same alert as "renewal recovered".
+ *      in the same alert as "renewal recovered". The arm looks back as far
+ *      as a renewal payment can still be settling (RENEWAL_LOOKBACK_MS).
+ *
+ * A post archived while its checkout was open is paid for but not put live
+ * (leftArchived on both fulfilments). The alert says so, so "recovered" is
+ * never read as "live".
  *
  * ('upgrade' sessions are skipped: nothing in the app creates them any more.)
  *
@@ -51,12 +56,23 @@ import { logger } from '@/lib/logger';
 import { captureException } from '@/lib/sentry';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
 import { sanitizeForDiscord } from '@/lib/sanitize-for-discord';
+import { RENEWAL_SETTLEMENT_LOOKBACK_MS } from '@/lib/renewal-checkout-sessions';
 import { activatePaidJobCheckout } from '@/app/api/webhooks/stripe/activate-paid-job';
 import { applyRenewalCheckout } from '@/app/api/webhooks/stripe/apply-renewal';
 
 const PENDING_MIN_AGE_MS = 2 * 60 * 60 * 1000;   // ignore rows younger than 2h — webhook may still be in flight
 const ABANDON_AFTER_MS = 24 * 60 * 60 * 1000;    // Stripe checkout sessions hard-expire 24h after creation
-const RENEWAL_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000; // past Stripe's ~3-day webhook retry window, with margin
+/**
+ * How far back the renewal arm reads Checkout Sessions. The same range in
+ * which /api/create-renewal-checkout refuses a new renewal while a paid one
+ * is not on the ledger: a delayed payment (ACH and similar) can settle weeks
+ * after its session was created, and a renewal that settled past a shorter
+ * lookback, with its webhook lost, was never recovered here and went on
+ * blocking new renewals there.
+ */
+const RENEWAL_LOOKBACK_MS = RENEWAL_SETTLEMENT_LOOKBACK_MS;
+/** Appended to a recovered payment's alert line when the post is archived and so not live. */
+const LEFT_ARCHIVED_NOTE = ' (left archived: employer must restore)';
 const MAX_ROWS_PER_SWEEP = 100;
 const MAX_RENEWALS_PER_SWEEP = 100;
 const MAX_SESSIONS_SCANNED = 2000;
@@ -78,11 +94,15 @@ interface SessionScan {
 interface ActivationStepResult {
     outcome: 'activated' | 'already_active' | 'employer_job_missing' | 'duplicate_payment' | 'skipped-unpaid' | 'error';
     error?: string;
+    /** Paid and claimed, but the post is archived and stays unpublished until the employer restores it. */
+    leftArchived?: true;
 }
 
 interface RenewalStepResult {
-    outcome: 'applied' | 'already_applied' | 'revoked_posting' | 'employer_job_missing' | 'has-charge' | 'skipped-unpaid' | 'error';
+    outcome: 'applied' | 'already_applied' | 'revoked_posting' | 'employer_job_missing' | 'cap_reached' | 'has-charge' | 'skipped-unpaid' | 'error';
     error?: string;
+    /** On the books, but the post is archived and stays unpublished until the employer restores it. */
+    leftArchived?: true;
 }
 
 function requireStripe() {
@@ -212,7 +232,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
         });
 
         const sessionsByJobId = scan.byJobId;
-        const recovered: Array<{ jobId: string; sessionId: string; activation: string }> = [];
+        const recovered: Array<{ jobId: string; sessionId: string; activation: string; leftArchived?: true }> = [];
         const failures: Array<{ jobId: string; sessionId?: string; error: string }> = [];
         let expired = 0;
         let settling = 0;
@@ -232,7 +252,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
                             return { outcome: 'skipped-unpaid' };
                         }
                         const activation = await activatePaidJobCheckout(stripe, session);
-                        return { outcome: activation.outcome };
+                        return { outcome: activation.outcome, ...(activation.leftArchived && { leftArchived: true as const }) };
                     } catch (err) {
                         // Contain per-row failures so one broken row can't abort
                         // the whole sweep; surfaced via the Discord alert below.
@@ -251,7 +271,12 @@ export const paymentReconciliationSweep = inngest.createFunction(
                 if (result.outcome === 'error') {
                     failures.push({ jobId: row.jobId, sessionId: match.sessionId, error: result.error ?? 'unknown' });
                 } else if (result.outcome !== 'skipped-unpaid') {
-                    recovered.push({ jobId: row.jobId, sessionId: match.sessionId, activation: result.outcome });
+                    recovered.push({
+                        jobId: row.jobId,
+                        sessionId: match.sessionId,
+                        activation: result.outcome,
+                        ...(result.leftArchived && { leftArchived: true as const }),
+                    });
                 }
             } else {
                 // B78: the dashboard's resume-payment action mints a NEW
@@ -299,7 +324,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
                     const session = await stripe.checkout.sessions.retrieve(renewal.sessionId);
                     if (session.payment_status !== 'paid') return { outcome: 'skipped-unpaid' };
                     const applied = await applyRenewalCheckout(stripe, session);
-                    return { outcome: applied.outcome };
+                    return { outcome: applied.outcome, ...(applied.leftArchived && { leftArchived: true as const }) };
                 } catch (err) {
                     logger.error('[PaymentReconciliation] Renewal recovery failed', err, renewal);
                     captureException(err, { tags: { area: 'payment-reconciliation' }, extra: { ...renewal, kind: 'renewal' } });
@@ -311,7 +336,12 @@ export const paymentReconciliationSweep = inngest.createFunction(
                 failures.push({ jobId: renewal.jobId, sessionId: renewal.sessionId, error: `RENEWAL ${result.error ?? 'unknown'}` });
             } else if (result.outcome !== 'has-charge' && result.outcome !== 'skipped-unpaid') {
                 const label = result.outcome === 'applied' ? 'renewal recovered' : `renewal ${result.outcome}`;
-                recovered.push({ jobId: renewal.jobId, sessionId: renewal.sessionId, activation: label });
+                recovered.push({
+                    jobId: renewal.jobId,
+                    sessionId: renewal.sessionId,
+                    activation: label,
+                    ...(result.leftArchived && { leftArchived: true as const }),
+                });
             }
         }
 
@@ -321,7 +351,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
             await step.run('alert-paid-but-pending', async () => {
                 const lines = [
                     ...recovered.map((r) =>
-                        `job ${r.jobId} · session ${r.sessionId} · ${r.activation === 'activated' ? 'recovered (activated now)' : r.activation}`),
+                        `job ${r.jobId} · session ${r.sessionId} · ${r.activation === 'activated' ? 'recovered (activated now)' : r.activation}${r.leftArchived ? LEFT_ARCHIVED_NOTE : ''}`),
                     ...failures.map((f) =>
                         `job ${f.jobId}${f.sessionId ? ` · session ${f.sessionId}` : ''} · ACTIVATION FAILED: ${f.error}`),
                 ];

@@ -19,7 +19,9 @@ const CONVERTED = [
     'app/messages/page.tsx',
     'app/post-job/page.tsx',
     'app/jobs/edit/[token]/page.tsx',
-    'app/admin/outreach/page.tsx',
+    // The outreach UI moved to a client component behind a server page that
+    // decides the template list per request; the toast pin follows the UI.
+    'app/admin/outreach/OutreachClient.tsx',
     'components/employer/EmployerDashboardClient.tsx',
 ];
 

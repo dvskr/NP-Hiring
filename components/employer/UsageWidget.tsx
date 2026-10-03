@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Users, Mail, TrendingUp, Loader2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { config } from '@/lib/config';
+import { currentQuote } from '@/lib/next-post-quote';
+import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 import { brand } from '@/config/brand';
 
 /**
@@ -15,7 +17,8 @@ import { brand } from '@/config/brand';
  *   1. GET /api/employer/plan — an active plan wins: "Employer plan · N of
  *      M slots used".
  *   2. GET /api/employer/free-quota-status — otherwise the next-post quote:
- *      launch promo ("Free through <date>") or the paid rung.
+ *      launch promo ("Free through <date>", only while the promo is still
+ *      running on this render) or the paid rung.
  * Without an active plan the card carries the Subscribe link (Stripe
  * Payment Link from the plan endpoint) or, when no link is configured, a
  * mailto to support — the same fallback /pricing uses. A Stripe-billed plan
@@ -73,6 +76,10 @@ export default function UsageWidget() {
     const [planStatus, setPlanStatus] = useState<PlanStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [billingError, setBillingError] = useState<string | null>(null);
+    // The Plan card reads the promo phase as it renders (currentQuote below);
+    // this gives a strip left open over config.promoEndsAt the render that
+    // drops its promo label.
+    useRerenderAtPromoEnd();
 
     const openBillingPortal = async () => {
         setBillingError(null);
@@ -134,9 +141,17 @@ export default function UsageWidget() {
     const t = tierGradients[tier] || tierGradients.pro;
 
     // ─── Plan card label (one message, precedence documented up top) ───
+    // The quote is the server's answer from when the dashboard loaded. A
+    // 'promo' answer stops holding at config.promoEndsAt, so it counts only
+    // while the promo runs on this render (currentQuote). A dashboard left
+    // open over the boundary is rendered again at that instant
+    // (useRerenderAtPromoEnd above), so it drops the promo label instead of
+    // advertising free posting, and shows the Subscribe pitch the ladder
+    // phase carries.
+    const liveQuota = currentQuote(quota);
     const hasActivePlan = planStatus?.entitled === true;
-    const quoteMode = quota?.eligible === true ? quota.mode : undefined;
-    const promoEndsLabel = quota?.promoEndsLabel ?? config.promoEndsLabel;
+    const quoteMode = liveQuota?.eligible === true ? liveQuota.mode : undefined;
+    const promoEndsLabel = liveQuota?.promoEndsLabel ?? config.promoEndsLabel;
     const planPrice = planStatus?.price ?? config.planPrice;
     const planSlots = planStatus?.slots && planStatus.slots > 0 ? planStatus.slots : config.planSlots;
 
@@ -150,7 +165,7 @@ export default function UsageWidget() {
         : quoteMode === 'promo'
             ? `Free through ${promoEndsLabel}`
             : quoteMode === 'intro' || quoteMode === 'paid'
-                ? `Next post $${quota?.price ?? config.priceDollarsForTier(quota?.tier)}`
+                ? `Next post $${liveQuota?.price ?? config.priceDollarsForTier(liveQuota?.tier)}`
                 : null;
 
     // Subscribe (Stripe Payment Link) or Contact us (mailto) — only when the

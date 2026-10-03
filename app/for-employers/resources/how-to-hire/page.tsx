@@ -14,7 +14,9 @@
  *  - Certification bodies are named correctly per role (AANP/ANCC for
  *    NPs, NBCRNA for CRNAs, AMCB for CNMs).
  *  - Article dateModified renders the LAST_REVIEWED constant — never
- *    new Date() (fabricated-freshness rule, audit P0 #23).
+ *    new Date() (fabricated-freshness rule, audit P0 #23). The only clock
+ *    read is the launch-promo check for the post-your-role card, which
+ *    picks a price line and dates nothing.
  */
 import { brand } from '@/config/brand';
 import { indefiniteArticle } from '@/lib/display-text';
@@ -23,11 +25,18 @@ import Link from 'next/link';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { salaryConfig } from '@/config/niche/salary';
-// Launch-promo end date for the post-your-role card (config token, never typed).
+// The post-your-role card follows the launch-promo clock: the promo end date
+// (a config token, never typed) while it runs, the ladder from
+// lib/pricing-copy.ts once it has ended.
 import { config } from '@/lib/config';
+import { LADDER_PRICES } from '@/lib/pricing-copy';
 import {
   BookOpen, CheckCircle, ClipboardCheck, Clock, DollarSign, ExternalLink, ArrowRight,
 } from 'lucide-react';
+
+// Re-render hourly so the post-your-role card switches to the paid ladder
+// without a deploy when the promo ends.
+export const revalidate = 3600;
 
 // Bump on each editorial review pass (repo pattern:
 // app/resources/1099-vs-w2/page.tsx).
@@ -196,6 +205,8 @@ const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 export default function HowToHireGuidePage() {
+  // Decided per render, never at module load (lib/pricing-copy.ts).
+  const promoActive = config.isPromoActive(new Date());
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Article schema — derives from the same constants as the visible
@@ -413,7 +424,9 @@ export default function HowToHireGuidePage() {
             </Link>
             <Link href="/post-job" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold text-sm" style={{ color: 'var(--color-primary)' }}>Post Your Role</h3>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>Free through {config.promoEndsLabel}, with every feature included.</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                {promoActive ? `Free through ${config.promoEndsLabel}, with every feature included.` : LADDER_PRICES}
+              </p>
             </Link>
           </div>
         </div>

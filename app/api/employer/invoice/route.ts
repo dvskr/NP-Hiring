@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { generateInvoice } from '@/lib/invoice-generator';
 import { config, PricingTier } from '@/lib/config';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * GET /api/employer/invoice?jobId=...&[chargeId=...]&[token=...]
@@ -72,10 +73,7 @@ export async function GET(request: NextRequest) {
           // P5.A: the contactEmail fallback is restricted to legacy rows with
           // no claimed userId — otherwise a user whose verified email equals a
           // job's contactEmail could pull another account's invoice PDF.
-          OR: [
-            { userId: user.id },
-            { userId: null, contactEmail: user.email! },
-          ],
+          OR: employerJobOwnershipBranches(user),
         },
         include: {
           job: {

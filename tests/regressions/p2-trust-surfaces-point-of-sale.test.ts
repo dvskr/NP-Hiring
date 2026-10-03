@@ -27,6 +27,11 @@ import path from 'node:path';
 import { brand } from '@/config/brand';
 import { config as pricingConfig } from '@/lib/config';
 import { employerComparisonRows } from '@/lib/employer-comparison';
+import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
+
+/** Both sides of the launch-promo switch (backlog 2.1): /for-employers copy is built per render. */
+const DURING_PROMO = new Date('2026-12-31T12:00:00.000Z');
+const LADDER_START = new Date(pricingConfig.promoEndsAt);
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -224,13 +229,31 @@ describe('P2 #16 — /for-employers discloses the pricing terms', () => {
         // config.promoEndsLabel, then the intro / featured / plan ladder. The
         // old "one free post, shorter duration" disclosure is gone because
         // the concept is — every post now runs config.durationDays.
-        expect(employers).toContain('Free through {config.promoEndsLabel}');
-        expect(employers).toMatch(/From \{config\.ladderStartsLabel\}: your first post is \$\{config\.introPrice\}/);
-        expect(employers).toContain('${config.planPrice}/month for {config.planSlots} active jobs');
-        expect(employers).toMatch(/Every post runs\{' '\}\s*\{config\.durationDays\} days/);
-        expect(employersCode).not.toContain('One free post per organization');
-        expect(employersCode).not.toMatch(/first post (is )?free/i);
-        expect(employersCode).not.toMatch(/\$(199|299|399)\b/);
+        // Backlog 2.1: the page prints these from forEmployersCopy(now), so
+        // the disclosure is pinned on the builder in both phases: the promo
+        // with its end date and the dated ladder while it runs, the plain
+        // price list once it has ended.
+        const promo = forEmployersCopy(DURING_PROMO);
+        expect(promo.headline).toBe(`Free through ${pricingConfig.promoEndsLabel}`);
+        expect(promo.receiptStamp).toBe(promo.headline);
+        expect(promo.ladder).toBe(
+            `From ${pricingConfig.ladderStartsLabel}: your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}, or $${pricingConfig.planPrice}/month for ${pricingConfig.planSlots} active jobs.`,
+        );
+        const ladder = forEmployersCopy(LADDER_START);
+        expect(ladder.ladder).toBe(
+            `Your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}, or $${pricingConfig.planPrice}/month for ${pricingConfig.planSlots} active jobs.`,
+        );
+        expect(ladder.receiptTotal).toBe(`From $${pricingConfig.introPrice}`);
+        // The receipt and the pricing card print that sentence, and the
+        // receipt says how long every post runs.
+        expect(employers).toContain('{copy.ladder} Every post runs {config.durationDays} days.');
+        expect(employers).toContain('{copy.ladder}<br />');
+        const builderCode = code(read('app/for-employers/for-employers-copy.ts'));
+        for (const src of [employersCode, builderCode]) {
+            expect(src).not.toContain('One free post per organization');
+            expect(src).not.toMatch(/first post (is )?free/i);
+            expect(src).not.toMatch(/\$(199|299|399)\b/);
+        }
     });
 
     it('no longer hardcodes the listing duration in the bento headline', () => {
@@ -450,12 +473,17 @@ describe('P2 #16 — the comparison table renders as English', () => {
     });
 
     it('holds the FAQ answers to the same rendering standard (they feed JSON-LD)', () => {
+        // Backlog 2.1: the pricing answers come from forEmployersCopy(now),
+        // checked in both phases; the evergreen answers stay in the page.
         const faqBlock = employersCode.slice(
-            employersCode.indexOf('const employerFaqs'),
+            employersCode.indexOf('const EVERGREEN_FAQS'),
             employersCode.indexOf('export default async function ForEmployersPage'),
         );
-        const answers = [...faqBlock.matchAll(/a: `([^`]*)`/g)].map((m) => render(m[1]));
-        expect(answers.length).toBeGreaterThan(2);
+        const evergreen = [...faqBlock.matchAll(/a: `([^`]*)`/g)].map((m) => render(m[1]));
+        const pricingAnswers = [DURING_PROMO, LADDER_START].flatMap((now) => forEmployersCopy(now).pricingFaqs.map((f) => f.a));
+        expect(evergreen.length).toBeGreaterThan(1);
+        expect(pricingAnswers.length).toBeGreaterThan(2);
+        const answers = [...evergreen, ...pricingAnswers];
         for (const answer of answers) {
             expect(answer, answer).not.toContain('${');
             for (const [, article, word] of answer.matchAll(/\b(an?)\s+([A-Za-z][A-Za-z-]*)/g)) {

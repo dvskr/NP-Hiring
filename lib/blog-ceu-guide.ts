@@ -38,11 +38,16 @@
  * already styles `ul li:has(strong:first-child)` as a definition row.
  * Guarded by tests/regressions/p2-content-pillars-guides.test.ts.
  *
- * SERVING: unlike the licensure series (which lib/blog.ts resolves from
- * code), this is a SINGLE post, so it ships through the established .mdx
- * pipeline: `buildCeuGuideMdx()` writes content/blog/<slug>.mdx and
- * scripts/sync-blog-to-db.ts publishes it (extracting the visible FAQ
- * section into faq_json → FAQPage JSON-LD). The committed .mdx must stay
+ * SERVING: unlike the licensure series (which lib/blog.ts builds from
+ * lib/blog-license-guides.ts at render time), this is a SINGLE post, so it
+ * ships through the .mdx pipeline: `buildCeuGuideMdx()` writes
+ * content/blog/<slug>.mdx, and lib/blog.ts serves and lists that file like
+ * any other content/blog post, with no blog_posts row
+ * (lib/blog-mdx-posts.ts extracts the visible FAQ section into faq_json →
+ * FAQPage JSON-LD). scripts/sync-blog-to-db.ts can still copy it into
+ * blog_posts, for the admin blog editor; once it has, the published row
+ * serves instead of the file, so a regenerated .mdx reaches readers only
+ * after that script runs again with --update. The committed .mdx must stay
  * byte-identical to this generator's output; that is enforced by
  * tests/regressions/p2-content-pillars-guides.test.ts, which also
  * REGENERATES the file when run as:
@@ -66,18 +71,22 @@ export const CEU_GUIDE_TITLE = `${brand.niche.long} Continuing Education (CE/CEU
  * REACHABILITY, not taxonomy aesthetics — do not "correct" this back to
  * 'state_spotlight'.
  *
- * app/resources/page.tsx splits published posts into `stateGuides`
- * (category === 'state_spotlight') and `articles` (everything else). The
- * stateGuides branch then maps each slug through
- * LICENSE_GUIDE_SLUG_REGEX (`^np-license-`) and drops non-matches with
- * `.filter(Boolean)`. A national CE hub filed as state_spotlight
- * therefore renders in NEITHER the licensure grid NOR the article grid —
- * it disappears from /resources entirely. It would also be buried among
- * the 51 per-state licensure guides on /blog?category=state_spotlight.
+ * app/resources/page.tsx splits the posts it lists into `stateGuides`
+ * (category === 'state_spotlight', plus any license-guide slug filed
+ * elsewhere) and `articles` (everything else). The stateGuides branch then
+ * keeps only the slugs that match LICENSE_GUIDE_SLUG_REGEX (`^np-license-`)
+ * and skips the rest (stateGuideTiles). A national CE hub filed as
+ * state_spotlight therefore renders in NEITHER the licensure grid NOR the
+ * article grid — it disappears from /resources entirely. It would also be
+ * buried among the 51 per-state licensure guides on
+ * /blog?category=state_spotlight.
  *
  * 'career_opportunities' is a real public category (lib/blog-categories.ts)
- * with a styled group on /resources ("Career"), holds 2 other posts, and
- * sits well under that grid's slice(0, 6) cap.
+ * with a styled group on /resources ("Career"). That group shows six posts
+ * as cards, newest first (leaving out the two the "Before you apply" band
+ * already shows), and links the whole category on /blog ("View all Career
+ * articles") when it holds more, so the hub stays reachable from /resources
+ * however many newer Career posts push it off the cards.
  * Guarded by tests/regressions/p2-content-pillars-guides.test.ts.
  */
 export const CEU_GUIDE_CATEGORY = 'career_opportunities';
@@ -135,8 +144,10 @@ export interface CeuGuideFaq {
 
 /**
  * FAQ — the SAME array feeds the visible "Frequently asked questions"
- * markdown section and (via the sync script's extractor) faq_json →
- * FAQPage JSON-LD, so schema can never diverge from on-page content.
+ * markdown section and, through the extractor that reads that section back
+ * out of the .mdx (extractMdxFaq in lib/blog-mdx-posts.ts, or the sync
+ * script's twin of it for a synced row), faq_json → FAQPage JSON-LD, so
+ * schema can never diverge from on-page content.
  *
  * Every answer that would need an hour count, cycle length, or fee
  * resolves to the board instead. That is the point of the page.

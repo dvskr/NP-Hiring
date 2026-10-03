@@ -3,7 +3,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import BreadcrumbSchema from '@/components/BreadcrumbSchema'
 import ProgramEmbedBuilder from '@/components/ProgramEmbedBuilder'
-import { prisma } from '@/lib/prisma'
+import { getPostBySlug } from '@/lib/blog'
 import { getSiteStatsOrNull } from '@/lib/site-stats'
 import { getStatesCovered } from '@/lib/states-covered'
 import {
@@ -87,22 +87,20 @@ const programFaqs = [
  * and building one without accreditor-verified data would be a YMYL
  * fabrication with named victims.
  *
- * Looked up in the DB rather than hardcoded as an href: .mdx posts only
- * resolve once scripts/sync-blog-to-db.ts has published them, so a literal
- * /blog/<slug> link would 404 in the window between deploying this file
- * and running the sync. No row → the card is simply not rendered.
+ * Resolved through getPostBySlug (lib/blog.ts), the same lookup
+ * /blog/<slug> renders with, rather than hardcoded as an href or read from
+ * blog_posts directly (the table is empty in production, so that read hid
+ * the card): a published row wins, otherwise the authored content/blog
+ * .mdx serves the guide, and an unpublished row (an editorial takedown)
+ * hides it. The card therefore renders exactly when the link resolves, and
+ * never links a 404. getPostBySlug never throws: a failed read falls back
+ * to the .mdx.
  */
 const PROGRAM_GUIDE_SLUG = 'how-to-evaluate-np-programs'
 
-async function getProgramGuide() {
-  try {
-    return await prisma.blogPost.findFirst({
-      where: { slug: PROGRAM_GUIDE_SLUG, status: 'published' },
-      select: { slug: true, title: true, metaDescription: true },
-    })
-  } catch {
-    return null
-  }
+async function getProgramGuide(): Promise<{ slug: string; title: string } | null> {
+  const post = await getPostBySlug(PROGRAM_GUIDE_SLUG)
+  return post ? { slug: post.slug, title: post.title } : null
 }
 
 interface ProgramsStats {
@@ -1414,7 +1412,7 @@ export default async function ForProgramsPage() {
           ))}
 
           {/* P4 cross-link — see getProgramGuide() above. Rendered only when
-              the post exists in the DB, so this can never be a live 404. */}
+              /blog/<slug> renders the guide, so this can never be a live 404. */}
           {programGuide && (
             <Link
               href={`/blog/${programGuide.slug}`}

@@ -16,8 +16,13 @@
  *      (Rhode Island), the salary specialty verdicts, one URL per company
  *      display slug, and dioramas only on the gated state entries.
  *   6. vercel.json caches the sitemaps for the routes' own hour.
+ *   7. Backlog 2.1: a page whose copy switches from the launch promo to the
+ *      paid ladder at config.promoEndsAt changed at that instant, so once it
+ *      has passed its lastmod is never earlier (PROMO_SWITCH_PATHS, the
+ *      homepage's employer band); before it nothing changes. Sections 4 and
+ *      5 pin the clock, because the sitemaps read it.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
@@ -43,10 +48,11 @@ vi.mock('@/lib/pseo/state-hub-index', async (importOriginal) => {
 
 import { prisma } from '@/lib/prisma';
 import { brand } from '@/config/brand';
+import { config } from '@/lib/config';
 import { getAllPublishedSlugs } from '@/lib/blog';
 import { getPublishableSalaryGuideStates } from '@/lib/salary-analytics';
 import { getIndexableSalarySpecialtySlugs, specialtyTagWhere } from '@/lib/salary-guide-specialty';
-import { COMPARE_HUB_PATH, COMPARE_REVIEW_DATE } from '@/lib/compare-data';
+import { COMPARE_HUB_PATH, COMPARE_PAGE_PATHS, COMPARE_REVIEW_DATE } from '@/lib/compare-data';
 import { loadStateHubVerdicts, type StateHubVerdict } from '@/lib/pseo/state-hub-index';
 import { ALL_CATEGORY_CONFIGS } from '@/lib/pseo/category-city-template';
 import { stateDioramaSrc } from '@/components/StateImage';
@@ -57,6 +63,9 @@ import {
     newestPageContentDate,
     PAGE_CONTENT_DATES,
     pageContentDate,
+    PROMO_SWITCH_PATHS,
+    promoSwitchDate,
+    withPromoSwitch,
 } from '@/app/api/sitemaps/lastmod';
 import { SITEMAP_CACHE_CONTROL } from '@/app/api/sitemaps/cache-control';
 import {
@@ -81,6 +90,43 @@ const RI_CONTENT = new Date('2026-09-24T12:00:00.000Z');
 const COMPANY_CONTENT = new Date('2026-09-22T08:00:00.000Z');
 /** A write timestamp: nothing may ever emit it. */
 const WRITE_STAMP = new Date('2026-09-28T23:59:00.000Z');
+
+/** Backlog 2.1: the launch promo's last day, its last millisecond, and the switch to the ladder. */
+const PROMO_RUNNING = new Date('2026-12-31T12:00:00.000Z');
+const SWITCH = new Date(config.promoEndsAt);
+const LAST_PROMO_MS = new Date(SWITCH.getTime() - 1);
+const AFTER_SWITCH = new Date(SWITCH.getTime() + 60 * 60 * 1000);
+
+/**
+ * The UTC day the engineering backlog release dates the pages whose copy it
+ * changed (PAGE_CONTENT_DATES). A page is dated by the change that SHIPS it:
+ * if the release ships on a later UTC day, move this and every entry that
+ * carries it in app/api/sitemaps/lastmod.ts to the ship day in that commit.
+ * Each such entry is pinned to this constant below, so a partial move fails.
+ */
+const BACKLOG_RELEASE_DAY = '2026-10-04';
+
+/** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1). */
+const PROMO_SWITCH_PAGES = [
+    '/pricing',
+    '/for-employers',
+    '/faq',
+    '/for-employers/resources',
+    '/for-employers/resources/how-to-hire',
+    // Its post-a-job button reads "Post a Job: Free" only while the promo runs.
+    '/for-employers/resources/job-description-guide',
+    '/for-employers/resources/job-description-templates',
+    '/for-employers/resources/job-description-templates/[id]',
+    '/tools/salary-benchmark',
+    '/tools/cost-per-hire-calculator',
+    ...COMPARE_PAGE_PATHS,
+];
+
+/** The sitemaps read the clock (lastmods, the canonical predicate), so sections 4 and 5 pin it. */
+function pinClock(at: Date): void {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(at);
+}
 
 /** The global Prisma mock predates PseoStats; the primary sitemap reads it. */
 const prismaMock = prisma as unknown as Record<string, unknown> & { pseoStats: { findMany: ReturnType<typeof vi.fn> } };
@@ -172,35 +218,121 @@ describe('lastmod helpers', () => {
     });
 
     it('code-authored pages carry a real calendar day, and unknown pages none', () => {
+        // While the promo runs, so every page is dated by its copy alone.
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
             expect(day, pagePath).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-            expect(pageContentDate(pagePath)?.toISOString().slice(0, 10), pagePath).toBe(day);
+            expect(pageContentDate(pagePath, PROMO_RUNNING)?.toISOString().slice(0, 10), pagePath).toBe(day);
         }
-        expect(pageContentDate('/not-a-page')).toBeUndefined();
-        expect(newestPageContentDate()?.toISOString().slice(0, 10)).toBe(Object.values(PAGE_CONTENT_DATES).sort().pop());
+        expect(pageContentDate('/not-a-page', PROMO_RUNNING)).toBeUndefined();
+        expect(newestPageContentDate(PROMO_RUNNING)?.toISOString().slice(0, 10)).toBe(Object.values(PAGE_CONTENT_DATES).sort().pop());
+    });
+
+    it('2.1: the promo switch covers exactly the pages whose copy follows the promo clock', () => {
+        expect([...PROMO_SWITCH_PATHS].sort()).toEqual([...PROMO_SWITCH_PAGES].sort());
+        // Every comparison page states our price in its capability table.
+        for (const pagePath of COMPARE_PAGE_PATHS) expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(true);
+        // The hub renders only titles and descriptions, so its copy does not switch.
+        expect(PROMO_SWITCH_PATHS.has(COMPARE_HUB_PATH)).toBe(false);
+        expect(promoSwitchDate(LAST_PROMO_MS)).toBeNull();
+        expect(promoSwitchDate(SWITCH)).toEqual(SWITCH);
+        expect(promoSwitchDate(AFTER_SWITCH)).toEqual(SWITCH);
+    });
+
+    it('2.1: up to the last promo millisecond every page keeps its copy date, the switch pages included', () => {
+        for (const pagePath of new Set([...Object.keys(PAGE_CONTENT_DATES), ...PROMO_SWITCH_PATHS])) {
+            const day = PAGE_CONTENT_DATES[pagePath];
+            const expected = day ? new Date(`${day}T00:00:00.000Z`) : undefined;
+            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(expected);
+        }
+        expect(newestPageContentDate(LAST_PROMO_MS)).toEqual(newestPageContentDate(PROMO_RUNNING));
+    });
+
+    it('2.1: from config.promoEndsAt a switch page is dated no earlier than the switch; every other page keeps its copy date', () => {
+        for (const at of [SWITCH, AFTER_SWITCH]) {
+            for (const pagePath of PROMO_SWITCH_PATHS) {
+                // Every copy date predates the switch, so the switch dates them all.
+                expect(pageContentDate(pagePath, at), pagePath).toEqual(SWITCH);
+            }
+            for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
+                if (PROMO_SWITCH_PATHS.has(pagePath)) continue;
+                expect(pageContentDate(pagePath, at), pagePath).toEqual(new Date(`${day}T00:00:00.000Z`));
+            }
+            expect(newestPageContentDate(at)).toEqual(SWITCH);
+            expect(pageContentDate('/not-a-page', at)).toBeUndefined();
+        }
+        // Every comparison page has a copy date of its own now (the AANP page
+        // had none until its price sentence was corrected), and the switch
+        // still dates each of them once it has passed.
+        for (const pagePath of COMPARE_PAGE_PATHS) {
+            const copyDate = new Date(`${PAGE_CONTENT_DATES[pagePath]}T00:00:00.000Z`);
+            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(copyDate);
+            expect(copyDate.getTime(), pagePath).toBeLessThan(SWITCH.getTime());
+            expect(pageContentDate(pagePath, SWITCH), pagePath).toEqual(SWITCH);
+        }
+    });
+
+    it('2.1: withPromoSwitch raises a listing date only once the switch has passed, and never invents one', () => {
+        const later = new Date(SWITCH.getTime() + 86_400_000);
+        expect(withPromoSwitch(CONTENT, LAST_PROMO_MS)).toEqual(CONTENT);
+        expect(withPromoSwitch(CONTENT, SWITCH)).toEqual(SWITCH);
+        expect(withPromoSwitch(later, AFTER_SWITCH)).toEqual(later);
+        // An unread date stays unread: the switch is a lower bound, not a content date.
+        expect(withPromoSwitch(undefined, AFTER_SWITCH)).toBeUndefined();
+        expect(withPromoSwitch(null, AFTER_SWITCH)).toBeUndefined();
+        expect(withPromoSwitch(new Date('nope'), AFTER_SWITCH)).toBeUndefined();
     });
 
     it('pages whose rendered copy or links this release changed carry its date, so Google recrawls them', () => {
         // /press and /tools/licensure-checker now link the scope of practice
-        // explorer, /resources and /tools/licensure-checker dropped the
-        // "All 50 states classified" claim, the revenue calculator card points
-        // at /scope-of-practice, and the cost of living comparator links a
-        // curated metro's guide (CQ-13, L-05). The Indeed and ENP Network
-        // comparisons' licensure row and advantage now link the scope of
-        // practice explorer (CQ-13), and the specialty salary template's
+        // explorer, /tools/licensure-checker dropped the "All 50 states
+        // classified" claim (so did /resources, which changed again since; see
+        // the next test), the revenue calculator card points at
+        // /scope-of-practice, and the cost of living comparator links a
+        // curated metro's guide (CQ-13, L-05). The Indeed comparison's
+        // licensure row and advantage now link the scope of practice explorer
+        // (CQ-13; so do the ENP Network page's, which changed again since:
+        // see the comparison test below), and the specialty salary template's
         // config and content were rewritten.
         for (const pagePath of [
             '/press',
-            '/resources',
             '/tools/licensure-checker',
             '/tools/private-practice-revenue-calculator',
             '/tools/cost-of-living-comparison',
             '/compare/np-hiring-vs-indeed',
-            '/compare/np-hiring-vs-enp-network',
             '/salary-guide/specialty/[specialty]',
         ]) {
             expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe('2026-09-29');
         }
+    });
+
+    it('backlog 2.2: /resources and /for-programs carry the day they began rendering the posts served from code', () => {
+        // Both read blog_posts directly, which holds no rows in production, so
+        // the article grids and the program guide card rendered nothing. They
+        // now read through lib/blog.ts, which serves those posts from code.
+        for (const pagePath of ['/resources', '/for-programs']) {
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(BACKLOG_RELEASE_DAY);
+            // Neither page's copy follows the promo clock, so the switch never
+            // dates it: the copy date stands on both sides of the promo end.
+            expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(false);
+            for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
+                expect(pageContentDate(pagePath, at), pagePath).toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
+            }
+        }
+    });
+
+    it('backlog 2.1: the AANP and ENP Network comparisons carry the day their price sentences were put right', () => {
+        // Both pages changed what they print WHILE the promo runs: the AANP
+        // page dated our own price to the competitor review ("both public, as
+        // of <review date>", five weeks before the promo and the ladder went
+        // public) and said "a NP salary guide"; the ENP Network page said
+        // "hiring a NP". The Indeed page's copy did not change.
+        for (const pagePath of ['/compare/np-hiring-vs-aanp-jobcenter', '/compare/np-hiring-vs-enp-network']) {
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(BACKLOG_RELEASE_DAY);
+            expect(pageContentDate(pagePath, PROMO_RUNNING), pagePath).toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
+            // Its price statements still switch at the promo end, which dates it afterwards.
+            expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
+        }
+        expect(PAGE_CONTENT_DATES['/compare/np-hiring-vs-indeed']).toBe('2026-09-29');
     });
 
     it('lastmodTag emits a W3C datetime, or nothing for a missing date', () => {
@@ -311,6 +443,7 @@ describe('/api/sitemaps/index dates each child by the newest lastmod inside it',
         xml.match(new RegExp(`<loc>${loc.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}</loc>(?:\\s*<lastmod>([^<]+)</lastmod>)?`))?.[1] ?? null;
 
     beforeEach(() => {
+        pinClock(PROMO_RUNNING);
         vi.mocked(prisma.$queryRaw).mockImplementation((async (_strings: TemplateStringsArray, ...values: unknown[]) =>
             values[0] === 'category-city'
                 ? [{ categorySlug: 'remote', locationSlug: 'new-york-ny', totalJobs: 6, distinctEmployers: 3, indexable: true }]
@@ -344,10 +477,34 @@ describe('/api/sitemaps/index dates each child by the newest lastmod inside it',
         expect(response.headers.get('Cache-Control')).toBe(SITEMAP_CACHE_CONTROL);
     });
 
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('a newer listed blog post dates the primary child', async () => {
-        vi.mocked(getAllPublishedSlugs).mockResolvedValue([{ slug: 'post-new', updated_at: '2026-10-02T00:00:00.000Z' }]);
+        // Derived, not literal: the post only proves the point while it is
+        // newer than every other source the primary child reads (the jobs'
+        // CONTENT stamp and the page copy dates, which move to the ship day
+        // each release). A hard-coded day silently stops testing anything
+        // once BACKLOG_RELEASE_DAY passes it.
+        const newest = latestOf(CONTENT, newestPageContentDate(PROMO_RUNNING))!;
+        const newer = new Date(newest.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        vi.mocked(getAllPublishedSlugs).mockResolvedValue([{ slug: 'post-new', updated_at: newer }]);
         const xml = await (await sitemapIndexGET()).text();
-        expect(lastmodOf(xml, `${BASE}/sitemap.xml`)).toBe('2026-10-02T00:00:00.000Z');
+        expect(lastmodOf(xml, `${BASE}/sitemap.xml`)).toBe(newer);
+    });
+
+    it('2.1: once the promo has ended, the primary child is dated no earlier than the switch its pages made', async () => {
+        // Jobs (CONTENT) and the blog (2026-09-20) are older than the switch.
+        vi.setSystemTime(LAST_PROMO_MS);
+        const before = await (await sitemapIndexGET()).text();
+        expect(lastmodOf(before, `${BASE}/sitemap.xml`)).toBe(latestOf(CONTENT, newestPageContentDate(PROMO_RUNNING))!.toISOString());
+        vi.setSystemTime(AFTER_SWITCH);
+        const after = await (await sitemapIndexGET()).text();
+        expect(lastmodOf(after, `${BASE}/sitemap.xml`)).toBe(SWITCH.toISOString());
+        // The other children list no switch page, so their dates do not move.
+        expect(lastmodOf(after, `${BASE}/api/sitemaps/jobs/0`)).toBe(CONTENT.toISOString());
+        expect(lastmodOf(after, `${BASE}/api/sitemaps/cities/0`)).toBe(CONTENT.toISOString());
     });
 
     it('an unreadable content date omits the lastmod, never guesses "today", and does not degrade the index', async () => {
@@ -367,7 +524,14 @@ describe('/api/sitemaps/index dates each child by the newest lastmod inside it',
 /* ─── 5. primary sitemap ───────────────────────────────────────────────── */
 
 describe('/sitemap.xml dates from content and agrees with the page robots', () => {
-    beforeEach(() => mockPrimaryInventory());
+    beforeEach(() => {
+        pinClock(PROMO_RUNNING);
+        mockPrimaryInventory();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
 
     const byUrl = async () => new Map((await sitemap()).map((entry) => [entry.url, entry]));
 
@@ -443,18 +607,78 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         expect(undated, 'a listed page has no content date (add it to PAGE_CONTENT_DATES)').toEqual([]);
     });
 
+    it('backlog 2.2: /resources and /for-programs are listed with the day they began rendering posts from code, before and after the promo end', async () => {
+        for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
+            vi.setSystemTime(at);
+            const entries = await byUrl();
+            for (const pagePath of ['/resources', '/for-programs']) {
+                expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
+            }
+        }
+    });
+
     it('a comparison page carries the later of its claims review and its own copy change; the hub keeps the review date', async () => {
         const entries = await byUrl();
         const reviewed = new Date(COMPARE_REVIEW_DATE);
-        // CQ-13 relinked these two pages after the review.
-        for (const pagePath of ['/compare/np-hiring-vs-indeed', '/compare/np-hiring-vs-enp-network']) {
+        // Each page's copy changed after the review: CQ-13 relinked the Indeed
+        // and ENP Network pages, and the AANP and ENP Network price sentences
+        // were corrected since. The review date is not moved for a copy edit
+        // that re-checked no claim, so the copy date is what the sitemap emits.
+        for (const pagePath of COMPARE_PAGE_PATHS) {
             expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(pageContentDate(pagePath));
             expect(pageContentDate(pagePath)!.getTime(), pagePath).toBeGreaterThan(reviewed.getTime());
         }
-        // No copy change since the review: the review date stands.
-        expect(PAGE_CONTENT_DATES['/compare/np-hiring-vs-aanp-jobcenter']).toBeUndefined();
-        expect(entries.get(`${BASE}/compare/np-hiring-vs-aanp-jobcenter`)?.lastModified).toEqual(reviewed);
+        expect(entries.get(`${BASE}/compare/np-hiring-vs-aanp-jobcenter`)?.lastModified)
+            .toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
+        // The hub prints no price and no corrected sentence: the review date stands.
         expect(entries.get(`${BASE}${COMPARE_HUB_PATH}`)?.lastModified).toEqual(reviewed);
+    });
+
+    it('2.1: until the promo ends, no page is dated by the switch', async () => {
+        vi.setSystemTime(LAST_PROMO_MS);
+        const entries = await byUrl();
+        for (const pagePath of ['/pricing', '/for-employers', '/faq', '/for-employers/resources', '/tools/cost-per-hire-calculator']) {
+            expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(pageContentDate(pagePath, PROMO_RUNNING));
+        }
+        expect(entries.get(`${BASE}/compare/np-hiring-vs-aanp-jobcenter`)?.lastModified)
+            .toEqual(pageContentDate('/compare/np-hiring-vs-aanp-jobcenter', PROMO_RUNNING));
+        expect(entries.get(BASE)?.lastModified).toEqual(CONTENT);
+        const dates = [...entries.values()].map((entry) => (entry.lastModified as Date | undefined)?.getTime());
+        expect(dates).not.toContain(SWITCH.getTime());
+    });
+
+    it('2.1: from the promo end, every page whose copy switched is dated at the switch, and no other page moves', async () => {
+        vi.setSystemTime(AFTER_SWITCH);
+        const entries = await byUrl();
+        const switched = PROMO_SWITCH_PAGES.filter((pagePath) => !pagePath.includes('[id]'));
+        for (const pagePath of switched) {
+            expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(SWITCH);
+        }
+        const templatePages = [...entries.values()].filter((entry) => entry.url.includes('/job-description-templates/'));
+        expect(templatePages.length).toBeGreaterThan(0);
+        for (const entry of templatePages) expect(entry.lastModified, entry.url).toEqual(SWITCH);
+        // Pages whose copy does not follow the promo clock keep their dates.
+        expect(entries.get(`${BASE}/about`)?.lastModified).toEqual(pageContentDate('/about', PROMO_RUNNING));
+        expect(entries.get(`${BASE}/tools/licensure-checker`)?.lastModified)
+            .toEqual(pageContentDate('/tools/licensure-checker', PROMO_RUNNING));
+        expect(entries.get(`${BASE}${COMPARE_HUB_PATH}`)?.lastModified).toEqual(new Date(COMPARE_REVIEW_DATE));
+        expect(entries.get(`${BASE}/jobs`)?.lastModified).toEqual(CONTENT);
+        // The homepage's employer band switched too, and its jobs (CONTENT) are older.
+        expect(entries.get(BASE)?.lastModified).toEqual(SWITCH);
+    });
+
+    it('2.1: after the switch a newer job still dates the homepage, and an unread one leaves it undated', async () => {
+        vi.setSystemTime(AFTER_SWITCH);
+        const newerJob = new Date(SWITCH.getTime() + 30 * 60 * 1000);
+        vi.mocked(prisma.job.aggregate).mockResolvedValue({ _max: { contentChangedAt: newerJob, createdAt: CREATED } } as never);
+        expect((await byUrl()).get(BASE)?.lastModified).toEqual(newerJob);
+
+        vi.mocked(prisma.job.aggregate).mockRejectedValue(new Error('db blip'));
+        const entries = await byUrl();
+        expect(entries.has(BASE)).toBe(true);
+        expect(entries.get(BASE)?.lastModified).toBeUndefined();
+        // Code-authored switch pages need no read: they still carry the switch.
+        expect(entries.get(`${BASE}/pricing`)?.lastModified).toEqual(SWITCH);
     });
 
     it('a specialty salary page is dated by its own specialty bucket, not by the site-wide newest job', async () => {

@@ -25,6 +25,7 @@ import {
   buildTerseWorkModeLine,
   formatK,
 } from '@/lib/pseo/listing-narrative';
+import { OG_CITY_SALARY_LABELS } from '@/app/api/og/city/salary-label';
 import { shouldIndexMetro } from '@/lib/pseo/render-gate';
 import { getGatedLocationSalary, type GatedSalary } from '@/lib/salary-analytics';
 import {
@@ -241,12 +242,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // route reads are passed: `city` (headline), `jobs` (open positions tile)
   // and `salary` only when the metro median clears the gate, so the card
   // drops the tile rather than showing a figure this board cannot source.
+  // `label` travels with `salary`: the figure is one median, which the
+  // route's default tile label ("Salary Range") would call a range. The
+  // tile reads "Median Posted Pay", the words the hero stat below uses for
+  // the same figure (buildHeroStats), so the card and the page agree.
   // `category` and `shortage` are deliberately absent: a metro guide is
   // all-specialty and carries no behavioral-health designation.
   const ogParams = new URLSearchParams({
     city: `${metro.city}, ${metro.stateCode}`,
     jobs: String(facts.total),
     ...(facts.benchmark !== null && { salary: formatK(facts.benchmark.median) }),
+    ...(facts.benchmark !== null && { label: OG_CITY_SALARY_LABELS.median }),
   });
   const ogImageUrl = `/api/og/city?${ogParams.toString()}`;
   const socialTitle = `${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode}`;

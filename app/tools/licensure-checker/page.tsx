@@ -9,19 +9,25 @@
  * DATA PROVENANCE (all read-only imports — nothing is re-typed here)
  *  - Practice authority: lib/state-practice-authority.ts (AANP).
  *  - State salary: live aggregation over published postings.
- *  - State guide slugs: published state_spotlight posts plus the live
- *    code-generated license guide series (lib/blog.ts fallback rule).
+ *  - State guide slugs: the license-guide slugs in getAllPublishedSlugs()
+ *    (lib/blog.ts), the list the sitemap advertises and the state pages
+ *    check before they link a guide.
  *
- * NOT USED HERE, DELIBERATELY: LICENSE_GUIDE_NLC_NON_MEMBERS from
- * lib/blog-license-guides.ts. This page used to derive a per-state compact
- * verdict and a "{n} of 51 jurisdictions are compact members" headline from
- * that set. The set is inaccurate in both directions (it omits Alaska, a
- * non-member, and lists Connecticut, Rhode Island and Washington as
- * non-members when all three are members), and the drift test guarding it only
- * proves its two copies agree with each other. See the long note at the top of
- * components/tools/MultiStatePlanner.tsx. Nothing on this route may reintroduce
- * a per-state membership claim until the shared dataset is re-verified against
- * NCSBN by its owner.
+ * NOT USED HERE, DELIBERATELY: the compact roster in lib/blog-license-guides.ts
+ * (LICENSE_GUIDE_NLC_NON_MEMBERS and LICENSE_GUIDE_NLC_ENACTED_PENDING). This
+ * page used to derive a per-state compact verdict and a "{n} of 51
+ * jurisdictions are compact members" headline from the non-member set while
+ * that set was inaccurate in both directions (it omitted Alaska, a
+ * non-member, and listed Connecticut, Rhode Island and Washington as
+ * non-members when all three were members), so both came out. The roster was
+ * corrected and verified against NCSBN on 2026-08-11 (NLC_ROSTER_VERIFIED_AT
+ * records the latest check) and now feeds the license guides, the state pages
+ * and /scope-of-practice. This route still states the compact rules and links
+ * NCSBN for the current roster, by choice: a per-state verdict here is
+ * personalized licensure advice that is only as current as the last roster
+ * check, so it would need the roster re-verified on a fixed cadence and the
+ * date shown beside it. See the note at the top of
+ * components/tools/MultiStatePlanner.tsx before reintroducing one.
  */
 import { brand } from '@/config/brand';
 import type { Metadata } from 'next';
@@ -32,9 +38,8 @@ import LicensureChecker from '@/components/LicensureChecker';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import MultiStatePlanner, { type PlannerState } from '@/components/tools/MultiStatePlanner';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
-import { LICENSE_GUIDE_SLUG_PREFIX, LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
-import { licenseGuideFallbackSlugs } from '@/lib/blog';
-import { prisma } from '@/lib/prisma';
+import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
+import { getAllPublishedSlugs } from '@/lib/blog';
 import { getGatedStateBenchmarks } from '@/lib/salary-analytics';
 import { logger } from '@/lib/logger';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
@@ -114,27 +119,18 @@ const STATE_NAME_BY_SLUG = new Map(
 );
 
 /**
- * Every live state licensure-guide slug: published state_spotlight rows plus
- * the code-generated series that /blog/np-license-<state> renders without a
- * row (licenseGuideFallbackSlugs, the rule lib/blog.ts serves and lists by).
- * Reading only blog_posts omitted every guide link while all 51 guides were
- * live.
+ * Every live blog slug, from getAllPublishedSlugs() in lib/blog.ts: published
+ * rows first, then the posts /blog/<slug> renders from code (the license
+ * series and the content/blog files) when blog_posts holds no row for them,
+ * minus any an editor unpublished. loadCheckerData keeps the license-guide
+ * slugs. This used to query blog_posts through Prisma for state_spotlight
+ * rows and add the series by the same fallback rule; reading the list the
+ * sitemap and the state pages' guide links read means this page cannot
+ * disagree with them about which guides are live.
  */
 async function loadGuideSlugs(): Promise<string[]> {
-  const [publishedGuides, licenseRows] = await Promise.all([
-    prisma.blogPost.findMany({
-      where: { status: 'published', category: 'state_spotlight' },
-      select: { slug: true },
-    }),
-    prisma.blogPost.findMany({
-      where: { slug: { startsWith: LICENSE_GUIDE_SLUG_PREFIX } },
-      select: { slug: true },
-    }),
-  ]);
-  return [
-    ...publishedGuides.map((post) => post.slug),
-    ...licenseGuideFallbackSlugs(licenseRows.map((row) => row.slug)),
-  ];
+  const rows = await getAllPublishedSlugs();
+  return rows.map((row) => row.slug);
 }
 
 async function loadCheckerData(): Promise<CheckerData> {

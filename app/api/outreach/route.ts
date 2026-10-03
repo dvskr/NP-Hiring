@@ -9,7 +9,15 @@ import {
   createEmployerLead,
   updateLeadStatus,
   renderTemplate,
+  OUTREACH_TEMPLATE_NAMES,
+  OutreachTemplateUnavailableError,
+  type OutreachTemplateName,
 } from '@/lib/outreach-service';
+
+/** A template key the service knows, whether or not it is on offer right now. */
+function isOutreachTemplateName(value: unknown): value is OutreachTemplateName {
+  return typeof value === 'string' && (OUTREACH_TEMPLATE_NAMES as readonly string[]).includes(value);
+}
 
 export async function GET(request: NextRequest) {
   const authError = await requireApiAdmin(request);
@@ -141,19 +149,33 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Validate template name
-      const validTemplates = ['initial', 'followUp', 'freeOffer'];
-      if (!validTemplates.includes(templateName)) {
+      // Validate template name against the service's own key list, so the
+      // route can never accept a key the service does not have.
+      if (!isOutreachTemplateName(templateName)) {
         return NextResponse.json(
           {
             success: false,
-            error: `Invalid template name. Valid options: ${validTemplates.join(', ')}`,
+            error: `Invalid template name. Valid options: ${OUTREACH_TEMPLATE_NAMES.join(', ')}`,
           },
           { status: 400 }
         );
       }
 
-      const rendered = renderTemplate(templateName, variables);
+      // A known key can still be off offer: freeOffer pitches free posting,
+      // so the service refuses it once the launch promo has ended (an admin
+      // page loaded before config.promoEndsAt can still ask for it). That is
+      // the request conflicting with the current phase, not a server failure:
+      // answer 409 with the service's reason, which the admin page shows, and
+      // leave the error log for real failures.
+      let rendered: { subject: string; body: string };
+      try {
+        rendered = renderTemplate(templateName, variables);
+      } catch (error) {
+        if (error instanceof OutreachTemplateUnavailableError) {
+          return NextResponse.json({ success: false, error: error.message }, { status: 409 });
+        }
+        throw error;
+      }
 
       return NextResponse.json({ success: true, data: rendered });
     }

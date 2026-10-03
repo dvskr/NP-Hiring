@@ -107,24 +107,30 @@ describe('category art port', () => {
     expect(missing).toEqual([]);
   });
 
+  // The size cap needs one sharp.metadata() per ported file. Awaited one at a
+  // time this took about 30 seconds and blew the default 5 second budget
+  // whenever the machine was busy, which read as a failing assertion rather
+  // than a slow one. The reads are independent, so they run together and the
+  // per-file findings are flattened in walk order to keep the message stable.
   it('every ported file is referenced, neutrally named and within its size cap', async () => {
     const referenced = new Set([...sourcePaths().keys(), ...registryPaths()]);
     const caps: Record<string, number> = { heroes: 1024, bento: 768, icons: 256, nav: 256 };
-    const problems: string[] = [];
-    for (const file of walk(ART_DIR)) {
+    const perFile = await Promise.all([...walk(ART_DIR)].map(async (file) => {
       const publicPath = '/' + path.relative(path.join(ROOT, 'public'), file).split(path.sep).join('/');
       const [, , , group, name] = publicPath.split('/');
-      if (!/^[a-z0-9-]+\.webp$/.test(name ?? '')) problems.push(`${publicPath}: name is not kebab-case webp`);
+      const found: string[] = [];
+      if (!/^[a-z0-9-]+\.webp$/.test(name ?? '')) found.push(`${publicPath}: name is not kebab-case webp`);
       if (/pmhnp|psychiatr|psych|mental|behavioral|addiction|substance|crisis/i.test(publicPath)) {
-        problems.push(`${publicPath}: niche word in file name`);
+        found.push(`${publicPath}: niche word in file name`);
       }
-      if (!(group in caps)) problems.push(`${publicPath}: unknown art group`);
-      if (!referenced.has(publicPath)) problems.push(`${publicPath}: not referenced by any page or the registry`);
+      if (!(group in caps)) found.push(`${publicPath}: unknown art group`);
+      if (!referenced.has(publicPath)) found.push(`${publicPath}: not referenced by any page or the registry`);
       const { width = 0, height = 0 } = await sharp(file).metadata();
-      if (Math.max(width, height) > (caps[group] ?? 0)) problems.push(`${publicPath}: ${width}x${height} exceeds ${caps[group]}`);
-    }
-    expect(problems).toEqual([]);
-  });
+      if (Math.max(width, height) > (caps[group] ?? 0)) found.push(`${publicPath}: ${width}x${height} exceeds ${caps[group]}`);
+      return found;
+    }));
+    expect(perFile.flat()).toEqual([]);
+  }, 30_000);
 
   it('psych-only art appears only on the psychiatric-mental-health category', () => {
     const leaks: string[] = [];

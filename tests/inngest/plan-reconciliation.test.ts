@@ -10,13 +10,16 @@
  *   - a plan row whose status / paid-through date drifted from the live
  *     subscription (lost .updated/.deleted) is re-applied through
  *     handleSubscriptionChange; an in-sync row is left alone;
+ *   - that replay is stamped with the time its read was SENT, so a slow
+ *     answer cannot outrank a webhook that read the subscription later; a
+ *     replay that comes back 'stale' (a webhook wrote first) is no finding;
  *   - a row whose subscription Stripe no longer has is reported as orphaned;
  *   - every finding reaches Discord;
  *   - without a Stripe key the sweep logs a skip and returns instead of
  *     failing every day with retries (a warning when plan rows tracking a
  *     subscription exist, since those can no longer be reconciled).
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
@@ -80,6 +83,12 @@ function run(fn: CapturedFunction) {
     return fn.handler({ step: { run: stepRun } });
 }
 
+// Load the sweep's module graph once, outside any single test's time budget (a
+// cold import under a loaded full suite run can outlast vitest's 5 second default).
+beforeAll(async () => {
+    await import('@/lib/inngest/functions/plan-reconciliation');
+}, 60_000);
+
 beforeEach(() => {
     vi.clearAllMocks();
     process.env.STRIPE_SECRET_KEY = 'sk_test_x';
@@ -131,6 +140,10 @@ describe('drift on existing rows', () => {
         planMocks.getPlanBySubscriptionId.mockResolvedValue({ ...stored });
     });
 
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('leaves an in-sync row alone and sends nothing', async () => {
         stripeMocks.subscriptionsRetrieve.mockResolvedValue(subscription());
         const result = await run(await load());
@@ -156,6 +169,39 @@ describe('drift on existing rows', () => {
         handlerMocks.handleSubscriptionChange.mockResolvedValue({ outcome: 'updated', status: 'active' });
         await run(await load());
         expect(handlerMocks.handleSubscriptionChange).toHaveBeenCalledOnce();
+    });
+
+    it('stamps the replay with the time its read was sent, not the time the answer arrived', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        const READ_SENT = new Date('2027-01-20T06:45:00.000Z');
+        vi.setSystemTime(READ_SENT);
+        stripeMocks.subscriptionsRetrieve.mockImplementation(async () => {
+            // The answer takes half a second; a webhook can read and write meanwhile.
+            vi.setSystemTime(READ_SENT.getTime() + 500);
+            return subscription({ status: 'canceled' });
+        });
+
+        await run(await load());
+
+        // Stamped on arrival, this replay would outrank a webhook that read the subscription after it did.
+        expect(handlerMocks.handleSubscriptionChange).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'sub_1', status: 'canceled' }),
+            'customer.subscription.updated',
+            { eventId: 'plan-reconciliation:plan-1', observedAt: READ_SENT },
+        );
+    });
+
+    it('records nothing when a webhook wrote a fresher state between the read and the write (the replay comes back stale)', async () => {
+        stripeMocks.subscriptionsRetrieve.mockResolvedValue(subscription({ status: 'canceled' }));
+        // Nothing was applied: the row already holds what the fresher delivery wrote.
+        handlerMocks.handleSubscriptionChange.mockResolvedValue({ outcome: 'stale', status: 'active' });
+
+        const result = await run(await load());
+
+        expect(handlerMocks.handleSubscriptionChange).toHaveBeenCalledOnce();
+        expect(result.findings).toBe(0);
+        // A delivery that just landed is no sign of broken webhook delivery.
+        expect(discordMocks.sendDiscordMessage).not.toHaveBeenCalled();
     });
 
     it('reports a row whose subscription Stripe no longer has as orphaned', async () => {

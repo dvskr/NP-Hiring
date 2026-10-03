@@ -6,6 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import { formatDate, getExpiryStatus } from '@/lib/utils';
 import { ExternalLink, Edit, RefreshCw, Mail, Loader2, Shield, Pause, Play, Rocket, Users, Eye, MousePointerClick, User, Plus, Briefcase, BarChart3, Star, MessageSquare, Send, HelpCircle, Archive, ArchiveRestore, Info, FileText } from 'lucide-react';
 import { config } from '@/lib/config';
+import { renewalSavingsLine } from '@/lib/renewal-offer';
+import { applyArchiveResult, archiveRequestBody, shouldOfferRenew } from '@/lib/employer-dashboard-rules';
+import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 import { trackBeginCheckout } from '@/lib/analytics';
 import ApplicantsTab from '@/components/employer/ApplicantsTab';
 import AnalyticsTab from '@/components/employer/AnalyticsTab';
@@ -54,32 +57,11 @@ interface EmployerDashboardClientProps {
  *     either; pending rows get the "Complete payment" action instead.
  * Everything else ('promo', 'paid', legacy free_renewed / free_upgraded)
  * renews at config.renewalPrice, but only while a renewal can be bought
- * (paid posting on; see paidPostingAvailable below).
+ * (paid posting on; see paidPostingAvailable below), and never while the
+ * post is archived. The Renew rule itself is shouldOfferRenew in
+ * lib/employer-dashboard-rules.ts.
  */
 const LEGACY_FREE_STATUSES = new Set(['free', 'free_renewed', 'free_upgraded']);
-const NON_RENEWABLE_STATUSES = new Set(['plan', 'pending', 'refunded']);
-
-/**
- * The renewal savings line for this employer, or null when no saving is
- * true for them. The same rule as lib/pricing.ts#resolveRenewalOffer and
- * renewalSavingsLabel (this client bundle cannot import that module: it
- * loads the Prisma client), pinned to it by tests/lib/renewal-offer.test.ts:
- *   - no claim while the launch promo runs, because a new post is free;
- *   - `nextPostPrice` is the employer's own next new-post price from
- *     /api/employer/free-quota-status (0 with a free plan slot); without it
- *     the line names the standard post price instead;
- *   - no claim unless the renewal is cheaper by at least 1%.
- */
-export function renewalSavingsLine(nextPostPrice: number | null, now: Date = new Date()): string | null {
-    if (config.isPromoActive(now)) return null;
-    const comparedWith = nextPostPrice ?? config.postingPrice;
-    if (!Number.isFinite(comparedWith) || comparedWith <= config.renewalPrice) return null;
-    const percent = Math.floor(((comparedWith - config.renewalPrice) / comparedWith) * 100);
-    if (percent < 1) return null;
-    return nextPostPrice === null
-        ? `Save ${percent}% vs. the $${comparedWith} post price`
-        : `Save ${percent}% vs. your next new post at $${comparedWith}`;
-}
 
 /* ═══════════════════════════════════════════
    CLAY DESIGN TOKENS
@@ -157,7 +139,8 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
     // posting on and Stripe configured), so the dashboard never offers a
     // renewal the checkout would refuse with a 503; any failure counts as
     // unavailable. The quota status is this employer's own next new-post
-    // price (see renewalSavingsLine); null when it cannot be read.
+    // price (0 with a free plan slot), the comparison for the renewal's
+    // savings line; null when it cannot be read.
     const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
     const [nextPostPrice, setNextPostPrice] = useState<number | null>(null);
     useEffect(() => {
@@ -178,6 +161,12 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
         })();
         return () => { cancelled = true; };
     }, []);
+    // The launch-promo phase for this render. Every promo sentence on the
+    // page branches on it, and it is decided per render (never at module
+    // load), so the dashboard stops offering free posts at
+    // config.promoEndsAt without a deploy. A dashboard left open over that
+    // instant has no other reason to render, so the hook gives it one.
+    useRerenderAtPromoEnd();
     const promoActive = config.isPromoActive();
     const renewalPurchasable = paidPostingAvailable === true;
     // The Renew action offers what the employer can do right now: a renewal
@@ -185,7 +174,10 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
     // nothing at all otherwise (or until availability is known).
     const canOfferRenewAction = paidPostingAvailable !== null && (renewalPurchasable || promoActive);
     const renewActionLabel = renewalPurchasable ? 'Renew' : 'Post Again';
-    const savingsLine = renewalSavingsLine(nextPostPrice);
+    // The shared rule (lib/renewal-offer.ts), the one the expiry emails use:
+    // no claim during the promo, the employer's own next-post price when
+    // known, else the standard post price named as such, nothing under 1%.
+    const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, nextPostPrice });
 
     // Sync internal tab state when the URL query changes (top-nav navigation
     // between Dashboard and Applicants is the primary trigger).
@@ -229,10 +221,10 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
         return expiry.isUrgent;
     };
 
-    const shouldShowRenew = (job: Job): boolean => {
-        if (NON_RENEWABLE_STATUSES.has(job.paymentStatus)) return false;
-        return isExpired(job) || isExpiringSoon(job);
-    };
+    // A renewable post that has ended or ends soon, and is not archived
+    // (an archived post is restored before anything else is offered on it).
+    const shouldShowRenew = (job: Job): boolean =>
+        shouldOfferRenew(job, { expired: isExpired(job), expiringSoon: isExpiringSoon(job) });
 
     const handleRenewClick = (job: Job) => {
         setSelectedJob(job);
@@ -318,17 +310,21 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
         setArchivingJobId(job.id);
         setArchiveTarget(null);
         try {
-            const res = await fetch(`/api/employer/jobs/${job.id}/archive`, { method: 'PATCH' });
-            const result: { success?: boolean; archivedAt?: string | null; error?: string } =
+            // The state this employer chose, not a toggle: in a stale tab that
+            // still shows the post live, Archive must not restore it.
+            const res = await fetch(`/api/employer/jobs/${job.id}/archive`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(archiveRequestBody(job)),
+            });
+            const result: { success?: boolean; archivedAt?: string | null; isPublished?: boolean; error?: string } =
                 await res.json().catch(() => ({}));
             if (!res.ok || !result.success) {
                 throw new Error(result.error || `Request failed (${res.status})`);
             }
-            setLocalJobs(prev => prev.map(j =>
-                j.id === job.id
-                    ? { ...j, archivedAt: result.archivedAt ?? null, isPublished: result.archivedAt ? false : j.isPublished }
-                    : j
-            ));
+            // Show what the server stored, which differs from this tab's
+            // view when another tab changed the post first.
+            setLocalJobs(prev => prev.map(j => (j.id === job.id ? applyArchiveResult(j, result) : j)));
         } catch (err) {
             console.error('Error toggling archive state:', err);
             toast(
@@ -909,17 +905,25 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 const isArchivedOff = !job.isPublished && !!job.archivedAt;
                                                 const blocked = expired || isUnpaid || isArchivedOff;
                                                 const disabled = blocked || togglingJobId === job.id;
-                                                const blockTitle = expired
-                                                    ? (renewalPurchasable
-                                                        ? 'This posting has expired. Renew or post a new listing to make changes.'
-                                                        : 'This posting has expired and cannot be republished.')
-                                                    : isArchivedOff
-                                                        ? 'This post is archived. Restore it before you republish it.'
-                                                        : isUnpaid
-                                                            ? (promoActive
-                                                                ? `This posting was never paid for. Every post is free through ${config.promoEndsLabel}, so post the role again as a new listing.`
-                                                                : 'Payment required to publish this posting. Complete checkout to make it live.')
-                                                            : undefined;
+                                                // An archived row offers no Renew (shouldOfferRenew) and the
+                                                // renewal checkout answers 409 for it. When restoring an expired
+                                                // post is what brings Renew back, the tooltip says so: the expired
+                                                // wording below names Renew, which this row does not have.
+                                                const renewsOnceRestored = !!job.archivedAt && renewalPurchasable
+                                                    && shouldOfferRenew({ paymentStatus: job.paymentStatus, archivedAt: null }, { expired, expiringSoon: false });
+                                                const blockTitle = renewsOnceRestored
+                                                    ? 'This post is archived and has expired. Restore it before you renew it, or post a new listing.'
+                                                    : expired
+                                                        ? (renewalPurchasable
+                                                            ? 'This posting has expired. Renew or post a new listing to make changes.'
+                                                            : 'This posting has expired and cannot be republished.')
+                                                        : isArchivedOff
+                                                            ? 'This post is archived. Restore it before you republish it.'
+                                                            : isUnpaid
+                                                                ? (promoActive
+                                                                    ? `This posting was never paid for. Every post is free through ${config.promoEndsLabel}, so post the role again as a new listing.`
+                                                                    : 'Payment required to publish this posting. Complete checkout to make it live.')
+                                                                : undefined;
                                                 return (
                                                     <button
                                                         onClick={() => !disabled && handleTogglePublish(job)}
@@ -1381,7 +1385,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 Renewals at ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing. This legacy free-trial post isn&apos;t one of them.
                             </p>
                             <p style={{ fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6, marginBottom: '20px' }}>
-                                {config.isPromoActive()
+                                {promoActive
                                     ? `You can post this role again as a fresh listing, free through ${config.promoEndsLabel}. It runs ${config.durationDays} days with its own ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`
                                     : `You can post this role again as a fresh listing: $${config.introPrice} for your company's first paid post, $${config.postingPrice} after that. It runs ${config.durationDays} days with its own ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`}
                             </p>
@@ -1392,7 +1396,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                                     textDecoration: 'none', padding: '12px 16px', fontWeight: 700, fontSize: '14px',
                                 }}>
-                                    {config.isPromoActive() ? 'Post a New Job for Free' : 'Post a New Job'}
+                                    {promoActive ? 'Post a New Job for Free' : 'Post a New Job'}
                                 </Link>
                                 <button
                                     onClick={() => { setShowRenewModal(false); setSelectedJob(null); }}

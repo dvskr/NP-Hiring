@@ -13,11 +13,17 @@
  *  - The same holds for a posting that was never paid for ('pending', or
  *    'expired' after the reconciliation sweep retired the abandoned
  *    checkout): a $179 renewal must not publish a post nobody paid for.
+ *  - A full refund takes the posting down only when no other payment for it
+ *    stands. The alerts "Two paid renewals for one posting, refund required"
+ *    and "second payment for one posting" ask the operator for exactly that
+ *    refund, and it used to revoke the posting the employer had paid for
+ *    twice. A renewal that was never applied (renewal cap, revoked posting)
+ *    is refunded without touching the posting either.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
-import { sendRenewalConfirmationEmail } from '@/lib/email-service';
+import { sendRefundConfirmationEmail, sendRenewalConfirmationEmail } from '@/lib/email-service';
 
 vi.mock('stripe', () => ({
     default: vi.fn().mockImplementation(() => ({
@@ -45,6 +51,12 @@ function makeRequest(body: object): Request {
 
 const AMOUNT = 19900;
 
+// Load the webhook route graph once, outside any single test's time budget (a
+// cold import under a loaded full suite run can outlast vitest's 5 second default).
+beforeAll(async () => {
+    await import('@/app/api/webhooks/stripe/route');
+}, 60_000);
+
 beforeEach(() => {
     vi.clearAllMocks();
     process.env.STRIPE_SECRET_KEY = 'sk_test_x';
@@ -52,6 +64,8 @@ beforeEach(() => {
     vi.mocked(prisma.processedStripeEvent.create).mockResolvedValue({} as never);
     vi.mocked(prisma.jobCharge.findUnique).mockResolvedValue({ id: 'jc1', employerJobId: 'ej1', amountCents: AMOUNT } as never);
     vi.mocked(prisma.jobCharge.update).mockResolvedValue({} as never);
+    // The posting's only payment, unless a test says otherwise.
+    vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ id: 'ej1', jobId: 'job1', contactEmail: 'e@x.com', job: { id: 'job1', title: 'PMHNP' } } as never);
     vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
     vi.mocked(prisma.job.update).mockResolvedValue({} as never);
@@ -102,6 +116,145 @@ describe('Stripe webhook — refund/dispute entitlement', () => {
         expect(prisma.job.update).toHaveBeenCalledWith(
             expect.objectContaining({ where: { id: 'job1' }, data: { isPublished: false } }),
         );
+    });
+});
+
+describe('Stripe webhook — a full refund takes the posting down only when no other payment for it stands', () => {
+    const RENEWAL = 17900;
+    const POST_FEE = 29900;
+
+    /** The refunded ledger row, as charge.refunded finds it by payment intent. */
+    function refundedCharge(type: 'renewal' | 'new', amountCents: number) {
+        vi.mocked(prisma.jobCharge.findUnique).mockResolvedValue({ id: 'jc2', employerJobId: 'ej1', amountCents, type } as never);
+    }
+
+    /** The posting's other ledger rows. */
+    function otherCharges(rows: Array<{ type: string; amountCents: number; refundedAmountCents: number | null }>) {
+        vi.mocked(prisma.jobCharge.findMany).mockResolvedValue(rows as never);
+    }
+
+    function posting(paymentStatus: string) {
+        vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({
+            id: 'ej1', jobId: 'job1', paymentStatus, contactEmail: 'e@x.com', job: { id: 'job1', title: 'Nurse Practitioner' },
+        } as never);
+    }
+
+    async function refundInFull(eventId: string, amountCents: number) {
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        return POST(makeRequest({
+            id: eventId, type: 'charge.refunded',
+            data: { object: { id: 'ch_dup', payment_intent: 'pi_dup', amount_refunded: amountCents, refunds: { data: [{ id: `re_${eventId}`, reason: 'duplicate' }] } } },
+        }) as never);
+    }
+
+    function expectPostingKept() {
+        expect(prisma.employerJob.update).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+    }
+
+    function expectPostingRevoked() {
+        expect(prisma.employerJob.update).toHaveBeenCalledWith({ where: { id: 'ej1' }, data: { paymentStatus: 'refunded' } });
+        expect(prisma.job.update).toHaveBeenCalledWith({ where: { id: 'job1' }, data: { isPublished: false } });
+    }
+
+    it('one of two paid renewals refunded in full: the refund is recorded, and the posting stays live and paid', async () => {
+        refundedCharge('renewal', RENEWAL);
+        otherCharges([{ type: 'renewal', amountCents: RENEWAL, refundedAmountCents: null }]);
+        posting('paid');
+
+        const res = await refundInFull('evt_dup_renewal', RENEWAL);
+
+        expect(res.status).toBe(200);
+        // The ledger records the refund, and the employer is told about it...
+        expect(prisma.jobCharge.update).toHaveBeenCalledWith({
+            where: { id: 'jc2' },
+            data: expect.objectContaining({ refundedAmountCents: RENEWAL, refundReason: 'duplicate' }),
+        });
+        expect(sendRefundConfirmationEmail).toHaveBeenCalledWith('e@x.com', 'Nurse Practitioner', RENEWAL, false, 'utok');
+        // ...but the posting they paid for twice is not taken down.
+        expectPostingKept();
+        expect(prisma.jobCharge.findMany).toHaveBeenCalledWith({
+            where: { employerJobId: 'ej1', id: { not: 'jc2' } },
+            select: { type: true, amountCents: true, refundedAmountCents: true },
+        });
+    });
+
+    it('a refunded renewal keeps the posting while its post fee stands', async () => {
+        refundedCharge('renewal', RENEWAL);
+        otherCharges([{ type: 'new', amountCents: POST_FEE, refundedAmountCents: null }]);
+        posting('paid');
+
+        await refundInFull('evt_renewal_with_post_fee', RENEWAL);
+
+        expectPostingKept();
+    });
+
+    it('a partly refunded payment still stands', async () => {
+        refundedCharge('renewal', RENEWAL);
+        otherCharges([{ type: 'renewal', amountCents: RENEWAL, refundedAmountCents: 5000 }]);
+        posting('paid');
+
+        await refundInFull('evt_other_partly_refunded', RENEWAL);
+
+        expectPostingKept();
+    });
+
+    it("the posting's last standing payment refunded in full: revoked as before", async () => {
+        refundedCharge('renewal', RENEWAL);
+        otherCharges([{ type: 'renewal', amountCents: RENEWAL, refundedAmountCents: RENEWAL }]);
+        posting('paid');
+
+        const res = await refundInFull('evt_both_refunded', RENEWAL);
+
+        expect(res.status).toBe(200);
+        expectPostingRevoked();
+    });
+
+    it('a renewed promo post whose only renewal is refunded is revoked as before', async () => {
+        refundedCharge('renewal', RENEWAL);
+        otherCharges([]);
+        posting('paid');
+
+        await refundInFull('evt_only_renewal', RENEWAL);
+
+        expectPostingRevoked();
+    });
+
+    it.each(['promo', 'disputed', 'pending', 'expired', 'refunded'])(
+        "a refunded renewal that was never applied (posting still '%s') leaves the posting exactly as it is",
+        async (status) => {
+            // An applied renewal always leaves the posting 'paid'. This one was
+            // ledgered for a refund instead: the renewal cap, or a revoked posting.
+            refundedCharge('renewal', RENEWAL);
+            otherCharges([]);
+            posting(status);
+
+            const res = await refundInFull(`evt_unapplied_${status}`, RENEWAL);
+
+            expect(res.status).toBe(200);
+            expect(prisma.jobCharge.update).toHaveBeenCalled();
+            expectPostingKept();
+        },
+    );
+
+    it('a post fee refunded in full still revokes the posting when only renewals stand', async () => {
+        refundedCharge('new', POST_FEE);
+        otherCharges([{ type: 'renewal', amountCents: RENEWAL, refundedAmountCents: null }]);
+        posting('paid');
+
+        await refundInFull('evt_post_fee', POST_FEE);
+
+        expectPostingRevoked();
+    });
+
+    it('a post fee paid twice: refunding one of the two keeps the posting', async () => {
+        refundedCharge('new', POST_FEE);
+        otherCharges([{ type: 'new', amountCents: POST_FEE, refundedAmountCents: null }]);
+        posting('paid');
+
+        await refundInFull('evt_dup_post_fee', POST_FEE);
+
+        expectPostingKept();
     });
 });
 

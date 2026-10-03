@@ -14,6 +14,7 @@ import {
 } from '@/lib/email-templates-v2';
 import { renderJobCardHtml } from '@/lib/utils/render-job-card';
 import { resolveRenewalOffer, renewalSavingsLabel, type RenewalOffer } from '@/lib/pricing';
+import { LADDER_HEADLINE, PROMO_HEADLINE, PROMO_SUB, ladderLine } from '@/lib/pricing-copy';
 import { buildListUnsubscribeHeaders } from '@/lib/email/list-unsubscribe';
 import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
 
@@ -79,17 +80,16 @@ const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || brand.email.replyTo;
 
 // ── Canonical pricing copy (2026-09-12 launch promo + 2027 ladder) ──
 //
-// These strings are the SAME wording the pricing page, wizard and success
-// page use (see tmp/pricing-design.md "Canonical copy"); the regression
-// suite pins them, so keep them byte-identical and always token-driven —
-// never a literal price or date. Which one an email shows is decided at
-// SEND time via config.isPromoActive(): a welcome email sent on
+// The promo and ladder sentences (PROMO_HEADLINE, PROMO_SUB, ladderLine,
+// LADDER_HEADLINE) are imported from lib/pricing-copy.ts, the SAME wording
+// the pricing pages, wizard and success page use; the regression suite pins
+// them, so they are never redefined here and always token-driven, never a
+// literal price or date. Which one an email shows is decided at SEND time via
+// config.isPromoActive(now) / ladderLine(now): a welcome email sent on
 // 2026-12-30 promises the free launch period, one sent on 2027-01-02
-// states the ladder. Nothing here claims audience size (subscribers,
+// states the ladder as today's price (no "From January 1, 2027" once that
+// date has passed). Nothing here claims audience size (subscribers,
 // visitors, applicants) — that rule is absolute across every email.
-const PROMO_HEADLINE = `Free through ${config.promoEndsLabel}`;
-const PROMO_SUB = `Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required.`;
-const LADDER_LINE = `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`;
 const FEATURES_LINE = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
 /** The renewal limit lib/expires-at.ts#renewalExpiresAt applies, in the /pricing wording. */
 const RENEWAL_CAP_LINE = `Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`;
@@ -117,12 +117,14 @@ function planTerms(slots: number = config.planSlots): string {
  * The pricing sentence an employer-facing email should carry right now:
  * the promo pitch while the launch period runs, the ladder afterwards.
  * Evaluated per send (not at module load) so the switch-over on
- * config.promoEndsAt needs no deploy.
+ * config.promoEndsAt needs no deploy. The ladder body is ladderLine(now),
+ * which is already present tense on this branch: the old LADDER_LINE
+ * constant kept announcing "From January 1, 2027" in emails sent after it.
  */
 function pricingCopyForNow(now: Date = new Date()): { label: string; headline: string; body: string } {
   return config.isPromoActive(now)
     ? { label: 'Launch offer', headline: PROMO_HEADLINE, body: PROMO_SUB }
-    : { label: 'Pricing', headline: 'Simple per-post pricing', body: LADDER_LINE };
+    : { label: 'Pricing', headline: LADDER_HEADLINE, body: ladderLine(now) };
 }
 
 /** How a post was placed — drives the confirmation email's wording. */
@@ -389,15 +391,18 @@ export async function sendSignupWelcomeEmail(
     // Pricing pitch is resolved at send time (promo vs ladder) \u2014 see
     // pricingCopyForNow. The old "first post is free / no credit card"
     // card was a fixed promise that would have gone false on
-    // config.promoEndsAt without a deploy.
-    const pricing = pricingCopyForNow();
+    // config.promoEndsAt without a deploy. One instant decides both the
+    // card and the preheader, so a send that straddles the boundary can
+    // never mix the promo with the ladder.
+    const now = new Date();
+    const pricing = pricingCopyForNow(now);
 
     let html: string;
     if (isEmployer) {
       html = emailShellV2(`
       ${headerBlockV2('Your Employer Account Is Ready', '')}
       ${spacerV2(12)}
-      ${bodyTextV2(`Post positions, track engagement, and connect with qualified ${brand.niche.long}s \u2014 all from one dashboard.`)}
+      ${bodyTextV2(`Post positions, track engagement, and connect with qualified ${brand.niche.long}s, all from one dashboard.`)}
       ${spacerV2(20)}
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;text-align:center;">
@@ -421,9 +426,9 @@ export async function sendSignupWelcomeEmail(
       ${spacerV2(48)}
       ${closeContentV2()}`,
         unsubscribeFooterV2('sample'),
-        config.isPromoActive()
-          ? `Your employer account is ready \u2014 every post is free through ${config.promoEndsLabel}.`
-          : `Your employer account is ready \u2014 post your first job today.`
+        config.isPromoActive(now)
+          ? `Your employer account is ready. Every post is free through ${config.promoEndsLabel}.`
+          : 'Your employer account is ready. Post your first job today.'
       );
     } else {
       html = emailShellV2(`
@@ -454,7 +459,7 @@ export async function sendSignupWelcomeEmail(
       from: EMAIL_FROM,
       to: email,
       subject: isEmployer
-        ? `Welcome to ${brand.name} — Start Hiring Today`
+        ? `Welcome to ${brand.name}: Start Hiring Today`
         : `Welcome to ${brand.name}, ${firstName || 'there'}!`,
       html,
     }, 'welcome_signup', { role }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
@@ -690,6 +695,14 @@ export interface ExpiryWarningOptions {
    */
   renewalPurchasable?: boolean;
   /**
+   * True only when a NEW post can be bought right now: the same paid-posting
+   * check, before the row's own renewability narrows it to
+   * renewalPurchasable. Once the promo is over, a row that cannot be renewed
+   * (a legacy free row) is offered a paid repost at the ladder price instead
+   * of no offer at all. Omitted means false, for the same reason as above.
+   */
+  postingPurchasable?: boolean;
+  /**
    * The employer's own next new-post price in dollars
    * (lib/pricing#nextNewPostPrice), when the caller resolved it. Unknown
    * compares the renewal with config.postingPrice and says so.
@@ -703,7 +716,7 @@ export interface ExpiryWarningOptions {
 const NOT_RENEWABLE_STATUSES = new Set(['plan', 'free', 'pending', 'refunded', 'disputed']);
 
 /** Which offer an expiry warning carries: see expiryWarningCopy. */
-export type ExpiryWarningOffer = 'plan' | 'renew' | 'promo_repost' | 'none';
+export type ExpiryWarningOffer = 'plan' | 'renew' | 'promo_repost' | 'paid_repost' | 'none';
 
 interface ExpiryWarningCopy {
   offer: ExpiryWarningOffer;
@@ -727,9 +740,15 @@ interface ExpiryCopyContext {
   dashboardUrl: string;
   /** "a fresh 25 unlocks and 25 InMails", from config.limits. */
   fresh: string;
+  /** Send time: the instant every phase-dependent sentence is decided at. */
+  now: Date;
 }
 
-/** Every job post is free through the promo end: the sentence all promo offers share. */
+/**
+ * Every job post is free through the promo end: the sentence all promo
+ * offers share. A constant is safe because it is only ever chosen at send
+ * time, on the offer.promoActive branches below; never print it elsewhere.
+ */
 const PROMO_REPOST_LINE = `Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`;
 
 function planExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
@@ -778,6 +797,22 @@ function promoRepostExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
   };
 }
 
+/** After the promo, for a row that cannot be renewed: post it again at today's ladder price. */
+function paidRepostExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
+  return {
+    offer: 'paid_repost',
+    subject: `⏰ Your job posting expires in ${dayCount(c.days)}`,
+    preheader: `Your listing expires in ${dayCount(c.days)}. You can post this role again as a fresh listing.`,
+    lead: `Your posting for ${c.title} will expire on ${c.expiryDateStr}.`,
+    cardLabel: 'Post it again',
+    // ladderLine(now) is the present-tense price on this branch (it is only
+    // reached once the promo is over).
+    cardBody: `You can post this role again as a fresh listing. It runs ${config.durationDays} days with ${c.fresh}. ${ladderLine(c.now)}`,
+    ctaLabel: 'Post a New Job',
+    ctaUrl: `${BASE_URL}/post-job`,
+  };
+}
+
 function noOfferExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
   return {
     offer: 'none',
@@ -798,24 +833,32 @@ function noOfferExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
  *   renew        — a renewal can be bought; a saving is named only when it is
  *                  true for this reader (lib/pricing#resolveRenewalOffer)
  *   promo_repost — no renewal on sale, launch promo running: post it again free
- *   none         — no renewal on sale and no free alternative: no offer at all
+ *   paid_repost  — no renewal on sale, promo over, a new post can be bought:
+ *                  post it again at the ladder price
+ *   none         — promo over and nothing confirmed on sale (paid posting
+ *                  off): no offer at all
+ * The promo is judged at options.now, so the free wording stops on
+ * config.promoEndsAt with no deploy.
  */
 function expiryWarningCopy(jobTitle: string, expiryDateStr: string, days: number, options: ExpiryWarningOptions): ExpiryWarningCopy {
+  const now = options.now ?? new Date();
   const context: ExpiryCopyContext = {
     title: `<strong>${escapeHtml(jobTitle)}</strong>`,
     expiryDateStr,
     days,
     dashboardUrl: `${BASE_URL}/employer/dashboard`,
     fresh: `a fresh ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails`,
+    now,
   };
   if (options.paymentStatus === 'plan') return planExpiryCopy(context);
   const offer = resolveRenewalOffer({
     purchasable: !NOT_RENEWABLE_STATUSES.has(options.paymentStatus ?? '') && options.renewalPurchasable === true,
     nextPostPrice: options.nextPostPrice,
-    now: options.now,
+    now,
   });
   if (offer.purchasable) return renewExpiryCopy(context, offer);
-  return offer.promoActive ? promoRepostExpiryCopy(context) : noOfferExpiryCopy(context);
+  if (offer.promoActive) return promoRepostExpiryCopy(context);
+  return options.postingPurchasable === true ? paidRepostExpiryCopy(context) : noOfferExpiryCopy(context);
 }
 
 export async function sendExpiryWarningEmail(

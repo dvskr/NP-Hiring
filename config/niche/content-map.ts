@@ -7,16 +7,12 @@
  * ── NP HIRING CONTENT STATUS (2026-07-30, P1 #2/#3 · P2 · P3 #5) ─────
  * The launch content batch is authored:
  *   - Six evergreen NP posts live as .mdx in content/blog/ and are
- *     wired into every slug list below. They serve from the blog_posts
- *     table — run `npx tsx scripts/sync-blog-to-db.ts` against prod
- *     BEFORE deploying this file so the homepage links resolve.
+ *     wired into every slug list below.
  *   - P2 added five application-funnel pillars as .mdx in the same
  *     directory (np-interview-questions, np-resume-guide,
  *     np-cover-letter-guide, np-salary-negotiation-guide, and the
  *     code-generated np-ceu-requirements-by-state — see
- *     lib/blog-ceu-guide.ts). They ship through the SAME sync script;
- *     the same "sync before deploy" rule applies to the sidebar slots
- *     below.
+ *     lib/blog-ceu-guide.ts), wired into the sidebar slots below.
  *   - P3 #5 closed the content worklist with two regulated-adjacent
  *     guides in the same mechanism: np-malpractice-insurance-guide and
  *     np-credentialing-checklist. Both are MECHANICS-ONLY by design (no
@@ -35,7 +31,7 @@
  *     A future program DIRECTORY drops in behind them; it does not
  *     replace them, and it must not ship before the dataset exists.
  *   - P5 (A3) added the four-post certification guide series in the same
- *     .mdx + sync mechanism: np-certification-overview (the track→body
+ *     .mdx mechanism: np-certification-overview (the track→body
  *     router), fnp-certification-aanp-vs-ancc, pmhnp-certification-guide,
  *     and agacnp-vs-agpcnp. All four are MECHANICS-ONLY (no fees, hour
  *     counts, question counts, pass rates, or renewal-cycle lengths —
@@ -50,6 +46,27 @@
  *     never 404 a subset of states.
  * The consumers still handle empty gracefully (RelatedBlogPosts /
  * HomepageBlogSection return null on empty lists) for future forks.
+ *
+ * ── SERVING: NO SYNC BEFORE DEPLOY (backlog 2.2, 2026-10-01) ─────────
+ * Every slug below resolves without a blog_posts row (production held
+ * none on 2026-10-01). lib/blog.ts serves the content/blog .mdx posts
+ * (lib/blog-mdx-posts.ts) and the license series from code whenever the
+ * table has no row for a slug, and the surfaces that list posts apply
+ * the same rule (/blog, related posts, the sitemap, /resources,
+ * /for-programs, the licensure checker's guide links). Deploying a new
+ * post or a new slug here needs no database step.
+ * scripts/sync-blog-to-db.ts is OPTIONAL. It copies the files into
+ * blog_posts as published rows, which is only needed for what lives in
+ * the table: to bring a post under /admin/blog (it lists and edits rows,
+ * never the files), and to give PATCH /api/blog a row to attach an image
+ * or a YouTube video to (it updates a row by slug, a post served from its
+ * file carries neither, and the video sitemap lists only rows with a
+ * video). A row outranks the file: a published row is the editorial
+ * version, and an unpublished row takes the post down everywhere. That
+ * makes a synced .mdx row a snapshot: later edits to the file stay hidden
+ * until `--update` re-syncs it. (A license-guide row synced before the
+ * series review date is superseded by the generator anyway:
+ * isSupersededLicenseGuideRow in lib/blog.ts.)
  *
  * ── WHAT EACH MAP FEEDS ───────────────────────────────────────────────
  *   RELATED_BLOG_SLUGS       getRelevantBlogSlugs() in
@@ -82,8 +99,10 @@
  * NP HIRING: populated with the six-post seed batch in content/blog/
  * (P1 #3), extended with the application-funnel pillars in P2
  * (interview / resume / cover letter / negotiation / CE). Slugs resolve
- * through getPostBySlug(), so until the sync script has run against prod
- * a missing post silently drops out of the sidebar rather than 404ing.
+ * through getPostBySlug(), which serves the files from code (see SERVING
+ * above), so a slug with no post behind it (a typo, a removed file, or a
+ * post an editor unpublished) silently drops out of the sidebar rather
+ * than 404ing.
  *
  * ORDER MATTERS MORE THAN LENGTH HERE. getRelevantBlogSlugs()
  * (components/RelatedBlogPosts.tsx) caps the sidebar at 3 and always
@@ -226,8 +245,9 @@ export interface FeaturedBlogPost {
  * posts in content/blog/.
  *
  * NP HIRING: populated with the six-post seed batch (P1 #3). These are
- * direct <Link> hrefs — run `npx tsx scripts/sync-blog-to-db.ts` against
- * prod before deploying, or these become live internal 404s.
+ * direct <Link> hrefs, so each must name a file in content/blog/ (served
+ * from code, no sync needed: see SERVING above). A slug with no file, or
+ * one an editor unpublishes in blog_posts, is a live internal 404.
  */
 export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [
     // CQ-13: /salary-guide is the primary page for NP pay figures, so this

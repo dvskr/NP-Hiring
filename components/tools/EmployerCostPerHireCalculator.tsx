@@ -12,6 +12,12 @@
  * Our side has three ways to buy (launch promo → free; per-post ladder; the
  * Employer plan) and the widget prices whichever one the reader picks, so a
  * $0 promo result is always labelled as a dated window rather than a rate.
+ * Which ways are on offer follows the launch-promo clock: the server page
+ * decides the phase per render and passes it in (`phase`), so the server
+ * HTML and the hydrated widget agree. Once the promo has ended the promo is
+ * not offered at all and nothing here dates the ladder as a future price; a
+ * widget that was already open with the promo selected falls back to the
+ * per-post ladder (offeredFlatFeeMode).
  *
  * ACCESSIBILITY / STABILITY
  *  - Labelled native inputs with ids, keyboard operable, hints wired through
@@ -28,27 +34,28 @@ import ToolStyles from './ToolStyles';
 import { parsePlainAmount } from './parse-amount';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle } from './tool-theme';
 import {
-    DEFAULT_INPUTS,
+    DEFAULT_PLAN_MONTHS,
     FIRST_YEAR_BASE_SOURCE,
     FLAT_FEE_COST_PER_DAY,
-    FLAT_FEE_MODE_LABELS,
     FLAT_FEE_PRICING,
     FREE_POST_SCOPE_NOTE,
     INTRO_PRICE_SCOPE_NOTE,
     PLAN_NO_RENEWALS_NOTE,
     RENEWAL_SCOPE_NOTE,
     compareChannels,
+    defaultInputs,
     flatFeeCostPerHire,
+    flatFeeModeOptions,
     flatFeeSpend,
+    offeredFlatFeeMode,
     rankByCostPerHire,
     type CostPerHireInputs,
     type FlatFeeMode,
+    type PricingPhase,
 } from './cost-per-hire-model';
 
 type NumericKey = Exclude<keyof CostPerHireInputs, 'useIntroPrice' | 'flatFeeMode'>;
 type Draft = Record<NumericKey, string>;
-
-const FLAT_FEE_MODES: readonly FlatFeeMode[] = ['promo', 'per-post', 'plan'];
 
 function toDraft(inputs: CostPerHireInputs): Draft {
     return {
@@ -144,10 +151,21 @@ const twoCol = {
     gap: '14px',
 } as const;
 
-export default function EmployerCostPerHireCalculator() {
-    const [draft, setDraft] = useState<Draft>(() => toDraft(DEFAULT_INPUTS));
-    const [flatFeeMode, setFlatFeeMode] = useState<FlatFeeMode>(DEFAULT_INPUTS.flatFeeMode);
-    const [useIntroPrice, setUseIntroPrice] = useState(DEFAULT_INPUTS.useIntroPrice);
+interface EmployerCostPerHireCalculatorProps {
+    /** The pricing phase, decided per render by the server page (pricingPhase). */
+    phase: PricingPhase;
+}
+
+export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPerHireCalculatorProps) {
+    const promoPhase = phase === 'promo';
+    const modeOptions = flatFeeModeOptions(phase);
+    const [draft, setDraft] = useState<Draft>(() => toDraft(defaultInputs(phase)));
+    const [selectedMode, setSelectedMode] = useState<FlatFeeMode>(() => defaultInputs(phase).flatFeeMode);
+    // The selection is seeded once, at mount, and the phase can change under
+    // a mounted widget (a tab held open across the promo end). The mode that
+    // is shown and priced is therefore always one the phase still offers.
+    const flatFeeMode = offeredFlatFeeMode(selectedMode, phase);
+    const [useIntroPrice, setUseIntroPrice] = useState(() => defaultInputs(phase).useIntroPrice);
 
     const inputs = useMemo<CostPerHireInputs>(
         () => ({
@@ -218,8 +236,15 @@ export default function EmployerCostPerHireCalculator() {
             {/* Flat fee */}
             <h3 style={{ ...groupHeading, marginTop: '20px' }}>Flat-fee posting on {brand.name}</h3>
             <p style={groupNote}>
-                During our launch promo {FREE_POST_SCOPE_NOTE}. From {FLAT_FEE_PRICING.ladderStartsLabel}: your
-                first post is {formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is{' '}
+                {promoPhase ? (
+                    <>
+                        During our launch promo {FREE_POST_SCOPE_NOTE}. From {FLAT_FEE_PRICING.ladderStartsLabel}: your
+                        first post is{' '}
+                    </>
+                ) : (
+                    <>Your first post is{' '}</>
+                )}
+                {formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is{' '}
                 {formatUsd(FLAT_FEE_PRICING.postingPrice)} for {FLAT_FEE_PRICING.durationDays} days
                 ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day), or {formatUsd(FLAT_FEE_PRICING.planPrice)}/month for{' '}
                 {FLAT_FEE_PRICING.planSlots} active jobs. Renewal: {RENEWAL_SCOPE_NOTE}; {PLAN_NO_RENEWALS_NOTE}.
@@ -233,16 +258,17 @@ export default function EmployerCostPerHireCalculator() {
                     className="tool-control"
                     value={flatFeeMode}
                     aria-describedby="cph-flat-mode-hint"
-                    onChange={(event) => setFlatFeeMode(event.target.value as FlatFeeMode)}
+                    onChange={(event) => setSelectedMode(event.target.value as FlatFeeMode)}
                     style={controlStyle}
                 >
-                    {FLAT_FEE_MODES.map((mode) => (
-                        <option key={mode} value={mode}>{FLAT_FEE_MODE_LABELS[mode]}</option>
+                    {modeOptions.map(({ mode, label }) => (
+                        <option key={mode} value={mode}>{label}</option>
                     ))}
                 </select>
                 <p id="cph-flat-mode-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>
-                    The promo prices every post at zero until it ends; the two {FLAT_FEE_PRICING.ladderStartsLabel} options
-                    price the same roles on the per-post ladder or on the Employer plan.
+                    {promoPhase
+                        ? `The promo prices every post at zero until it ends; the two ${FLAT_FEE_PRICING.ladderStartsLabel} options price the same roles on the per-post ladder or on the Employer plan.`
+                        : 'Price the same roles on the per-post ladder or on the Employer plan.'}
                 </p>
             </div>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
@@ -257,7 +283,7 @@ export default function EmployerCostPerHireCalculator() {
                     <NumberField
                         id="cph-plan-months"
                         label="Months on the Employer plan"
-                        hint={`Starts at ${DEFAULT_INPUTS.planMonths} because that is our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. That is a product fact, not how long anyone subscribes. There are no renewals to price, because ${PLAN_NO_RENEWALS_NOTE}.`}
+                        hint={`Starts at ${DEFAULT_PLAN_MONTHS} because that is our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. That is a product fact, not how long anyone subscribes. There are no renewals to price, because ${PLAN_NO_RENEWALS_NOTE}.`}
                         value={draft.planMonths}
                         suffix="months"
                         onChange={set('planMonths')}

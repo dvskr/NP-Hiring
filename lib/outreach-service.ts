@@ -5,10 +5,16 @@
  * Copy rules (2026-09-12 pricing change):
  *   - NEVER state audience numbers (subscribers, visitors, applicants). The
  *     old "over 1,000 NPs subscribed" line was unverifiable and is gone.
- *   - The launch offer IS true now — every post is free through
- *     config.promoEndsLabel — so it is stated with the same tokens the
- *     pricing page uses (duration, Featured, unlocks/InMails), never with
- *     literal numbers or dates.
+ *   - The offer sentence is decided per render (offerLine(now)): while the
+ *     launch promo runs every post is free through config.promoEndsLabel;
+ *     from config.promoEndsAt it states the ladder as today's price
+ *     (lib/pricing-copy ladderLine). Both use the same tokens the pricing
+ *     page uses (duration, Featured, unlocks/InMails, prices), never literal
+ *     numbers or dates. Deciding at module load would keep pitching free
+ *     posting until a redeploy.
+ *   - freeOffer IS the free pitch, so it exists only while the promo runs:
+ *     availableOutreachTemplates(now) drops it afterwards and renderTemplate
+ *     refuses it with OutreachTemplateUnavailableError.
  *   - The three template keys and renderTemplate's signature are pinned by
  *     the admin page and the API route; do not rename them.
  */
@@ -16,18 +22,53 @@ import { prisma } from '@/lib/prisma';
 import { EmployerLead } from '@/lib/types';
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
+import { ladderLine } from '@/lib/pricing-copy';
 
-/** One-line statement of the launch offer, shared by all three templates. */
-const LAUNCH_OFFER_LINE = `Right now every job post on ${brand.name} is free during our launch period through ${config.promoEndsLabel}: a ${config.durationDays}-day Featured listing with top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required.`;
+export type OutreachTemplateName = 'initial' | 'followUp' | 'freeOffer';
 
-const TEMPLATES = {
-  initial: {
-    subject: `Reach qualified ${brand.niche.short}s with {{companyName}}`,
-    body: `Hi {{contactName}},
+/** Every template key, in the order the admin page lists them. */
+export const OUTREACH_TEMPLATE_NAMES: readonly OutreachTemplateName[] = ['initial', 'followUp', 'freeOffer'];
+
+/** The package every post includes, in the wording both offer lines share. */
+const POST_PACKAGE = `a ${config.durationDays}-day Featured listing with top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails`;
+
+/** One-line statement of the launch offer. Only while config.isPromoActive(). */
+const LAUNCH_OFFER_LINE = `Right now every job post on ${brand.name} is free during our launch period through ${config.promoEndsLabel}: ${POST_PACKAGE}. No credit card required.`;
+
+/** The offer sentence the templates carry at `now`: the launch offer, then the ladder price. */
+function offerLine(now: Date): string {
+  if (config.isPromoActive(now)) return LAUNCH_OFFER_LINE;
+  return `Every job post on ${brand.name} is ${POST_PACKAGE}. ${ladderLine(now)}`;
+}
+
+/** freeOffer pitches free posting, so it is on offer only while the promo runs. */
+function isTemplateAvailable(templateName: OutreachTemplateName, now: Date): boolean {
+  return templateName !== 'freeOffer' || config.isPromoActive(now);
+}
+
+/** The templates an admin may use at `now`, decided per request. */
+export function availableOutreachTemplates(now: Date = new Date()): OutreachTemplateName[] {
+  return OUTREACH_TEMPLATE_NAMES.filter((templateName) => isTemplateAvailable(templateName, now));
+}
+
+/** renderTemplate was asked for freeOffer after the launch promo ended. */
+export class OutreachTemplateUnavailableError extends Error {
+  constructor(public readonly templateName: OutreachTemplateName) {
+    super(`The ${templateName} template is no longer available: free posting ran through ${config.promoEndsLabel}. Use the initial or followUp template, which state the current prices.`);
+    this.name = 'OutreachTemplateUnavailableError';
+  }
+}
+
+function outreachTemplates(now: Date): Record<OutreachTemplateName, { subject: string; body: string }> {
+  const offer = offerLine(now);
+  return {
+    initial: {
+      subject: `Reach qualified ${brand.niche.short}s with {{companyName}}`,
+      body: `Hi {{contactName}},
 
 I noticed {{companyName}} is hiring ${brand.niche.descriptor}s. I'm reaching out because we run ${brand.name}, the specialized job board for ${brand.niche.descriptor}s.
 
-${LAUNCH_OFFER_LINE}
+${offer}
 
 Would you be interested in posting your open positions? I'm happy to set up your first listing.
 
@@ -36,25 +77,27 @@ Best,
 ${brand.name}
 
 P.S. You can check out our site at ${brand.domain}`
-  },
+    },
 
-  followUp: {
-    subject: `Following up: ${brand.niche.short} job posting`,
-    body: `Hi {{contactName}},
+    followUp: {
+      subject: `Following up: ${brand.niche.short} job posting`,
+      body: `Hi {{contactName}},
 
 Just following up on my previous email about posting your ${brand.niche.short} positions on our job board.
 
-${LAUNCH_OFFER_LINE}
+${offer}
 
 Happy to answer any questions or set up a quick call.
 
 Best,
 [Your name]`
-  },
+    },
 
-  freeOffer: {
-    subject: `Free ${brand.niche.short} job posting for {{companyName}}`,
-    body: `Hi {{contactName}},
+    // Always the launch offer: renderTemplate refuses this key once the
+    // promo is over, so it never renders with any other sentence.
+    freeOffer: {
+      subject: `Free ${brand.niche.short} job posting for {{companyName}}`,
+      body: `Hi {{contactName}},
 
 I'd like to invite {{companyName}} to post on ${brand.name}, the specialized job board for ${brand.niche.descriptor}s.
 
@@ -64,14 +107,24 @@ Just reply to this email with your job details, or post directly at ${brand.doma
 
 Best,
 [Your name]`
-  }
-};
+    },
+  };
+}
 
+/**
+ * Fill a template for one lead. `now` decides the offer sentence and whether
+ * freeOffer may be used at all (production callers use the default).
+ * Throws OutreachTemplateUnavailableError for freeOffer after the promo.
+ */
 export function renderTemplate(
-  templateName: keyof typeof TEMPLATES,
-  variables: { companyName: string; contactName?: string }
+  templateName: OutreachTemplateName,
+  variables: { companyName: string; contactName?: string },
+  now: Date = new Date(),
 ): { subject: string; body: string } {
-  const template = TEMPLATES[templateName];
+  if (!isTemplateAvailable(templateName, now)) {
+    throw new OutreachTemplateUnavailableError(templateName);
+  }
+  const template = outreachTemplates(now)[templateName];
 
   // Replace variables in subject and body
   let subject = template.subject;

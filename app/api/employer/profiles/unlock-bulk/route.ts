@@ -29,6 +29,7 @@ import { prisma } from '@/lib/prisma';
 import { canUnlockCandidate, getEmployerTier } from '@/lib/tier-limits';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 const requestSchema = z.object({
   candidateIds: z.array(z.string().min(1)).min(1).max(100),
@@ -94,10 +95,7 @@ export async function POST(req: NextRequest) {
     const ownsPosting = await prisma.employerJob.findFirst({
       where: {
         id: parsed.postingId,
-        OR: [
-          { userId: user.id },
-          { userId: null, contactEmail: user.email ?? '' },
-        ],
+        OR: employerJobOwnershipBranches(user),
         job: { isPublished: true, expiresAt: { gt: new Date() } },
       },
       select: { id: true },

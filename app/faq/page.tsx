@@ -10,6 +10,13 @@ import { Mail, HelpCircle } from 'lucide-react';
 import { config } from '@/lib/config';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { CEU_GUIDE_SLUG, CEU_GUIDE_TITLE } from '@/lib/blog-ceu-guide';
+import { employerPricingFaqs } from './faq-employer-copy';
+
+// The employer pricing answers (and the FAQPage JSON-LD they feed) follow the
+// launch-promo clock (backlog 2.1). This page was fully static, so it would
+// have advertised free posting until the next deploy; re-render hourly so
+// the answers switch on config.promoEndsAt by themselves.
+export const revalidate = 3600;
 
 // Edge-generated OG card — no dependency on storage assets that don't
 // exist on this board (the old pmhnp-*.webp URL 400s). Same pattern as
@@ -85,31 +92,11 @@ export default function FAQPage() {
   // Pricing answers are written around the launch promo + 2027 ladder in
   // lib/config — every number and date is a config token, and the sentences
   // match the canonical copy on /pricing so the FAQPage JSON-LD below never
-  // tells Google a different price than the pricing page does.
+  // tells Google a different price than the pricing page does. The four that
+  // follow the promo clock (cost, features, intro price, plan) come from
+  // ./faq-employer-copy.ts, built for this render's clock.
   const employerFaqs = [
-    {
-      question: "How much does it cost to post a job?",
-      answer: `Free through ${config.promoEndsLabel}. Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`
-    },
-    {
-      question: "What features are included?",
-      answer: `Every job post, whether free during the promo, intro, featured, or posted from an Employer plan slot, gets the same features: a ${config.durationDays}-day listing, Featured badge, top placement in search results, company logo, full analytics with salary benchmarks, ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and apply-on-platform. There is no stripped-down tier.`
-    },
-    {
-      question: `What is the intro price, and who gets it?`,
-      answer: `From ${config.ladderStartsLabel}, the first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. It is scoped to your organization's domain, not to a login, and posts made free during the launch promo do not use it up.`
-    },
-    {
-      // Plan posts are NOT live "for as long as the plan is active": every
-      // post, plan included, runs config.durationDays (post-free writes the
-      // same expiresAt), a plan post is never renewed (create-renewal-checkout
-      // 409s it), and the lapse job takes plan posts down when the plan ends.
-      // What the plan buys is the slot: when a post ends or is closed, the
-      // employer posts into that slot again at no extra charge. Same wording
-      // as PLAN_TERMS / PLAN_POSTS_LINE / PLAN_CANCEL_LINE on /pricing.
-      question: "How does the Employer plan work?",
-      answer: `From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. ${config.planSlots} active job slots while you're subscribed. Swap jobs any time. Cancel any time. Each plan post runs ${config.durationDays} days. When one ends, or you close it to swap in another role, its slot opens up and you can post into it again at no extra charge. Plan posts come down if the plan ends. The plan is billed month to month. If you cancel, your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first. Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`
-    },
+    ...employerPricingFaqs(new Date()),
     {
       // A renewal moves the end date and nothing else: it does not reset the
       // post's unlock or InMail counts (lib/tier-limits.ts counts both per

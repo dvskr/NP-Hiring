@@ -1,8 +1,11 @@
 /**
  * app/compare/page.tsx — hub for the vs-competitor comparison series
- * (P5 A2). Cards derive from COMPETITOR_PROFILES in lib/compare-data.ts —
- * the same array the three detail pages render from — so the hub can never
- * advertise a comparison that does not exist.
+ * (P5 A2). Cards derive from competitorProfiles() in lib/compare-data.ts —
+ * the same profiles the three detail pages render from — so the hub can
+ * never advertise a comparison that does not exist. The hub renders only
+ * each profile's names, meta title and description, none of which follow
+ * the launch-promo clock, so it stays static (and its sitemap lastmod stays
+ * the review date).
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -12,7 +15,7 @@ import { brand } from '@/config/brand';
 import {
     COMPARE_HUB_PATH,
     COMPARE_REVIEW_DATE_LABEL,
-    COMPETITOR_PROFILES,
+    competitorProfiles,
 } from '@/lib/compare-data';
 import { ldJson } from './comparison-shared';
 
@@ -33,6 +36,7 @@ export const metadata: Metadata = {
 };
 
 export default function CompareHubPage() {
+    const profiles = competitorProfiles(new Date());
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <BreadcrumbSchema
@@ -52,7 +56,7 @@ export default function CompareHubPage() {
                         url: `${brand.baseUrl}${COMPARE_HUB_PATH}`,
                         mainEntity: {
                             '@type': 'ItemList',
-                            itemListElement: COMPETITOR_PROFILES.map((profile, idx) => ({
+                            itemListElement: profiles.map((profile, idx) => ({
                                 '@type': 'ListItem',
                                 position: idx + 1,
                                 name: profile.metaTitle,
@@ -117,9 +121,9 @@ export default function CompareHubPage() {
                         </div>
                     </div>
 
-                    {/* Comparison cards — derived from the same array as the routes */}
+                    {/* Comparison cards — derived from the same profiles as the routes */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                        {COMPETITOR_PROFILES.map((profile) => (
+                        {profiles.map((profile) => (
                             <Link
                                 key={profile.slug}
                                 href={`${COMPARE_HUB_PATH}/${profile.slug}`}

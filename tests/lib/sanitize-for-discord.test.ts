@@ -91,3 +91,72 @@ describe('sanitizeForDiscord', () => {
         expect(sanitizeForDiscord(12345 as unknown as string)).toBe('12345');
     });
 });
+
+// A Checkout Session id (cs_live_ or cs_test_ plus about 58 characters) is long
+// enough for the long_token fallback, which masked the sessionId in every
+// Stripe webhook alert. Stripe object ids stay readable; secrets do not.
+describe('sanitizeForDiscord: Stripe object ids', () => {
+    // Real-length bodies, letters and digits only, as Stripe issues them.
+    const SESSION_BODY = 'a1B2c3D4e5F6g7H8i9J0'.repeat(3).slice(0, 58);
+    const LONG_BODY = 'Ab12Cd34Ef'.repeat(4);
+
+    it.each(['cs_live_', 'cs_test_'])('keeps a real-length %s Checkout Session id intact', (prefix) => {
+        const line = `sessionId=${prefix}${SESSION_BODY} · jobId=job-1`;
+        expect(`${prefix}${SESSION_BODY}`.length).toBeGreaterThanOrEqual(60);
+        expect(sanitizeForDiscord(line)).toBe(line);
+    });
+
+    it.each(['pi', 'ch', 'in', 'sub', 'cus', 'evt', 're', 'dp', 'price', 'prod', 'plink', 'seti', 'py'])(
+        'keeps a %s_ id intact even when it is long enough for the token fallback',
+        (prefix) => {
+            const id = `${prefix}_${LONG_BODY}`;
+            expect(id.length).toBeGreaterThanOrEqual(40);
+            expect(sanitizeForDiscord(`No such object: '${id}'`)).toBe(`No such object: '${id}'`);
+        },
+    );
+
+    it('keeps several ids in one alert line, the way the renewal alert joins them', () => {
+        const line = `otherSessionIds=cs_live_${SESSION_BODY}, cs_test_${SESSION_BODY} · otherPaymentIntentIds=pi_${LONG_BODY}`;
+        expect(sanitizeForDiscord(line)).toBe(line);
+    });
+
+    // Fixtures for secrets carry underscores after the prefix, like the key
+    // fixtures above, so they never match GitHub's push protection patterns.
+    it.each([
+        ['a secret key', 'sk_live_FAKE_KEY_FOR_TEST_ONLY_0123456789'],
+        ['a test mode secret key', 'sk_test_FAKE_KEY_FOR_TEST_ONLY_0123456789'],
+        ['a restricted key', 'rk_live_FAKE_KEY_FOR_TEST_ONLY_0123456789'],
+        ['a webhook signing secret, shorter than the token fallback', 'whsec_FAKE_SECRET_FOR_TEST_ONLY_01'],
+    ])('still masks %s', (_label, secret) => {
+        const out = sanitizeForDiscord(`Stripe rejected ${secret} for cs_live_${SESSION_BODY}`);
+        expect(out).not.toContain(secret);
+        expect(out).toContain('[REDACTED_API_KEY]');
+        // The id beside it is still readable.
+        expect(out).toContain(`cs_live_${SESSION_BODY}`);
+    });
+
+    // Stripe's signing secrets are letters and digits, but the Resend webhook
+    // (Svix) uses the same whsec_ prefix with a base64 body, which can hold
+    // + / and =. The fixtures also carry an underscore so no secret scanner
+    // reads them as real.
+    it.each([
+        ['with + and / after a long run', 'whsec_FAKE_KEY_FOR_TEST_ONLY+FAKEFAKE/Fk'],
+        ['with / inside the first 16 characters', 'whsec_FAKE_ONLY/FAKEFAKEFAKE+FAKEFAKEFk'],
+        ['with + early and = padding', 'whsec_FAKE_ONLY+FAKE/FAKEFAKEFAKEFAKEFA=='],
+    ])('masks a base64 webhook signing secret %s in full', (_label, secret) => {
+        expect(sanitizeForDiscord(`svix: no matching signature for ${secret} (resend)`))
+            .toBe('svix: no matching signature for [REDACTED_API_KEY] (resend)');
+    });
+
+    it.each([
+        ['a PaymentIntent client secret', `pi_${LONG_BODY}_secret_${LONG_BODY}`],
+        ['a SetupIntent client secret', `seti_${LONG_BODY}_secret_${LONG_BODY}`],
+        ['a secret key joined to an id by an underscore', `cs_live_${SESSION_BODY}_sk_live_FAKE_KEY_FOR_TEST_ONLY`],
+        ['a long token that only starts like a refund id (the shape of another vendor key)', 're_FAKE_KEY_FOR_TEST_ONLY_0123456789_abcdef'],
+        ['a long token with a prefix Stripe ids do not use', `tok_${LONG_BODY}`],
+    ])('still masks %s as a long token', (_label, token) => {
+        const out = sanitizeForDiscord(`value: ${token} end`);
+        expect(out).not.toContain(token);
+        expect(out).toBe('value: [REDACTED_TOKEN] end');
+    });
+});

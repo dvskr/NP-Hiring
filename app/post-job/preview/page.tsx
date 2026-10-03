@@ -7,6 +7,8 @@ import { MapPin, Briefcase, Monitor, ExternalLink, ChevronLeft, ChevronRight, Lo
 import { formatSalary } from '@/lib/utils';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
 import { config } from '@/lib/config';
+import { currentQuote } from '@/lib/next-post-quote';
+import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 import { trackFreePostLimitHit } from '@/lib/analytics';
 import JobCard from '@/components/JobCard';
 import type { Job } from '@/lib/types';
@@ -101,11 +103,17 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [quotaStatus, setQuotaStatus] = useState<QuotaStatus | null>(null);
+  const [fetchedQuotaStatus, setFetchedQuotaStatus] = useState<QuotaStatus | null>(null);
   // F3: server-checked paid-posting availability (ENABLE_PAID_POSTING flag +
   // stripeConfigured). null = unknown (fail open — the checkout API still
   // 503s with a stable code if a paid attempt slips through).
   const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
+  // The quote as it stands on this render: a 'promo' answer fetched before
+  // config.promoEndsAt reads as no answer once it has passed (see
+  // lib/next-post-quote.ts). A preview left open over that instant is
+  // rendered again by the hook, so the page never keeps promising a free post.
+  useRerenderAtPromoEnd();
+  const quotaStatus = currentQuote(fetchedQuotaStatus);
 
   useEffect(() => {
     const stored = localStorage.getItem('jobFormData');
@@ -132,9 +140,9 @@ export default function PreviewPage() {
         const res = await fetch('/api/employer/free-quota-status');
         if (!res.ok) return;
         const data = (await res.json()) as QuotaStatus;
-        if (!cancelled) setQuotaStatus(data);
+        if (!cancelled) setFetchedQuotaStatus(data);
       } catch {
-        /* leave quotaStatus null — falls back to neutral copy */
+        /* leave the quote null — falls back to neutral copy */
       }
     })();
     return () => { cancelled = true; };
@@ -328,8 +336,10 @@ export default function PreviewPage() {
   };
 
   const willBeFree = quotaStatus?.eligible === true && quotaStatus.willBeFree === true;
-  // Mode is only trusted from an eligible answer; anything else renders the
-  // neutral "Live for N days" headline (no price guessed, no promo claimed).
+  // Mode is only trusted from an eligible answer that still holds (a promo
+  // answer only while the promo runs, see currentQuote above); anything else
+  // renders the neutral "Live for N days" headline (no price guessed, no
+  // promo claimed).
   const postingMode = quotaStatus?.eligible === true ? quotaStatus.mode : undefined;
   const listingDays = quotaStatus?.durationDays ?? config.durationDays;
   const planSlots = quotaStatus?.plan?.slots ?? config.planSlots;

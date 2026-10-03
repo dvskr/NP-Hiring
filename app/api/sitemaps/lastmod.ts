@@ -18,6 +18,9 @@
  *     specialty's jobs, or its template's copy date when that is later;
  *   - a code-authored page: the date its copy last changed
  *     (PAGE_CONTENT_DATES below);
+ *   - a page whose copy switches from the launch promo to the paid ladder
+ *     when the promo ends: once that instant has passed, never earlier than
+ *     it (PROMO_SWITCH_PATHS below);
  *   - a sitemap index child: the newest lastmod inside that child.
  * A URL whose content date cannot be read carries no lastmod at all, which is
  * honest; a guessed "now" is not.
@@ -27,6 +30,7 @@
  */
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 
 /** The two Job columns a content date reads, for a `select` or an aggregate `_max`. */
 export const JOB_CONTENT_DATE_FIELDS = { contentChangedAt: true, createdAt: true } as const;
@@ -84,7 +88,9 @@ export async function latestJobContentDate(where: Prisma.JobWhereInput): Promise
  * recrawl); a date moved without a copy change over-claims. Seeded on
  * 2026-09-29 from each page's last commit, and from that day for pages this
  * release rewrote. tests/regressions/sitemap-content-lastmod.test.ts fails
- * when a listed code-authored page has no entry here.
+ * when a listed code-authored page has no entry here. The one copy change
+ * not recorded here is the launch promo's end, which changes pages on a date
+ * fixed in config rather than in a commit: PROMO_SWITCH_PATHS carries it.
  */
 export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/for-employers': '2026-09-27',
@@ -96,12 +102,19 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/terms': '2026-09-27',
   '/privacy': '2026-09-15',
   '/pricing': '2026-09-27',
-  '/for-programs': '2026-09-29',
+  // 2026-10-04 (backlog 2.2): the program guide card now resolves through
+  // lib/blog.ts, which serves the guide from code, so the card renders; it
+  // read the empty blog_posts table and never rendered before.
+  '/for-programs': '2026-10-04',
   '/security': '2026-09-12',
   '/sub-processors': '2026-09-12',
   '/accessibility': '2026-09-15',
   '/press': '2026-09-29',
-  '/resources': '2026-09-29',
+  // 2026-10-04 (backlog 2.2): the article count, the article grid, the
+  // "Before you apply" band and the state guide grid now list the posts
+  // lib/blog.ts serves from code; they read the empty blog_posts table and
+  // rendered nothing before.
+  '/resources': '2026-10-04',
   '/resources/fpa-guide': '2026-09-29',
   '/resources/private-practice-guide': '2026-09-29',
   '/resources/1099-vs-w2': '2026-09-29',
@@ -125,7 +138,14 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // explorer (lib/compare-data.ts). COMPARE_REVIEW_DATE stays: nobody
   // re-checked the claims.
   '/compare/np-hiring-vs-indeed': '2026-09-29',
-  '/compare/np-hiring-vs-enp-network': '2026-09-29',
+  // 2026-10-04 (backlog 2.1): the "comparing published prices" line dates
+  // only the AANP price to the review (it read "both public, as of" the
+  // review, five weeks before our promo and ladder went public), and the
+  // salary guide line reads "an NP". No claim was re-checked.
+  '/compare/np-hiring-vs-aanp-jobcenter': '2026-10-04',
+  // 2026-10-04 (backlog 2.1): "hiring an NP" (it read "a NP"). CQ-13 had
+  // relinked its licensure row on 2026-09-29, like the Indeed page's.
+  '/compare/np-hiring-vs-enp-network': '2026-10-04',
   // Every specialty salary page renders from one template: the specialty
   // config and content were rewritten in this release (specialty-config.ts,
   // specialty-content.ts).
@@ -133,20 +153,79 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
 };
 
 /**
- * The copy date of a code-authored page (see PAGE_CONTENT_DATES), or
- * undefined when the page has no entry: the sitemap then emits no lastmod
- * for it rather than a guessed one.
+ * Code-authored pages whose rendered copy switches from the launch promo to
+ * the paid ladder at config.promoEndsAt (backlog 2.1). Each states the promo
+ * while it runs and the ladder as the current price afterwards, deciding the
+ * phase per render and re-rendering at least hourly, so the switch needs no
+ * deploy and no edit to PAGE_CONTENT_DATES. Their copy did change at that
+ * instant, though, so once it has passed their lastmod is never earlier
+ * (pageContentDate); before it nothing here changes. Add a page in the same
+ * change that makes its copy follow the promo clock, and only then: listing
+ * one whose copy does not switch over-claims a change. Every comparison page
+ * is here because each states our price in its capability table.
+ * tests/regressions/promo-clock-pages-rerender.test.ts holds the set to the
+ * sources in both directions: a dated page whose code reads the promo clock
+ * has to be here (and re-render hourly), and a page here has to read it.
  */
-export function pageContentDate(path: string): Date | undefined {
-  const day = PAGE_CONTENT_DATES[path];
-  if (!day) return undefined;
-  const date = new Date(`${day}T00:00:00.000Z`);
-  return isValidDate(date) ? date : undefined;
+export const PROMO_SWITCH_PATHS: ReadonlySet<string> = new Set([
+  '/pricing',
+  '/for-employers',
+  '/faq',
+  '/for-employers/resources',
+  '/for-employers/resources/how-to-hire',
+  // States no price: only its post-a-job button switches ("Post a Job: Free"
+  // to "Post a Job"), the same kind of change as the homepage's employer band.
+  '/for-employers/resources/job-description-guide',
+  '/for-employers/resources/job-description-templates',
+  '/for-employers/resources/job-description-templates/[id]',
+  '/tools/salary-benchmark',
+  '/tools/cost-per-hire-calculator',
+  '/compare/np-hiring-vs-indeed',
+  '/compare/np-hiring-vs-aanp-jobcenter',
+  '/compare/np-hiring-vs-enp-network',
+]);
+
+/**
+ * The instant the launch promo ended, once `now` has reached it; null while
+ * it runs. Every page in PROMO_SWITCH_PATHS changed its copy then, and so did
+ * the homepage's employer band (see withPromoSwitch).
+ */
+export function promoSwitchDate(now: Date = new Date()): Date | null {
+  return config.isPromoActive(now) ? null : new Date(config.promoEndsAt);
 }
 
-/** The newest copy date among the code-authored pages, for a sitemap index child. */
-export function newestPageContentDate(): Date | null {
-  return latestOf(...Object.keys(PAGE_CONTENT_DATES).map(pageContentDate));
+/**
+ * The content date of a page that lists jobs AND renders copy that switches
+ * when the promo ends (the homepage, through components/EmployerHowItWorks):
+ * its jobs' newest content date, raised to the switch once that has passed.
+ * A date that could not be read stays unread, because the switch is only a
+ * lower bound on it, not the page's content date.
+ */
+export function withPromoSwitch(date: Date | null | undefined, now: Date = new Date()): Date | undefined {
+  if (!isValidDate(date)) return undefined;
+  return latestOf(date, promoSwitchDate(now)) ?? undefined;
+}
+
+/**
+ * The content date of a code-authored page: its copy date (see
+ * PAGE_CONTENT_DATES), raised to the promo switch for a page in
+ * PROMO_SWITCH_PATHS once `now` has passed it. Undefined when neither
+ * applies: the sitemap then emits no lastmod for the page rather than a
+ * guessed one. A switch page without a copy date (a comparison page still
+ * dated by its review; none is today) is dated by the switch alone once it
+ * has happened, which is exact: nothing else on it changed since.
+ */
+export function pageContentDate(path: string, now: Date = new Date()): Date | undefined {
+  const day = PAGE_CONTENT_DATES[path];
+  const copyDate = day ? new Date(`${day}T00:00:00.000Z`) : undefined;
+  const switchDate = PROMO_SWITCH_PATHS.has(path) ? promoSwitchDate(now) : null;
+  return latestOf(copyDate, switchDate) ?? undefined;
+}
+
+/** The newest content date among the code-authored pages at `now`, for a sitemap index child. */
+export function newestPageContentDate(now: Date = new Date()): Date | null {
+  const paths = new Set([...Object.keys(PAGE_CONTENT_DATES), ...PROMO_SWITCH_PATHS]);
+  return latestOf(...[...paths].map((path) => pageContentDate(path, now)));
 }
 
 /** A sitemap XML <lastmod> value (W3C datetime), or '' when there is no date. */

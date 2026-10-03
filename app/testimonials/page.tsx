@@ -28,8 +28,11 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
+import { LADDER_PRICES } from '@/lib/pricing-copy';
 import { ShieldCheck, ArrowRight, MessageSquareQuote } from 'lucide-react';
 
+// Hourly: new testimonials appear, and the post-a-job CTA switches from the
+// launch promo to the paid ladder when the promo ends, without a deploy.
 export const revalidate = 3600;
 
 /** Hard cap so a long-running board can't render an unbounded page. */
@@ -102,6 +105,10 @@ export default async function TestimonialsPage() {
 
     // Nothing approved (or the read failed) → no page. Never a placeholder.
     if (testimonials.length === 0) notFound();
+
+    // The CTA follows the launch-promo clock, decided per render, never at
+    // module load (lib/pricing-copy.ts).
+    const promoActive = config.isPromoActive(new Date());
 
     return (
         <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '48px 16px 80px' }}>
@@ -289,9 +296,11 @@ export default async function TestimonialsPage() {
                             boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
                         }}
                     >
-                        Post a job: free through {config.promoEndsLabel} <ArrowRight size={15} aria-hidden="true" />
+                        {promoActive ? `Post a job: free through ${config.promoEndsLabel}` : 'Post a job'}{' '}
+                        <ArrowRight size={15} aria-hidden="true" />
                     </Link>
                     <p style={{ fontSize: '12.5px', color: MUTED_TEXT, margin: '10px 0 0' }}>
+                        {promoActive ? null : `${LADDER_PRICES} `}
                         Every post runs {config.durationDays} days with every feature. See{' '}
                         <Link href="/for-employers" style={linkStyle}>
                             what every post includes

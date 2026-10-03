@@ -10,10 +10,27 @@
  *   2. --license-guides: generates all 51 state licensure posts from
  *      lib/blog-license-guides.ts and upserts them in a single
  *      transaction — all-or-nothing, so the DB can never hold a
- *      partial series. (Rendering never depends on this sync: lib/blog.ts
- *      falls back to the generator for license slugs with no DB row.
- *      Syncing makes the series visible to DB-reading listings such as
- *      /resources' state grid and the /blog index.)
+ *      partial series.
+ *
+ * WHAT A SYNC STILL CHANGES. Nothing a reader needs: lib/blog.ts serves
+ * the content/blog posts (lib/blog-mdx-posts.ts builds the row this script
+ * would write, faq_json included) and the license guides from code when
+ * blog_posts has no row for the slug, and the surfaces that list posts
+ * read through lib/blog.ts too (/blog and its post count, related posts,
+ * the sitemap, /resources, /for-programs, the licensure checker's guide
+ * links), so the posts render and are listed with the table empty. A row
+ * adds only what lives in the table: a post the admin blog editor can edit
+ * or unpublish (an unpublished row takes a post down even where code
+ * serves it), and a row PATCH /api/blog can attach an image or a YouTube
+ * video to (the video sitemap lists only rows with a video).
+ *
+ * WHAT IT COSTS. A published row outranks the file it came from, so a
+ * synced .mdx post is a snapshot: later edits to the file stay hidden until
+ * this runs again with --update. A license-guide row is superseded by the
+ * generator once the state's review date (getLicenseGuideReviewedAt) passes
+ * the row's reviewed_at, which this script stamps from the generator, so a
+ * review that bumps that date reaches readers without a resync
+ * (isSupersededLicenseGuideRow in lib/blog.ts).
  *
  * Usage:
  *   npx tsx scripts/sync-blog-to-db.ts [--update]

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * POST /api/employer/testimonials
@@ -97,10 +98,7 @@ export async function POST(request: NextRequest) {
     // signed up and went straight to a feedback prompt).
     const recentJob = await prisma.employerJob.findFirst({
       where: {
-        OR: [
-          { userId: user.id },
-          { userId: null, contactEmail: user.email || '' },
-        ],
+        OR: employerJobOwnershipBranches(user),
       },
       orderBy: { createdAt: 'desc' },
       select: { employerName: true },
@@ -118,10 +116,7 @@ export async function POST(request: NextRequest) {
       const owned = await prisma.employerJob.findFirst({
         where: {
           id: employerJobId,
-          OR: [
-            { userId: user.id },
-            { userId: null, contactEmail: user.email || '' },
-          ],
+          OR: employerJobOwnershipBranches(user),
         },
         select: { id: true },
       });

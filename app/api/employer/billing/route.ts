@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { config, PricingTier } from '@/lib/config';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * GET /api/employer/billing
@@ -32,10 +33,7 @@ export async function GET(req: NextRequest) {
         where: {
             // P5.A: contactEmail fallback limited to unclaimed legacy rows so a
             // user can't list another account's billing history by email match.
-            OR: [
-                { userId: user.id },
-                { userId: null, contactEmail: user.email! },
-            ],
+            OR: employerJobOwnershipBranches(user),
         },
         include: {
             job: {

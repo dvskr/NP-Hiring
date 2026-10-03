@@ -12,11 +12,16 @@
  *     next new-post price (intro vs. post price, 0 with a free plan slot),
  *     looked up once per (quota domain, employer);
  *   - plan rows are never offered a renewal: each runs config.durationDays
- *     and its slot is free when it ends.
+ *     and its slot is free when it ends;
+ *   - (backlog 2.1) every free-posting line is judged at the run's own clock,
+ *     so it stops at config.promoEndsAt with no deploy; after that a row the
+ *     renewal checkout refuses is offered a paid repost at the ladder price,
+ *     only while new posts can be bought.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
+import { LADDER_PRICES } from '@/lib/pricing-copy';
 
 const sendExpiryWarningEmail = vi.fn();
 const sendAndLog = vi.fn();
@@ -41,6 +46,10 @@ import { logger } from '@/lib/logger';
 
 const DURING_PROMO = new Date('2026-11-21T12:00:00.000Z');
 const AFTER_PROMO = new Date('2027-03-01T12:00:00.000Z');
+const LAST_PROMO_SECOND = new Date('2027-01-01T09:59:59.000Z');
+const LADDER_START = new Date(config.promoEndsAt);
+/** Free posting offered as a current deal: never true once the promo is over. */
+const FREE_REPOST = /free through|for free|at no charge|launch (period|promo)/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DOMAIN_WITH_PAID_POST = 'repeat.example';
 const DOMAIN_WITHOUT_PAID_POST = 'first.example';
@@ -97,6 +106,14 @@ function postExpiryHtml(jobId: string): string {
     return (call![0] as { html: string }).html;
 }
 
+// The first import of the route is a cold transform of its whole module
+// graph. Paid for once here, with its own budget: inside the first test it
+// outran the 5s default on a loaded machine, and the late run then consumed
+// the rows the next test had seeded.
+beforeAll(async () => {
+    await import('@/app/api/cron/expiry-warnings/route');
+}, 120_000);
+
 beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -124,7 +141,7 @@ describe('during the launch promo with paid posting off (production today)', () 
 
         expect(body.warningsSent).toBe(2);
         for (const id of ['a', 'b']) {
-            expect(warningOptionsFor(id)).toMatchObject({ renewalPurchasable: false, nextPostPrice: null, now: DURING_PROMO });
+            expect(warningOptionsFor(id)).toMatchObject({ renewalPurchasable: false, postingPurchasable: false, nextPostPrice: null, now: DURING_PROMO });
         }
         expect(getPlanSlotStatus).not.toHaveBeenCalled();
         expect(prisma.employerJob.count).not.toHaveBeenCalled();
@@ -244,11 +261,81 @@ describe('after the promo with paid posting off', () => {
 
         await runCron();
 
-        expect(warningOptionsFor('a')).toMatchObject({ renewalPurchasable: false, nextPostPrice: null });
+        expect(warningOptionsFor('a')).toMatchObject({ renewalPurchasable: false, postingPurchasable: false, nextPostPrice: null });
         const html = postExpiryHtml('gone');
         expect(html).not.toContain(`$${config.renewalPrice}`);
         expect(html).not.toMatch(/free through/i);
         expect(html).toContain('Go to Your Dashboard');
+    });
+});
+
+describe('after the promo with paid posting on: a row the renewal checkout refuses', () => {
+    beforeEach(() => {
+        vi.setSystemTime(AFTER_PROMO);
+        getPaidPostingStatus.mockReturnValue({ enabled: true, stripeConfigured: true, available: true });
+    });
+
+    it('the pre-expiry warning is told new posts can be bought but this row cannot be renewed', async () => {
+        seed([row('legacy', { status: 'free', expiresInDays: 3 })]);
+
+        await runCron();
+
+        expect(warningOptionsFor('legacy')).toMatchObject({
+            paymentStatus: 'free',
+            renewalPurchasable: false,
+            postingPurchasable: true,
+            nextPostPrice: null,
+            now: AFTER_PROMO,
+        });
+    });
+
+    it('the post-expiry email offers a paid repost at the ladder price, never a free one', async () => {
+        seed([], [row('legacy', { status: 'free', expiresInDays: -1 })]);
+
+        await runCron();
+
+        const html = postExpiryHtml('legacy');
+        expect(html).toContain(`You can post this role again as a fresh ${config.durationDays}-day listing. ${LADDER_PRICES} Your stats and applicants stay attached to the expired posting.`);
+        expect(html).toMatch(/>\s*Post a New Job\s*</);
+        expect(html).toContain('/post-job');
+        expect(html).not.toContain(`$${config.renewalPrice}`);
+        expect(html).not.toMatch(FREE_REPOST);
+        // Present tense: no start date that has already passed.
+        expect(html).not.toContain(config.ladderStartsLabel);
+    });
+});
+
+describe('the free repost line stops exactly at config.promoEndsAt', () => {
+    async function postExpiryAt(now: Date): Promise<string> {
+        vi.setSystemTime(now);
+        sendAndLog.mockClear();
+        seed([], [row('gone', { status: 'promo', expiresInDays: -1 })]);
+        await runCron();
+        return postExpiryHtml('gone');
+    }
+
+    it('paid posting off (production today): free repost in the last promo second, no offer from the next instant', async () => {
+        getPaidPostingStatus.mockReturnValue({ enabled: false, stripeConfigured: true, available: false });
+
+        const last = await postExpiryAt(LAST_PROMO_SECOND);
+        expect(last).toContain(`Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`);
+        expect(last).toMatch(/>\s*Post a New Job for Free\s*</);
+
+        const first = await postExpiryAt(LADDER_START);
+        expect(first).not.toMatch(FREE_REPOST);
+        expect(first).not.toContain('Post a New Job for Free');
+        expect(first).toContain('Go to Your Dashboard');
+    });
+
+    it('paid posting on: the renewal drops its free alternative at the same instant', async () => {
+        getPaidPostingStatus.mockReturnValue({ enabled: true, stripeConfigured: true, available: true });
+
+        const last = await postExpiryAt(LAST_PROMO_SECOND);
+        expect(last).toContain(`Or post this role again as a fresh listing, free through ${config.promoEndsLabel}.`);
+
+        const first = await postExpiryAt(LADDER_START);
+        expect(first).toContain(`Renew for $${config.renewalPrice}`);
+        expect(first).not.toMatch(FREE_REPOST);
     });
 });
 

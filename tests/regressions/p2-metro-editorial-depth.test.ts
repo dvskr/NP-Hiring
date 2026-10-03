@@ -32,14 +32,19 @@
  * WHY THE NLC TEST INVERTED
  * This file used to assert that every "X is not a Nurse Licensure Compact
  * state" sentence AGREED WITH LICENSE_GUIDE_NLC_NON_MEMBERS. That made the
- * test an accomplice rather than a guard: the board's own code documents that
- * set as wrong in both directions and forbids deriving per-state membership
- * claims from it (components/tools/MultiStatePlanner.tsx,
- * app/tools/licensure-checker/page.tsx). Agreement with it is not evidence of
- * anything, and it is what let Massachusetts (a party state since
- * 2024-11-20, pending implementation) ship as "not a Nurse Licensure Compact
- * state" on twenty indexed pages. The assertion is now the prohibition the
- * rest of the repo already carries.
+ * test an accomplice rather than a guard: the set was wrong in both
+ * directions at the time (components/tools/MultiStatePlanner.tsx records
+ * how), so agreement with it was not evidence of anything, and it is what
+ * let Massachusetts (a party state since 2024-11-20, pending implementation)
+ * ship as "not a Nurse Licensure Compact state" on twenty indexed pages. The
+ * assertion became a prohibition.
+ *
+ * The set has since been corrected and verified against NCSBN (2026-08-11,
+ * NLC_ROSTER_VERIFIED_AT in lib/blog-license-guides.ts), and the prohibition
+ * stays by choice: metro copy states the compact's observable effect, never
+ * membership, and a roster change is edited into those sentences by hand
+ * (policy note 8 in lib/metro-data.ts). A test that compares the copy with
+ * the dataset it was written from proves only that the two agree.
  */
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
@@ -161,7 +166,7 @@ describe('P2 #13: regulatory truth linkage', () => {
         // compact and still issue no multistate licenses (Massachusetts:
         // signed 2024-11-20, still implementing). Metro copy therefore states
         // the observable EFFECT, never the membership status. See policy note
-        // (7) at the top of lib/metro-data.ts.
+        // (8) at the top of lib/metro-data.ts.
         const BANNED = [
             /\bis (?:not )?an? Nurse Licensure Compact\b/i,
             /\bis (?:not )?a (?:member|party) (?:state|jurisdiction) of the (?:Nurse Licensure )?[Cc]ompact\b/i,
@@ -180,9 +185,10 @@ describe('P2 #13: regulatory truth linkage', () => {
     });
 
     it('does not derive any claim from LICENSE_GUIDE_NLC_NON_MEMBERS', () => {
-        // The dataset the rest of the repo pins shut. Neither the data file,
-        // the template, nor this test may read it: an assertion against it
-        // only proves the copy and the bad dataset agree with each other.
+        // The roster stays out of the metro surface (see the header). Neither
+        // the data file, the template, nor this test may read it: an
+        // assertion against it only proves the copy and the dataset agree
+        // with each other, which is all it proved while the set was wrong.
         const BANNED_SYMBOL = ['LICENSE_GUIDE', 'NLC', 'NON_MEMBERS'].join('_');
         for (const [label, src] of [
             ['lib/metro-data.ts', METRO_DATA_CODE],

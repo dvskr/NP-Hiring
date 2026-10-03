@@ -46,30 +46,39 @@ const SCOPE_EXPLORER_PATH = '/scope-of-practice';
  *   3. A claim that full-practice states have more openings per capita —
  *      same problem.
  *   4. An NLC member count that contradicted the repo's own compact
- *      dataset, which yields 38 member states.
+ *      dataset, which then yielded 38 member states.
  * Claims 1-3 are gone; the salary section now explains the MECHANISMS
  * practice authority actually controls (all readable off
  * lib/state-practice-authority.ts) and links to live per-state pay data
  * rather than inventing a premium.
  *
  * CLAIM 4 — SECOND PASS. The first fix replaced the typed "41 states" with
- * a count DERIVED from LICENSE_GUIDE_NLC_NON_MEMBERS (which yields 38).
+ * a count DERIVED from LICENSE_GUIDE_NLC_NON_MEMBERS (which yielded 38).
  * That made the claim self-consistent with the licensure series without
  * making it TRUE, and a derived number reads more authoritative than a
  * typed one. Checked against the NLC's own site and the public roster on
- * 2026-07-29: NCSBN publishes 43 member JURISDICTIONS (41 states plus
- * territories), and the repo's non-member set is wrong in five places — it
- * omits Alaska (a genuine non-member with only pending legislation) and
- * lists Connecticut, Massachusetts, Rhode Island, and Washington as
- * non-members when all four have joined.
+ * 2026-07-29: NCSBN published 43 member JURISDICTIONS (41 states plus
+ * territories), and the repo's non-member set was wrong in five places: it
+ * omitted Alaska (a genuine non-member with only pending legislation) and
+ * listed Connecticut, Massachusetts, Rhode Island, and Washington as
+ * non-members when all four had joined (Massachusetts by enactment, with
+ * implementation still pending).
  *
- * That set is a mirror of the canonical one in lib/pseo/state-narrative.ts
- * and drives 51 licensure guides, the state hubs, and the licensure
- * checker, so correcting it is a separate change with its own blast radius
- * — not something to smuggle in behind an FPA-guide edit. Until then this
- * page publishes NO membership count and no membership list: it explains
- * what the compact does and sends the reader to the live NCSBN map, the
- * same rule /resources/1099-vs-w2 applies to annually indexed IRS figures.
+ * Correcting that set was kept out of this page's edit because it feeds the
+ * 51 licensure guides and the state hubs. That change has since landed:
+ * on 2026-08-11 the set was corrected and verified against the live NCSBN
+ * roster, with Massachusetts moved to LICENSE_GUIDE_NLC_ENACTED_PENDING.
+ * Both sets live in lib/blog-license-guides.ts beside
+ * NLC_ROSTER_VERIFIED_AT, which records the latest verification, and
+ * /scope-of-practice prints each state's status with that date.
+ *
+ * This page still publishes NO membership count and no membership list, by
+ * choice: it explains what the compact does and sends the reader to the
+ * live NCSBN map, the same rule /resources/1099-vs-w2 applies to annually
+ * indexed IRS figures. A count or list here would only be as current as the
+ * last roster check, so it would need the roster re-verified on a fixed
+ * cadence and the date printed beside it, and per-state status already has
+ * that home on /scope-of-practice (audit CQ-13 above).
  */
 
 /**

@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { inngest } from '@/lib/inngest/client';
 import { republishPlanPost, type PlanRepublishOutcome } from '@/lib/employer-plan';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * paymentStatus values whose paused posts the owner may republish directly:
@@ -125,10 +126,7 @@ export async function PATCH(
         const employerJob = await prisma.employerJob.findFirst({
             where: {
                 jobId,
-                OR: [
-                    { userId: user.id },
-                    { userId: null, contactEmail: user.email! },
-                ],
+                OR: employerJobOwnershipBranches(user),
             },
             include: {
                 job: { select: { id: true, title: true, isPublished: true, expiresAt: true, archivedAt: true } },

@@ -9,27 +9,34 @@
  * employer with a free Employer plan slot. It also offered the renewal while
  * the renewal checkout answers 503 (paid posting off).
  *
- * lib/pricing.ts now decides the claim in one place:
+ * lib/renewal-offer.ts decides the claim in one place:
  *   - no saving unless a renewal can be bought AND the promo is over AND the
  *     renewal is cheaper than the price it is compared with;
  *   - the comparison is the reader's own next new post when known
  *     ('next-post'), otherwise the standard post price, named as such
  *     ('list-price');
  *   - the percent rounds DOWN so the claim never overstates.
- * The dashboard mirrors the rule client side (it cannot import the Prisma
- * backed module); the parity block below keeps the two from drifting.
+ * The module imports only lib/config (backlog 2.6), so the dashboard and the
+ * edit page, which are client bundles, call it instead of the copies they
+ * kept while the rule lived in Prisma-backed lib/pricing.ts. lib/pricing.ts
+ * re-exports it for the emails and the cron. These blocks test the module
+ * directly, prove the move kept what both pages printed (their old copies
+ * are the oracle), and keep the module free of Prisma.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
+import * as pricing from '@/lib/pricing';
+import { nextNewPostPrice } from '@/lib/pricing';
 import {
-    nextNewPostPrice,
     renewalSavings,
     renewalSavingsLabel,
+    renewalSavingsLine,
     resolveRenewalOffer,
-} from '@/lib/pricing';
+} from '@/lib/renewal-offer';
 
 const DURING_PROMO = new Date('2026-11-21T12:00:00.000Z');
 const LAST_PROMO_INSTANT = new Date(Date.parse(config.promoEndsAt) - 1);
@@ -124,6 +131,97 @@ describe('renewalSavingsLabel: names the price it is measured against', () => {
     });
 });
 
+describe('renewalSavingsLine: the claim the pages print, or nothing', () => {
+    it('during the promo: no line, whatever the next post costs', () => {
+        for (const now of [DURING_PROMO, LAST_PROMO_INSTANT]) {
+            for (const nextPostPrice of [null, config.introPrice, config.postingPrice]) {
+                expect(renewalSavingsLine({ purchasable: true, nextPostPrice, now })).toBeNull();
+            }
+        }
+    });
+
+    it('after the promo: the label for the reader, naming the price it is measured against', () => {
+        const ladderStart = new Date(config.promoEndsAt);
+        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: config.introPrice, now: ladderStart }))
+            .toBe(`Save 10% vs. your next new post at $${config.introPrice}`);
+        expect(renewalSavingsLine({ purchasable: true, now: AFTER_PROMO }))
+            .toBe(`Save 40% vs. the $${config.postingPrice} post price`);
+    });
+
+    it('no line beside a renewal that cannot be bought, nor for a free plan slot', () => {
+        expect(renewalSavingsLine({ purchasable: false, nextPostPrice: config.postingPrice, now: AFTER_PROMO })).toBeNull();
+        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: 0, now: AFTER_PROMO })).toBeNull();
+    });
+
+    it('is exactly resolveRenewalOffer in renewalSavingsLabel words', () => {
+        for (const now of [DURING_PROMO, LAST_PROMO_INSTANT, AFTER_PROMO]) {
+            for (const nextPostPrice of [null, 0, config.introPrice, config.postingPrice]) {
+                for (const purchasable of [true, false]) {
+                    const offer = resolveRenewalOffer({ purchasable, nextPostPrice, now });
+                    expect(renewalSavingsLine({ purchasable, nextPostPrice, now }))
+                        .toBe(offer.savings ? renewalSavingsLabel(offer.savings) : null);
+                }
+            }
+        }
+    });
+});
+
+describe('one rule for server and client', () => {
+    it('lib/pricing re-exports the same functions, so server importers are unchanged', () => {
+        expect(pricing.resolveRenewalOffer).toBe(resolveRenewalOffer);
+        expect(pricing.renewalSavings).toBe(renewalSavings);
+        expect(pricing.renewalSavingsLabel).toBe(renewalSavingsLabel);
+        const pricingSrc = read('lib/pricing.ts');
+        expect(pricingSrc).not.toMatch(/export function (renewalSavings|resolveRenewalOffer|renewalSavingsLabel)\b/);
+        expect(pricingSrc).not.toMatch(/export interface (RenewalSavings|RenewalOffer)\b/);
+    });
+
+    it('lib/renewal-offer.ts stays client-safe: no Prisma and no lib/pricing, however deep', () => {
+        // Every module a client bundle would load through it, following
+        // in-repo imports. Type-only imports are erased from the bundle, but
+        // Prisma and lib/pricing are refused even there.
+        const importsOf = (rel: string): { spec: string; typeOnly: boolean }[] => {
+            const sf = ts.createSourceFile(rel, read(rel), ts.ScriptTarget.Latest, true);
+            return sf.statements.flatMap((s) => {
+                if ((ts.isImportDeclaration(s) || ts.isExportDeclaration(s)) && s.moduleSpecifier && ts.isStringLiteral(s.moduleSpecifier)) {
+                    const typeOnly = ts.isImportDeclaration(s) ? s.importClause?.isTypeOnly === true : s.isTypeOnly;
+                    return [{ spec: s.moduleSpecifier.text, typeOnly }];
+                }
+                return [];
+            });
+        };
+        /** Repo-relative file for an '@/' or relative specifier; null for a package. */
+        const resolve = (from: string, spec: string): string | null => {
+            if (!spec.startsWith('@/') && !spec.startsWith('.')) return null;
+            const base = spec.startsWith('@/')
+                ? spec.slice(2)
+                : path.posix.join(path.posix.dirname(from), spec);
+            const hit = [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`].find((c) => fs.existsSync(path.join(ROOT, c)));
+            if (!hit) throw new Error(`${from}: cannot resolve ${spec}`);
+            return hit;
+        };
+        const seen = new Set<string>();
+        const queue = ['lib/renewal-offer.ts'];
+        const loaded: string[] = [];
+        while (queue.length > 0) {
+            const rel = queue.shift() as string;
+            if (seen.has(rel)) continue;
+            seen.add(rel);
+            for (const { spec, typeOnly } of importsOf(rel)) {
+                const file = resolve(rel, spec);
+                expect(spec, `${rel} imports ${spec}`).not.toMatch(/prisma/i);
+                expect(file, `${rel} imports ${spec}`).not.toBe('lib/pricing.ts');
+                expect(file, `${rel} imports ${spec}`).not.toBe('lib/prisma.ts');
+                if (typeOnly) continue;
+                loaded.push(file ?? spec);
+                if (file) queue.push(file);
+            }
+        }
+        // Today that is lib/config alone, which imports nothing.
+        expect(loaded).toEqual(['lib/config.ts']);
+    });
+});
+
 describe('nextNewPostPrice: the reader-specific comparison price', () => {
     it('is unknown without a quota domain, and reads nothing', async () => {
         expect(await nextNewPostPrice({ quotaDomain: null, hasPlanSlot: false, now: AFTER_PROMO })).toBeNull();
@@ -145,18 +243,73 @@ describe('nextNewPostPrice: the reader-specific comparison price', () => {
     });
 });
 
-describe('client surfaces mirror the server rule', () => {
-    it('the dashboard savings line agrees with lib/pricing for every price and date', async () => {
-        const { renewalSavingsLine } = await import('@/components/employer/EmployerDashboardClient');
+/**
+ * The two client copies of the rule, verbatim as they stood before they
+ * moved to lib/renewal-offer.ts (EmployerDashboardClient#renewalSavingsLine
+ * and the edit page's listPriceSavingsLine). They are the oracle: the shared
+ * rule must print exactly what each page printed, for every price and date.
+ */
+function dashboardLineBeforeTheMove(nextPostPrice: number | null, now: Date): string | null {
+    if (config.isPromoActive(now)) return null;
+    const comparedWith = nextPostPrice ?? config.postingPrice;
+    if (!Number.isFinite(comparedWith) || comparedWith <= config.renewalPrice) return null;
+    const percent = Math.floor(((comparedWith - config.renewalPrice) / comparedWith) * 100);
+    if (percent < 1) return null;
+    return nextPostPrice === null
+        ? `Save ${percent}% vs. the $${comparedWith} post price`
+        : `Save ${percent}% vs. your next new post at $${comparedWith}`;
+}
+
+function editPageLineBeforeTheMove(now: Date): string | null {
+    if (config.isPromoActive(now)) return null;
+    const comparedWith = config.postingPrice;
+    if (comparedWith <= config.renewalPrice) return null;
+    const percent = Math.floor(((comparedWith - config.renewalPrice) / comparedWith) * 100);
+    return percent < 1 ? null : `Save ${percent}% vs. the $${comparedWith} post price`;
+}
+
+describe('client surfaces use the shared rule', () => {
+    const DATES = [DURING_PROMO, LAST_PROMO_INSTANT, new Date(config.promoEndsAt), AFTER_PROMO];
+
+    it('the dashboard line is unchanged by the move, for every price and date', () => {
         const prices: (number | null)[] = [null, 0, config.renewalPrice - 1, config.renewalPrice, config.renewalPrice + 1, config.introPrice, config.postingPrice];
-        for (const now of [DURING_PROMO, LAST_PROMO_INSTANT, AFTER_PROMO]) {
+        for (const now of DATES) {
             for (const nextPostPrice of prices) {
                 const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice, now });
                 const expected = offer.savings ? renewalSavingsLabel(offer.savings) : null;
-                expect(renewalSavingsLine(nextPostPrice, now), `${now.toISOString()} / ${nextPostPrice}`).toBe(expected);
+                const line = renewalSavingsLine({ purchasable: true, nextPostPrice, now });
+                expect(line, `${now.toISOString()} / ${nextPostPrice}`).toBe(expected);
+                expect(line, `${now.toISOString()} / ${nextPostPrice}`).toBe(dashboardLineBeforeTheMove(nextPostPrice, now));
             }
         }
-    }, 30_000);
+    });
+
+    it('the edit page line (no quota domain) is unchanged: the named post price, never during the promo', () => {
+        for (const now of DATES) {
+            expect(renewalSavingsLine({ purchasable: true, now }), now.toISOString()).toBe(editPageLineBeforeTheMove(now));
+        }
+        expect(renewalSavingsLine({ purchasable: true, now: DURING_PROMO })).toBeNull();
+        expect(renewalSavingsLine({ purchasable: true, now: AFTER_PROMO })).toBe(`Save 40% vs. the $${config.postingPrice} post price`);
+    });
+
+    it('both pages call the shared rule and keep no copy of it', () => {
+        const dashboard = read('components/employer/EmployerDashboardClient.tsx');
+        const edit = read('app/jobs/edit/[token]/page.tsx');
+        expect(dashboard).toContain("import { renewalSavingsLine } from '@/lib/renewal-offer';");
+        expect(dashboard).toContain('const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, nextPostPrice });');
+        expect(edit).toContain("import { renewalSavingsLine } from '@/lib/renewal-offer';");
+        // No quota domain on this page, so no next-post price: the list-price basis.
+        expect(edit).toContain('const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable });');
+        for (const [rel, src] of [['dashboard', dashboard], ['edit page', edit]] as const) {
+            expect(src, rel).not.toMatch(/function (renewalSavingsLine|listPriceSavingsLine)\b/);
+            // Subtracting the renewal price is computing a saving: only lib/renewal-offer does that.
+            expect(src, rel).not.toMatch(/-\s*config\.renewalPrice\b/);
+            // Neither can load the Prisma-backed module.
+            expect(src, rel).not.toContain("from '@/lib/pricing'");
+            // Printed only when the rule claims a saving; it is null otherwise.
+            expect(src, rel).toContain('{savingsLine && (');
+        }
+    });
 
     it('no surface computes the old list-price-only discount any more', () => {
         const oldFormula = /1 - config\.renewalPrice \/ config\.postingPrice/;
@@ -223,14 +376,5 @@ describe('client surfaces mirror the server rule', () => {
             expect(src).not.toContain('from a plan slot');
             expect(src).not.toMatch(/live while (the|your) (Employer )?plan/);
         }
-    });
-
-    it('the edit page (no quota domain) claims only against the named post price, never during the promo', () => {
-        const src = read('app/jobs/edit/[token]/page.tsx');
-        const fn = src.slice(src.indexOf('function listPriceSavingsLine'), src.indexOf('const workModes'));
-        expect(fn).toContain('if (config.isPromoActive(now)) return null;');
-        expect(fn).toContain('if (comparedWith <= config.renewalPrice) return null;');
-        expect(fn).toContain('Math.floor(');
-        expect(fn).toContain('`Save ${percent}% vs. the $${comparedWith} post price`');
     });
 });

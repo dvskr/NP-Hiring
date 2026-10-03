@@ -15,6 +15,7 @@ import { getPaidPostingStatus } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import { getPlanSlotStatus } from '@/lib/employer-plan'
 import { nextNewPostPrice, renewalSavingsLabel, resolveRenewalOffer, type RenewalOffer } from '@/lib/pricing'
+import { ladderLine } from '@/lib/pricing-copy'
 
 export const maxDuration = 120 // 2 minutes — expiry warning emails
 
@@ -98,10 +99,17 @@ async function renewalInputsFor(
   return { purchasable, nextPostPrice: await nextPostPriceFor(employerJob, ctx) }
 }
 
-/** The post-expiry email's offer paragraph and button, true to what the employer can do now. */
+/**
+ * The post-expiry email's offer paragraph and button, true to what the
+ * employer can do now. Every free-posting sentence sits behind
+ * offer.promoActive, which resolveRenewalOffer judged at ctx.now, so the
+ * free wording stops on config.promoEndsAt with no deploy; after that the
+ * email offers the renewal, a paid repost at the ladder price, or nothing.
+ */
 function postExpiryOffer(
   employerJob: EmployerJob,
   offer: RenewalOffer,
+  ctx: RenewalContext,
   dashboardUrl: string,
 ): { line: string; ctaLabel: string; ctaUrl: string } {
   if (offer.purchasable) {
@@ -131,6 +139,15 @@ function postExpiryOffer(
       ctaUrl: `${BASE_URL}/post-job`,
     }
   }
+  // Promo over and this row cannot be renewed (a legacy free row), but a new
+  // post can be bought: ctx.purchasable is the paid-posting check itself.
+  if (ctx.purchasable) {
+    return {
+      line: `You can post this role again as a fresh ${config.durationDays}-day listing. ${ladderLine(ctx.now)} Your stats and applicants stay attached to the expired posting.`,
+      ctaLabel: 'Post a New Job',
+      ctaUrl: `${BASE_URL}/post-job`,
+    }
+  }
   return {
     line: 'Your stats and applicants stay attached to the expired posting in your dashboard.',
     ctaLabel: 'Go to Your Dashboard',
@@ -155,7 +172,7 @@ async function sendPostExpiryEmail(
     const unsubToken = await getOrCreateUnsubToken(employerJob.contactEmail)
     const inputs = await renewalInputsFor(employerJob, ctx)
     const offer = resolveRenewalOffer({ ...inputs, now: ctx.now })
-    const { line: relistLine, ctaLabel, ctaUrl } = postExpiryOffer(employerJob, offer, dashboardUrl)
+    const { line: relistLine, ctaLabel, ctaUrl } = postExpiryOffer(employerJob, offer, ctx, dashboardUrl)
 
     const html = emailShellV2(`
       ${headerBlockV2('Your Listing Has Expired', '')}
@@ -260,10 +277,13 @@ export async function GET(request: NextRequest) {
               // paymentStatus drops the renewal for 'plan' rows (each runs
               // config.durationDays, then its slot is free); the renewal is
               // offered only while it can be bought, with a saving named only
-              // when it is true against this employer's next new post.
+              // when it is true against this employer's next new post. After
+              // the promo a row that cannot be renewed is offered a paid
+              // repost, only while new posts can be bought.
               {
                 paymentStatus: employerJob.paymentStatus,
                 renewalPurchasable: renewal.purchasable,
+                postingPurchasable: renewalCtx.purchasable,
                 nextPostPrice: renewal.nextPostPrice,
                 now,
               },

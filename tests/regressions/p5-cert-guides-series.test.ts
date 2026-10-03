@@ -6,11 +6,13 @@
  * (agacnp-vs-agpcnp).
  *
  * All four ship through the mechanism P1 established and P2/P3/P4
- * extended: .mdx in content/blog/, published by scripts/sync-blog-to-db.ts
- * (which extracts the visible "Frequently asked questions" section into
- * faq_json → the FAQPage JSON-LD emitted by app/blog/[slug]/page.tsx),
- * bylined by components/EditorialByline.tsx, and wired into the job-page
- * sidebar slots in config/niche/content-map.ts.
+ * extended: .mdx in content/blog/, served from the file by lib/blog.ts with
+ * or without a blog_posts row (lib/blog-mdx-posts.ts, and
+ * scripts/sync-blog-to-db.ts for a synced row, extract the visible
+ * "Frequently asked questions" section into faq_json → the FAQPage JSON-LD
+ * emitted by app/blog/[slug]/page.tsx), bylined by
+ * components/EditorialByline.tsx, and wired into the job-page sidebar slots
+ * in config/niche/content-map.ts.
  *
  * WHY THIS SUITE EXISTS
  * Certification-body facts are the single most harmful thing to get wrong
@@ -161,8 +163,9 @@ describe('post shape', () => {
             // Hoisted into the .ed-quick-answer callout by app/blog/[slug]/page.tsx.
             expect(body).toMatch(/\*\*Quick answer:\*\*/);
 
-            // scripts/sync-blog-to-db.ts extracts THIS exact heading into
-            // faq_json, the only source of the FAQPage JSON-LD.
+            // lib/blog-mdx-posts.ts (and scripts/sync-blog-to-db.ts, for a
+            // synced row) extracts THIS exact heading into faq_json, the
+            // only source of the FAQPage JSON-LD.
             expect(body).toMatch(/^## Frequently asked questions/m);
             const faqSection = body.split(/^## Frequently asked questions/m)[1];
             const questions = faqSection.match(/^### .+$/gm) ?? [];
@@ -584,7 +587,10 @@ describe('internal links resolve to real routes', () => {
 });
 
 /**
- * FAQ → schema, one source. Asserted by reading source rather than
+ * FAQ → schema, one source. The sync script extracts the visible FAQ into
+ * faq_json for a synced row (lib/blog-mdx-posts.ts does the same for a post
+ * served from its file; tests/regressions/p10-blog-mdx-fallback.test.ts
+ * pins the two to each other). Asserted by reading source rather than
  * importing, because scripts/sync-blog-to-db.ts throws at module load
  * without PROD_DATABASE_URL.
  */

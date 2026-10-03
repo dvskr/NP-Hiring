@@ -262,23 +262,18 @@ const nextConfig: NextConfig = {
       // nowhere in this board's content, so this redirect landed on a 404
       // and threw away the legacy URL's equity.
       //
-      // TEMPORARY (307) ON PURPOSE — do not "tidy" this to permanent:true.
-      // The destination is an authored .mdx that only renders once
-      // `npx tsx scripts/sync-blog-to-db.ts` has run against prod:
-      // getPostBySlug() (lib/blog.ts) reads blog_posts and has a code
-      // fallback for the np-license-* series ONLY, so np-interview-questions
-      // 404s between deploying this file and running the sync. next.config
-      // ships with the app, so that window always exists. A 301 through it
-      // is the one irreversible version of the mistake: Google records the
-      // permanent target as a 404 and browsers cache the binding, whereas a
-      // 307 leaves the legacy URL indexed until the destination is live.
-      // FLIP TO permanent:true once /blog/np-interview-questions returns 200
-      // in prod (and update the assertion in the suite below).
-      // Guarded by tests/regressions/p2-content-pillars-guides.test.ts.
+      // PERMANENT since 2026-10-01. It was a 307 while the destination, an
+      // authored .mdx, rendered only after `scripts/sync-blog-to-db.ts` had
+      // run against prod: a 301 through that window would have pointed the
+      // legacy URL at a 404 for good. getPostBySlug() (lib/blog.ts) now
+      // serves authored .mdx posts from code when no row exists, so the
+      // destination no longer depends on the sync, and it returned 200 in
+      // prod on 2026-10-01. Guarded by
+      // tests/regressions/p2-content-pillars-guides.test.ts.
       {
         source: '/blog/pmhnp-interview-questions',
         destination: '/blog/np-interview-questions',
-        permanent: false,
+        permanent: true,
       },
     ];
   },

@@ -13,7 +13,7 @@
  *
  * These tests assert the dedupe row is deleted before any 500 response.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { prisma } from '@/lib/prisma';
@@ -51,6 +51,12 @@ function makeRequest(body: object): Request {
         body: JSON.stringify(body),
     });
 }
+
+// Load the webhook route graph once, outside any single test's time budget (a
+// cold import under a loaded full suite run can outlast vitest's 5 second default).
+beforeAll(async () => {
+    await import('@/app/api/webhooks/stripe/route');
+}, 60_000);
 
 describe('Stripe webhook C2 — idempotency rollback', () => {
     beforeEach(() => {

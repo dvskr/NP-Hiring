@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import {
   ArrowRight, BarChart3, Briefcase, Building2, Calculator, ClipboardCheck, Compass, DollarSign,
-  FileDown, Globe, GraduationCap, MapPin, Rocket, Scale, Search, ShieldCheck, Star,
+  Globe, GraduationCap, MapPin, Rocket, Scale, Search, ShieldCheck, Star,
   TrendingUp, Users, type LucideIcon,
 } from 'lucide-react';
 // P2 tools band — paths come from the registry that renders /tools, so this
@@ -16,7 +16,9 @@ import ResourceDownloadGate from '@/components/ResourceDownloadGate';
 import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
 import LicensureChecker from '@/components/LicensureChecker';
 import StateImage from '@/components/StateImage';
-import { prisma } from '@/lib/prisma';
+import { getPostCount, getPublishedPosts, type BlogPost } from '@/lib/blog';
+import { getLicenseGuideState } from '@/lib/blog-license-guides';
+import { truncateOnWord } from '@/lib/display-text';
 import { getGatedStateBenchmarks } from '@/lib/salary-analytics';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 
@@ -32,9 +34,9 @@ const RESOURCES_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`
 // Audit F12: metadata describes the ACTUAL inventory — 3 in-depth guides
 // (FPA, private practice, 1099 vs W2), the interactive salary tool, and the
 // licensure checker. The previous article-count and state-guide-series
-// claims described content this board does not have (see
-// config/niche/content-map.ts: no authored posts, license-guide series
-// unwritten) — a claim-vs-reality mismatch that answer engines penalize.
+// claims described content this board did not have at the time — a
+// claim-vs-reality mismatch that answer engines penalize. Post counts stay
+// out of the metadata; the hero prints the live count instead.
 export const metadata: Metadata = {
   title: `${brand.niche.short} Career Resources: Salary Tool & Licensure Checker`,
   description: `Free ${brand.niche.short} career resources: an interactive salary calculator, a state licensure checker, and guides to Full Practice Authority, private practice startup, and 1099 vs W2 pay.`,
@@ -104,22 +106,97 @@ const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string
    holds no program dataset, and inventing one is the highest-harm
    fabrication available on this board (people pick an education from it).
 
-   Rendered from the blog rows this page ALREADY fetches, never from a
-   hardcoded /blog/<slug> href: .mdx posts only resolve once
-   scripts/sync-blog-to-db.ts has published them (lib/blog.ts
-   getPostBySlug falls back to code for the license series ONLY), so a
-   literal href here would be a live internal 404 in the window between
-   deploying this file and running the sync against prod — the hazard
-   config/niche/content-map.ts documents for HOMEPAGE_FEATURED_POSTS.
-   Missing post → the band simply does not render. */
+   Rendered from the posts this page ALREADY reads (the /blog listing,
+   below), never from a hardcoded /blog/<slug> href: a slug is listed
+   exactly when /blog/<slug> renders it, so a card can never link a 404,
+   and a guide an editor takes down (an unpublished blog_posts row) or
+   renames drops its card instead. Missing post → the band simply does
+   not render.
+
+   A guide the band shows is not repeated as a card in its category group
+   in the article grid (it still counts toward that group): both are filed
+   under Career, and repeating them spent two of that group's six cards on
+   posts linked a few bands up. */
 const EDUCATION_WEDGE_SLUGS = ['how-to-evaluate-np-programs', 'np-preceptor-guide'] as const;
+
+/**
+ * Posts read for the grids below: one page of the merged listing /blog
+ * renders, as large as the merge itself (lib/blog.ts reads at most 1000
+ * blog_posts rows before adding the posts served from code), so the grids
+ * see every listed post until the blog outgrows that cap. The hero count
+ * reads getPostCount() and is exact either way.
+ */
+const RESOURCES_POST_SCAN_LIMIT = 1000;
+
+/** Cards per category group in the article grid; "View all" links the rest. */
+const ARTICLE_CARDS_PER_GROUP = 6;
+
+/**
+ * Teaser budgets in characters, ellipsis included. The band's cards are half
+ * the content width, the article cards a third.
+ */
+const WEDGE_TEASER_MAX = 140;
+const ARTICLE_TEASER_MAX = 120;
+
+/**
+ * A post description cut down to a card teaser. The cut lands at the end of
+ * a word (truncateOnWord): slicing at a fixed length ended most cards inside
+ * one ("certificatio…", "before yo…") or on a dangling comma.
+ */
+function cardTeaser(description: string, max: number): string {
+  return truncateOnWord(description, max, '…');
+}
+
+/**
+ * True for a post in the licensure series. The series is known by its slug,
+ * as on every other surface (the guide links on /tools/licensure-checker and
+ * the state pages, the sitemap, /blog/<slug> itself), not by the category
+ * its row is filed under: an editor who refiles a guide row in /admin/blog
+ * would otherwise take that state's tile, and its guide link in the checker
+ * below, off this page while the standalone checker kept both.
+ */
+function isLicenseGuide(post: Pick<BlogPost, 'slug'>): boolean {
+  return LICENSE_GUIDE_SLUG_REGEX.test(post.slug);
+}
+
+/** One licensure-guide tile: the jurisdiction and the guide it links. */
+interface StateGuideTile {
+  name: string;
+  slug: string;
+}
+
+/**
+ * One tile per jurisdiction, A to Z, from the license-guide posts. The name
+ * comes from the guide registry (lib/blog-license-guides.ts), which is the
+ * name LicensureChecker matches a guide by: title casing the slug printed
+ * "District Of Columbia" and left DC's checker result without its guide
+ * link. A slug outside the registry keeps the title-cased name. A trailing
+ * "-2" marks a duplicate row for the same state; the first one listed wins.
+ */
+function stateGuideTiles(posts: readonly Pick<BlogPost, 'slug'>[]): StateGuideTile[] {
+  const byName = new Map<string, StateGuideTile>();
+  for (const { slug } of posts) {
+    const match = slug.match(LICENSE_GUIDE_SLUG_REGEX);
+    if (!match) continue;
+    const stateSlug = match[1].replace(/-\d+$/, '');
+    const name = getLicenseGuideState(stateSlug)?.name
+      ?? stateSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    if (!byName.has(name)) byName.set(name, { name, slug });
+  }
+  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
 
 /* ─── Featured guides data ─── */
 const featuredGuides = [
   {
     href: '/salary-guide',
     title: 'Salary Calculator & Guide',
-    desc: 'Interactive salary tool with state, experience, and setting selectors. Complete 2026 data.',
+    // What /salary-guide actually renders: its calculator's four selectors,
+    // the cited BLS national median, and the gated state medians from live
+    // postings. No edition year (the data refreshes daily, so a typed year
+    // only goes stale) and no completeness claim (states below the
+    // publishing gate print no figure).
+    desc: 'Interactive calculator by state, experience, setting, and specialty, with the BLS national median and state medians from live postings.',
     icon: Calculator,
     badge: 'Interactive Tool',
     badgeColor: '#BE185D',
@@ -145,12 +222,18 @@ const featuredGuides = [
 ];
 
 export default async function ResourcesPage() {
-  const [blogPosts, benchmarkRows] = await Promise.all([
-    prisma.blogPost.findMany({
-      where: { status: 'published' },
-      select: { slug: true, title: true, category: true, metaDescription: true, imageUrl: true, publishDate: true },
-      orderBy: { publishDate: 'desc' },
-    }),
+  const [blogPosts, postCount, stateSpotlightCount, benchmarkRows] = await Promise.all([
+    // Backlog 2.2: the listing and count /blog renders (lib/blog.ts), not a
+    // direct blog_posts read, which showed nothing while the table was
+    // empty. Published rows merge with the posts served from code
+    // (content/blog and the license-guide series), newest first, one entry
+    // per slug, so this page lists what /blog lists whether or not the table
+    // has rows: a taken down post stays hidden, and a license-guide row
+    // synced before the series review carries the reviewed copy.
+    getPublishedPosts(1, RESOURCES_POST_SCAN_LIMIT),
+    // The two counts behind the hero's "Articles" figure (articleCount).
+    getPostCount(),
+    getPostCount('state_spotlight'),
     // P9 #2c/#2d: gated per-state medians for the embedded licensure
     // checker — replaces the old `_avg` mean-of-min/max over every
     // published row (psychiatrist/PA pay and estimated rows included).
@@ -167,15 +250,19 @@ export default async function ResourcesPage() {
     }))
     .sort((a, b) => b.medianSalary - a.medianSalary);
 
-  // Split state_spotlight from other articles
-  const stateGuides = blogPosts.filter(p => p.category === 'state_spotlight');
-  const articles = blogPosts.filter(p => p.category !== 'state_spotlight');
+  // Split the licensure series from the articles. State Spotlight posts and
+  // every license-guide slug (isLicenseGuide) go to the state grid, which
+  // keeps the license-guide slugs (stateGuideTiles); the rest are articles.
+  const stateGuides = blogPosts.filter(p => p.category === 'state_spotlight' || isLicenseGuide(p));
+  const articles = blogPosts.filter(p => p.category !== 'state_spotlight' && !isLicenseGuide(p));
 
-  // P4 education wedge — resolved against the published rows above, so a
-  // card can only appear for a post the sync script has actually shipped.
+  // P4 education wedge — resolved against the listing above, so a card can
+  // only appear for a post /blog lists (and /blog/<slug> renders).
   const educationWedge = EDUCATION_WEDGE_SLUGS
     .map(slug => blogPosts.find(p => p.slug === slug))
     .filter((p): p is (typeof blogPosts)[number] => Boolean(p));
+  // The guides the band shows; the article grid leaves them out of its cards.
+  const wedgeSlugs = new Set(educationWedge.map(p => p.slug));
 
   // Group articles by category
   const grouped: Record<string, typeof articles> = {};
@@ -184,24 +271,21 @@ export default async function ResourcesPage() {
     grouped[a.category].push(a);
   });
 
-  // Extract unique state names from slugs for the grid
-  const stateNames = stateGuides.map(s => {
-    const match = s.slug.match(LICENSE_GUIDE_SLUG_REGEX);
-    if (!match) return null;
-    const raw = match[1].replace(/-\d+$/, ''); // remove trailing -2 duplicates
-    return {
-      name: raw.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-      slug: s.slug,
-      title: s.title,
-    };
-  }).filter(Boolean);
+  const sortedStates = stateGuideTiles(stateGuides);
 
-  // Deduplicate (some states have -2 copies)
-  const uniqueStates = new Map<string, typeof stateNames[0]>();
-  stateNames.forEach(s => {
-    if (s && !uniqueStates.has(s.name)) uniqueStates.set(s.name, s);
-  });
-  const sortedStates = Array.from(uniqueStates.values()).sort((a, b) => a!.name.localeCompare(b!.name));
+  // Hero "Articles": the posts the article grid below groups, which is every
+  // post /blog counts outside State Spotlight. /blog's own total includes
+  // the license guides, and the State Guides sticker beside this one counts
+  // those already, so printing that total here counted every guide twice
+  // (on 2026-10-01, with blog_posts empty: 70 Articles beside 51 State
+  // Guides, for 19 articles).
+  // Counted through getPostCount rather than from the listing, so the
+  // figure stays exact past RESOURCES_POST_SCAN_LIMIT. A license guide
+  // whose row is filed outside State Spotlight is a State Guide on this
+  // page (isLicenseGuide) but sits in the other count, so it comes off
+  // here. The floor at zero covers the counts being separate reads.
+  const guidesFiledElsewhere = blogPosts.filter(p => p.category !== 'state_spotlight' && isLicenseGuide(p)).length;
+  const articleCount = Math.max(0, postCount - stateSpotlightCount - guidesFiledElsewhere);
 
   const currentYear = new Date().getFullYear();
 
@@ -251,10 +335,12 @@ export default async function ResourcesPage() {
           </p>
 
           {/* Stat stickers: count stickers render only when the content actually
-              exists (audit F12: no advertised inventory the page cannot deliver) */}
+              exists (audit F12: no advertised inventory the page cannot deliver).
+              "Articles" and "State Guides" count separate posts (articleCount
+              above), so no post is counted twice. */}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginBottom: '56px' }}>
             {[
-              ...(blogPosts.length > 0 ? [{ value: `${blogPosts.length}`, label: 'Articles' }] : []),
+              ...(articleCount > 0 ? [{ value: `${articleCount}`, label: 'Articles' }] : []),
               ...(sortedStates.length > 0 ? [{ value: `${sortedStates.length}`, label: 'State Guides' }] : []),
               { value: '3', label: 'Deep Guides' },
               { value: 'Free', label: 'Always' },
@@ -310,9 +396,9 @@ export default async function ResourcesPage() {
             </Link>
 
             {/* ─── P4: Before you apply — the education wedge ───
-                Gated on the DB rows (see EDUCATION_WEDGE_SLUGS above): the
-                band disappears entirely rather than linking a post the sync
-                script has not published yet. */}
+                Gated on the /blog listing (see EDUCATION_WEDGE_SLUGS above):
+                the band disappears entirely rather than linking a post that
+                /blog/<slug> would not render. */}
             {educationWedge.length > 0 && (
               <div style={{ marginTop: '28px' }}>
                 <p style={{ fontSize: '11px', fontWeight: 800, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '0 0 12px' }}>
@@ -326,9 +412,9 @@ export default async function ResourcesPage() {
                         <span className="stk-icon" aria-hidden="true"><GraduationCap size={18} strokeWidth={2.25} /></span>
                       </span>
                       <h2 className="stk-title font-heading">{post.title}</h2>
-                      {post.metaDescription && (
+                      {post.meta_description && (
                         <p className="stk-desc">
-                          {post.metaDescription.length > 140 ? post.metaDescription.slice(0, 140) + '…' : post.metaDescription}
+                          {cardTeaser(post.meta_description, WEDGE_TEASER_MAX)}
                         </p>
                       )}
                       <StickerFooter index={i + 2} action="Read guide" />
@@ -361,7 +447,7 @@ export default async function ResourcesPage() {
           {/* ─── Licensure Checker Tool, framed as one large sticker ─── */}
           <div className="stk-frame" style={{ maxWidth: '1000px', margin: '0 auto' }}>
             <LicensureChecker
-              stateGuides={sortedStates.filter(Boolean).map(s => ({ name: s!.name, slug: s!.slug }))}
+              stateGuides={sortedStates}
               stateSalaries={stateSalaries}
               practiceAuthority={STATE_PRACTICE_AUTHORITY}
             />
@@ -371,9 +457,10 @@ export default async function ResourcesPage() {
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 3B: BROWSE ALL STATE GUIDES (warm peach bg)
-          Audit F12: rendered only when state guides exist — the license-guide
-          series is unwritten (config/niche/content-map.ts), and a "50-State
+          Audit F12: rendered only when state guides are listed — a "50-State
           Coverage" header over an empty grid advertises missing content.
+          The series renders from code (lib/blog-license-guides.ts), so the
+          grid is full whether or not blog_posts holds the rows.
           ═══════════════════════════════════════════════════════════════ */}
       {sortedStates.length > 0 && (
       <section className="stk-stage stk-stage-peach">
@@ -394,7 +481,6 @@ export default async function ResourcesPage() {
             display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px',
           }}>
             {sortedStates.map(s => {
-              if (!s) return null;
               const slug = s.name.toLowerCase().replace(/\s+/g, '-');
               return (
                 <Link key={s.name} href={`/blog/${s.slug}`} className="stk-state">
@@ -420,15 +506,17 @@ export default async function ResourcesPage() {
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 4: BLOG ARTICLES BY CATEGORY (cream bg)
-          Audit F12: rendered only when published articles exist — this board
-          launches with an empty blog (config/niche/content-map.ts).
+          Audit F12: rendered only when /blog lists articles, so an empty
+          blog (a fork at launch) shows no empty band. The eyebrow names
+          where the posts live rather than claiming expertise: the byline
+          names no reviewer (components/EditorialByline.tsx).
           ═══════════════════════════════════════════════════════════════ */}
       {articles.length > 0 && (
       <div className="stk-stage stk-stage-grid">
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="stk-head">
             <p className="stk-eyebrow">
-              Expert Articles
+              From the Blog
             </p>
             <h2 className="stk-h2 font-heading">
               Career Guides & Insights
@@ -437,6 +525,9 @@ export default async function ResourcesPage() {
 
           {Object.entries(grouped).map(([category, posts]) => {
             const cfg = CATEGORY_CONFIG[category] || { label: category, color: '#64748B', bg: '#F1F5F9', icon: Star };
+            // The group counts every post filed under it; its cards are the
+            // newest ones the "Before you apply" band has not already shown.
+            const cards = posts.filter(p => !wedgeSlugs.has(p.slug)).slice(0, ARTICLE_CARDS_PER_GROUP);
             return (
               <div key={category} style={{ marginBottom: '56px' }}>
                 {/* Category header */}
@@ -447,24 +538,28 @@ export default async function ResourcesPage() {
                 </div>
                 {/* Post grid */}
                 <div className="res-article-grid stk-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  {posts.slice(0, 6).map((post, i) => (
+                  {cards.map((post, i) => (
                     <Link key={post.slug} href={`/blog/${post.slug}`} className="stk-card">
                       <span className="stk-top">
                         <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[i % STICKER_CHIP_FILLS.length] }}>{cfg.label}</span>
                       </span>
                       <h4 className="stk-title font-heading">{post.title}</h4>
-                      {post.metaDescription && (
+                      {post.meta_description && (
                         <p className="stk-desc">
-                          {post.metaDescription.length > 120 ? post.metaDescription.slice(0, 120) + '…' : post.metaDescription}
+                          {cardTeaser(post.meta_description, ARTICLE_TEASER_MAX)}
                         </p>
                       )}
                       <StickerFooter index={i} action="Read" />
                     </Link>
                   ))}
                 </div>
-                {posts.length > 6 && (
+                {/* "View all <label> articles" opens /blog filtered to the
+                    category (the URL /blog's own filter pills use), not the
+                    unfiltered index the label would misdescribe. Shown
+                    whenever the group holds posts its cards do not. */}
+                {posts.length > cards.length && (
                   <div style={{ textAlign: 'center', marginTop: '28px' }}>
-                    <Link href="/blog" className="stk-link">
+                    <Link href={`/blog?category=${encodeURIComponent(category)}`} className="stk-link">
                       View all {cfg.label} articles <ArrowRight size={14} aria-hidden="true" />
                     </Link>
                   </div>

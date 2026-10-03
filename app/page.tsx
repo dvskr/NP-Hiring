@@ -5,6 +5,7 @@ import { Bell, Building2, Calculator, Receipt, ShieldCheck, Stethoscope, type Lu
 import { getSiteStats } from '@/lib/site-stats';
 import { getIndexableLandingSlugs } from '@/lib/homepage-links';
 import { brand } from '@/config/brand';
+import { config } from '@/lib/config';
 import EmployerTrustSection from '@/components/EmployerTrustSection';
 import FeaturedJobsSection from '@/components/FeaturedJobsSection';
 import TopStatesSection from '@/components/TopStatesSection';
@@ -97,6 +98,13 @@ export default async function Home() {
   // indexable, so the homepage never spends a link on a noindexed or empty
   // landing (lib/homepage-links.ts).
   const indexableLandingSlugs = await getIndexableLandingSlugs();
+  // Backlog 2.1: the employer band's CTA reads "free through <date>" only
+  // while the launch promo runs. The phase is decided here, on this render's
+  // clock, and handed to the client component, so its hydration agrees with
+  // the HTML this ISR page served (rendered on an earlier request) instead of
+  // re-reading the browser's clock, which can disagree around
+  // config.promoEndsAt. Same pattern as app/for-employers/page.tsx.
+  const promoActive = config.isPromoActive(new Date());
 
   return (
     <>
@@ -135,8 +143,8 @@ export default async function Home() {
         {/* 4b. Free career tools — P2 #14 */}
         <FreeToolsBand />
 
-        {/* 5. Employer How It Works */}
-        <EmployerHowItWorks />
+        {/* 5. Employer How It Works (promo flag from this server render) */}
+        <EmployerHowItWorks promoActive={promoActive} />
 
         <HomepageBlogSection />
 

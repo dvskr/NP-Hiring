@@ -17,11 +17,20 @@ import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/to
 import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import { STAT_SOURCES } from '@/lib/stats-sources';
-// Launch-promo end date for the post-a-role cross-link — read from config so
-// this page can never advertise a free window the product has stopped running.
+// The post-a-role cross-link follows the launch-promo clock: the promo end
+// date while it runs, the ladder from lib/pricing-copy.ts once it has ended,
+// decided per render so this page never advertises a free window the
+// product has stopped running.
 import { config } from '@/lib/config';
+import { LADDER_PRICES } from '@/lib/pricing-copy';
 
-export const revalidate = 86400;
+// Hourly (it was daily), so the post-a-role card drops the promo line soon
+// after the promo ends. The hour is not a hard bound: regeneration is
+// stale-while-revalidate, so a render cached before the switch is served
+// until its hour runs out and once more to the request that triggers the
+// regeneration. Each regeneration re-runs the benchmark aggregation, as
+// /for-employers already does on the same cadence.
+export const revalidate = 3600;
 
 const PAGE_PATH = '/tools/salary-benchmark';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
@@ -78,6 +87,8 @@ const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 export default function SalaryBenchmarkPage() {
+  // Decided per render, never at module load (lib/pricing-copy.ts).
+  const promoActive = config.isPromoActive(new Date());
   return (
     <>
       <script
@@ -206,7 +217,7 @@ export default function SalaryBenchmarkPage() {
             {[
               { href: '/for-employers/resources/how-to-hire', title: `How to hire a ${brand.niche.long}`, blurb: 'Process, credential checks, and a realistic timeline.' },
               { href: '/for-employers/resources/job-description-templates', title: 'Job description templates', blurb: 'Setting-specific skeletons you can post today.' },
-              { href: '/post-job', title: 'Post a role', blurb: `Free through ${config.promoEndsLabel}, all features included.` },
+              { href: '/post-job', title: 'Post a role', blurb: promoActive ? `Free through ${config.promoEndsLabel}, all features included.` : LADDER_PRICES },
               { href: '/for-employers', title: 'For employers', blurb: 'Pricing, reach, and what a post includes.' },
               { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'The candidate-facing view of the same market data.' },
               { href: '/tools/cost-of-living-comparison', title: 'Cost-of-living comparator', blurb: 'Why the same salary lands differently in two markets.' },

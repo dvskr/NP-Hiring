@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { getEmployerTier } from '@/lib/tier-limits';
 import { config } from '@/lib/config';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * GET /api/employer/analytics/benchmarks
@@ -93,10 +94,7 @@ export async function GET() {
         // Get THIS employer's jobs with full details for salary + suggestions
         const myJobs = await prisma.employerJob.findMany({
             where: {
-                OR: [
-                    { userId: user.id },
-                    { userId: null, contactEmail: user.email! },
-                ],
+                OR: employerJobOwnershipBranches(user),
             },
             include: {
                 job: {

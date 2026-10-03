@@ -32,6 +32,11 @@ const leadColumns: FooterColumn[] = [
       { label: 'Saved Jobs', href: '/saved' },
       { label: 'Job Alerts', href: '/job-alerts' },
       { label: `${brand.niche.short} Salary Guide`, href: '/salary-guide' },
+      // Backlog 2.10: /scope-of-practice is in the sitemap and, since audit
+      // CQ-13, the one state-by-state practice reference, yet no header or
+      // footer link reached it. It sits beside the salary guide, the other
+      // state-by-state reference a job seeker uses, under the page's own H1.
+      { label: `${brand.niche.short} Scope of Practice by State`, href: '/scope-of-practice' },
       { label: 'FAQ', href: '/faq' },
     ],
   },

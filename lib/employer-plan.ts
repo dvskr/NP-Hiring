@@ -279,7 +279,11 @@ export interface UpsertPlanInput {
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   source: 'stripe' | 'admin';
-  /** `created` of the Stripe event (or the time of a live read) this write reflects. */
+  /**
+   * When the state this write carries was observed: the time a live read of
+   * the subscription was sent (subscription events, the sweep), or `created`
+   * of the Stripe event (plan checkout).
+   */
   lastStripeEventAt?: Date;
 }
 
@@ -290,6 +294,69 @@ export interface UpsertPlanOptions {
    * a duplicate subscription without touching the employer's live plan.
    */
   detached?: boolean;
+  /**
+   * Compare-and-set on the event stamp, for a writer that races other
+   * writers of the same row: the subscription path, where two deliveries
+   * processed at once each read the subscription live and the older read
+   * must never land last. An existing row is updated only while its
+   * lastStripeEventAt is null or not later than input.lastStripeEventAt,
+   * checked in the WHERE of the write itself; when that matches nothing, a
+   * fresher write got there first, nothing is written and
+   * StalePlanWriteError is thrown. With no stamp on the input there is
+   * nothing to compare and the update is unconditional; a new row is
+   * created as without the option.
+   */
+  rejectStale?: boolean;
+}
+
+/**
+ * Thrown by upsertPlan with rejectStale when a fresher write reached the row
+ * between the caller's read and this write. Nothing was written; `current`
+ * is the row as it stands now (null when it is gone).
+ */
+export class StalePlanWriteError extends Error {
+  readonly planId: string;
+  readonly current: PlanRow | null;
+
+  constructor(planId: string, stamp: Date, current: PlanRow | null) {
+    super(`employer plan ${planId} already holds a state newer than ${stamp.toISOString()}; the older write was not applied`);
+    this.name = 'StalePlanWriteError';
+    this.planId = planId;
+    this.current = current;
+  }
+}
+
+/** The columns upsertPlan writes. */
+interface PlanWriteData {
+  userId: string | null;
+  email: string;
+  status: string;
+  currentPeriodEnd: Date;
+  slots: number;
+  priceCents: number;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  lastStripeEventAt?: Date;
+  source: string;
+}
+
+/**
+ * The compare-and-set behind UpsertPlanOptions.rejectStale: one UPDATE whose
+ * WHERE holds the stamp check, so no other write can land between the check
+ * and the write. updateMany reports the rows it matched; none means a
+ * fresher stamp got there first (or the row is gone).
+ */
+async function updatePlanUnlessNewer(existing: PlanRow, data: PlanWriteData, stamp: Date): Promise<PlanRow> {
+  const { count } = await prisma.employerPlan.updateMany({
+    where: { id: existing.id, OR: [{ lastStripeEventAt: null }, { lastStripeEventAt: { lte: stamp } }] },
+    data,
+  });
+  if (count === 0) {
+    const current = await prisma.employerPlan.findUnique({ where: { id: existing.id } });
+    throw new StalePlanWriteError(existing.id, stamp, current);
+  }
+  // updateMany returns no row: this is the row as the write just left it.
+  return { ...existing, ...data };
 }
 
 /**
@@ -309,9 +376,12 @@ export interface UpsertPlanOptions {
  *   - Stripe ids are written only when the caller passes them, so an admin
  *     write can never sever the webhook link of a paying subscription;
  *   - a row with a Stripe subscription stays Stripe-owned: an admin write
- *     keeps its status, period end and `source: 'stripe'`.
+ *     keeps its status, period end and `source: 'stripe'`;
+ *   - with `rejectStale` (the subscription path only), an existing row is
+ *     written only while no fresher event stamp holds it
+ *     (StalePlanWriteError otherwise).
  */
-export async function upsertPlan(input: UpsertPlanInput, options: UpsertPlanOptions = {}) {
+export async function upsertPlan(input: UpsertPlanInput, options: UpsertPlanOptions = {}): Promise<PlanRow> {
   const email = input.email.toLowerCase();
   const subscriptionId = input.stripeSubscriptionId ?? null;
 
@@ -327,7 +397,7 @@ export async function upsertPlan(input: UpsertPlanInput, options: UpsertPlanOpti
   const stripeOwned = !!existing?.stripeSubscriptionId;
   const keepStripeState = input.source === 'admin' && stripeOwned && existing !== null;
 
-  const data = {
+  const data: PlanWriteData = {
     userId: options.detached ? (existing?.userId ?? null) : input.userId,
     email,
     status: keepStripeState ? existing.status : input.status,
@@ -341,7 +411,9 @@ export async function upsertPlan(input: UpsertPlanInput, options: UpsertPlanOpti
   };
 
   if (existing) {
-    const updated = await prisma.employerPlan.update({ where: { id: existing.id }, data });
+    const updated = options.rejectStale && input.lastStripeEventAt
+      ? await updatePlanUnlessNewer(existing, data, input.lastStripeEventAt)
+      : await prisma.employerPlan.update({ where: { id: existing.id }, data });
     logger.info('employer plan updated', { planId: updated.id, userId: updated.userId ?? undefined, status: updated.status, source: data.source });
     return updated;
   }

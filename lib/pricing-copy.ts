@@ -34,3 +34,31 @@ export function ladderLine(now: Date = new Date()): string {
   if (!config.isPromoActive(now)) return LADDER_PRICES;
   return `From ${config.ladderStartsLabel}: ${LADDER_PRICES.charAt(0).toLowerCase()}${LADDER_PRICES.slice(1)}`;
 }
+
+/**
+ * The headline that replaces PROMO_HEADLINE once the ladder is live: the
+ * /pricing H1 and the /for-employers hero, in the same words as the
+ * ladder-phase email headline. Only after the promo.
+ */
+export const LADDER_HEADLINE = 'Simple per-post pricing';
+
+/**
+ * What every post includes, whatever it cost: the sentence that stands where
+ * PROMO_SUB stood once the promo has ended (true in both phases, but the
+ * promo copy already says it inside PROMO_SUB).
+ */
+export const FULL_PACKAGE = `Every post gets the full package: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails.`;
+
+/** The entry price, for CTA cards and descriptions once the ladder is live. Only after the promo. */
+export const LADDER_FROM_LINE = `Posts start at $${config.introPrice}, with all features included.`;
+
+/**
+ * The Employer plan's price for `now`. While the promo runs it is dated, the
+ * sentence /pricing, /faq and /for-employers already printed; once the ladder
+ * is live it is the plain price.
+ */
+export function planPriceLine(now: Date = new Date()): string {
+  return config.isPromoActive(now)
+    ? `From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month.`
+    : `The Employer plan is $${config.planPrice}/month.`;
+}

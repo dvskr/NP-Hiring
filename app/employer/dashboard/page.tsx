@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Metadata } from 'next';
 import { requireEmployer } from '@/lib/auth/protect';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import EmployerDashboardClient from '@/components/employer/EmployerDashboardClient';
 import UnfinishedPostBanner from '@/components/employer/UnfinishedPostBanner';
@@ -27,13 +28,13 @@ export default async function EmployerDashboardPage() {
         redirect('/login?next=/employer/dashboard');
     }
 
-    // 2. Query Jobs (by userId OR contactEmail as fallback)
+    // 2. Query Jobs: the employer's claimed rows, plus unclaimed legacy rows
+    // under their email. A row another account claimed stays off this page
+    // even when it carries the same contact email (P5.A): every action route
+    // already refuses it, and listing it here handed out its edit token.
     const employerJobs = await prisma.employerJob.findMany({
         where: {
-            OR: [
-                { userId: user.id },
-                { contactEmail: user.email }
-            ]
+            OR: employerJobOwnershipBranches(user),
         },
         include: {
             job: {

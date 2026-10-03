@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 import { scopeJobIdsToOwned } from './scope';
 
 /**
@@ -42,13 +43,11 @@ export async function GET(req: NextRequest) {
     //     pre-account posts that never got upgraded).
     // Supabase's signup-email verification is the trust anchor for the
     // contactEmail branch: an attacker can't sign up with someone
-    // else's email without controlling the inbox.
+    // else's email without controlling the inbox. The branch exists only
+    // for a session with an email (lib/employer-ownership.ts).
     const employerJobs = await prisma.employerJob.findMany({
         where: {
-            OR: [
-                { userId: user.id },
-                { userId: null, contactEmail: user.email! },
-            ],
+            OR: employerJobOwnershipBranches(user),
         },
         select: { jobId: true, job: { select: { title: true, id: true } } },
     });

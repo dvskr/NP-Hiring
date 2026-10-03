@@ -421,13 +421,25 @@ describe('7-vi — /post-job metadata reflects the real pricing model', () => {
 
   it('the description derives the price from lib/config instead of hand-typing it', () => {
     expect(layout).toContain('config.postingPrice');
-    // 2026-09-12 pricing change: the promo sentence is dated from config so
-    // static metadata stays true after the promo ends, and the ladder
-    // (intro / featured / plan) is spelled from config tokens only.
+    // 2026-09-12 pricing change: the promo sentence is dated from config, and
+    // the ladder (intro / featured / plan) is spelled from config tokens only.
     expect(layout).toMatch(/free through \$\{config\.promoEndsLabel\}/);
     expect(layout).toContain('config.introPrice');
     expect(layout).toContain('config.planPrice');
     expect(layout).not.toMatch(/first post is free/i);
+    expect(layout).not.toMatch(/\$\d/);
+  });
+
+  it('builds the description per render and re-renders hourly, so it switches when the promo ends (backlog 2.1)', () => {
+    // Static metadata is evaluated once at build: a dated "free through" line
+    // there kept offering a free post after config.promoEndsAt. The ladder
+    // sentence after the switch is the shared one from lib/pricing-copy.ts.
+    expect(layout).toContain('export const revalidate = 3600;');
+    expect(layout).toContain('export async function generateMetadata(): Promise<Metadata>');
+    expect(layout).not.toContain('export const metadata');
+    expect(layout).toContain('description: postJobDescription(new Date()),');
+    expect(layout).toContain('if (config.isPromoActive(now)) {');
+    expect(layout).toContain('${LADDER_PRICES}');
   });
 });
 

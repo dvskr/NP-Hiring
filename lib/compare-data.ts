@@ -17,6 +17,15 @@
  *     product (tools registry, taxonomy registry, pricing config, licensure
  *     series), so the comparison pages cannot drift from the real app.
  *     Dormant/flag-gated features are simply not claimed.
+ *   - Our price statements follow the launch-promo clock (backlog 2.1).
+ *     While the promo runs they lead with it and date the ladder from
+ *     config.ladderStartsLabel; once config.promoEndsAt has passed they state
+ *     the ladder as the current price. So the profiles are built per render
+ *     by competitorProfiles(now) and getCompetitorProfile(slug, now), never at
+ *     module load (lib/pricing-copy.ts explains why), and the pages re-render
+ *     hourly. COMPARE_REVIEW_DATE keeps dating only the competitor claims:
+ *     our prices are current, theirs are snapshots from that review, and the
+ *     copy says which is which.
  *   - All three pages read this module, so they share one review date and
  *     one claims corpus. tests/regressions/p5-comparison-pages-*.test.ts
  *     enforce the invariants.
@@ -25,6 +34,7 @@
  */
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
+import { indefiniteArticle } from '@/lib/display-text';
 import { TOOLS } from '@/app/tools/tools-registry';
 import { CATEGORY_AXES, ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { SALARY_SPECIALTY_SLUGS } from '@/app/salary-guide/specialty/specialty-config';
@@ -88,6 +98,20 @@ export const OUR_FACTS = {
     statsLastReviewed: STATS_LAST_REVIEWED,
 } as const;
 
+/**
+ * The comparison routes under /compare, in page order. The profiles are
+ * rebuilt per render, but their routes never change with the pricing phase,
+ * so the hub links, the sitemap and the route folders read this list, and
+ * a route file typed with CompetitorSlug fails the type check on a typo.
+ */
+export const COMPETITOR_SLUGS = [
+    'np-hiring-vs-indeed',
+    'np-hiring-vs-aanp-jobcenter',
+    'np-hiring-vs-enp-network',
+] as const;
+
+export type CompetitorSlug = (typeof COMPETITOR_SLUGS)[number];
+
 /** A competitor fact with the public URL it was verified against. */
 export interface VerifiedClaim {
     /** The claim, written observationally; numbers are review-date snapshots. */
@@ -114,7 +138,7 @@ export interface CompareGuidance {
 
 export interface CompetitorProfile {
     /** Route slug under /compare. */
-    slug: string;
+    slug: CompetitorSlug;
     competitorName: string;
     competitorUrl: string;
     /** H1 of the page. */
@@ -134,8 +158,6 @@ export interface CompetitorProfile {
     pagesReviewed: readonly { label: string; url: string }[];
 }
 
-const OUR_PRICE_CELL = `Free through ${OUR_FACTS.promoEndsLabel}. From ${OUR_FACTS.ladderStartsLabel}: $${OUR_FACTS.introPriceUsd} first post, $${OUR_FACTS.postingPriceUsd} after, or $${OUR_FACTS.planPriceUsd}/month for ${OUR_FACTS.planSlots} active jobs. Every post runs ${OUR_FACTS.postingDurationDays} days. All of it is published on /pricing`;
-
 const OUR_TOOLS_CELL = `${OUR_FACTS.toolCount} free tools (pay calculators, cost-of-living and licensure planners, specialty finder, employer benchmarks)`;
 
 const OUR_TAXONOMY_CELL = `${OUR_FACTS.categoryPageCount} ${brand.niche.short} category pages: ${OUR_FACTS.npSpecialtyCategoryCount} clinical specialties plus APRN, setting, job-type, and experience axes, with state pages`;
@@ -146,389 +168,462 @@ const OUR_SALARY_CELL = `Salary guide with state and specialty pages computed fr
 // practice explorer; /resources/fpa-guide explains the concept.
 const OUR_LICENSURE_CELL = `${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series plus a scope of practice explorer, linking to each state board`;
 
-export const COMPETITOR_PROFILES: readonly CompetitorProfile[] = [
-    // ── Indeed ──────────────────────────────────────────────────────────────
-    {
-        slug: 'np-hiring-vs-indeed',
-        competitorName: 'Indeed',
-        competitorUrl: 'https://www.indeed.com',
-        title: `${brand.name} vs Indeed for ${brand.niche.short} jobs`,
-        metaTitle: `${brand.name} vs Indeed for ${brand.niche.short} Jobs | An Honest Comparison`,
-        metaDescription: `How ${brand.name} compares with Indeed for ${brand.niche.descriptor} job searches and hiring: focus, pricing, salary data, and tools. Every claim dated and checked against Indeed's own pages.`,
-        intro: [
-            `Indeed is the largest general-purpose job site in the world, and for many ${brand.niche.descriptor}s it is the first place a search starts. ${brand.name} is a small, ${brand.niche.short}-only board. Those are genuinely different products, and this page lays out the differences without pretending the scale gap does not exist.`,
-            `Everything stated here about Indeed was checked against Indeed's own public pages on ${COMPARE_REVIEW_DATE_LABEL}. The sources are listed at the bottom, and the figures are snapshots from that date.`,
-        ],
-        strengths: [
-            {
-                text: `Scale nothing niche can match: Indeed's own about page describes it as the world's #1 job site (Comscore Total Visits, March 2026) and states 665M job seeker profiles and 3.5M+ employers.`,
-                sourceUrl: 'https://www.indeed.com/about',
-            },
-            {
-                text: `Salary data with visible provenance: Indeed's ${brand.niche.descriptor} salary page showed an average of $129,948 per year, stated as drawn from "53.4k salaries taken from job postings on Indeed in the past 36 months (updated August 2, 2026)". Publishing the sample size and refresh date on the page is a practice we respect and follow ourselves.`,
-                sourceUrl: 'https://www.indeed.com/career/nurse-practitioner/salaries',
-            },
-            {
-                text: `An employer-review corpus with "Work Wellbeing" scores. For example, one large health system's Indeed page showed 3,500+ employee reviews and a published wellbeing score on the review date. We do not host employer reviews at all, so for review research Indeed is the tool to use.`,
-                sourceUrl: 'https://www.indeed.com/cmp/Mayo-Clinic/reviews',
-            },
-            {
-                text: `Hiring Lab, a labor-market research arm with named, bylined researchers, represents a level of research investment that no ${brand.niche.short}-specific board makes.`,
-                sourceUrl: 'https://www.hiringlab.org/',
-            },
-            {
-                text: `Real search filters on ${brand.niche.descriptor} queries: on the review date, Indeed's ${brand.niche.short} search showed Pay, Job type, License, Work setting, and a Specialty filter.`,
-                sourceUrl: 'https://www.indeed.com/jobs?q=nurse+practitioner',
-            },
-        ],
-        differences: [
-            {
-                title: `${brand.niche.short}-only, end to end`,
-                body: `Every listing, category page, salary page, and tool here exists for the ${brand.niche.descriptor} and APRN market: ${OUR_FACTS.categoryPageCount} category landing pages, including ${OUR_FACTS.npSpecialtyCategoryCount} clinical specialty categories with per-state pages. On a generalist site, ${brand.niche.short} roles share infrastructure with every other occupation.`,
-                href: '/jobs',
-            },
-            {
-                title: 'Flat, published employer pricing',
-                body: `Our pricing is a short public page: every post is free through ${OUR_FACTS.promoEndsLabel}; from ${OUR_FACTS.ladderStartsLabel} your first post is $${OUR_FACTS.introPriceUsd}, every post after that is $${OUR_FACTS.postingPriceUsd}, or $${OUR_FACTS.planPriceUsd}/month for ${OUR_FACTS.planSlots} active jobs, each a ${OUR_FACTS.postingDurationDays}-day listing. Indeed's model is different by design: its pricing page states there is no flat upfront fee and sponsorship is results-based (per click or per started application, with budgets), alongside a monthly free-post allowance. Neither model is wrong; ours is simpler to budget for a single ${brand.niche.short} hire.`,
-                href: '/pricing',
-            },
-            {
-                title: `${OUR_FACTS.toolCount} free ${brand.niche.short}-specific tools`,
-                body: `Contract-vs-salary math, cost-of-living comparison, a licensure and multi-state planner, a specialty finder, an employer salary benchmark, and more, all built specifically for ${brand.niche.short} decisions, free, and ungated.`,
-                href: '/tools',
-            },
-            {
-                title: 'Licensure and practice-authority coverage',
-                body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series and a state by state scope of practice explorer, each linking to the state board and stating a fee or processing time only with its source and check date.`,
-                href: '/scope-of-practice',
-            },
-            {
-                title: 'Salary product with a citation regime',
-                body: `State and specialty salary pages computed from live postings, a calculator, and a free downloadable guide. Every national statistic we publish names its source and vintage on the page (last editorial review: ${OUR_FACTS.statsLastReviewed}).`,
-                href: '/salary-guide',
-            },
-        ],
-        table: [
-            {
-                dimension: 'Focus',
-                us: `${brand.niche.short}/APRN roles only`,
-                them: 'All occupations, all industries, 60+ countries',
-                themSourceUrl: 'https://www.indeed.com/about',
-            },
-            {
-                dimension: 'Scale',
-                us: 'Deliberately niche: one clinical profession',
-                them: '665M job seeker profiles; 3.5M+ employers (self-reported)',
-                themSourceUrl: 'https://www.indeed.com/about',
-            },
-            {
-                dimension: 'Employer pricing',
-                us: OUR_PRICE_CELL,
-                them: 'No flat per-post fee; results-based sponsorship (per click / per started application) plus a monthly free-post allowance',
-                themSourceUrl: 'https://www.indeed.com/hire/resources/howtohub/how-pricing-works-on-indeed',
-            },
-            {
-                dimension: 'Salary data',
-                us: OUR_SALARY_CELL,
-                them: `${brand.niche.short} salary pages with stated sample size and refresh date`,
-                themSourceUrl: 'https://www.indeed.com/career/nurse-practitioner/salaries',
-            },
-            {
-                dimension: 'Employer reviews',
-                us: 'None (we deliberately do not host reviews)',
-                them: 'Large review corpus with Work Wellbeing scores',
-                themSourceUrl: 'https://www.indeed.com/companies',
-            },
-            {
-                dimension: `${brand.niche.short} career tools`,
-                us: OUR_TOOLS_CELL,
-                them: NOT_FOUND_IN_REVIEW,
-            },
-            {
-                dimension: 'Licensure guidance',
-                us: OUR_LICENSURE_CELL,
-                them: NOT_FOUND_IN_REVIEW,
-            },
-        ],
-        guidance: {
-            useThem: [
-                `You want maximum listing volume and every employer in one place. No niche board matches Indeed's inventory.`,
-                'You want to research employers through reviews and wellbeing scores before applying.',
-                'You are hiring for many role types beyond advanced practice and want one pipeline.',
-            ],
-            useUs: [
-                `You want only ${brand.niche.descriptor} roles, faceted by clinical specialty, practice setting, and state, with licensure and pay context on the same site.`,
-                `You are an employer hiring one or a few ${brand.niche.short}s and prefer a flat published price over managing a bid budget.`,
-                `You want ${brand.niche.short}-specific salary, licensure, and contract tools next to the search itself.`,
-            ],
-        },
-        pagesReviewed: [
-            { label: 'Indeed: About', url: 'https://www.indeed.com/about' },
-            { label: `Indeed: ${brand.niche.descriptor} salaries`, url: 'https://www.indeed.com/career/nurse-practitioner/salaries' },
-            { label: `Indeed: ${brand.niche.descriptor} job search`, url: 'https://www.indeed.com/jobs?q=nurse+practitioner' },
-            { label: 'Indeed: How pricing works (employer resource)', url: 'https://www.indeed.com/hire/resources/howtohub/how-pricing-works-on-indeed' },
-            { label: 'Indeed: company reviews (example page)', url: 'https://www.indeed.com/cmp/Mayo-Clinic/reviews' },
-            { label: 'Indeed Hiring Lab', url: 'https://www.hiringlab.org/' },
-        ],
-    },
+/** Our side of the price statements on the comparison pages, for one pricing phase. */
+interface OurPriceCopy {
+    /** The "Employer pricing" cell of every capability table. */
+    tableCell: string;
+    /** Indeed: how our pricing reads, before Indeed's model is described. */
+    indeedLead: string;
+    /** AANP JobCenter: our price and run, before "versus" their single posting. */
+    aanpLead: string;
+    /** AANP JobCenter: the employer's reason to choose us. */
+    aanpUseUs: string;
+    /** ENP Network: our price and run, before "versus" their starting price. */
+    enpLead: string;
+    /** ENP Network: the employer's reason to choose us. */
+    enpUseUs: string;
+}
 
-    // ── AANP JobCenter ──────────────────────────────────────────────────────
-    {
-        slug: 'np-hiring-vs-aanp-jobcenter',
-        competitorName: 'AANP JobCenter',
-        competitorUrl: 'https://jobcenter.aanp.org',
-        title: `${brand.name} vs the AANP JobCenter`,
-        metaTitle: `${brand.name} vs AANP JobCenter | An Honest Comparison`,
-        metaDescription: `How ${brand.name} compares with the AANP JobCenter for ${brand.niche.descriptor}s and employers: access model, pricing, salary resources, and tools. Claims dated and checked against AANP's own pages.`,
-        intro: [
-            `The AANP JobCenter is the career board of the American Association of Nurse Practitioners, the profession's largest membership organization. That official standing is real, and we do not compete with it: if you want the association itself (advocacy, CE, conferences, community), that is AANP.`,
-            `This page compares the two job boards as job boards: how listings are accessed, what employers pay, and what career resources sit around the search. Everything stated about the AANP JobCenter was checked against its own public pages on ${COMPARE_REVIEW_DATE_LABEL}; figures are snapshots from that date.`,
-        ],
-        strengths: [
-            {
-                text: `Official association standing: the JobCenter describes itself as containing one of the largest sources of ${brand.niche.descriptor} jobs in the nation, "with access to more than 118k+ AANP members."`,
-                sourceUrl: 'https://jobcenter.aanp.org/',
-            },
-            {
-                text: `Real inventory: the job search showed 3,896 results on the review date.`,
-                sourceUrl: 'https://jobcenter.aanp.org/jobs/',
-            },
-            {
-                text: `A concrete membership perk: "AANP members receive an exclusive 2 day preview to new jobs" (the JobCenter's own wording). If you are already an AANP member, that head start is a genuine benefit.`,
-                sourceUrl: 'https://jobcenter.aanp.org/',
-            },
-            {
-                text: `Published, public employer pricing with no contact-sales wall: a single 30-day posting at $399, packages at $599 / $949 / $1,099, network distribution at $749, single resume purchase at $49, and 30-day unlimited resume access at $699 were all listed openly on the review date. The $599 package included placement in a monthly email described as reaching 90,000+ ${brand.niche.descriptor}s.`,
-                sourceUrl: 'https://jobcenter.aanp.org/employer/pricing/',
-            },
-        ],
-        differences: [
-            {
-                title: 'No membership tiers on listings',
-                body: `Every listing here is visible to everyone the moment it publishes. The JobCenter is open to non-members too, but its own copy offers members an exclusive two-day preview of new jobs, which is reasonable for a membership organization but a different model from ours.`,
-                href: '/jobs',
-            },
-            {
-                title: 'Employer price and duration',
-                body: `Free through ${OUR_FACTS.promoEndsLabel} here, then from ${OUR_FACTS.ladderStartsLabel} $${OUR_FACTS.introPriceUsd} for your first post and $${OUR_FACTS.postingPriceUsd} after (or $${OUR_FACTS.planPriceUsd}/month for ${OUR_FACTS.planSlots} active jobs), every post ${OUR_FACTS.postingDurationDays} days, versus $399 for a single 30-day posting there (their published price on the review date). Both prices are public, so you can compare them directly for your hiring volume.`,
-                href: '/pricing',
-            },
-            {
-                title: 'Salary product',
-                body: `We publish a ${brand.niche.short} salary guide with state and specialty pages computed from live postings, a calculator, an employer benchmark, and a free PDF, with named sources on every national statistic. We did not find a comparable salary data product on the JobCenter pages we reviewed.`,
-                href: '/salary-guide',
-            },
-            {
-                title: `Interactive ${brand.niche.short} tools`,
-                body: `${OUR_FACTS.toolCount} free tools (contract-vs-salary math, cost-of-living comparison, licensure and multi-state planning, specialty matching, and employer benchmarks) sit next to the job search.`,
-                href: '/tools',
-            },
-            {
-                title: 'Licensure and practice-authority editorial',
-                body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure series and a practice-authority guide, maintained with a no-stale-numbers rule: anything we cannot verify links to the state board instead of being asserted.`,
-                href: '/resources/fpa-guide',
-            },
-        ],
-        table: [
-            {
-                dimension: 'Operator',
-                us: `Independent ${brand.niche.short}-only job board`,
-                them: 'Career board of AANP, the professional association',
-                themSourceUrl: 'https://jobcenter.aanp.org/',
-            },
-            {
-                dimension: 'Listing access',
-                us: 'All listings public immediately',
-                them: 'Open to all; members get an exclusive 2-day preview of new jobs',
-                themSourceUrl: 'https://jobcenter.aanp.org/',
-            },
-            {
-                dimension: 'Inventory (snapshot)',
-                us: 'Live counts shown per category on our browse pages',
-                them: `3,896 job results on ${COMPARE_REVIEW_DATE_LABEL}`,
-                themSourceUrl: 'https://jobcenter.aanp.org/jobs/',
-            },
-            {
-                dimension: 'Employer pricing',
-                us: OUR_PRICE_CELL,
-                them: '$399 single 30-day post; packages $599 to $1,099; resume access $49 single / $699 for 30-day unlimited; all published publicly',
-                themSourceUrl: 'https://jobcenter.aanp.org/employer/pricing/',
-            },
-            {
-                dimension: 'Salary data',
-                us: OUR_SALARY_CELL,
-                them: NOT_FOUND_IN_REVIEW,
-            },
-            {
-                dimension: `${brand.niche.short} career tools`,
-                us: OUR_TOOLS_CELL,
-                them: NOT_FOUND_IN_REVIEW,
-            },
-            {
-                dimension: 'Association benefits (CE, advocacy, conferences)',
-                us: 'None (we are not a membership organization)',
-                them: 'The core of what AANP is; the JobCenter is one member benefit among many',
-                themSourceUrl: 'https://jobcenter.aanp.org/',
-            },
-        ],
-        guidance: {
-            useThem: [
-                'You are (or want to be) an AANP member and value the early-preview window plus the association ecosystem around the board.',
-                'You want a large single-source board operated under the profession’s official association brand.',
-                'You are an employer who specifically wants distribution to AANP’s membership channels.',
-            ],
-            useUs: [
-                `You want specialty-, setting-, and state-faceted ${brand.niche.short} search with salary and licensure context on the same site, no membership involved.`,
-                `You are an employer comparing published prices: free through ${OUR_FACTS.promoEndsLabel}, then $${OUR_FACTS.introPriceUsd} first post / $${OUR_FACTS.postingPriceUsd} after for ${OUR_FACTS.postingDurationDays} days here, versus $399 for 30 days there (both public, as of ${COMPARE_REVIEW_DATE_LABEL}).`,
-                `You want free ${brand.niche.short} tools (contract math, relocation, licensure planning), not just listings.`,
-            ],
-        },
-        pagesReviewed: [
-            { label: 'AANP JobCenter: home', url: 'https://jobcenter.aanp.org/' },
-            { label: 'AANP JobCenter: job search', url: 'https://jobcenter.aanp.org/jobs/' },
-            { label: 'AANP JobCenter: employer pricing', url: 'https://jobcenter.aanp.org/employer/pricing/' },
-        ],
-    },
+/**
+ * Our price statements for `now`. While the launch promo runs they are the
+ * sentences these pages have printed since 2026-09-12: the promo first, then
+ * the ladder dated from config.ladderStartsLabel. Once it has ended each one
+ * drops the promo and its dates and states the ladder as the current price,
+ * while the competitor prices stay dated to COMPARE_REVIEW_DATE.
+ *
+ * In both phases the review date dates THEIR price only. The promo and the
+ * ladder went public on 2026-09-12, five weeks after the review, so the old
+ * promo wording "both public, as of <review date>" was never true of ours.
+ */
+function ourPriceCopy(now: Date): OurPriceCopy {
+    const f = OUR_FACTS;
+    if (config.isPromoActive(now)) {
+        return {
+            tableCell: `Free through ${f.promoEndsLabel}. From ${f.ladderStartsLabel}: $${f.introPriceUsd} first post, $${f.postingPriceUsd} after, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs. Every post runs ${f.postingDurationDays} days. All of it is published on /pricing`,
+            indeedLead: `Our pricing is a short public page: every post is free through ${f.promoEndsLabel}; from ${f.ladderStartsLabel} your first post is $${f.introPriceUsd}, every post after that is $${f.postingPriceUsd}, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs, each a ${f.postingDurationDays}-day listing.`,
+            aanpLead: `Free through ${f.promoEndsLabel} here, then from ${f.ladderStartsLabel} $${f.introPriceUsd} for your first post and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), every post ${f.postingDurationDays} days`,
+            aanpUseUs: `You are an employer comparing published prices: free through ${f.promoEndsLabel}, then $${f.introPriceUsd} first post / $${f.postingPriceUsd} after for ${f.postingDurationDays} days here, versus $399 for 30 days there (theirs as published on ${COMPARE_REVIEW_DATE_LABEL}).`,
+            enpLead: `free through ${f.promoEndsLabel} here, then $${f.introPriceUsd} for your first post and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), each ${f.postingDurationDays} days`,
+            // "an NP", not "a NP": the article follows the credential.
+            enpUseUs: `You are an employer hiring ${indefiniteArticle(brand.niche.short)} ${brand.niche.short} and comparing published prices: free through ${f.promoEndsLabel}, then $${f.introPriceUsd} first post and $${f.postingPriceUsd} after, every post ${f.postingDurationDays} days.`,
+        };
+    }
+    return {
+        tableCell: `$${f.introPriceUsd} first post, $${f.postingPriceUsd} after, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs. Every post runs ${f.postingDurationDays} days. All of it is published on /pricing`,
+        indeedLead: `Our pricing is a short public page: your first post is $${f.introPriceUsd}, every post after that is $${f.postingPriceUsd}, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs, each a ${f.postingDurationDays}-day listing.`,
+        aanpLead: `$${f.introPriceUsd} for your first post here and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), every post ${f.postingDurationDays} days`,
+        // Their price stays dated: it is the review-date snapshot, ours is current.
+        aanpUseUs: `You are an employer comparing published prices: $${f.introPriceUsd} first post / $${f.postingPriceUsd} after for ${f.postingDurationDays} days here, versus $399 for 30 days there (theirs as published on ${COMPARE_REVIEW_DATE_LABEL}).`,
+        enpLead: `$${f.introPriceUsd} for your first post here and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), each ${f.postingDurationDays} days`,
+        enpUseUs: `You are an employer hiring ${indefiniteArticle(brand.niche.short)} ${brand.niche.short} and comparing published prices: $${f.introPriceUsd} first post and $${f.postingPriceUsd} after, every post ${f.postingDurationDays} days.`,
+    };
+}
 
-    // ── ENP Network ─────────────────────────────────────────────────────────
-    {
-        slug: 'np-hiring-vs-enp-network',
-        competitorName: 'ENP Network',
-        competitorUrl: 'https://www.enpnetwork.com',
-        title: `${brand.name} vs ENP Network`,
-        metaTitle: `${brand.name} vs ENP Network | An Honest Comparison`,
-        metaDescription: `How ${brand.name} compares with ENP Network for ${brand.niche.descriptor}s and employers: association network, events, preceptors, CE, pay transparency, pricing, and tools. Claims dated and source-checked.`,
-        intro: [
-            `ENP Network is the infrastructure player of the ${brand.niche.short} world: it hosts association communities, an events calendar, a preceptor marketplace, and a CE directory alongside its job board. Much of that we simply do not offer, and this page says so plainly.`,
-            `Where the two differ most is the job-search product itself: pay transparency, salary data, tools, and pricing. Everything stated about ENP Network was checked against its own public pages on ${COMPARE_REVIEW_DATE_LABEL}; figures are snapshots from that date.`,
-        ],
-        strengths: [
-            {
-                text: `A real association network: ENP's homepage counted 267 ${brand.niche.descriptor} associations and described a membership of 319,842 active members on the review date. Distribution inside the profession's own associations is a moat no independent board has.`,
-                sourceUrl: 'https://www.enpnetwork.com/',
-            },
-            {
-                text: `An events calendar with 478 ${brand.niche.descriptor} events listed on the review date. We have no events product at all.`,
-                sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-events',
-            },
-            {
-                text: `A preceptor marketplace listing 2,202 preceptors on the review date. If you are a student or program looking for a preceptor, ENP has an actual product there; we publish guidance only.`,
-                sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-preceptors',
-            },
-            {
-                text: `An on-demand CE directory with 266 activities on the review date (255 listed as offering credit), faceted by credit type. This is another product category we do not offer.`,
-                sourceUrl: 'https://www.enpnetwork.com/on-demand-ce-for-nurse-practitioners',
-            },
-            {
-                text: `Fully itemized public employer pricing: job postings starting at $389, posting packages up to $5,245, and resume-access passes from $195 to $1,850 were all published openly on the review date, the same no-contact-sales transparency we practice.`,
-                sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs/for-employers',
-            },
-            {
-                text: `A Direct Hire vs Staffing facet on job search: 3,028 direct-hire versus 783 staffing listings on the review date. Surfacing that split is genuinely useful and rare.`,
-                sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs',
-            },
-        ],
-        differences: [
-            {
-                title: 'Pay visibility on listings',
-                body: `On the review date, ENP's own Annual Pay search facet counted 3,567 listings as pay "Not provided" out of roughly 3,800 total, or about 94%. We are not perfect either: we show pay when the posting supplies it and do not yet require it. However, we surround listings with state-level pay computed from live data, salary badges where data exists, and a salary guide that names its sources.`,
-                href: '/salary-guide',
-            },
-            {
-                title: 'Salary product',
-                body: `State and specialty salary pages computed from live postings, a calculator, an employer benchmark, and a free ungated PDF. We did not find a comparable salary data product on the ENP pages we reviewed.`,
-                href: '/salary-guide',
-            },
-            {
-                title: `${OUR_FACTS.toolCount} free interactive tools`,
-                body: `Contract-vs-salary math, cost-of-living comparison, a licensure and multi-state planner, a specialty finder, and employer benchmarks, all free and ungated, next to the search.`,
-                href: '/tools',
-            },
-            {
-                title: 'Licensure editorial',
-                body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series plus a scope of practice explorer with board deep-links, editorial infrastructure we invest in heavily.`,
-                href: '/scope-of-practice',
-            },
-            {
-                title: 'Employer price point',
-                body: `Both boards publish employer pricing openly, and credit is due for that. The numbers differ: free through ${OUR_FACTS.promoEndsLabel} here, then $${OUR_FACTS.introPriceUsd} for your first post and $${OUR_FACTS.postingPriceUsd} after (or $${OUR_FACTS.planPriceUsd}/month for ${OUR_FACTS.planSlots} active jobs), each ${OUR_FACTS.postingDurationDays} days, versus postings starting at $389 there (their published price on the review date).`,
-                href: '/pricing',
-            },
-        ],
-        table: [
-            {
-                dimension: 'What it is',
-                us: `${brand.niche.short}-only job board with salary + licensure editorial and tools`,
-                them: `Professional network: associations, events, preceptors, CE, and a job board`,
-                themSourceUrl: 'https://www.enpnetwork.com/',
-            },
-            {
-                dimension: 'Association network',
-                us: 'None',
-                them: `267 associations; 319,842 active members (site's own counts)`,
-                themSourceUrl: 'https://www.enpnetwork.com/',
-            },
-            {
-                dimension: 'Events / preceptors / CE',
-                us: 'None (guidance content only)',
-                them: '478 events; 2,202 preceptors; an on-demand CE directory (homepage counts, snapshots)',
-                themSourceUrl: 'https://www.enpnetwork.com/',
-            },
-            {
-                dimension: 'Pay shown on listings',
-                us: 'Shown when the posting supplies it, plus state-level aggregates from live data',
-                them: `Own search facet counted 3,567 of ~3,800 listings as pay "Not provided" (~94%) on ${COMPARE_REVIEW_DATE_LABEL}`,
-                themSourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs',
-            },
-            {
-                dimension: 'Salary data product',
-                us: OUR_SALARY_CELL,
-                them: NOT_FOUND_IN_REVIEW,
-            },
-            {
-                dimension: `${brand.niche.short} career tools`,
-                us: OUR_TOOLS_CELL,
-                them: NOT_FOUND_IN_REVIEW,
-            },
-            {
-                dimension: 'Employer pricing',
-                us: OUR_PRICE_CELL,
-                them: 'Postings from $389; packages to $5,245; resume passes $195 to $1,850; fully published',
-                themSourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs/for-employers',
-            },
-        ],
-        guidance: {
-            useThem: [
-                'You want your professional association’s community, bulletins, and events in one network.',
-                'You need a preceptor or on-demand CE. ENP has real products in both categories.',
-                'You are an employer who wants distribution across association sites and a resume database with published pass pricing.',
+/** A profile without its route slug, which COMPETITOR_SLUGS supplies. */
+type ProfileBody = Omit<CompetitorProfile, 'slug'>;
+
+/**
+ * Every profile for `now`, keyed by slug, so the type check fails if a slug
+ * in COMPETITOR_SLUGS has no profile. Only the OurPriceCopy statements
+ * depend on `now`; everything else is the same in both phases.
+ */
+function profileBodies(now: Date): Record<CompetitorSlug, ProfileBody> {
+    const price = ourPriceCopy(now);
+    return {
+        // ── Indeed ──────────────────────────────────────────────────────────
+        'np-hiring-vs-indeed': {
+            competitorName: 'Indeed',
+            competitorUrl: 'https://www.indeed.com',
+            title: `${brand.name} vs Indeed for ${brand.niche.short} jobs`,
+            metaTitle: `${brand.name} vs Indeed for ${brand.niche.short} Jobs | An Honest Comparison`,
+            metaDescription: `How ${brand.name} compares with Indeed for ${brand.niche.descriptor} job searches and hiring: focus, pricing, salary data, and tools. Every claim dated and checked against Indeed's own pages.`,
+            intro: [
+                `Indeed is the largest general-purpose job site in the world, and for many ${brand.niche.descriptor}s it is the first place a search starts. ${brand.name} is a small, ${brand.niche.short}-only board. Those are genuinely different products, and this page lays out the differences without pretending the scale gap does not exist.`,
+                `Everything stated here about Indeed was checked against Indeed's own public pages on ${COMPARE_REVIEW_DATE_LABEL}. The sources are listed at the bottom, and the figures are snapshots from that date.`,
             ],
-            useUs: [
-                `You are searching by clinical specialty, setting, or state and want pay and licensure context around every step.`,
-                `Pay matters to your search: we publish state-level pay from live data and a sourced salary guide rather than listings alone.`,
-                `You are an employer hiring a ${brand.niche.short} and comparing published prices: free through ${OUR_FACTS.promoEndsLabel}, then $${OUR_FACTS.introPriceUsd} first post and $${OUR_FACTS.postingPriceUsd} after, every post ${OUR_FACTS.postingDurationDays} days.`,
+            strengths: [
+                {
+                    text: `Scale nothing niche can match: Indeed's own about page describes it as the world's #1 job site (Comscore Total Visits, March 2026) and states 665M job seeker profiles and 3.5M+ employers.`,
+                    sourceUrl: 'https://www.indeed.com/about',
+                },
+                {
+                    text: `Salary data with visible provenance: Indeed's ${brand.niche.descriptor} salary page showed an average of $129,948 per year, stated as drawn from "53.4k salaries taken from job postings on Indeed in the past 36 months (updated August 2, 2026)". Publishing the sample size and refresh date on the page is a practice we respect and follow ourselves.`,
+                    sourceUrl: 'https://www.indeed.com/career/nurse-practitioner/salaries',
+                },
+                {
+                    text: `An employer-review corpus with "Work Wellbeing" scores. For example, one large health system's Indeed page showed 3,500+ employee reviews and a published wellbeing score on the review date. We do not host employer reviews at all, so for review research Indeed is the tool to use.`,
+                    sourceUrl: 'https://www.indeed.com/cmp/Mayo-Clinic/reviews',
+                },
+                {
+                    text: `Hiring Lab, a labor-market research arm with named, bylined researchers, represents a level of research investment that no ${brand.niche.short}-specific board makes.`,
+                    sourceUrl: 'https://www.hiringlab.org/',
+                },
+                {
+                    text: `Real search filters on ${brand.niche.descriptor} queries: on the review date, Indeed's ${brand.niche.short} search showed Pay, Job type, License, Work setting, and a Specialty filter.`,
+                    sourceUrl: 'https://www.indeed.com/jobs?q=nurse+practitioner',
+                },
+            ],
+            differences: [
+                {
+                    title: `${brand.niche.short}-only, end to end`,
+                    body: `Every listing, category page, salary page, and tool here exists for the ${brand.niche.descriptor} and APRN market: ${OUR_FACTS.categoryPageCount} category landing pages, including ${OUR_FACTS.npSpecialtyCategoryCount} clinical specialty categories with per-state pages. On a generalist site, ${brand.niche.short} roles share infrastructure with every other occupation.`,
+                    href: '/jobs',
+                },
+                {
+                    title: 'Flat, published employer pricing',
+                    body: `${price.indeedLead} Indeed's model is different by design: its pricing page states there is no flat upfront fee and sponsorship is results-based (per click or per started application, with budgets), alongside a monthly free-post allowance. Neither model is wrong; ours is simpler to budget for a single ${brand.niche.short} hire.`,
+                    href: '/pricing',
+                },
+                {
+                    title: `${OUR_FACTS.toolCount} free ${brand.niche.short}-specific tools`,
+                    body: `Contract-vs-salary math, cost-of-living comparison, a licensure and multi-state planner, a specialty finder, an employer salary benchmark, and more, all built specifically for ${brand.niche.short} decisions, free, and ungated.`,
+                    href: '/tools',
+                },
+                {
+                    title: 'Licensure and practice-authority coverage',
+                    body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series and a state by state scope of practice explorer, each linking to the state board and stating a fee or processing time only with its source and check date.`,
+                    href: '/scope-of-practice',
+                },
+                {
+                    title: 'Salary product with a citation regime',
+                    body: `State and specialty salary pages computed from live postings, a calculator, and a free downloadable guide. Every national statistic we publish names its source and vintage on the page (last editorial review: ${OUR_FACTS.statsLastReviewed}).`,
+                    href: '/salary-guide',
+                },
+            ],
+            table: [
+                {
+                    dimension: 'Focus',
+                    us: `${brand.niche.short}/APRN roles only`,
+                    them: 'All occupations, all industries, 60+ countries',
+                    themSourceUrl: 'https://www.indeed.com/about',
+                },
+                {
+                    dimension: 'Scale',
+                    us: 'Deliberately niche: one clinical profession',
+                    them: '665M job seeker profiles; 3.5M+ employers (self-reported)',
+                    themSourceUrl: 'https://www.indeed.com/about',
+                },
+                {
+                    dimension: 'Employer pricing',
+                    us: price.tableCell,
+                    them: 'No flat per-post fee; results-based sponsorship (per click / per started application) plus a monthly free-post allowance',
+                    themSourceUrl: 'https://www.indeed.com/hire/resources/howtohub/how-pricing-works-on-indeed',
+                },
+                {
+                    dimension: 'Salary data',
+                    us: OUR_SALARY_CELL,
+                    them: `${brand.niche.short} salary pages with stated sample size and refresh date`,
+                    themSourceUrl: 'https://www.indeed.com/career/nurse-practitioner/salaries',
+                },
+                {
+                    dimension: 'Employer reviews',
+                    us: 'None (we deliberately do not host reviews)',
+                    them: 'Large review corpus with Work Wellbeing scores',
+                    themSourceUrl: 'https://www.indeed.com/companies',
+                },
+                {
+                    dimension: `${brand.niche.short} career tools`,
+                    us: OUR_TOOLS_CELL,
+                    them: NOT_FOUND_IN_REVIEW,
+                },
+                {
+                    dimension: 'Licensure guidance',
+                    us: OUR_LICENSURE_CELL,
+                    them: NOT_FOUND_IN_REVIEW,
+                },
+            ],
+            guidance: {
+                useThem: [
+                    `You want maximum listing volume and every employer in one place. No niche board matches Indeed's inventory.`,
+                    'You want to research employers through reviews and wellbeing scores before applying.',
+                    'You are hiring for many role types beyond advanced practice and want one pipeline.',
+                ],
+                useUs: [
+                    `You want only ${brand.niche.descriptor} roles, faceted by clinical specialty, practice setting, and state, with licensure and pay context on the same site.`,
+                    `You are an employer hiring one or a few ${brand.niche.short}s and prefer a flat published price over managing a bid budget.`,
+                    `You want ${brand.niche.short}-specific salary, licensure, and contract tools next to the search itself.`,
+                ],
+            },
+            pagesReviewed: [
+                { label: 'Indeed: About', url: 'https://www.indeed.com/about' },
+                { label: `Indeed: ${brand.niche.descriptor} salaries`, url: 'https://www.indeed.com/career/nurse-practitioner/salaries' },
+                { label: `Indeed: ${brand.niche.descriptor} job search`, url: 'https://www.indeed.com/jobs?q=nurse+practitioner' },
+                { label: 'Indeed: How pricing works (employer resource)', url: 'https://www.indeed.com/hire/resources/howtohub/how-pricing-works-on-indeed' },
+                { label: 'Indeed: company reviews (example page)', url: 'https://www.indeed.com/cmp/Mayo-Clinic/reviews' },
+                { label: 'Indeed Hiring Lab', url: 'https://www.hiringlab.org/' },
             ],
         },
-        pagesReviewed: [
-            { label: 'ENP Network: home', url: 'https://www.enpnetwork.com/' },
-            { label: 'ENP Network: job search', url: 'https://www.enpnetwork.com/nurse-practitioner-jobs' },
-            { label: 'ENP Network: for employers (pricing)', url: 'https://www.enpnetwork.com/nurse-practitioner-jobs/for-employers' },
-            { label: 'ENP Network: events', url: 'https://www.enpnetwork.com/nurse-practitioner-events' },
-            { label: 'ENP Network: preceptors', url: 'https://www.enpnetwork.com/nurse-practitioner-preceptors' },
-            { label: 'ENP Network: on-demand CE', url: 'https://www.enpnetwork.com/on-demand-ce-for-nurse-practitioners' },
-        ],
-    },
-] as const;
+
+        // ── AANP JobCenter ──────────────────────────────────────────────────
+        'np-hiring-vs-aanp-jobcenter': {
+            competitorName: 'AANP JobCenter',
+            competitorUrl: 'https://jobcenter.aanp.org',
+            title: `${brand.name} vs the AANP JobCenter`,
+            metaTitle: `${brand.name} vs AANP JobCenter | An Honest Comparison`,
+            metaDescription: `How ${brand.name} compares with the AANP JobCenter for ${brand.niche.descriptor}s and employers: access model, pricing, salary resources, and tools. Claims dated and checked against AANP's own pages.`,
+            intro: [
+                `The AANP JobCenter is the career board of the American Association of Nurse Practitioners, the profession's largest membership organization. That official standing is real, and we do not compete with it: if you want the association itself (advocacy, CE, conferences, community), that is AANP.`,
+                `This page compares the two job boards as job boards: how listings are accessed, what employers pay, and what career resources sit around the search. Everything stated about the AANP JobCenter was checked against its own public pages on ${COMPARE_REVIEW_DATE_LABEL}; figures are snapshots from that date.`,
+            ],
+            strengths: [
+                {
+                    text: `Official association standing: the JobCenter describes itself as containing one of the largest sources of ${brand.niche.descriptor} jobs in the nation, "with access to more than 118k+ AANP members."`,
+                    sourceUrl: 'https://jobcenter.aanp.org/',
+                },
+                {
+                    text: `Real inventory: the job search showed 3,896 results on the review date.`,
+                    sourceUrl: 'https://jobcenter.aanp.org/jobs/',
+                },
+                {
+                    text: `A concrete membership perk: "AANP members receive an exclusive 2 day preview to new jobs" (the JobCenter's own wording). If you are already an AANP member, that head start is a genuine benefit.`,
+                    sourceUrl: 'https://jobcenter.aanp.org/',
+                },
+                {
+                    text: `Published, public employer pricing with no contact-sales wall: a single 30-day posting at $399, packages at $599 / $949 / $1,099, network distribution at $749, single resume purchase at $49, and 30-day unlimited resume access at $699 were all listed openly on the review date. The $599 package included placement in a monthly email described as reaching 90,000+ ${brand.niche.descriptor}s.`,
+                    sourceUrl: 'https://jobcenter.aanp.org/employer/pricing/',
+                },
+            ],
+            differences: [
+                {
+                    title: 'No membership tiers on listings',
+                    body: `Every listing here is visible to everyone the moment it publishes. The JobCenter is open to non-members too, but its own copy offers members an exclusive two-day preview of new jobs, which is reasonable for a membership organization but a different model from ours.`,
+                    href: '/jobs',
+                },
+                {
+                    title: 'Employer price and duration',
+                    body: `${price.aanpLead}, versus $399 for a single 30-day posting there (their published price on the review date). Both prices are public, so you can compare them directly for your hiring volume.`,
+                    href: '/pricing',
+                },
+                {
+                    title: 'Salary product',
+                    body: `We publish ${indefiniteArticle(brand.niche.short)} ${brand.niche.short} salary guide with state and specialty pages computed from live postings, a calculator, an employer benchmark, and a free PDF, with named sources on every national statistic. We did not find a comparable salary data product on the JobCenter pages we reviewed.`,
+                    href: '/salary-guide',
+                },
+                {
+                    title: `Interactive ${brand.niche.short} tools`,
+                    body: `${OUR_FACTS.toolCount} free tools (contract-vs-salary math, cost-of-living comparison, licensure and multi-state planning, specialty matching, and employer benchmarks) sit next to the job search.`,
+                    href: '/tools',
+                },
+                {
+                    title: 'Licensure and practice-authority editorial',
+                    body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure series and a practice-authority guide, maintained with a no-stale-numbers rule: anything we cannot verify links to the state board instead of being asserted.`,
+                    href: '/resources/fpa-guide',
+                },
+            ],
+            table: [
+                {
+                    dimension: 'Operator',
+                    us: `Independent ${brand.niche.short}-only job board`,
+                    them: 'Career board of AANP, the professional association',
+                    themSourceUrl: 'https://jobcenter.aanp.org/',
+                },
+                {
+                    dimension: 'Listing access',
+                    us: 'All listings public immediately',
+                    them: 'Open to all; members get an exclusive 2-day preview of new jobs',
+                    themSourceUrl: 'https://jobcenter.aanp.org/',
+                },
+                {
+                    dimension: 'Inventory (snapshot)',
+                    us: 'Live counts shown per category on our browse pages',
+                    them: `3,896 job results on ${COMPARE_REVIEW_DATE_LABEL}`,
+                    themSourceUrl: 'https://jobcenter.aanp.org/jobs/',
+                },
+                {
+                    dimension: 'Employer pricing',
+                    us: price.tableCell,
+                    them: '$399 single 30-day post; packages $599 to $1,099; resume access $49 single / $699 for 30-day unlimited; all published publicly',
+                    themSourceUrl: 'https://jobcenter.aanp.org/employer/pricing/',
+                },
+                {
+                    dimension: 'Salary data',
+                    us: OUR_SALARY_CELL,
+                    them: NOT_FOUND_IN_REVIEW,
+                },
+                {
+                    dimension: `${brand.niche.short} career tools`,
+                    us: OUR_TOOLS_CELL,
+                    them: NOT_FOUND_IN_REVIEW,
+                },
+                {
+                    dimension: 'Association benefits (CE, advocacy, conferences)',
+                    us: 'None (we are not a membership organization)',
+                    them: 'The core of what AANP is; the JobCenter is one member benefit among many',
+                    themSourceUrl: 'https://jobcenter.aanp.org/',
+                },
+            ],
+            guidance: {
+                useThem: [
+                    'You are (or want to be) an AANP member and value the early-preview window plus the association ecosystem around the board.',
+                    'You want a large single-source board operated under the profession’s official association brand.',
+                    'You are an employer who specifically wants distribution to AANP’s membership channels.',
+                ],
+                useUs: [
+                    `You want specialty-, setting-, and state-faceted ${brand.niche.short} search with salary and licensure context on the same site, no membership involved.`,
+                    price.aanpUseUs,
+                    `You want free ${brand.niche.short} tools (contract math, relocation, licensure planning), not just listings.`,
+                ],
+            },
+            pagesReviewed: [
+                { label: 'AANP JobCenter: home', url: 'https://jobcenter.aanp.org/' },
+                { label: 'AANP JobCenter: job search', url: 'https://jobcenter.aanp.org/jobs/' },
+                { label: 'AANP JobCenter: employer pricing', url: 'https://jobcenter.aanp.org/employer/pricing/' },
+            ],
+        },
+
+        // ── ENP Network ─────────────────────────────────────────────────────
+        'np-hiring-vs-enp-network': {
+            competitorName: 'ENP Network',
+            competitorUrl: 'https://www.enpnetwork.com',
+            title: `${brand.name} vs ENP Network`,
+            metaTitle: `${brand.name} vs ENP Network | An Honest Comparison`,
+            metaDescription: `How ${brand.name} compares with ENP Network for ${brand.niche.descriptor}s and employers: association network, events, preceptors, CE, pay transparency, pricing, and tools. Claims dated and source-checked.`,
+            intro: [
+                `ENP Network is the infrastructure player of the ${brand.niche.short} world: it hosts association communities, an events calendar, a preceptor marketplace, and a CE directory alongside its job board. Much of that we simply do not offer, and this page says so plainly.`,
+                `Where the two differ most is the job-search product itself: pay transparency, salary data, tools, and pricing. Everything stated about ENP Network was checked against its own public pages on ${COMPARE_REVIEW_DATE_LABEL}; figures are snapshots from that date.`,
+            ],
+            strengths: [
+                {
+                    text: `A real association network: ENP's homepage counted 267 ${brand.niche.descriptor} associations and described a membership of 319,842 active members on the review date. Distribution inside the profession's own associations is a moat no independent board has.`,
+                    sourceUrl: 'https://www.enpnetwork.com/',
+                },
+                {
+                    text: `An events calendar with 478 ${brand.niche.descriptor} events listed on the review date. We have no events product at all.`,
+                    sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-events',
+                },
+                {
+                    text: `A preceptor marketplace listing 2,202 preceptors on the review date. If you are a student or program looking for a preceptor, ENP has an actual product there; we publish guidance only.`,
+                    sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-preceptors',
+                },
+                {
+                    text: `An on-demand CE directory with 266 activities on the review date (255 listed as offering credit), faceted by credit type. This is another product category we do not offer.`,
+                    sourceUrl: 'https://www.enpnetwork.com/on-demand-ce-for-nurse-practitioners',
+                },
+                {
+                    text: `Fully itemized public employer pricing: job postings starting at $389, posting packages up to $5,245, and resume-access passes from $195 to $1,850 were all published openly on the review date, the same no-contact-sales transparency we practice.`,
+                    sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs/for-employers',
+                },
+                {
+                    text: `A Direct Hire vs Staffing facet on job search: 3,028 direct-hire versus 783 staffing listings on the review date. Surfacing that split is genuinely useful and rare.`,
+                    sourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs',
+                },
+            ],
+            differences: [
+                {
+                    title: 'Pay visibility on listings',
+                    body: `On the review date, ENP's own Annual Pay search facet counted 3,567 listings as pay "Not provided" out of roughly 3,800 total, or about 94%. We are not perfect either: we show pay when the posting supplies it and do not yet require it. However, we surround listings with state-level pay computed from live data, salary badges where data exists, and a salary guide that names its sources.`,
+                    href: '/salary-guide',
+                },
+                {
+                    title: 'Salary product',
+                    body: `State and specialty salary pages computed from live postings, a calculator, an employer benchmark, and a free ungated PDF. We did not find a comparable salary data product on the ENP pages we reviewed.`,
+                    href: '/salary-guide',
+                },
+                {
+                    title: `${OUR_FACTS.toolCount} free interactive tools`,
+                    body: `Contract-vs-salary math, cost-of-living comparison, a licensure and multi-state planner, a specialty finder, and employer benchmarks, all free and ungated, next to the search.`,
+                    href: '/tools',
+                },
+                {
+                    title: 'Licensure editorial',
+                    body: `A ${OUR_FACTS.licensureGuideCount}-jurisdiction licensure guide series plus a scope of practice explorer with board deep-links, editorial infrastructure we invest in heavily.`,
+                    href: '/scope-of-practice',
+                },
+                {
+                    title: 'Employer price point',
+                    body: `Both boards publish employer pricing openly, and credit is due for that. The numbers differ: ${price.enpLead}, versus postings starting at $389 there (their published price on the review date).`,
+                    href: '/pricing',
+                },
+            ],
+            table: [
+                {
+                    dimension: 'What it is',
+                    us: `${brand.niche.short}-only job board with salary + licensure editorial and tools`,
+                    them: `Professional network: associations, events, preceptors, CE, and a job board`,
+                    themSourceUrl: 'https://www.enpnetwork.com/',
+                },
+                {
+                    dimension: 'Association network',
+                    us: 'None',
+                    them: `267 associations; 319,842 active members (site's own counts)`,
+                    themSourceUrl: 'https://www.enpnetwork.com/',
+                },
+                {
+                    dimension: 'Events / preceptors / CE',
+                    us: 'None (guidance content only)',
+                    them: '478 events; 2,202 preceptors; an on-demand CE directory (homepage counts, snapshots)',
+                    themSourceUrl: 'https://www.enpnetwork.com/',
+                },
+                {
+                    dimension: 'Pay shown on listings',
+                    us: 'Shown when the posting supplies it, plus state-level aggregates from live data',
+                    them: `Own search facet counted 3,567 of ~3,800 listings as pay "Not provided" (~94%) on ${COMPARE_REVIEW_DATE_LABEL}`,
+                    themSourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs',
+                },
+                {
+                    dimension: 'Salary data product',
+                    us: OUR_SALARY_CELL,
+                    them: NOT_FOUND_IN_REVIEW,
+                },
+                {
+                    dimension: `${brand.niche.short} career tools`,
+                    us: OUR_TOOLS_CELL,
+                    them: NOT_FOUND_IN_REVIEW,
+                },
+                {
+                    dimension: 'Employer pricing',
+                    us: price.tableCell,
+                    them: 'Postings from $389; packages to $5,245; resume passes $195 to $1,850; fully published',
+                    themSourceUrl: 'https://www.enpnetwork.com/nurse-practitioner-jobs/for-employers',
+                },
+            ],
+            guidance: {
+                useThem: [
+                    'You want your professional association’s community, bulletins, and events in one network.',
+                    'You need a preceptor or on-demand CE. ENP has real products in both categories.',
+                    'You are an employer who wants distribution across association sites and a resume database with published pass pricing.',
+                ],
+                useUs: [
+                    `You are searching by clinical specialty, setting, or state and want pay and licensure context around every step.`,
+                    `Pay matters to your search: we publish state-level pay from live data and a sourced salary guide rather than listings alone.`,
+                    price.enpUseUs,
+                ],
+            },
+            pagesReviewed: [
+                { label: 'ENP Network: home', url: 'https://www.enpnetwork.com/' },
+                { label: 'ENP Network: job search', url: 'https://www.enpnetwork.com/nurse-practitioner-jobs' },
+                { label: 'ENP Network: for employers (pricing)', url: 'https://www.enpnetwork.com/nurse-practitioner-jobs/for-employers' },
+                { label: 'ENP Network: events', url: 'https://www.enpnetwork.com/nurse-practitioner-events' },
+                { label: 'ENP Network: preceptors', url: 'https://www.enpnetwork.com/nurse-practitioner-preceptors' },
+                { label: 'ENP Network: on-demand CE', url: 'https://www.enpnetwork.com/on-demand-ce-for-nurse-practitioners' },
+            ],
+        },
+    };
+}
 
 /** Hub route. */
 export const COMPARE_HUB_PATH = '/compare';
 
 /** All comparison-page paths (for the hub, tests, and sitemap reporting). */
-export const COMPARE_PAGE_PATHS: readonly string[] = COMPETITOR_PROFILES.map(
-    (p) => `${COMPARE_HUB_PATH}/${p.slug}`,
+export const COMPARE_PAGE_PATHS: readonly string[] = COMPETITOR_SLUGS.map(
+    (slug) => `${COMPARE_HUB_PATH}/${slug}`,
 );
 
-/** Lookup by route slug — undefined for anything not configured. */
-export function getCompetitorProfile(slug: string): CompetitorProfile | undefined {
-    return COMPETITOR_PROFILES.find((p) => p.slug === slug);
+/**
+ * Every profile for `now`, in COMPETITOR_SLUGS order. Call it per render,
+ * never at module load: the price statements follow the promo clock.
+ */
+export function competitorProfiles(now: Date = new Date()): readonly CompetitorProfile[] {
+    const bodies = profileBodies(now);
+    return COMPETITOR_SLUGS.map((slug) => ({ slug, ...bodies[slug] }));
+}
+
+/** One profile for `now`. Call it per render, never at module load. */
+export function getCompetitorProfile(slug: CompetitorSlug, now: Date = new Date()): CompetitorProfile {
+    return { slug, ...profileBodies(now)[slug] };
+}
+
+/** Whether a string (a route param, a test input) is a configured comparison slug. */
+export function isCompetitorSlug(value: string): value is CompetitorSlug {
+    return (COMPETITOR_SLUGS as readonly string[]).includes(value);
 }

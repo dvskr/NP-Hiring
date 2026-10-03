@@ -21,7 +21,7 @@
  * Plus the signup-domain rules that never change: a free-mail signup is 400
  * even during the promo, and the form contactEmail can never shift the domain.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
@@ -107,6 +107,12 @@ async function post(body: object = BODY) {
     const res = await POST(makeReq(body));
     return { res, json: await res.json() };
 }
+
+// Load the route graph once, outside any single test's time budget: on a
+// loaded machine the cold import outran the first test's 5 second default.
+beforeAll(async () => {
+    await import('@/app/api/jobs/post-free/route');
+}, 120_000);
 
 beforeEach(() => {
     vi.clearAllMocks();

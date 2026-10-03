@@ -6,6 +6,7 @@ import { sendEmployerMessageNotification } from '@/lib/email-service';
 import { canSendInMail, getEmployerTier } from '@/lib/tier-limits';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
+import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 import { readJsonObject, validateEmployerSendPayload } from '@/app/api/conversations/_lib/message-payload';
 
 /**
@@ -135,10 +136,7 @@ export async function POST(req: NextRequest) {
                         id: jobId,
                         isFeatured: true,
                         employerJobs: {
-                            OR: [
-                                { userId: user.id },
-                                { userId: null, contactEmail: user.email! },
-                            ],
+                            OR: employerJobOwnershipBranches(user),
                         },
                     },
                     select: { id: true },
@@ -149,10 +147,7 @@ export async function POST(req: NextRequest) {
             } else {
                 const featuredJob = await prisma.employerJob.findFirst({
                     where: {
-                        OR: [
-                            { userId: user.id },
-                            { userId: null, contactEmail: user.email! },
-                        ],
+                        OR: employerJobOwnershipBranches(user),
                         job: { isFeatured: true },
                     },
                     select: { id: true },
