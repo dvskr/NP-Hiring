@@ -14,6 +14,7 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import HomepageBlogSection from '@/components/HomepageBlogSection';
 import HomepageFAQ from '@/components/HomepageFAQ';
 import EmployerHowItWorks from '@/components/EmployerHowItWorks';
+import SisterBoardBand from '@/components/sister-board/SisterBoardBand';
 import dynamic from 'next/dynamic';
 
 // P0 OG sweep: the previous OG image lived in an unpopulated Supabase
@@ -145,6 +146,10 @@ export default async function Home() {
 
         {/* 5. Employer How It Works (promo flag from this server render) */}
         <EmployerHowItWorks promoActive={promoActive} />
+
+        {/* 5b. Sister board routing (owner decision 2026-10-12): after this
+            board has made its own case to both audiences, before the blog. */}
+        <SisterBoardBand />
 
         <HomepageBlogSection />
 

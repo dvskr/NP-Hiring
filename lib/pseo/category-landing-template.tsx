@@ -59,6 +59,7 @@ import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
+import SisterBoardHubCallout from '@/components/sister-board/SisterBoardHubCallout';
 import {
     ClayCard,
     ClayHead,
@@ -787,6 +788,9 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                             <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New {midSentenceLabel} roles delivered daily.</p>
                             <Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link>
                         </div>
+                        {/* Sister board routing (owner decision 2026-10-12):
+                            renders on the sister board's specialty only. */}
+                        <SisterBoardHubCallout categorySlug={slug} />
                     </div>
                 </div>
             </div>

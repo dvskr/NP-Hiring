@@ -218,5 +218,20 @@ export const LEAKED_PLACEHOLDER_RE = /\b(undefined|NaN|null)\b/;
 export const DONOR_COPY_RE =
     /pmhnphiring\.com|PMHNP\s*Hiring\b|PMHNP job board|for PMHNPs\b|PMHNP-only|dedicated to PMHNPs|Psychiatric[- ]Mental Health Nurse Practitioner job board/i;
 
+/**
+ * The one deliberate exception to DONOR_COPY_RE: blocks that route visitors to
+ * the sister board (owner decision 2026-10-12; config/sister-board.ts) name it
+ * on purpose and carry this marker. Guards remove marked blocks before they
+ * read page text, so a donor leak anywhere else still fails.
+ */
+export const SISTER_BOARD_SELECTOR = '[data-sister-board]';
+
+/**
+ * Upper bound on the text inside any one marked block. The real blocks (the
+ * homepage band, the category sidebar callout, the post-job hint) stay well
+ * under it, so marking a large wrapper to hide a leak fails instead.
+ */
+export const SISTER_BOARD_MAX_TEXT = 1200;
+
 /** Marker Next.js leaves in SSR HTML when a segment bailed out to client rendering. */
 export const CSR_BAILOUT_MARKER = 'BAILOUT_TO_CLIENT_SIDE_RENDERING';

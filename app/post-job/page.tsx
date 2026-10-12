@@ -11,6 +11,7 @@ import { config } from '@/lib/config';
 import { trackViewPostJobPage } from '@/lib/analytics';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import ScreeningQuestionsBuilder from '@/components/ScreeningQuestionsBuilder';
+import SisterBoardPostJobHint from '@/components/sister-board/SisterBoardPostJobHint';
 import { Building2, MapPin, FileText, DollarSign, Rocket, ChevronRight, ChevronLeft, Check, Loader2, Trash2, Upload } from 'lucide-react';
 import { EXPERIENCE_BUCKETS, deriveExperienceLabel } from '@/lib/experience-label';
 import {
@@ -364,6 +365,7 @@ function PostJobContent() {
   const selectedPricingTier = watch('pricingTier');
   const contactEmail = watch('contactEmail');
   const salaryPeriod = watch('salaryPeriod');
+  const selectedSpecialty = watch('specialty');
 
   // P7: pricing-funnel analytics — landed on post-job page
   useEffect(() => {
@@ -1257,6 +1259,9 @@ function PostJobContent() {
                     <option value="">Select a specialty...</option>
                     {SPECIALTY_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
+                  {/* Sister board hint (owner decision 2026-10-12): post on
+                      both boards. Renders for the sister board's specialty only. */}
+                  <SisterBoardPostJobHint specialty={selectedSpecialty} />
                 </div>
 
                 {/* Clinical Setting */}

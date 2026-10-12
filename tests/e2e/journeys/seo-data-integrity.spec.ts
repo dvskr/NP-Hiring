@@ -24,6 +24,8 @@ import {
     metaRobotsOf,
     parseLocs,
     programsCountDisplay,
+    SISTER_BOARD_MAX_TEXT,
+    SISTER_BOARD_SELECTOR,
     stringLeaves,
     titleOf,
     typesOf,
@@ -420,7 +422,39 @@ async function expectPageClassBasics(page: Page, path: string): Promise<void> {
     expect(new URL(canonical!).pathname, `${path}: canonical path`).toBe(path);
     const bodyText = await page.locator('body').innerText();
     expect(bodyText, `${path}: leaked undefined/NaN/null copy`).not.toMatch(LEAKED_PLACEHOLDER_RE);
-    expect(bodyText, `${path}: donor-brand (PMHNP Hiring) copy`).not.toMatch(DONOR_COPY_RE);
+    // The sister board callout names the other board on purpose; everything
+    // outside it must still be free of donor copy.
+    await expectSisterBlocksSmall(page, path);
+    const outsideSister = await visibleTextOutsideSister(page);
+    expect(outsideSister, `${path}: donor-brand (PMHNP Hiring) copy`).not.toMatch(DONOR_COPY_RE);
+}
+
+/**
+ * body.innerText with sister board blocks hidden. It reads the LIVE document
+ * so innerText keeps its rendered-text meaning: a detached clone has no
+ * layout, and its innerText falls back to textContent, which would include
+ * inline scripts (the RSC payload repeats every rendered string).
+ */
+async function visibleTextOutsideSister(page: Page): Promise<string> {
+    return page.evaluate((selector) => {
+        const marked = Array.from(document.querySelectorAll<HTMLElement>(selector));
+        const previous = marked.map((el) => el.style.display);
+        marked.forEach((el) => { el.style.display = 'none'; });
+        const text = document.body.innerText;
+        marked.forEach((el, i) => { el.style.display = previous[i]; });
+        return text;
+    }, SISTER_BOARD_SELECTOR);
+}
+
+/** The exemption covers small, purpose-built blocks only (SISTER_BOARD_MAX_TEXT). */
+async function expectSisterBlocksSmall(page: Page, path: string): Promise<void> {
+    const sizes = await page.evaluate(
+        (selector) => Array.from(document.querySelectorAll(selector)).map((el) => (el.textContent ?? '').length),
+        SISTER_BOARD_SELECTOR,
+    );
+    for (const size of sizes) {
+        expect(size, `${path}: a data-sister-board block holds ${size} chars, too large to be a sister board block`).toBeLessThanOrEqual(SISTER_BOARD_MAX_TEXT);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1484,17 +1518,18 @@ async function headDashHits(page: Page): Promise<string[]> {
 }
 
 /**
- * Body text outside employer job data and outside links that legitimately
- * point at the psychiatric hub (nav quick-links, salary-guide index).
+ * Body text outside employer job data, outside links that legitimately
+ * point at the psychiatric hub (nav quick-links, salary-guide index), and
+ * outside sister board blocks (which name that board on purpose).
  */
 async function siteCopyText(page: Page): Promise<string> {
-    return page.evaluate(() => {
+    return page.evaluate((sisterSelector) => {
         const clone = document.body.cloneNode(true) as HTMLElement;
         clone
-            .querySelectorAll('.jc-card, .job-description-html, script, style, noscript, template, a[href*="psychiatric"], a[href*="pmhnp"]')
+            .querySelectorAll(`.jc-card, .job-description-html, script, style, noscript, template, a[href*="psychiatric"], a[href*="pmhnp"], ${sisterSelector}`)
             .forEach((el) => el.remove());
         return (clone.textContent ?? '').replace(/\s+/g, ' ');
-    });
+    }, SISTER_BOARD_SELECTOR);
 }
 
 /** PMHNP used as a board identity rather than a credential token. */
@@ -1575,6 +1610,7 @@ test.describe('copy rules', () => {
         const bareTokens: string[] = [];
         for (const path of targets) {
             await gotoAndSettle(page, path);
+            await expectSisterBlocksSmall(page, path);
             const text = await siteCopyText(page);
             const donor = text.match(DONOR_COPY_RE);
             if (donor) eraCopy.push(`${path}: donor "${donor[0]}"`);
