@@ -177,7 +177,9 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
       });
     } catch (err) {
       console.error('[fetchJobs] Error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      // The thrown message carries the HTTP status and raw response body for
+      // the console; the visitor gets a plain sentence instead.
+      setError('We could not load jobs. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -383,7 +385,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
   return (
     <>
       <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '24px 16px 0' }}>
-        {/* Main Content with Sidebar Layout. The H1 + subtitle live INSIDE
+        {/* Main Content with Sidebar Layout. The H1 lives INSIDE
             the right-hand <section> rather than spanning the full width
             above this flex, because StickyFilterSidebar is `position: fixed`
             with top:110px (out of normal flow) — a full-width header above
@@ -428,15 +430,12 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     fontSize: 'clamp(22px, 2.4vw, 30px)',
                     fontWeight: 700,
                     color: '#1A2E35',
-                    margin: '0 0 6px',
+                    margin: 0,
                     lineHeight: 1.2,
                     letterSpacing: '-0.015em',
                   }}
                 >{brand.niche.long} &amp; APRN Jobs</h1>
-                {/* --text-tertiary (#596579, 5.21:1 on --bg-primary); the old grey literal was 3.68:1. */}
-                <p style={{
-                  fontSize: '13px', color: 'var(--text-tertiary)', margin: 0, fontWeight: 500,
-                }}>Browse fresh {brand.niche.short} roles across the US: telehealth, on-site, hybrid, and locum.</p>
+                {/* No subtitle under the H1 (owner call, 2026-10-12). */}
               </header>
               {/* Empty right column mirrors the breadcrumb column so the
                   middle <header> stays optically centered. */}
@@ -538,7 +537,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                   className="jp-search-form"
                   style={{ flex: 1, minWidth: 0, maxWidth: '640px' }}
                   role="search"
-                  aria-label="AI semantic job search"
+                  aria-label="AI job search"
                 >
                   <div
                     className="hero-search-bar jp-jobs-search-bar"
@@ -562,7 +561,6 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                         onChange={(e) => setAiQuery(e.target.value)}
                         autoComplete="off"
                         aria-label="Describe the role you want"
-                        title='Describe a role in your own words, for example "telehealth child psychiatry, west coast"'
                         className="hero-search-input"
                         style={{ boxShadow: 'none', outline: 'none', border: 'none', background: 'transparent', width: '100%', fontSize: '0.9rem', color: '#1f2937', textAlign: 'left' }}
                         onFocus={(e) => { e.target.style.boxShadow = 'none'; e.target.style.outline = 'none'; }}
@@ -711,7 +709,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     {!aiLoading && !aiError && aiResults !== null && (
                       <>
                         Showing <strong>relevant matches</strong> for <strong>&ldquo;{aiSubmittedQuery}&rdquo;</strong>
-                        {aiDegraded && <span style={{ color: '#92400e', marginLeft: 6 }}>(degraded: keyword fallback)</span>}
+                        {aiDegraded && <span style={{ color: '#92400e', marginLeft: 6 }}>(keyword matches only)</span>}
                       </>
                     )}
                   </p>
@@ -767,32 +765,23 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     {formatZeroResultHint(zeroResultHint)}
                   </p>
                 )}
-                {activeFilterCount > 0 ? (
-                  <>
-                    <p style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
-                      Try adjusting your filters or clear them to browse all open positions.
-                    </p>
-                    <Link
-                      href="/jobs"
-                      style={{
-                        display: 'inline-block',
-                        marginTop: '16px',
-                        padding: '10px 20px',
-                        borderRadius: '8px',
-                        background: 'var(--color-primary)',
-                        color: '#fff',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Clear filters
-                    </Link>
-                  </>
-                ) : (
-                  <p style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
-                    New positions are added daily. Set up a job alert to be notified.
-                  </p>
+                {activeFilterCount > 0 && (
+                  <Link
+                    href="/jobs"
+                    style={{
+                      display: 'inline-block',
+                      marginTop: '16px',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
+                      background: 'var(--color-primary)',
+                      color: '#fff',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Clear filters
+                  </Link>
                 )}
               </div>
             )}
@@ -800,10 +789,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
             {/* AI No-Results State */}
             {!aiLoading && !aiError && aiResults !== null && aiResults.length === 0 && (
               <div style={{ textAlign: 'center', padding: '64px 20px' }}>
-                <p style={{ fontSize: '18px', color: 'var(--text-secondary)', fontWeight: 600 }}>No semantic matches</p>
-                <p style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
-                  Try a broader query, or clear AI matches to browse normally.
-                </p>
+                <p style={{ fontSize: '18px', color: 'var(--text-secondary)', fontWeight: 600 }}>No matches found</p>
               </div>
             )}
 

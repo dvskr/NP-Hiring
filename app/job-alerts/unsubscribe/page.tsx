@@ -52,7 +52,7 @@ function UnsubscribeContent() {
 
   useEffect(() => {
     if (!token) {
-      setFatalError('Invalid unsubscribe link. No token provided.');
+      setFatalError('This unsubscribe link is incomplete. Please use the link in your alert email.');
     }
   }, [token]);
 
@@ -120,7 +120,7 @@ function UnsubscribeContent() {
       }
       setOutcome(nextOutcome);
     } catch {
-      setActionError('Network error: we couldn’t reach the server. Please try again.');
+      setActionError('We couldn’t reach the server. Please try again.');
     } finally {
       setPending(null);
     }
@@ -144,7 +144,7 @@ function UnsubscribeContent() {
       }
       setOutcome('deleted');
     } catch {
-      setActionError('Network error: we couldn’t reach the server. Please try again.');
+      setActionError('We couldn’t reach the server. Please try again.');
     } finally {
       setPending(null);
     }
@@ -178,7 +178,7 @@ function UnsubscribeContent() {
     const copy = {
       paused: {
         title: 'Alert Paused',
-        body: 'You won’t receive this alert until you resume it. Nothing was deleted, and your criteria are still saved.',
+        body: 'You won’t receive this alert until you resume it. Your criteria are still saved.',
       },
       weekly: {
         title: 'Switched to Weekly',
@@ -268,14 +268,11 @@ function UnsubscribeContent() {
             <AlertTriangle className="h-8 w-8 text-amber-600" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 text-center mb-3">
+        {/* No narration under the heading: the option labels say what each
+            does (owner call, 2026-10-12). */}
+        <h1 className="text-2xl font-bold text-gray-900 text-center mb-6">
           {isRunning ? 'Too many emails?' : 'This alert is already paused'}
         </h1>
-        <p className="text-gray-600 text-center mb-6">
-          {isRunning
-            ? 'You don’t have to delete this alert to receive fewer emails. Choose whichever option fits. Every option below is reversible except the last one.'
-            : 'This alert isn’t sending you anything right now. You can leave it paused, change what it looks for, or delete it permanently.'}
-        </p>
 
         {actionError && (
           <div

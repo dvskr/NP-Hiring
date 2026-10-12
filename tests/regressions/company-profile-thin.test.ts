@@ -379,7 +379,8 @@ describe('CO deletions — the claim prompt is one sentence', () => {
     });
 
     it('the component still promises review rather than control', () => {
-        expect(cta).toContain('nothing on this page changes');
+        expect(cta).toContain('Your claim is pending review.');
+        expect(cta).toContain('Once it is approved');
     });
 });
 

@@ -67,8 +67,6 @@ export interface QuizQuestion {
     /** Short dimension name, reused in the "why it matched" list. */
     dimension: string;
     prompt: string;
-    /** One-line clarifier rendered under the prompt. */
-    help: string;
     options: readonly QuizOption[];
 }
 
@@ -77,7 +75,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'population',
         dimension: 'Patient population',
         prompt: 'Who do you want in front of you?',
-        help: 'Population is the single biggest divider between specialties, and the one your certification is tied to.',
         options: [
             { value: 'lifespan', label: 'Any age, cradle to grave' },
             { value: 'adults', label: 'Adults and older adults' },
@@ -91,7 +88,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'acuity',
         dimension: 'Acuity',
         prompt: 'How sick do you want your patients to be?',
-        help: 'Acuity drives your pace, your hours, and how much of the day is unplanned.',
         options: [
             { value: 'low', label: 'Stable: chronic conditions managed over time' },
             { value: 'mixed', label: 'Mixed: routine visits with real urgency in the day' },
@@ -102,7 +98,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'setting',
         dimension: 'Setting',
         prompt: 'Where do you want to work?',
-        help: 'The physical setting decides your team, your schedule, and often your pay basis.',
         options: [
             { value: 'clinic', label: 'Outpatient clinic or office' },
             { value: 'hospital', label: 'Hospital inpatient units' },
@@ -115,7 +110,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'autonomy',
         dimension: 'Autonomy',
         prompt: 'How much do you want to be the decision-maker?',
-        help: 'What is legally available also depends on your state; the licensure checker covers that separately.',
         options: [
             { value: 'independent', label: 'I want to own a panel and make the decisions' },
             { value: 'collaborative', label: 'I want a team and someone to escalate to' },
@@ -126,7 +120,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'procedures',
         dimension: 'Procedures',
         prompt: 'How hands-on do you want the work to be?',
-        help: 'Procedural volume is the clearest split between otherwise similar specialties.',
         options: [
             { value: 'many', label: 'Procedures are the point of the job' },
             { value: 'some', label: 'A few procedures alongside visits' },
@@ -137,7 +130,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'continuity',
         dimension: 'Continuity',
         prompt: 'Do you want to keep your patients?',
-        help: 'Longitudinal panels and episodic encounters are very different jobs on the same license.',
         options: [
             { value: 'longitudinal', label: 'Long relationships with the same patients' },
             { value: 'episodic', label: 'One encounter, then hand off and move on' },
@@ -148,7 +140,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'schedule',
         dimension: 'Schedule',
         prompt: 'What should your week look like?',
-        help: 'Shift work usually carries differentials; predictable weekdays usually do not.',
         options: [
             { value: 'weekday', label: 'Predictable weekday hours' },
             { value: 'shifts', label: 'Shifts, including nights and weekends' },
@@ -159,7 +150,6 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'careMix',
         dimension: 'Care and payment mix',
         prompt: 'Insurance-based care, or elective and cash-pay?',
-        help: 'Elective work changes who your patient is, how you are paid, and how much of the job is business.',
         options: [
             { value: 'medical', label: 'Insurance-based medical care' },
             { value: 'elective', label: 'Elective and cash-pay services' },

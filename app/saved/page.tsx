@@ -300,7 +300,7 @@ export default function SavedJobsPage() {
       const keptCount = appliedJobs.length - clearable.length;
       if (keptCount > 0) {
         toast(
-          `Cleared ${clearable.length} and kept ${keptCount}. Submitted applications are never removed here. You can manage them from My Applications.`,
+          `Cleared ${clearable.length} and kept ${keptCount}. Submitted applications stay in My Applications, where you can manage them.`,
           'success',
         );
       }
@@ -314,7 +314,7 @@ export default function SavedJobsPage() {
   const handleClearApplied = () => {
     setConfirm({
       title: 'Clear application history?',
-      description: 'This clears the jobs you clicked through to from this list. Applications you submitted on this site are kept: employers can still see them, and you can withdraw any of them from My Applications.',
+      description: 'This clears the jobs you clicked through to from this list. Applications you submitted on this site are kept. Employers can still see them, and you can withdraw any of them from My Applications.',
       confirmLabel: 'Clear history',
       variant: 'danger',
       onConfirm: () => {
@@ -362,14 +362,11 @@ export default function SavedJobsPage() {
             <h1 style={{
                 fontSize: '28px', fontWeight: 800,
                 fontFamily: 'var(--font-lora), Georgia, serif',
-                color: '#1A2E35', margin: '0 0 6px',
+                color: '#1A2E35', margin: 0,
                 letterSpacing: '-0.5px',
             }}>
                 My Jobs
             </h1>
-            <p style={{ fontSize: '15px', color: '#8A9BA6', margin: 0 }}>
-                Jobs you&apos;ve saved and applications you&apos;ve submitted.
-            </p>
         </div>
 
         {/* ═══ Account notices ═══ */}
@@ -592,16 +589,10 @@ export default function SavedJobsPage() {
                 <h2 style={{
                     fontSize: '18px', fontWeight: 700,
                     fontFamily: 'var(--font-lora), Georgia, serif',
-                    color: '#1A2E35', marginBottom: '8px',
+                    color: '#1A2E35', marginBottom: '24px',
                 }}>
                     Sign in to see your saved jobs
                 </h2>
-                <p style={{
-                    color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
-                    maxWidth: '360px', marginInline: 'auto', lineHeight: 1.6,
-                }}>
-                    Jobs you save while signed in are kept in your account, so they are here on every device.
-                </p>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     <Link href={SIGN_IN_HREF} style={{
                         display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -637,16 +628,10 @@ export default function SavedJobsPage() {
                 <h2 style={{
                     fontSize: '18px', fontWeight: 700,
                     fontFamily: 'var(--font-lora), Georgia, serif',
-                    color: '#1A2E35', marginBottom: '8px',
+                    color: '#1A2E35', marginBottom: '24px',
                 }}>
                     No saved jobs yet
                 </h2>
-                <p style={{
-                    color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
-                    maxWidth: '340px', marginInline: 'auto', lineHeight: 1.6,
-                }}>
-                    Bookmark the jobs you&apos;re interested in, and they&apos;ll appear here.
-                </p>
                 <Link href="/jobs" style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '10px 20px', borderRadius: '12px',
@@ -671,16 +656,10 @@ export default function SavedJobsPage() {
                 <h2 style={{
                     fontSize: '18px', fontWeight: 700,
                     fontFamily: 'var(--font-lora), Georgia, serif',
-                    color: '#1A2E35', marginBottom: '8px',
+                    color: '#1A2E35', marginBottom: '24px',
                 }}>
                     No applications yet
                 </h2>
-                <p style={{
-                    color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
-                    maxWidth: '340px', marginInline: 'auto', lineHeight: 1.6,
-                }}>
-                    Apply to jobs through the platform and track your progress here.
-                </p>
                 <Link href="/jobs" style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '10px 20px', borderRadius: '12px',
@@ -922,9 +901,6 @@ function UnavailableJobPlaceholder({
                             }}
                         >
                             Listing no longer available
-                        </p>
-                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>
-                            The employer has taken this posting down.
                         </p>
                     </div>
                 </div>

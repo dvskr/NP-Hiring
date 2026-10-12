@@ -662,7 +662,7 @@ export default function InPlatformApplyForm({
                             <p id="cover-letter-counter" className="text-xs mt-1" style={{ color: coverLetter.length >= COVER_LETTER_MAX ? '#ef4444' : 'var(--text-tertiary)' }}>
                                 {coverLetter.length > 0
                                     ? `${coverLetter.length.toLocaleString('en-US')} / ${COVER_LETTER_MAX.toLocaleString('en-US')} characters${coverLetter.length >= COVER_LETTER_MAX ? ' (limit reached)' : ''}`
-                                    : `A brief note can help you stand out (up to ${COVER_LETTER_MAX.toLocaleString('en-US')} characters)`}
+                                    : `Up to ${COVER_LETTER_MAX.toLocaleString('en-US')} characters`}
                             </p>
                         </>
                     ) : (

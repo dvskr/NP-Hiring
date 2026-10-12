@@ -569,14 +569,16 @@ describe('P2 #22 (follow-up) — the 1099/W-2 rate comparison is not self-contra
 
     it('the bands are published once, together, with their non-comparability stated', () => {
         expect(flat(code)).toContain('<strong>They are not comparable end to end.</strong>');
-        expect(code).toContain('a wider envelope is not a higher rate');
+        expect(code).toContain('A wider range is not a higher rate.');
         // Both bases still render, so neither band can be read as a survey.
         expect(code).toContain('{CONTRACT_HOURLY.basis}');
         expect(code).toContain('{W2_ANNUAL.basis}');
+        expect(code).toContain('Neither is a survey of what every');
     });
 
     it('the FAQ answer routes the comparison to the computed example', () => {
-        expect(code).toContain('that is an ingest envelope, not a contract floor');
+        expect(code).toContain('That range is the outer limit for any contract posting, not a contract floor');
+        expect(code).not.toContain('ingest envelope');
         expect(code).toContain('${contractPremiumNeededPct}% more gross');
     });
 });

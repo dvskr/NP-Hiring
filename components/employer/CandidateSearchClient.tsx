@@ -328,7 +328,7 @@ export default function CandidateSearchClient() {
             } else {
                 // Non-OK (4xx/5xx) — surface it instead of silently keeping
                 // whatever results were on screen before the failed request.
-                setBrowseError(`Couldn’t load candidates (request failed with status ${res.status}).`);
+                setBrowseError('Something went wrong on our end. Please try again.');
             }
         } catch {
             setBrowseError('Couldn’t load candidates. Check your connection and try again.');
@@ -985,14 +985,15 @@ export default function CandidateSearchClient() {
                         <h3 style={{
                             fontSize: '18px', fontWeight: 700,
                             fontFamily: 'var(--font-lora), Georgia, serif',
-                            color: '#1A2E35', marginBottom: '6px',
+                            color: '#1A2E35', margin: 0,
                         }}>No candidates found</h3>
-                        <p style={{ fontSize: '13px', color: '#8A9BA6' }}>Try adjusting your search or filters.</p>
                     </div>
                 ) : (
                     <>
-                        {/* Rerank-failure diagnostic — surfaces the actual
-                            error so we can stop chasing dev-server logs. */}
+                        {/* Rerank-failure notice. The plain sentence is what
+                            employers see; the underlying error (unmasked only
+                            outside production by the API) is appended in dev
+                            so we can stop chasing dev-server logs. */}
                         {rerankError && aiState.status === 'ready' && (
                             <div style={{
                                 background: '#FEF3C7',
@@ -1002,9 +1003,11 @@ export default function CandidateSearchClient() {
                                 marginBottom: '14px',
                                 fontSize: '12px',
                                 color: '#92400E',
-                                fontFamily: 'monospace',
                             }}>
-                                <strong>Rerank fell back to vector order.</strong> Reason: {rerankError}
+                                AI ranking is unavailable right now, so these results are sorted by profile match.
+                                {process.env.NODE_ENV !== 'production' && (
+                                    <span style={{ fontFamily: 'monospace' }}> ({rerankError})</span>
+                                )}
                             </div>
                         )}
 

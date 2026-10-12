@@ -16,7 +16,6 @@
  */
 import { brand } from '@/config/brand';
 import { Metadata } from 'next';
-import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import SalaryProvenance, { formatStatVintage } from '@/components/SalaryProvenance';
@@ -129,9 +128,7 @@ export default async function SalarySpecialtyIndexPage() {
                     </h1>
                     <p style={{ fontSize: '16px', color: CLAY_BODY, maxWidth: '620px', margin: '0 auto', lineHeight: 1.65 }}>
                         The national median across all {brand.niche.short}s is{' '}
-                        <strong>{median.formatted}</strong> per year ({median.source}). Pick a
-                        specialty for its full breakdown: certification, where the roles are open, and
-                        live postings with disclosed pay. The nurse anesthetist and nurse midwife
+                        <strong>{median.formatted}</strong> per year ({median.source}). The nurse anesthetist and nurse midwife
                         guides cover neighboring APRN roles, which that median does not include, so
                         each cites the BLS median for its own occupation instead.
                     </p>
@@ -187,7 +184,6 @@ export default async function SalarySpecialtyIndexPage() {
                 <ClayHead
                     eyebrow="Also on this board"
                     title="Pay by state, not by specialty"
-                    lede="The national guide publishes a median per state, plus the practice rules and the employers behind each one."
                 />
                 <ClayCard
                     href="/salary-guide"
@@ -195,13 +191,10 @@ export default async function SalarySpecialtyIndexPage() {
                     index={1}
                     icon={BarChart3}
                     title="National salary guide"
-                    desc="Every state that publishes a median, the gate each one has to clear, and the board-wide figures behind the comparison."
+                    desc="Every state with a median of its own, the sample each one needs, and the board-wide figures behind the comparison."
                     action="Open the salary guide"
                     headingLevel={2}
                 />
-                <p style={{ fontSize: '13px', color: CLAY_MUTED, margin: '16px 0 0', textAlign: 'center' }}>
-                    <Link href="/salary-guide" style={{ color: CLAY_INK }}>All states</Link>
-                </p>
             </section>
         </div>
     );

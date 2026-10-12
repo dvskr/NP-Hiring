@@ -143,11 +143,11 @@ async function loadComparatorData(): Promise<ComparatorData> {
 const FAQS = [
   {
     q: 'How is a cost-of-living adjusted salary calculated?',
-    a: `Divide the national-average index (100) by the city's index and multiply the salary by the result. A $140,000 salary in a city indexed at 140 is worth $100,000 in national-average dollars; the same salary in a city indexed at 90 is worth about $155,600. This comparator uses exactly the formula the rest of this site uses for cost-of-living adjusted pay. It is stricter about its inputs, though: this tool counts only postings where the employer disclosed a pay range, while our city and state pages also include listings whose pay we inferred. So for a city carrying inferred-pay listings, the nominal figure here can differ from the one on its own city page even though the adjustment is identical.`,
+    a: `Divide the national-average index (100) by the city's index and multiply the salary by the result. A $140,000 salary in a city indexed at 140 is worth $100,000 in national-average dollars. The same salary in a city indexed at 90 is worth about $155,600. This comparator uses exactly the formula the rest of this site uses for cost-of-living adjusted pay. It is stricter about its inputs, though: this tool counts only postings where the employer disclosed a pay range, while our city and state pages also include listings whose pay we inferred. So for a city carrying inferred-pay listings, the nominal figure here can differ from the one on its own city page even though the adjustment is identical.`,
   },
   {
     q: 'Where does the salary data come from?',
-    a: `Live postings on this board. Where a city has at least ${BENCHMARK_MIN_POSTINGS} published listings with disclosed, non-estimated pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them, we use the true median of those postings' midpoints; otherwise the state median stands in, and each column tells you which basis it used and how many postings sit behind it. Listings whose pay was inferred rather than posted are excluded entirely.`,
+    a: `Live postings on this board. Where a city has at least ${BENCHMARK_MIN_POSTINGS} published listings with disclosed, non-estimated pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them, we use the true median of those postings' midpoints. Otherwise the state median stands in, and each column tells you which basis it used and how many postings sit behind it. Listings whose pay was inferred rather than posted are excluded entirely.`,
   },
   {
     q: 'Does a higher salary in an expensive city still come out ahead?',
@@ -171,7 +171,7 @@ export default async function CostOfLivingComparisonPage() {
 
   const assumptions: readonly string[] = [
     `Nominal pay is the true median midpoint of published ${brand.niche.short}-eligible postings on this board that disclose a salary range. Postings whose pay was inferred rather than posted by the employer are excluded.`,
-    `A city uses its own postings when it has at least ${BENCHMARK_MIN_POSTINGS} of them with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, none contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them; otherwise the state median stands in. Each column states which basis it used and the sample size behind it.`,
+    `A city uses its own postings when it has at least ${BENCHMARK_MIN_POSTINGS} of them with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, none contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them. Otherwise the state median stands in. Each column states which basis it used and the sample size behind it.`,
     'The cost-of-living index comes from this site’s city dataset, where 100 is the national average. It covers living costs (housing, groceries, utilities, transport, and healthcare), not taxes.',
     'The adjusted figure is nominal pay multiplied by (100 ÷ the city’s index), the same formula used for cost-of-living adjusted pay across the rest of this site.',
     'The picker carries the largest cities in each state, plus every city with enough postings to publish a gated median of its own.',
@@ -249,8 +249,7 @@ export default async function CostOfLivingComparisonPage() {
                 Comparison data is unavailable right now
               </p>
               <p style={{ fontSize: '14px', color: '#5A4A42', margin: '0 0 18px', lineHeight: 1.6 }}>
-                We show only pay figures we can trace to live postings, so the comparator stays empty rather
-                than guessing. The state pay pages below are built from the same data.
+                The salary guide shows state pay built from the same postings.
               </p>
               <Link
                 href="/salary-guide"
@@ -269,11 +268,10 @@ export default async function CostOfLivingComparisonPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="How this comparison is built"
-            intro="Two numbers drive everything on this page: what postings in each city actually pay, and how far a dollar goes there. Here is where each comes from."
             assumptions={assumptions}
             exclusions={[
-              'Income tax of any kind. The index measures living costs, not what a state or city withholds; a no-income-tax state will do better than this comparison implies.',
-              'Your own housing situation. Cost-of-living indices assume an average household; if you own outright, rent below market, or commute in from outside the metro, your real gap will differ.',
+              'Income tax of any kind. The index measures living costs, not what a state or city withholds. A no-income-tax state will do better than this comparison implies.',
+              'Your own housing situation. Cost-of-living indices assume an average household. If you own outright, rent below market, or commute in from outside the metro, your real gap will differ.',
               'Employer benefits, shift differentials, and bonuses. Only the posted base range feeds these figures.',
             ]}
             sources={[

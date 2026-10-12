@@ -136,10 +136,10 @@ export function buildCityNarrative(
     // never tells a reader what this state requires, so the sentence points
     // to the state's own rules instead of stating one. The District of
     // Columbia is not a state, so its peers are "jurisdictions".
-    const peers = city.stateCode === 'DC' ? 'jurisdictions' : 'states';
+    const peers = city.stateCode === 'DC' ? 'Jurisdictions' : 'States';
     parts.push(
         practiceAuthority
-            ? `AANP places ${city.state} in its ${AUTHORITY_PHRASES[practiceAuthority]} category; ${peers} in the same category still set different requirements, so check the ${city.state} rules before applying.`
+            ? `AANP places ${city.state} in its ${AUTHORITY_PHRASES[practiceAuthority]} category. ${peers} in the same category still set different requirements, so check the ${city.state} rules before applying.`
             : `${city.state} sets its own ${brand.niche.short} practice rules, so check them before applying.`,
     );
 
@@ -178,7 +178,7 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     // the specific site's active NHSC approval, so that is what the copy
     // points at.
     'correctional': (f) => `Correctional ${NP} listings serving facilities in or near ${f.city.name} come from state, county, and contracted health services, and many describe public-employee benefits. Correctional facilities are one of HRSA's eligible NHSC site types, so federal loan repayment depends on whether the specific facility holds an active NHSC site approval.`,
-    'community-health': (f) => `Community-health ${NP} listings in ${f.city.name} are based at FQHCs and similar safety-net providers. FQHCs are among the site types HRSA treats as automatically eligible for NHSC approval, so ask any prospective employer for its current NHSC site status; loan repayment follows the approved site and the applicant's discipline.`,
+    'community-health': (f) => `Community-health ${NP} listings in ${f.city.name} are based at FQHCs and similar safety-net providers. FQHCs are among the site types HRSA treats as automatically eligible for NHSC approval, so ask any prospective employer for its current NHSC site status. Loan repayment follows the approved site and the applicant's discipline.`,
     'entry-level': (f) => `Entry-level ${NP} listings in ${f.city.name} describe roles open to clinicians early in practice, with the years of experience the employer expects stated in each posting. Read the onboarding and supervision details rather than relying on the label alone.`,
     'geriatric': (f) => `Geriatric ${NP} listings in ${f.city.name} commonly serve long-term care facilities, memory-care units, and home-based primary care. Ask how many buildings or visits a role covers and how visit-based pay, if any, is structured.`,
     'hospital': (f) => `Hospital-based ${NP} listings in ${f.city.name} include hospitalist, specialty service, and emergency department roles. Each names its shift pattern and any differentials or call stipends, so read the schedule section before comparing base pay.`,
@@ -194,10 +194,10 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     'home-health': (f) => `Home-health ${NP} listings serving ${f.city.name} center on house calls, transitional care, and annual wellness visits. Ask whether pay is per visit or salaried, how mileage is handled, and how large the territory is.`,
     'family-practice': (f) => `Family practice ${NP} (FNP) listings in ${f.city.name} cover primary care across the lifespan, from group practices to health systems and community clinics. Check each listing for panel size, walk-in coverage, and any collaboration terms ${f.city.state} applies.`,
     'adult-gerontology': (f) => `Adult-gerontology ${NP} listings in ${f.city.name} split between the primary care (AGPCNP) and acute care (AGACNP) tracks, across internal medicine, long-term care, and hospital services. Match the listing's certification requirement to your own track before applying.`,
-    'pediatric': (f) => `Pediatric ${NP} listings in ${f.city.name} span primary-care pediatrics, school-based health, and children's specialty services; PNP-PC and PNP-AC certifications map to clinic and hospital settings respectively. Confirm the acuity mix and any after-hours expectations.`,
+    'pediatric': (f) => `Pediatric ${NP} listings in ${f.city.name} span primary-care pediatrics, school-based health, and children's specialty services. PNP-PC and PNP-AC certifications map to clinic and hospital settings respectively. Confirm the acuity mix and any after-hours expectations.`,
     'neonatal': (f) => `Neonatal ${NP} listings in ${f.city.name} concentrate in NICUs, and employers expect prior NICU nursing experience alongside NNP certification. Night and weekend coverage is part of the role, so ask how call and post-call time are structured.`,
     'women-health': (f) => `Women's health ${NP} (WHNP) listings in ${f.city.name} sit in OB/GYN practices, family-planning clinics, and prenatal programs, often alongside certified nurse midwives. Confirm whether the scope is gynecology only or includes prenatal and postpartum panels.`,
-    'acute-care': (f) => `Acute care ${NP} listings in ${f.city.name} staff ICUs, step-down units, and rapid-response teams, with AGACNP certification the usual requirement. Listings name the shift pattern; ask about orientation length and procedure training before comparing offers.`,
+    'acute-care': (f) => `Acute care ${NP} listings in ${f.city.name} staff ICUs, step-down units, and rapid-response teams, with AGACNP certification the usual requirement. Listings name the shift pattern, so ask about orientation length and procedure training before comparing offers.`,
     'emergency': (f) => `Emergency ${NP} listings in ${f.city.name} place clinicians in emergency departments and fast-track units on shift schedules. Ask which procedures ${NP}s own in that department and what prior emergency or acute-care experience the employer expects.`,
     'oncology': (f) => `Oncology ${NP} listings in ${f.city.name} support infusion centers, hematology-oncology practices, and survivorship programs. The role blends symptom management, treatment monitoring, and care coordination, so confirm the treatment-phase focus in each listing.`,
     'cardiology': (f) => `Cardiology ${NP} listings in ${f.city.name} span heart-failure clinics, procedural support, and inpatient cardiology services, with device-clinic coverage and anticoagulation management as common components. Confirm whether the role is clinic-only, inpatient-only, or hybrid.`,
@@ -211,7 +211,7 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     // ── 2026-07 P1 #15 verticals ──
     'aesthetics': (f) => `Aesthetic ${NP} listings in ${f.city.name} center on medical spas, cosmetic practices, and plastic-surgery groups, with neuromodulator and dermal-filler injection as core procedures. Employers expect hands-on injectables training, and pay often pairs a base rate with per-service commission, so confirm both.`,
     'pain-management': (f) => `Pain management ${NP} listings in ${f.city.name} support interventional pain practices, spine centers, and rehabilitation clinics. The work combines medication management with procedure support, and controlled-substance prescribing under ${f.city.state} rules is central to the role.`,
-    'palliative-hospice': (f) => `Palliative care and hospice ${NP} listings in ${f.city.name} span hospital consult services, home hospice agencies, and long-term-care settings. Roles emphasize symptom management and goals-of-care conversations; community-based roles often add per-visit or mileage components, so ask.`,
+    'palliative-hospice': (f) => `Palliative care and hospice ${NP} listings in ${f.city.name} span hospital consult services, home hospice agencies, and long-term-care settings. Roles emphasize symptom management and goals-of-care conversations. Community-based roles often add per-visit or mileage components, so ask.`,
     // Keyed via the registry-derived constant so the specialty slug literal
     // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
     ...(PSYCH_SPECIALTY_SLUG

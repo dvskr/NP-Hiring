@@ -381,12 +381,11 @@ export default async function LocationsPage() {
         heroAlt={`${brand.niche.short} Jobs by Location`}
         badgeText="Nationwide"
         breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Locations", url: `${brand.baseUrl}/jobs/locations` }])}
-        indexLabel="№ 02"
         headlineLine1={brand.niche.short}
         headlineLine2="Locations"
         headlineSub="Search by State & City"
         stats={heroStats}
-        description={`Explore ${stats.totalJobs > 0 ? `${stats.totalJobs.toLocaleString()} ` : ''}${brand.niche.adjective} ${brand.niche.descriptor} positions across the United States. Find opportunities by state, in the largest metro areas and in remote positions.`}
+        description={`Explore ${stats.totalJobs > 0 ? `${stats.totalJobs.toLocaleString()} ` : ''}${brand.niche.adjective} ${brand.niche.descriptor} positions across the United States.`}
         ctaLabel="Browse All Jobs"
         ctaHref="/jobs"
       />
@@ -418,18 +417,16 @@ export default async function LocationsPage() {
                         <Image src={NAV_ICONS.remote.src} alt="" width={52} height={52} sizes="52px" style={{ objectFit: 'contain' }} />
                       </div>
 
+                      {/* Heading only, no sub-line (owner call, 2026-10-12).
+                          No coverage figure: this banner counts one live
+                          aggregate (the stat beside it) and claims nothing
+                          about how many states are represented. */}
                       <div>
                         <h2 style={{
                           fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800,
                           fontFamily: 'var(--font-lora, Georgia, serif)',
-                          color: '#1A2E35', margin: '0 0 6px', lineHeight: 1.2,
+                          color: '#1A2E35', margin: 0, lineHeight: 1.2,
                         }}>Remote {brand.niche.short} Jobs</h2>
-                        <p style={{ fontSize: '14px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                          {/* No coverage figure: this banner counts one live
-                              aggregate (the stat beside it) and claims nothing
-                              about how many states are represented. */}
-                          Telehealth and fully remote roles, gathered in one feed.
-                        </p>
                       </div>
                     </div>
 
@@ -613,18 +610,14 @@ export default async function LocationsPage() {
               directory page enforces are listed: no links to 404s. */}
           {stats.cityDirectories.length > 0 && (
             <div className="mb-12">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+              {/* No helper line under the heading: the About card's "City
+                  directories" block already explains them (owner call, 2026-10-12). */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                 <MapPinned className="h-6 w-6" style={{ color: '#BE185D' }} aria-hidden="true" />
                 <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, fontFamily: 'var(--font-lora, Georgia, serif)', color: '#1A2E35', margin: 0 }}>
                   Browse Cities State by State
                 </h2>
               </div>
-              <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '20px', lineHeight: 1.5 }}>
-                {/* "Each directory", not "these states": the District of
-                    Columbia earns a directory here on the same gate. */}
-                Each directory lists every city with live {brand.niche.short} openings, with the count shown next to
-                each one. Cities with {MIN_CITY_JOBS_FOR_LINK} or more roles are linked when a page for them exists.
-              </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {stats.cityDirectories.map((entry: StateCityDirectoryLink) => (
@@ -656,9 +649,6 @@ export default async function LocationsPage() {
                   Metro Area Guides
                 </h2>
               </div>
-              <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '-12px', marginBottom: '20px', lineHeight: 1.5 }}>
-                In-depth {brand.niche.short} job guides for major metros, covering practice authority, the employers posting there, and local licensure notes.
-              </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {METRO_CITIES.map((metro) => (
@@ -736,9 +726,6 @@ export default async function LocationsPage() {
               </div>
 
               <div style={{ marginTop: '32px', textAlign: 'center' }}>
-                <p style={{ fontSize: '14px', color: '#7A6A62', margin: '0 0 14px' }}>
-                  Looking for jobs in a specific city?
-                </p>
                 <Link
                   href="/jobs"
                   className="group-hover:-translate-y-0.5 transition-all"

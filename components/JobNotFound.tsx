@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { Search, Bell, Briefcase, TrendingUp } from 'lucide-react';
-import { brand } from '@/config/brand';
 
 export default function JobNotFound() {
   const handleAlertClick = () => {
@@ -32,29 +31,6 @@ export default function JobNotFound() {
         <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
           This job posting is no longer available.
         </p>
-
-        {/* Suggestions */}
-        <div className="mb-8">
-          <p className="text-sm font-semibold text-gray-900 mb-4">
-            Here&apos;s what you can do:
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto mb-8">
-            <div className="flex items-start gap-3 text-left">
-              <Briefcase className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-gray-900 text-sm">Browse similar jobs</p>
-                <p className="text-xs text-gray-600">Find other {brand.niche.short} opportunities.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 text-left">
-              <Bell className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-gray-900 text-sm">Set up job alerts</p>
-                <p className="text-xs text-gray-600">Get notified about new postings.</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -88,9 +64,6 @@ export default function JobNotFound() {
 
         <Card padding="md" variant="bordered" className="bg-primary-50 border-primary-200">
           <div className="text-center py-8">
-            <p className="text-gray-700 mb-4">
-              Browse our latest {brand.niche.short} job postings.
-            </p>
             <Link href="/jobs?sort=newest">
               <Button variant="primary" size="md">
                 View Recent Jobs
@@ -102,9 +75,6 @@ export default function JobNotFound() {
 
       {/* Quick Links */}
       <div className="mt-8 pt-8 border-t border-gray-200 text-center">
-        <p className="text-sm text-gray-600 mb-3">
-          Looking for something specific?
-        </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link
             href="/jobs?type=Full-time"

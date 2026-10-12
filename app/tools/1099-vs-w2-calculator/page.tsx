@@ -67,14 +67,14 @@ const ASSUMPTIONS: readonly string[] = [
   'The health premium you buy as a contractor is deducted above the line, capped at your earned income from the business.',
   'Both columns report "cash after tax" on one definition: what is left of gross pay after taxes, business expenses, and insurance premiums, and before any retirement money is set aside. This means the two are read against each other on the same basis.',
   'Net position adds to that cash only the retirement dollars an employer contributes: the match on the W-2 side. A contractor funding a SEP-IRA or solo 401(k) is moving cash already counted, not gaining extra, so it is shown as a call on that cash rather than added again.',
-  'The standard deduction is applied to a single stream of earned income; the model assumes you do not itemize.',
-  'Every input starts on a placeholder, not a benchmark. The two pay placeholders derive from this board’s typical W-2 band of ' + TYPICAL_BAND + ' (config/niche/salary.ts). Replace them with your actual offers.',
+  'The standard deduction is applied to a single stream of earned income. The model assumes you do not itemize.',
+  'Every input starts on a placeholder, not a benchmark. The two pay placeholders come from this board’s typical W-2 band of ' + TYPICAL_BAND + '. Replace them with your actual offers.',
 ];
 
 const FAQS = [
   {
     q: `How much more should a 1099 rate be than a W-2 ${brand.niche.short} salary?`,
-    a: `There is no single multiplier; it depends on what the W-2 offer actually includes. The calculator answers it directly with a break-even hourly rate: enter the W-2 salary, employer retirement match, premium share, and days off, and it solves for the contract rate at which the two net positions are equal. Anything above that rate leaves you ahead; anything below it does not, no matter how much larger the gross looks.`,
+    a: `There is no single multiplier. It depends on what the W-2 offer actually includes. The calculator answers it directly with a break-even hourly rate: enter the W-2 salary, employer retirement match, premium share, and days off, and it solves for the contract rate at which the two net positions are equal. Anything above that rate leaves you ahead. Anything below it does not, no matter how much larger the gross looks.`,
   },
   {
     q: 'What is self-employment tax and why does it hit 1099 income?',
@@ -82,7 +82,7 @@ const FAQS = [
   },
   {
     q: 'Does this calculator include state income tax?',
-    a: `No. It is federal only. State and local income tax rates, brackets, and local add-ons vary by jurisdiction, and publishing a state rate table we cannot keep current would be worse than omitting it. Both columns are therefore overstated by whatever your state charges. Because state tax applies to both, it narrows the gap but rarely reverses it.`,
+    a: `No. It is federal only, because state and local income tax rates, brackets, and local add-ons vary by jurisdiction. Both columns are therefore overstated by whatever your state charges. Because state tax applies to both, it narrows the gap but rarely reverses it.`,
   },
   {
     q: 'What benefits does a 1099 contractor have to replace?',
@@ -94,7 +94,7 @@ const FAQS = [
   },
   {
     q: 'Is this tax advice?',
-    a: `No. It is a planning estimate built from published federal rates for tax year ${TAX_MODEL_YEAR}, and it deliberately excludes the qualified business income deduction, itemized deductions, credits, dependents, other income, entity choice, and state tax. Take the output to a CPA before you sign anything or set aside estimated payments.`,
+    a: `No. It is a planning estimate built from published federal rates for tax year ${TAX_MODEL_YEAR}, and it excludes the qualified business income deduction, itemized deductions, credits, dependents, other income, entity choice, and state tax. Take the output to a CPA before you sign anything or set aside estimated payments.`,
   },
 ] as const;
 
@@ -112,7 +112,7 @@ const FAQS = [
 const HOW_TO_STEPS = [
   { name: 'Enter the W-2 offer in full', text: 'Base salary, the employer retirement match as a percent of salary, your annual share of the health premium, and how many paid days off the role includes. The match and the premium are where most of the hidden value of a W-2 offer sits.' },
   { name: 'Enter the contract offer', text: 'Hourly rate, the deductible business expenses you will carry (malpractice, licensure, CME, equipment, home office), the health insurance premium you will buy yourself, and the retirement contribution you intend to fund.' },
-  { name: 'Set hours and time off once', text: 'Both columns use the same hours per week and the same days off. On the W-2 side that time is paid; on the 1099 side it reduces billable hours, which is the honest way to price time off.' },
+  { name: 'Set hours and time off once', text: 'Both columns use the same hours per week and the same days off. On the W-2 side that time is paid. On the 1099 side it reduces billable hours.' },
   { name: 'Read the net position, not the gross', text: 'Compare the two net-position figures: cash after federal tax and insurance, measured the same way on both sides, plus the retirement dollars an employer adds. A larger 1099 gross regularly loses this comparison once self-employment tax and self-funded benefits are priced in.' },
   { name: 'Negotiate against the break-even rate', text: 'The calculator solves for the contract hourly rate that matches the W-2 offer exactly. That number, not a rule of thumb, is your floor in a rate conversation.' },
 ] as const;
@@ -209,13 +209,9 @@ export default function TakeHomeCalculatorPage() {
       {/* ─── How to use it (the visible source of the HowTo schema above) ─── */}
       <section style={{ background: '#FFF', padding: '56px 20px 8px' }}>
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 30px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 30px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 24px' }}>
             How to compare the two offers
           </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.65, margin: '0 0 24px' }}>
-            There are five steps, and the order matters: the break-even rate is only meaningful once both
-            columns describe the same working year.
-          </p>
           <ol style={{ listStyle: 'none', counterReset: 'step', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {HOW_TO_STEPS.map((step, i) => (
               <li key={step.name} style={{ ...clayCard, padding: '18px 20px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
@@ -245,7 +241,6 @@ export default function TakeHomeCalculatorPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="How this estimate is built"
-            intro={`This is a planning estimate, not a tax return. Everything the model does, and everything it deliberately leaves out, is listed here, because a take-home number without its assumptions is not a useful number.`}
             assumptions={ASSUMPTIONS}
             exclusions={TAX_MODEL_EXCLUSIONS}
             sources={TAX_MODEL_SOURCES}

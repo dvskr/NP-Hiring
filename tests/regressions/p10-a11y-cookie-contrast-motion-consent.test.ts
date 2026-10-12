@@ -74,7 +74,9 @@ describe('P10 a11y-cookie: colour contrast on the axe-flagged nodes', () => {
     it('1099 tool: hints, suffixes, muted figures and footnotes no longer use #94A3B8 (2.56:1)', () => {
         const src = read('components/tools/TakeHomeCalculator.tsx');
         expect(src).not.toMatch(/#94A3B8/i);
-        expect(src).toMatch(/id="takehome-filing-hint" style=\{\{ fontSize: '11\.5px', color: '#64748B'/);
+        // Every field hint renders through one element; the filing-status
+        // hint that used to be pinned here was removed (owner call, 2026-10-12).
+        expect(src).toMatch(/<p id=\{hintId\} style=\{\{ fontSize: '11\.5px', color: '#64748B'/);
         expect(contrast('#64748B', '#FFFFFF')).toBeGreaterThanOrEqual(AA);
     });
 

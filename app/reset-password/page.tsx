@@ -111,21 +111,12 @@ function ResetPasswordContent() {
       <h1 style={{
         fontSize: '28px', fontWeight: 800, color: '#1A2E35',
         fontFamily: 'var(--font-lora), Georgia, serif',
-        margin: '0 0 6px', letterSpacing: '-0.5px', textAlign: 'center',
+        margin: '0 0 20px', letterSpacing: '-0.5px', textAlign: 'center',
       }}>
         {linkExpired ? 'Link Expired' : success ? 'Password Updated' : noSession ? 'Reset Link Required' : 'Set a New Password'}
       </h1>
-      <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '20px', textAlign: 'center' }}>
-        {linkExpired
-          ? 'This link is no longer valid.'
-          : success
-            ? 'Redirecting you to login...'
-            : noSession
-              ? 'Open the reset link from your email to choose a new password.'
-              : mode === 'reauthenticate'
-                ? 'Confirm your current password, then choose a strong new one.'
-                : 'Choose a strong password.'}
-      </p>
+      {/* No subtitle: each state's card below already carries its message
+          (owner call, 2026-10-12). */}
 
       {renderCard(
         noSession ? (

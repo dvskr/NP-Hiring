@@ -64,7 +64,7 @@ function buildJobsHubFaqs(totalJobs: number, categoryGroups: readonly HubCategor
   return [
     {
       question: `How many ${brand.niche.descriptor} jobs are listed right now?`,
-      answer: `There are currently ${totalJobs.toLocaleString()} ${brand.niche.descriptor} and APRN jobs listed, spanning states, specialties, and work settings. Listings are refreshed daily as new roles are ingested and stale postings are retired.`,
+      answer: `There are currently ${totalJobs.toLocaleString()} ${brand.niche.descriptor} and APRN jobs listed, spanning states, specialties, and work settings. Listings are updated daily. New roles are added and expired postings are removed.`,
     },
     {
       // House style: median, never average (the answer cites the BLS median).

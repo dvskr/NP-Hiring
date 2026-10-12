@@ -340,7 +340,6 @@ export default async function MidCareerPage({ searchParams }: PageProps) {
         heroAlt={`Mid-career ${brand.niche.short} clinical leadership`}
         badgeText={facts.total > 0 ? buildLiveRolesBadge(facts.total) : `${brand.niche.long} Careers`}
         breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Mid-Career", url: `${brand.baseUrl}/jobs/mid-career` }])}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('mid-career') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Mid-Career"
         headlineLine2={brand.niche.short}
         headlineSub="jobs to advance your career."

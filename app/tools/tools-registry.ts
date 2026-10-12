@@ -104,7 +104,7 @@ export const TOOLS: readonly ToolEntry[] = [
     path: '/tools/cost-per-hire-calculator',
     title: 'Cost-per-hire calculator',
     blurb:
-      'A flat-fee posting against sponsored ads and an agency fee, on your own applicant volume and time-to-fill. Our prices are real; every other figure is yours.',
+      'A flat-fee posting against sponsored ads and an agency fee, on your own applicant volume and time-to-fill. Our prices are built in. Every other figure is yours.',
     badge: 'For employers',
     audience: 'employer',
     icon: 'briefcase',

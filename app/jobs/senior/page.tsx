@@ -359,7 +359,6 @@ export default async function SeniorPage({ searchParams }: PageProps) {
         heroAlt={`Senior ${brand.niche.short} clinical leadership roles`}
         badgeText={facts.total > 0 ? buildLiveRolesBadge(facts.total) : `${brand.niche.long} Careers`}
         breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Senior", url: `${brand.baseUrl}/jobs/senior` }])}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('senior') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Senior"
         headlineLine2={brand.niche.short}
         headlineSub="jobs in leadership roles."

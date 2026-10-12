@@ -52,11 +52,8 @@ export default function MessagesTab() {
         return (
             <div className="text-center py-12 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                 <MessageSquare size={40} className="mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
-                <p className="text-lg font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>
                     No messages yet
-                </p>
-                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                    Messages you send to candidates will appear here. You can reach out to candidates from the Applicants tab.
                 </p>
             </div>
         );

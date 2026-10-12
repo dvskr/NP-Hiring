@@ -554,14 +554,10 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
               </p>
               <h1
                 className="font-lora"
-                style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px', lineHeight: 1.15 }}
+                style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.15 }}
               >
                 {stateName} Cities Hiring {brand.niche.short}s
               </h1>
-              <p style={{ fontSize: '15px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                Every {stateName} city currently carrying {brand.niche.descriptor} openings, ranked by how many
-                roles are live right now.
-              </p>
             </div>
           </header>
 
@@ -614,8 +610,8 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   out of an agreement all differ within a tier). */}
               {authority && (
                 <>
-                  AANP classifies {stateName} as a <strong>{getAuthorityLabel(authority.authority)}</strong> {isDistrict ? 'jurisdiction' : 'state'};
-                  its hub page lists what {stateName} itself requires.{' '}
+                  AANP classifies {stateName} as a <strong>{getAuthorityLabel(authority.authority)}</strong> {isDistrict ? 'jurisdiction' : 'state'}.
+                  Its hub page lists what {stateName} itself requires.{' '}
                 </>
               )}
               {howToUse}
@@ -798,36 +794,22 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
             <Link href={`/salary-guide/${canonicalSlug}`} className="group" style={{ textDecoration: 'none' }}>
               <div className="h-full transition-all duration-200 group-hover:-translate-y-1" style={{ ...clayCard, padding: '20px' }}>
                 <DollarSign className="h-5 w-5 mb-2" style={{ color: '#BE185D' }} aria-hidden="true" />
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>
                   {stateName} salary guide
                 </h3>
-                <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  What {stateName} employers are posting, by experience and setting.
-                </p>
               </div>
             </Link>
             <Link href="/job-alerts" className="group" style={{ textDecoration: 'none' }}>
               <div className="h-full transition-all duration-200 group-hover:-translate-y-1" style={{ ...clayCard, padding: '20px' }}>
                 <Bell className="h-5 w-5 mb-2" style={{ color: '#BE185D' }} aria-hidden="true" />
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>
                   Alert me for {stateName}
                 </h3>
-                <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Get new {stateName} postings by email as they are indexed.
-                </p>
               </div>
             </Link>
           </section>
-
-          <p style={{ fontSize: '13px', color: '#7A6A62', lineHeight: 1.6 }}>
-            Looking somewhere else?{' '}
-            {/* The destination lists the states and cities that currently carry
-                inventory, so the label names it without claiming its size. */}
-            <Link href="/jobs/locations" style={{ color: '#BE185D', fontWeight: 700 }}>
-              Browse states and cities
-            </Link>
-            .
-          </p>
+          {/* No trailing "Looking somewhere else?" line: the breadcrumb above
+              already links /jobs/locations (owner call, 2026-10-12). */}
         </div>
       </div>
     </div>

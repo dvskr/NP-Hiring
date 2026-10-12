@@ -301,9 +301,8 @@ export default async function PressPage() {
 
                 <Section icon={<Database size={20} />} title="The figures we publish" id="data">
                     <p>
-                        These are the national statistics that appear across our salary and licensure pages. Each one
-                        renders from a single audited source file, so the value you see quoted on any page of this
-                        site is the value below, with the same &quot;as of&quot; date:
+                        These are the national statistics that appear across our salary and licensure pages. Every
+                        page that quotes one shows the value below, with the same &quot;as of&quot; date:
                     </p>
                     <div style={{ ...clayCard, padding: '16px 20px', marginTop: '12px', overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -368,7 +367,7 @@ export default async function PressPage() {
                         >
                             {STAT_SOURCES.fullPracticeStates.source}
                         </a>
-                        . The split below is computed from that dataset each time this page renders:
+                        . The split below comes from that dataset:
                     </p>
                     <div
                         style={{
@@ -383,7 +382,7 @@ export default async function PressPage() {
                             // used to state a rule per tier ("Physician supervision
                             // required"), which is untrue of several states in each
                             // tier; what one state requires is its own details.
-                            { n: fullPracticeCount, label: 'Full practice', hint: 'Exclusive licensure authority of the state board of nursing; some states first require a transition period' },
+                            { n: fullPracticeCount, label: 'Full practice', hint: 'Exclusive licensure authority of the state board of nursing, though some states first require a transition period' },
                             { n: reducedPracticeCount, label: 'Reduced practice', hint: 'State law reduces at least one element of practice' },
                             { n: restrictedPracticeCount, label: 'Restricted practice', hint: 'State law restricts at least one element of practice' },
                         ].map((s) => (
@@ -416,9 +415,8 @@ export default async function PressPage() {
                 {inventory && (
                     <Section icon={<BarChart3 size={20} />} title="What our own listings show" id="inventory">
                         <p>
-                            The figures below are a live count of this board&apos;s own indexable inventory at the
-                            time this page was generated. They are not a market estimate and not a national vacancy
-                            figure. They describe {brand.name} and nothing beyond {brand.name}.
+                            The figures below count the open listings on {brand.name} when this page was generated.
+                            They describe this board only, not the national job market.
                         </p>
                         <div
                             style={{
@@ -470,27 +468,24 @@ export default async function PressPage() {
                     </ul>
                 </Section>
 
-                <Section icon={<FlaskConical size={20} />} title="Methodology, and what these numbers are not">
+                <Section icon={<FlaskConical size={20} />} title="Methodology">
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>
                         <li>
-                            <strong>The national statistics are not ours.</strong> Salary, growth, and shortage
-                            figures come from the federal sources named in the table. We republish them with
-                            attribution; we do not survey, model, or adjust them.
+                            <strong>Salary, growth, and shortage figures come from federal sources.</strong> We
+                            republish them unchanged, with attribution to the sources named in the table.
                         </li>
                         <li>
                             <strong>Practice-authority classifications are a curated dataset.</strong> We maintain the
                             per-state mapping from the professional-association source above. Legislatures change
-                            this; check the &quot;as of&quot; date before quoting.
+                            these rules, so check the &quot;as of&quot; date before quoting.
                         </li>
                         <li>
                             <strong>Listing aggregates describe this board, not the labor market.</strong> Pay ranges
-                            derived from our postings reflect what employers advertised on {brand.name}, which skews
-                            toward roles employers chose to advertise with a salary at all. They are not a wage
-                            survey, and we label them as posting-derived everywhere they appear.
+                            from our postings reflect what employers advertised on {brand.name}, and only postings
+                            that state a salary are counted. They are labeled as posting-derived wherever they appear.
                         </li>
                         <li>
-                            <strong>We do not publish counts we cannot compute.</strong> Where a number is unavailable
-                            it is omitted rather than estimated, including on this page.
+                            <strong>Figures we cannot compute are left out, not estimated.</strong>
                         </li>
                         <li>
                             <strong>Certification bodies are attributed per specialty.</strong> AANP or ANCC for{' '}
@@ -526,8 +521,8 @@ export default async function PressPage() {
 
                 <Section icon={<ImageDown size={20} />} title="Brand assets">
                     <p style={{ marginBottom: '12px' }}>
-                        Logo files for editorial use. Please do not recolor, stretch, add effects to, or lock up the
-                        mark with other logos in a way that implies a partnership we do not have.
+                        Logo files for editorial use. Please do not recolor, stretch, or add effects to the mark, or
+                        pair it with other logos in a way that suggests a partnership.
                     </p>
                     <div
                         style={{

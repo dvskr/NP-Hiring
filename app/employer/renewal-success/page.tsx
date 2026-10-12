@@ -45,7 +45,7 @@ function RenewalSuccessContent() {
       const timer = setTimeout(() => {
         setState({
           loading: false,
-          error: 'No session ID provided.',
+          error: 'This link is missing its checkout details. Please check your dashboard.',
           renewalData: null,
         });
       }, 0);

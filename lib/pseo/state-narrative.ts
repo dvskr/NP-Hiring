@@ -86,7 +86,7 @@ const NP = brand.niche.short;
 
 const SETTING_LEADS: Record<string, SettingLeadFn> = {
     'remote': (c) => `Remote ${NP} listings for ${c.stateName} are roles the employer marks as remote, usually with a requirement to hold ${c.stateCode} licensure to treat patients located there. Check each listing for technology, schedule, and licensure expectations, because employers describe remote work differently.`,
-    'telehealth': (c) => `Telehealth ${NP} listings for ${c.stateName} describe care delivered by video or phone, and each names the platform, the visit model, and the state licensure it requires. Read the scheduling and documentation expectations closely; telehealth employers structure both in their own way.`,
+    'telehealth': (c) => `Telehealth ${NP} listings for ${c.stateName} describe care delivered by video or phone, and each names the platform, the visit model, and the state licensure it requires. Read the scheduling and documentation expectations closely, because telehealth employers structure both in their own way.`,
     'inpatient': (c) => `Inpatient ${NP} listings for ${c.stateName} come from hospitals and hospital-based services, where the posting names the unit, the shift pattern, and any differentials. Credentialing and privileging at the facility define the day-to-day scope, so ask about both timelines early.`,
     'outpatient': (c) => `Outpatient ${NP} listings for ${c.stateName} come from clinics, group practices, and community health centers. Panel size, visit length, and documentation time vary by practice, so confirm each before comparing offers.`,
     'travel': (c) => `Travel ${NP} listings for ${c.stateName} are assignments with a stated length, usually arranged through a staffing agency. Compare the full package, including housing and travel terms, and confirm the ${c.stateName} licensure timeline with the agency before accepting a start date.`,
@@ -101,10 +101,10 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
     'adult-gerontology': (c) => `Adult-gerontology ${NP} listings for ${c.stateName} split between the primary care track (AGPCNP) in clinics and long-term care and the acute care track (AGACNP) in hospital services. Match the listing's certification requirement to your own track before applying.`,
     'pediatric': (c) => `Pediatric ${NP} listings for ${c.stateName} span primary-care pediatrics, school-based programs, and children's hospital services. Confirm the acuity mix and any after-hours nurse-line or call expectations in each listing.`,
     'women-health': (c) => `Women's health ${NP} (WHNP) listings for ${c.stateName} sit in OB/GYN groups, family-planning programs, and prenatal clinics. Confirm whether the scope is gynecology only or includes prenatal and postpartum panels, and whether obstetric call is expected.`,
-    'acute-care': (c) => `Acute care ${NP} listings for ${c.stateName} come from ICUs, step-down units, and hospital specialty services. Listings name the shift pattern and differentials; orientation length and procedure training are worth asking about before comparing offers.`,
+    'acute-care': (c) => `Acute care ${NP} listings for ${c.stateName} come from ICUs, step-down units, and hospital specialty services. Listings name the shift pattern and differentials. Ask about orientation length and procedure training before comparing offers.`,
     'emergency': (c) => `Emergency ${NP} listings for ${c.stateName} staff emergency departments and fast-track units on shift schedules. Ask which procedures ${NP}s own in that department, how the day and overnight mix works, and what prior experience the employer expects.`,
     'anesthesia': (c) => `CRNA listings for ${c.stateName} come from hospital operating rooms, surgery centers, and procedural suites, and each states whether the practice model is independent, care-team, or supervised. Call burden and post-call time change what an offer is worth, so compare them alongside the rate. CRNA supervision rules in ${c.stateName} are set by state law and facility policy, separate from ${NP} practice authority.`,
-    'midwifery': (c) => `Certified nurse midwife (CNM) listings for ${c.stateName} cover hospital labor-and-delivery services, birth centers, and OB/GYN practices. Ask about call frequency, backup arrangements, and expected birth volume; CNM practice rules in ${c.stateName} are set separately from ${NP} practice authority.`,
+    'midwifery': (c) => `Certified nurse midwife (CNM) listings for ${c.stateName} cover hospital labor-and-delivery services, birth centers, and OB/GYN practices. Ask about call frequency, backup arrangements, and expected birth volume. CNM practice rules in ${c.stateName} are set separately from ${NP} practice authority.`,
     'primary-care': (c) => `Primary care ${NP} listings for ${c.stateName} come from internal-medicine groups, family practices, community health centers, and value-based care organizations. Panel size, documentation time, and quality-incentive structure are the practical differences to compare between offers.`,
     'oncology': (c) => `Oncology ${NP} listings for ${c.stateName} come from cancer centers, hematology-oncology groups, and infusion clinics. Confirm the treatment-phase focus, whether active treatment, infusion oversight, or survivorship, and what oncology-specific training the employer provides.`,
     'cardiology': (c) => `Cardiology ${NP} listings for ${c.stateName} split between clinic work, such as heart-failure and device clinics, and inpatient consult services. Hybrid roles name their call and weekend expectations, so read the schedule section before comparing pay.`,
@@ -154,9 +154,9 @@ export function buildSettingStateNarrative(
     if (lead) parts.push(lead);
 
     // The live count, stated as inventory rather than as a market signal.
-    // The verb agrees with the count.
+    // The noun agrees with the count.
     parts.push(
-        `The ${totalJobs} active ${totalJobs === 1 ? 'posting reflects' : 'postings reflect'} what employers currently list on ${brand.name} for ${stateName} in this category, not an estimate of the wider market.`,
+        `${brand.name} currently lists ${totalJobs} active ${totalJobs === 1 ? 'posting' : 'postings'} for ${stateName} in this category.`,
     );
 
     return parts.join(' ');
@@ -183,7 +183,7 @@ export function buildSettingStateNarrative(
 function plainStateAuthoritySentences(stateName: string, stateCode: string): string {
     const auth = getStatePracticeAuthority(stateName);
     if (!auth) {
-        return `On the regulatory side, ${stateName} applies state-specific practice rules; confirm current requirements with the ${stateCode} board of nursing before applying.`;
+        return `On the regulatory side, ${stateName} applies state-specific practice rules. Confirm current requirements with the ${stateCode} board of nursing before applying.`;
     }
     // The District of Columbia is not a state, so its peers are "jurisdictions".
     const peers = stateCode === 'DC' ? 'Jurisdictions' : 'States';
@@ -241,7 +241,7 @@ function plainStateCompactSentence(stateName: string, stateCode: string): string
         return `Confirm licensure requirements with the ${stateCode} board of nursing before applying.`;
     }
     if (env.nlcStatus === 'member') {
-        return `${stateName}'s Nurse Licensure Compact membership covers the RN license beneath the APRN credential; the APRN license itself is still issued by ${stateName}.`;
+        return `${stateName}'s Nurse Licensure Compact membership covers the RN license beneath the APRN credential. The APRN license itself is still issued by ${stateName}.`;
     }
     return nlcSentence(stateName) ?? `Confirm licensure requirements with the ${env.boardName} before applying.`;
 }

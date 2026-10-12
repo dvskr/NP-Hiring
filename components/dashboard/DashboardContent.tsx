@@ -19,7 +19,7 @@ import HowItWorksSidebar from './HowItWorksSidebar'
 import JobCard from '@/components/JobCard'
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers'
 import type { Job as JobCardJob } from '@/lib/types'
-import { DASHBOARD_MARKET_PULSE, DASHBOARD_PROFILE_NUDGE_CLAIM } from '@/config/niche/stats'
+import { DASHBOARD_MARKET_PULSE } from '@/config/niche/stats'
 import { brand } from '@/config/brand'
 
 /* ── Types ── */
@@ -304,13 +304,10 @@ function FeedbackRatingCard() {
             <h3 style={{
                 fontSize: '15px', fontWeight: 700,
                 fontFamily: 'var(--font-lora), Georgia, serif',
-                color: '#1A2E35', margin: '0 0 4px',
+                color: '#1A2E35', margin: '0 0 14px',
             }}>
                 Rate Your Experience
             </h3>
-            <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 14px', lineHeight: 1.4 }}>
-                How would you rate {brand.name} so far?
-            </p>
 
             {/* Stars */}
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
@@ -377,7 +374,7 @@ function FeedbackRatingCard() {
 }
 
 /* ── Testimonial Collection Card — written review + consent ── */
-function TestimonialCard({ firstName }: { firstName: string | null }) {
+function TestimonialCard() {
     const [review, setReview] = useState('')
     const [consent, setConsent] = useState(false)
     const [displayAs, setDisplayAs] = useState<'full' | 'initial' | 'anonymous'>('initial')
@@ -431,13 +428,10 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
             <h3 style={{
                 fontSize: '15px', fontWeight: 700,
                 fontFamily: 'var(--font-lora), Georgia, serif',
-                color: '#1A2E35', margin: '0 0 4px',
+                color: '#1A2E35', margin: '0 0 12px',
             }}>
                 Share Your Story
             </h3>
-            <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                {firstName ? `${firstName}, your` : 'Your'} experience matters. Help other {brand.niche.short}s discover opportunities.
-            </p>
 
             <textarea
                 value={review}
@@ -694,11 +688,6 @@ export default function DashboardContent() {
                     <span style={{ fontSize: '22px' }}>👋</span>
                     {new Date().getHours() < 12 ? 'Good morning,' : new Date().getHours() < 17 ? 'Good afternoon,' : 'Good evening,'} {profile.firstName || 'there'}
                 </h1>
-                <p style={{
-                    fontSize: '14px', color: '#8A9BA6', margin: 0,
-                }}>
-                    Here&apos;s what&apos;s happening with your job search.
-                </p>
             </div>
 
             {/* ═══ AI-Search visibility callout ═══
@@ -777,12 +766,9 @@ export default function DashboardContent() {
 
                     {/* Text + chips */}
                     <div style={{ flex: 1, minWidth: '200px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 10px' }}>
                             Your profile needs attention
                         </h3>
-                        <p style={{ fontSize: '13px', color: '#6B7F8A', margin: '0 0 10px' }}>
-                            {DASHBOARD_PROFILE_NUDGE_CLAIM}
-                        </p>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             {/* B83: chips deep-link into the settings tab that
                                 holds the missing field. fieldId is 'tab-<key>'
@@ -816,11 +802,11 @@ export default function DashboardContent() {
                             )}
                         </div>
 
-                        {/* AI resume-parsing shortcut — same callout as the
-                            settings page Resume section, surfaced here so
-                            the user sees the AI shortcut WITHOUT having to
-                            click into settings first. Routes directly to
-                            the resume section anchor. */}
+                        {/* AI resume-parsing shortcut, surfaced here so the
+                            user sees it WITHOUT having to click into
+                            settings first. Routes directly to the resume
+                            section anchor. Title only, no explainer line
+                            (owner call, 2026-10-12). */}
                         <Link
                             href="/settings?tab=personal#section-resume"
                             style={{
@@ -844,14 +830,9 @@ export default function DashboardContent() {
                             }}>
                                 <Sparkles size={14} style={{ color: '#8B5CF6' }} />
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.4 }}>
-                                    Skip the form and upload your resume
-                                </p>
-                                <p style={{ fontSize: '11px', color: '#4A5E6A', margin: '1px 0 0', lineHeight: 1.4 }}>
-                                    AI extracts your licenses, certifications, education, and work history. You review everything before anything is saved.
-                                </p>
-                            </div>
+                            <p style={{ flex: 1, minWidth: 0, fontSize: '12px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.4 }}>
+                                Skip the form and upload your resume
+                            </p>
                             <ArrowRight size={14} style={{ color: '#8B5CF6', flexShrink: 0 }} />
                         </Link>
                     </div>
@@ -969,11 +950,8 @@ export default function DashboardContent() {
                             ...cardRecessed,
                         }}>
                             <img src="/illustrations/empty-applications.png" alt="" style={{ width: '80px', height: '80px', margin: '0 auto 12px', objectFit: 'contain', opacity: 0.85 }} />
-                            <p style={{ fontSize: '14px', fontWeight: 600, color: '#4A5E6A', marginBottom: '4px' }}>
+                            <p style={{ fontSize: '14px', fontWeight: 600, color: '#4A5E6A', marginBottom: '12px' }}>
                                 No applications yet
-                            </p>
-                            <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '12px' }}>
-                                Jobs you apply to will appear here.
                             </p>
                             <Link href="/jobs" style={{ ...viewAllLink, fontSize: '14px' }}>
                                 Start browsing jobs <ArrowRight size={14} />
@@ -1031,11 +1009,8 @@ export default function DashboardContent() {
                             ...cardRecessed,
                         }}>
                             <img src="/illustrations/empty-saved.png" alt="" style={{ width: '80px', height: '80px', margin: '0 auto 12px', objectFit: 'contain', opacity: 0.85 }} />
-                            <p style={{ fontSize: '14px', fontWeight: 600, color: '#4A5E6A', marginBottom: '4px' }}>
+                            <p style={{ fontSize: '14px', fontWeight: 600, color: '#4A5E6A', marginBottom: '12px' }}>
                                 No saved jobs
-                            </p>
-                            <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '12px' }}>
-                                Bookmark jobs below to save them here.
                             </p>
                             <Link href="/jobs" style={{ ...viewAllLink, fontSize: '14px' }}>
                                 Browse jobs <ArrowRight size={14} />
@@ -1054,14 +1029,9 @@ export default function DashboardContent() {
             {/* ═══ Recommended Jobs ═══ */}
             <div style={{ marginTop: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <div>
-                        <h2 style={{ fontSize: '22px', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
-                            Recommended for you
-                        </h2>
-                        <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>
-                            Based on your profile and preferences.
-                        </p>
-                    </div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>
+                        Recommended for you
+                    </h2>
                     <Link href="/jobs" style={viewAllLink}>
                         See All Jobs <ArrowRight size={13} />
                     </Link>
@@ -1158,14 +1128,9 @@ export default function DashboardContent() {
                     }}>
                         <Bell size={20} style={{ color: '#fff' }} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', margin: '0 0 2px' }}>
-                            You have {unreadMessages} unread message{unreadMessages > 1 ? 's' : ''}
-                        </p>
-                        <p style={{ fontSize: '12px', color: '#6B7F8A', margin: 0 }}>
-                            From employers interested in your profile.
-                        </p>
-                    </div>
+                    <p style={{ flex: 1, fontSize: '14px', fontWeight: 600, color: '#1A2E35', margin: 0 }}>
+                        You have {unreadMessages} unread message{unreadMessages > 1 ? 's' : ''}
+                    </p>
                     <ArrowRight size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                 </Link>
             )}
@@ -1195,7 +1160,7 @@ export default function DashboardContent() {
                     <div style={{ padding: '16px 18px' }}>
                         <FeedbackRatingCard />
                         <div style={{ borderTop: '1px solid #E0EDE6', margin: '14px 0' }} />
-                        <TestimonialCard firstName={profile.firstName} />
+                        <TestimonialCard />
                     </div>
                 </div>
 

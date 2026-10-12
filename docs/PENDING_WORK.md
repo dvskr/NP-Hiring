@@ -153,12 +153,28 @@ records it, and the daily plan reconciliation cannot recover it either, since it
 cannot record it. Until then the deploy order in 1.2 is the only guard, and `docs/pricing-system.md` section
 1d states the gap.
 
-**2.17 Dashes in email subjects and previews.** Ten strings in `lib/email-service.ts` still join their two
-halves with an em dash on the one line a recipient reads in the inbox list: the job-alert welcome subject, the
-post-is-live confirmation, the refund notice, the plan-payment-failure preview, the new-message, new-application,
-application-received and application-status subjects, the employer report subject and the saved-jobs reminder.
-The house style bans the character, so each needs a colon, a comma or two sentences instead. Separate from D10,
-which waits on your wording for the Stripe line items; these need no decision.
+**2.18 Job alert salary matcher.** A job alert with a minimum salary and the /jobs salary filter use
+different rules. /jobs (`lib/filters.ts`) keeps a job whose low or high figure reaches the minimum and drops
+jobs with no salary; the alert digest (`lib/job-alerts-service.ts`) keeps a job whose high figure reaches it,
+plus jobs with no salary. A posting with a single figure ("$130,000/yr" stores no high figure) is therefore
+left out of a $100k+ alert although /jobs lists it. The two alert forms used to explain this under the field;
+that note was removed with the other field hints (2026-10-12), so the digest rule should now match /jobs.
+It changes which jobs real subscribers receive, so ship it on its own. `tests/regressions/p2-seeker-ux-static.test.ts`
+pins the current divergence and fails when it is fixed.
+
+**2.19 Employer analytics returns any job's clicks (security).** Found open on `origin/main` on 2026-10-12.
+`app/api/employer/analytics/route.ts` builds `jobIds` from the `jobId` query parameter without checking it
+against the employer's own jobs (`const jobIds = jobIdFilter ? [jobIdFilter] : ...`), so an employer with a live
+post can read the daily apply-click series of any other job. `days` is also unbounded. Keep only owned ids
+(intersect with `employerJobs`) and clamp `days`. Small; ship it on its own branch.
+
+**2.20 Dashboard assumes every account has an email.** `app/api/dashboard/route.ts` passes `user.email!` to
+`prisma.jobAlert.count` (an undefined email drops the filter and counts every active alert) and to
+`prisma.emailLead.findUnique` (throws). Low risk; guard both.
+
+**2.21 Coverage claims on navigation cards.** Found in the 2026-10-12 cleanup: metro pages print "All 50 states"
+and the landing pages "Browse every state" on cards that may not reach every state, and the /jobs/locations
+"Travel / Locum tenens" tile merges two categories the site keeps separate. Check against live data and reword.
 
 ## 3. Decisions (DECISION)
 
@@ -202,6 +218,15 @@ Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
 | D17 | The post-promo pricing copy you have not read yet | Both pricing surfaces switch themselves at `config.promoEndsAt` with no deploy (2.1), to wording written here, not approved by you. /pricing then runs the eyebrow "Per post or by the month" over the heading "Three ways to post", carries a new FAQ "Do all prices include the same features?" and ends its browser title with "Posts From $199". /for-employers stamps its receipt card "No bidding, no contracts" and labels its bento "Flat Per-Post Pricing · From $199". Approve it, or send replacement wording before 2027-01-01 | `app/pricing/pricing-page-copy.ts`, `app/for-employers/for-employers-copy.ts` |
 | D18 | The /resources card for the salary guide | Its description now reads "Interactive calculator by state, experience, setting, and specialty, with the BLS national median and state medians from live postings." It names no edition year and claims no completeness, because the figures refresh daily and a state below the publishing gate prints none. Approve that line, or name an edition instead | `app/resources/page.tsx` |
 | D19 | What a post that costs nothing is told at the till | House rule: never print $0. So the preview shows the price as "Free" and captions a plan post "Included in your Employer plan.", and /post-job/checkout shows "Free" over the caption "no payment needed" whenever the server quote says this post needs no payment, whether that is the promo or a plan slot. Approve both captions, or word them differently | `app/post-job/preview/page.tsx`, `app/post-job/checkout/page.tsx` |
+
+### 3.4b Left from the 2026-10-12 text cleanup
+
+| # | Question | Today | Where |
+|---|---|---|---|
+| D20 | Two alert buttons on every landing page | Specialty, setting, state and metro pages show a hero "Set Alert" button and a sidebar "Create Alert" card. Keep both, or one? | `lib/pseo/category-landing-template.tsx`, the landing pages |
+| D21 | Repeated benefit cards on 15 landing pages | The bento grids repeat themselves (hospital "Acute Inpatient Care" and "Acute Care", part-time "Work-Life Balance" twice). Removing them means re-laying out each grid | `app/jobs/<category>/page.tsx` |
+| D22 | Newsletter cadence | The blog sidebar says "delivered weekly", the exit popup checkbox says "monthly". Which is true? | `components/blog/**`, `components/ExitIntentPopup.tsx` |
+| D23 | Marketing blocks kept for your call | Employer dashboard "Hiring Tips" card, the /job-alerts "Why Set Up Alerts?" card, and the /for-programs "How It Works" steps (they describe emailing us although the page has a self-serve builder) | `components/employer/EmployerDashboardClient.tsx`, `app/job-alerts/page.tsx`, `app/for-programs/page.tsx` |
 
 ### 3.5 Audit-era items (enterprise audit)
 
@@ -280,6 +305,8 @@ tests fail until every side agrees:
 - 2.2, 2.4 to 2.7, 2.10: done in this release (see Shipped).
 - 2.11 Guest Easy Apply: closed by your decision; applying requires an account.
 - 2.12 Job rows that stored a state but no town: the planner shipped as `planStateOnlyTownBackfill` in `scripts/indexing-fixes/lib/planners.ts`, `scripts/indexing-fixes/backfill-job-locations.ts` runs it in every pass, and the 2026-10-01 pass found no such row left.
+- 2.17 Dashes in email subjects and previews: every subject, preview and preheader in `lib/email-service.ts` now uses a colon, a comma or two sentences (plain UI copy sweep, 2026-10-12).
+- Explanatory text sweep (2026-10-12, same branch): field hints, page narration, label restatements, duplicated lines and filler removed across the public site at the owner's request; legal, billing, consent, provenance and accuracy text kept. Follow-ups: 2.18, 2.21, D20 to D23.
 - Prisma migrations: applied, most recently `20260928000000_job_content_changed_at` on 2026-09-30.
 
 ## Shipped since 2026-08-16

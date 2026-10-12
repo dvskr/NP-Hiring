@@ -261,7 +261,7 @@ export default function ExitIntentPopup() {
                     Don&apos;t Miss Your Dream {brand.niche.short} Job
                 </h3>
                 <p className="text-sm text-center mb-6" style={{ color: 'var(--text-secondary)' }}>
-                    Get the latest {brand.niche.short} positions delivered to your inbox daily. No spam, only jobs.
+                    Get the latest {brand.niche.short} positions delivered to your inbox daily.
                 </p>
 
                 {isConfirmed ? (
@@ -349,7 +349,7 @@ export default function ExitIntentPopup() {
                             )}
                         </button>
                         <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>
-                            Free forever. Unsubscribe anytime.
+                            Unsubscribe anytime.
                         </p>
                     </form>
                 )}

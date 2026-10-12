@@ -69,19 +69,19 @@ export const metadata: Metadata = {
 };
 
 const ASSUMPTIONS: readonly string[] = [
-  `Scoring is a count, not a formula: one point per answered question whose option appears in that specialty's profile, divided by the questions you answered. Nothing is weighted and nothing is hidden: each result card lists the dimensions it matched and the ones it did not.`,
-  `The specialty profiles are editorial descriptions of how each specialty is usually practiced across ${DIMENSION_LIST}. They are not survey data, and individual roles vary enormously; a hospital-based role in a normally clinic-based specialty is a real job, not an error.`,
-  `The ${SPECIALTY_PROFILES.length} specialties come from this site's category taxonomy, which is also what the job listings are tagged with, so every result links to real inventory rather than to a page we invented for the quiz.`,
+  `Scoring is a count, not a formula: one point per answered question whose option appears in that specialty's profile, divided by the questions you answered. Nothing is weighted. Each result card lists the dimensions it matched and the ones it did not.`,
+  `The specialty profiles are editorial descriptions of how each specialty is usually practiced across ${DIMENSION_LIST}. They are not survey data, and individual roles vary widely. A hospital-based role in a normally clinic-based specialty is still a real job.`,
+  `The ${SPECIALTY_PROFILES.length} specialties are the same categories the job listings are tagged with, so every result links to real openings.`,
   `Where a premium band is shown it is the band already published in our salary guide, expressed as a percentage over the all-${brand.niche.short} median of ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}) and applied to that median as an estimate.`,
   `Ties are broken by a fixed order (broadest specialties first), so the same answers always produce the same ranking.`,
   `Answers stay in your browser. Nothing is submitted, stored, or emailed.`,
 ];
 
 const EXCLUSIONS: readonly string[] = [
-  'Aptitude. This tool has no knowledge of what you are good at, and it makes no attempt to guess.',
+  'Aptitude. The tool does not know what you are good at.',
   'Your certification and your program. Population-focused certification is what actually gates most of these specialties, and the tool does not know which one you hold or could pursue.',
-  'What your state allows. Practice authority, collaborative-agreement requirements, and transition-to-practice periods are state law; the licensure checker covers them separately.',
-  'Certification requirements and certifying bodies. They differ per specialty and we would rather send you to the specialty salary page that carries the sourced ones than risk naming the wrong board here.',
+  'What your state allows. Practice authority, collaborative-agreement requirements, and transition-to-practice periods are state law. The licensure checker covers them separately.',
+  'Certification requirements and certifying bodies. They differ by specialty. The specialty salary pages list the sourced ones.',
   'Local demand and pay. Both are geographic, and the salary guide and category pages answer them from live postings instead of from a quiz.',
 ];
 
@@ -92,19 +92,19 @@ const FAQS = [
   },
   {
     q: 'Is this an aptitude or career-aptitude test?',
-    a: `No, and it is deliberately built so it cannot be mistaken for one. It compares the preferences you entered against how each specialty is usually practiced and reports how many of them line up. It has no information about your clinical strengths, your training, your certification, or your circumstances, so it cannot tell you what you would be good at, only which specialties look like what you said you wanted.`,
+    a: `No. It compares the preferences you entered against how each specialty is usually practiced and reports how many of them line up. It has no information about your clinical strengths, your training, your certification, or your circumstances, so it cannot tell you what you would be good at, only which specialties look like what you said you wanted.`,
   },
   {
     q: 'Where do the specialty descriptions come from?',
-    a: `They are editorial descriptions written for this tool, listing the population, acuity, setting, autonomy, procedural content, continuity, schedule, and payment mix each specialty normally involves. They are not a survey and they are not sourced to one, which is why the tool shows you which answers matched instead of presenting a confidence score. Individual jobs vary a great deal within any specialty.`,
+    a: `They are editorial descriptions written for this tool, listing the population, acuity, setting, autonomy, procedural content, continuity, schedule, and payment mix each specialty normally involves. They are not survey data, so the tool shows you which answers matched instead of a confidence score. Individual jobs vary a great deal within any specialty.`,
   },
   {
     q: 'Do higher-paying specialties show up higher in the results?',
-    a: `No. Pay plays no part in the ranking at all; the sort is purely how many of your answers a specialty matches. Where our salary guide publishes a premium band for a specialty we show it on the card, because it is useful context once a specialty is already on your list, but it never moves anything up or down.`,
+    a: `No. Pay plays no part in the ranking. The sort is purely how many of your answers a specialty matches. Where our salary guide publishes a premium band for a specialty we show it on the card, because it is useful context once a specialty is already on your list, but it never moves anything up or down.`,
   },
   {
     q: 'What should I do with the result?',
-    a: `Treat the top ${TOP_MATCH_COUNT} as a shortlist to investigate, not an answer. Open the live roles for each one and read actual postings; the day-to-day work, the call expectations, and the pay basis show up there in a way no quiz can capture. Then check the specialty pay pages, and check what your state allows before you commit to a path that assumes independent practice.`,
+    a: `Treat the top ${TOP_MATCH_COUNT} as a shortlist to investigate, not an answer. Open the live roles for each one and read actual postings. The day-to-day work, the call expectations, and the pay basis show up there in a way no quiz can capture. Then check the specialty pay pages, and check what your state allows before you commit to a path that assumes independent practice.`,
   },
 ] as const;
 
@@ -186,7 +186,6 @@ export default function SpecialtyFinderPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="How the matching works"
-            intro="Every part of the score is visible on the page, because a quiz that hides its scoring is indistinguishable from one that made the answer up."
             assumptions={ASSUMPTIONS}
             exclusions={EXCLUSIONS}
             sources={[

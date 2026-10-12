@@ -215,52 +215,21 @@ describe('P2 #3 — the salary field does not claim parity with the /jobs filter
     }
   });
 
-  it('tells the visitor the digest and the jobs board will not agree', () => {
-    // Sharing SALARY_FILTER_BUCKETS makes the LABELS identical; it does
-    // not make the two queries identical. The hint has to say so, because
-    // the digest's "View All Matching Jobs" button links straight at
-    // /jobs?salaryMin= (buildFilteredJobsUrl).
+  it('carries no explanatory note under the field, and points at the matcher fix instead', () => {
+    // Owner call 2026-10-12: form fields carry no explanatory hints. The
+    // floor-only gap (a "$130,000/yr" posting normalizes to max:null, so a
+    // $100k+ alert omits it) is fixed in the digest matcher, tracked as
+    // docs/PENDING_WORK.md 2.18, not explained to the visitor.
     for (const src of [publicForm, manageForm]) {
-      expect(src).toMatch(/won&apos;t be identical/);
-      expect(src).toMatch(/top of (its|a) posted range/);
+      expect(src).not.toContain('min-salary-note');
+      expect(src).not.toMatch(/won&apos;t be identical/);
+      expect(src).toContain('docs/PENDING_WORK.md');
     }
   });
 
-  it('never describes the jobs board as the stricter rule — it is backwards', () => {
-    // The two matchers diverge in BOTH directions:
-    //   board  : min >= X OR max >= X  → drops salary-less, keeps floor-only
-    //   digest : max >= X OR both null → keeps salary-less, drops floor-only
-    // Calling the board "stricter" tells a seeker the board would show them
-    // FEWER jobs than the alert, when for the floor-only case — the case the
-    // alert silently drops — the board shows them MORE.
-    for (const src of [publicForm, manageForm]) {
-      const hint = src.slice(
-        src.indexOf('min-salary-note'),
-        src.indexOf('won&apos;t be identical'),
-      );
-      expect(hint).not.toMatch(/stricter/i);
-    }
-  });
-
-  it('discloses the floor-only gap, which is what a seeker actually loses', () => {
-    // A job posted "$130,000/yr" normalizes to {min:130000, max:null}
-    // (job-normalizer.ts ANNUAL branch, no second capture group), so the
-    // digest's `normalizedMaxSalary >= X` clause never matches it and a
-    // $100k+ alert silently omits a job that clears the bar. Exposing
-    // minSalary in the UI made this dormant matcher gap user-visible, so
-    // the copy has to name it rather than imply the job is included.
-    // JSX wraps the sentence across source lines, so compare on collapsed
-    // whitespace rather than pinning one particular line break.
-    for (const src of [publicForm, manageForm]) {
-      const flat = src.replace(/\s+/g, ' ');
-      expect(flat).toMatch(/single figure rather than a range/);
-      expect(flat).toMatch(/are missed/);
-    }
-  });
-
-  it('pins the normalizer behaviour the floor-only disclosure depends on', () => {
-    // If the ANNUAL branch ever starts inferring a max, the disclosure above
-    // becomes stale and should be revisited.
+  it('pins the normalizer behaviour behind the floor-only gap', () => {
+    // If the ANNUAL branch ever starts inferring a max, the gap closes on
+    // its own and PENDING_WORK 2.18 should be revisited.
     // Behavioural since the 2026-09-28 extractor rewrite (indexing audit
     // CQ-02) folded the period branches into one table: a single annual
     // figure still yields NO max.
@@ -268,11 +237,11 @@ describe('P2 #3 — the salary field does not claim parity with the /jobs filter
     expect(extractSalary('$120,000 annually')).toMatchObject({ min: 120000, max: null, period: 'year' });
   });
 
-  it('pins the known divergence — if these are aligned, update the copy above', () => {
+  it('pins the known divergence — if these are aligned, close PENDING_WORK 2.18', () => {
     // Deliberately asserts the CURRENT (divergent) clauses. Aligning the
-    // digest matcher with the board filter is the real fix and lives
-    // outside this package; when it lands this test fails, which is the
-    // signal to rewrite the two hints that currently disclose the gap.
+    // digest matcher with the board filter is the real fix (2.18); when it
+    // lands this test fails, which is the signal to update it and the two
+    // form comments that describe the gap.
     const boardFilter = read('lib/filters.ts');
     const digestMatcher = read('lib/job-alerts-service.ts');
 
@@ -450,7 +419,11 @@ describe('P2 #23 — destructive seeker mutations use the shared confirm dialog'
     const src = read('app/my-applications/page.tsx');
     const dialog = src.slice(src.indexOf('const requestWithdraw'), src.indexOf('confirmLabel'));
     expect(dialog).not.toMatch(/stops seeing you/i);
-    expect(dialog).toMatch(/employer still sees this application/i);
+    expect(dialog).toMatch(/employer still sees your application/i);
+    expect(dialog).toMatch(/marked “Withdrawn”, with your name on it/);
+    // Plain sentences in the modal: no colon or semicolon chaining.
+    expect(dialog).not.toMatch(/\$\{jobTitle\}: the employer/);
+    expect(dialog).not.toMatch(/removed from it; a cover letter/);
   });
 
   it('the withdraw dialog does not overstate the scrub', () => {

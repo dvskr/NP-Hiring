@@ -115,10 +115,7 @@ export default function SecurityPage() {
 
                 <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '32px' }}>
                     {brand.name} (operated by <strong>{brand.legal.entityName}</strong>) handles personal information
-                    that matters: resumes, contact details, and sometimes credentialing identifiers. This page explains
-                    how we protect that data, which vendors we share it with, and what to do if you notice a security
-                    issue. It is intentionally specific. If a customer or auditor needs more detail, the documents
-                    linked below support every claim with code and policy references.
+                    that matters: resumes, contact details, and sometimes credentialing identifiers.
                 </p>
 
                 <Practice icon={<Lock size={20} />} title="Encryption everywhere">
@@ -142,7 +139,7 @@ export default function SecurityPage() {
                         Analytics and advertising cookies default to <strong>denied</strong> and load
                         only after the visitor explicitly accepts them. Vercel Speed Insights waits for
                         the same consent. Visitors from the EEA, UK, Switzerland, Canada, Brazil, and
-                        Australia see a strict opt-in banner; visitors in implied-consent regions
+                        Australia see a strict opt-in banner. Visitors in implied-consent regions
                         keep one-click control through the &quot;Cookie Settings&quot; link in the footer
                         and the <Link href="/do-not-sell" style={linkStyle}>Do Not Sell or Share</Link>{' '}
                         page.
@@ -165,7 +162,7 @@ export default function SecurityPage() {
                         deletions are reversible. After the grace period, a daily cron job hard-purges
                         the record and the matching Supabase Auth identity. Inactive accounts that
                         have not logged in for 23 months receive a warning email and are then
-                        soft-deleted; the total dormancy lifecycle to hard deletion is approximately 25 months.
+                        soft-deleted. The total dormancy lifecycle to hard deletion is approximately 25 months.
                     </p>
                 </Practice>
 
@@ -198,11 +195,7 @@ export default function SecurityPage() {
                 >
                     Compliance posture
                 </h2>
-                <p style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.75 }}>
-                    We are committed to good privacy hygiene today and, progressively, to formal
-                    attestations as the platform grows.
-                </p>
-                <div style={{ ...clayCard, padding: '20px 24px', marginTop: '12px' }}>
+                <div style={{ ...clayCard, padding: '20px 24px' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                         <thead>
                             <tr style={{ textAlign: 'left', color: '#6B7F8A', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
@@ -214,7 +207,7 @@ export default function SecurityPage() {
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>GDPR / UK GDPR</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    Aligned. A DPIA is on file; see the <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>, §11 to §16.
+                                    Aligned. A DPIA is on file. See the <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>, §11 to §16.
                                 </td>
                             </tr>
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
@@ -233,19 +226,19 @@ export default function SecurityPage() {
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>SOC 2</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    In progress. A Type 1 attestation is planned when our first enterprise customer requires it. Most controls are already in place; see the audit summary below.
+                                    In progress. A Type 1 attestation is planned when our first enterprise customer requires it. Most controls are already in place. See the audit summary below.
                                 </td>
                             </tr>
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>HIPAA</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    Not applicable. We do not process Protected Health Information. Job seekers may voluntarily disclose health-related items in resumes; that content is not parsed for clinical data.
+                                    Not applicable. We do not process Protected Health Information. Job seekers may voluntarily disclose health-related items in resumes. That content is not parsed for clinical data.
                                 </td>
                             </tr>
                             <tr>
                                 <td style={{ padding: '12px 8px 12px 0' }}>CASL / PIPEDA / LGPD</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    Strict opt-in for marketing email; double opt-in on job alerts. Sub-processors disclosed.
+                                    Strict opt-in for marketing email. Double opt-in on job alerts. Sub-processors disclosed.
                                 </td>
                             </tr>
                         </tbody>
@@ -311,8 +304,8 @@ export default function SecurityPage() {
                 </ul>
                 <p style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.75, marginTop: '12px' }}>
                     Please do not exfiltrate data, run automated denial-of-service tests, or test against
-                    accounts that are not yours. We do not currently run a paid bug bounty program;
-                    we acknowledge contributions in writing.
+                    accounts that are not yours. We do not currently run a paid bug bounty program.
+                    We acknowledge contributions in writing.
                 </p>
 
                 <div

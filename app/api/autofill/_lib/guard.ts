@@ -35,12 +35,12 @@ export async function checkAutofillAiFeature(
 export function aiGatewayErrorResponse(err: AiGatewayError, label: string): NextResponse {
     if (err.code === 'rate_limited') {
         return NextResponse.json(
-            { error: `${label} rate limit exceeded — please try again shortly.` },
+            { error: 'Too many requests. Please wait a moment and try again.' },
             { status: 429 },
         );
     }
     if (err.code === 'provider_not_configured') {
-        return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
+        return NextResponse.json({ error: 'This AI feature is temporarily unavailable.' }, { status: 503 });
     }
-    return NextResponse.json({ error: `${label} failed — please try again.` }, { status: 502 });
+    return NextResponse.json({ error: `${label} failed. Please try again.` }, { status: 502 });
 }

@@ -106,7 +106,7 @@ const EVERGREEN_FAQS = [
     // guarantee the live inventory falsified (review items 1a–1d). Restated
     // as the screening commitment — what the pipeline actually does.
     q: 'Who sees my job posting?',
-    a: `Your listing goes live on a board built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles (listings are screened at ingest and removed when flagged out of scope), so it sits alongside relevant work rather than competing with unrelated listings. It is also highlighted in daily job-alert emails to subscribed candidates and receives its own indexed SEO page on Google.`,
+    a: `Your listing goes live on a board built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened and removed when flagged out of scope, so yours sits alongside relevant work rather than competing with unrelated listings. It is also highlighted in daily job-alert emails to subscribed candidates and receives its own indexed SEO page on Google.`,
   },
   {
     q: 'How do candidates apply?',
@@ -209,8 +209,8 @@ export default async function ForEmployersPage() {
                     return ONLY when the WP-1 inventory-invariant test is
                     green over the live inventory. */}
                 No bidding wars, no per-click billing, and no surprise invoices. This board is built exclusively for{' '}
-                {brand.niche.long} and {brand.niche.adjective} nursing roles (listings are screened at ingest and
-                removed when flagged out of scope), so your posting is not buried under unrelated listings.
+                {brand.niche.long} and {brand.niche.adjective} nursing roles. Listings are screened and removed when
+                flagged out of scope, so your posting is not buried under unrelated listings.
               </p>
 
               {/* CTA Buttons — No Sugar */}
@@ -456,12 +456,9 @@ export default async function ForEmployersPage() {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Why Switch
           </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '44px' }}>
             How We Compare
           </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '440px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-            An honest look at what you get, with no cherry-picking.
-          </p>
 
           {/* Split: Table (left) + CTA Card (right) */}
           <div className="emp-compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px', alignItems: 'start' }}>
@@ -527,9 +524,9 @@ export default async function ForEmployersPage() {
                   we do not want a stale cell here read as a factual claim. */}
               <p style={{ fontSize: '11.5px', color: '#64748B', lineHeight: 1.6, margin: 0, padding: '14px 24px 18px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
                 <strong style={{ color: '#475569' }}>Limited</strong> means the capability exists but is restricted,
-                costs extra, or varies by plan. The {brand.name} column describes what this product does today, with
-                its limits stated. The Indeed and LinkedIn columns describe their publicly documented standard
-                offerings; those change often, so check their sites before deciding. Spot something out of date?{' '}
+                costs extra, or varies by plan. The Indeed and LinkedIn columns describe their
+                publicly documented standard offerings, which change often, so check their sites before deciding.
+                Spot something out of date?{' '}
                 <a href={`mailto:${brand.email.contact}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>
                   Tell us
                 </a>{' '}
@@ -612,12 +609,9 @@ export default async function ForEmployersPage() {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Free Hiring Resources
           </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
             Guides for Hiring Teams
           </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-            The hiring process, the job description, and ready-to-customize templates, all free whether you post here or not.
-          </p>
 
           <div className="emp-resources-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             {[
@@ -677,8 +671,7 @@ export default async function ForEmployersPage() {
             What should you pay a {brand.niche.long}?
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '520px', margin: '0 auto 32px', lineHeight: 1.6 }}>
-            Median and 25th to 75th percentile posted pay by state, from live listings. Set your range before you
-            write the posting, not after the first week of silence.
+            Median and 25th to 75th percentile posted pay by state, from live listings.
           </p>
 
           <EmployerBenchmarkWidget compact />

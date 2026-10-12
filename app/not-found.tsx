@@ -78,15 +78,16 @@ const STATE_LINKS: ReadonlyArray<{ name: string; slug: string }> = [
     { name: 'Arizona', slug: 'arizona' },
 ];
 
-const POPULAR_PAGES: ReadonlyArray<{ href: string; label: string; blurb: string }> = [
-    { href: '/jobs', label: 'All jobs', blurb: 'Search and filter the full board' },
-    { href: '/salary-guide', label: 'Salary guide', blurb: 'Pay by state and specialty' },
-    { href: '/jobs/locations', label: 'Jobs by location', blurb: 'Browse states and cities' },
-    { href: '/blog', label: 'Career guides', blurb: 'Licensure, interviews, negotiation' },
-    { href: '/resources', label: 'Resources & tools', blurb: 'Guides, checkers, calculators' },
-    { href: '/job-alerts', label: 'Job alerts', blurb: 'New matches by email' },
-    { href: '/companies', label: 'Employers', blurb: 'Browse hiring organizations' },
-    { href: '/post-job', label: 'Post a job', blurb: 'For employers and recruiters' },
+/* Labels only, no per-link blurbs (owner call, 2026-10-12). */
+const POPULAR_PAGES: ReadonlyArray<{ href: string; label: string }> = [
+    { href: '/jobs', label: 'All jobs' },
+    { href: '/salary-guide', label: 'Salary guide' },
+    { href: '/jobs/locations', label: 'Jobs by location' },
+    { href: '/blog', label: 'Career guides' },
+    { href: '/resources', label: 'Resources & tools' },
+    { href: '/job-alerts', label: 'Job alerts' },
+    { href: '/companies', label: 'Companies' },
+    { href: '/post-job', label: 'Post a job' },
 ];
 
 /* ═══ Clay Tokens ═══ */
@@ -149,7 +150,7 @@ export default function NotFound() {
 
                     <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 24px' }}>
                         The link may be out of date, or the job it pointed to may have been filled or
-                        expired. Search the board or choose one of the paths below.
+                        expired.
                     </p>
 
                     {/* Plain GET form — works without JavaScript, submits to the
@@ -251,10 +252,7 @@ export default function NotFound() {
                                     textDecoration: 'none',
                                 }}>
                                     <ChevronRight size={16} color="#94A3B8" style={{ flexShrink: 0 }} />
-                                    <span style={{ flex: 1, minWidth: 0 }}>
-                                        <span style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{p.label}</span>
-                                        <span style={{ display: 'block', fontSize: '12px', color: '#64748B' }}>{p.blurb}</span>
-                                    </span>
+                                    <span style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{p.label}</span>
                                 </Link>
                             </li>
                         ))}

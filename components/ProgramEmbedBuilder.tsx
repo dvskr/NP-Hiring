@@ -171,7 +171,6 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
             display: 'grid',
             gridTemplateColumns: '1fr 1.5fr 0.9fr',
             gap: '16px',
-            marginBottom: '16px',
           }}
           className="pd-builder-grid"
         >
@@ -277,18 +276,6 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
             </select>
           </div>
         </div>
-
-        <p
-          style={{
-            margin: 0,
-            fontSize: '12.5px',
-            color: '#7A6A62',
-            lineHeight: 1.5,
-          }}
-        >
-          The widget below updates as you type. Select your state, enter your
-          program name, and copy the snippet at the bottom.
-        </p>
       </div>
 
       {/* Live preview */}
@@ -391,17 +378,8 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
         >
           {embedSnippet}
         </code>
-        <p
-          style={{
-            margin: '12px 0 0',
-            fontSize: '12px',
-            color: '#7A6A62',
-            lineHeight: 1.5,
-          }}
-        >
-          Paste this anywhere on your career-services page. No login or
-          API key is required. The jobs refresh automatically.
-        </p>
+        {/* No install note here: the How To Install section right after
+            the builder on /for-programs says it (owner call, 2026-10-12). */}
       </div>
 
       {/* Fallback link — for the small number of .edu sites that set a
@@ -438,10 +416,9 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
             lineHeight: 1.55,
           }}
         >
-          A small number of universities block all embedded content through a
-          strict Content-Security-Policy. If the iframe above appears
-          blank or fails to load, link your students to this page
-          instead. It filters to {stateName} {brand.niche.short} roles.
+          If the iframe above appears blank or fails to load, link your
+          students to this page instead. It filters to {stateName}{' '}
+          {brand.niche.short} roles.
         </p>
         <a
           href={fallbackUrl}

@@ -1047,7 +1047,6 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   <DollarSign size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>{stateName} Salary Guide</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Posted pay and practice environment</div>
                   </div>
                 </Link>
                 <Link href="/jobs/locations"
@@ -1056,7 +1055,6 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   <MapPin size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All Locations</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Every state and city with open roles</div>
                   </div>
                 </Link>
                 <Link href="/jobs"
@@ -1065,7 +1063,6 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   <Users size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All {NP} Jobs</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Nationwide listings</div>
                   </div>
                 </Link>
               </div>

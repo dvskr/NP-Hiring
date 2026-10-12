@@ -205,7 +205,7 @@ export default function FPAGuidePage() {
     },
     {
       question: `Does Full Practice Authority affect ${brand.niche.short} pay?`,
-      answer: `It changes what you are able to do, which in turn shapes what you can be paid for. This board does not publish a national premium figure, because no verifiable one exists in our data. A state's practice rules decide whether, and after how much experience, you can practice without a collaborative or supervisory agreement, whether independent contract or telehealth work there means arranging one, and whether a collaborator's fee comes out of your revenue. Those rules differ within each tier, so read your state's entry rather than relying on its classification. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which publish a median computed from live postings in that state once enough employers disclose pay.`
+      answer: `It changes what you are able to do, which in turn shapes what you can be paid for. A state's practice rules decide whether, and after how much experience, you can practice without a collaborative or supervisory agreement, whether independent contract or telehealth work there means arranging one, and whether a collaborator's fee comes out of your revenue. Those rules differ within each tier, so read your state's entry rather than relying on its classification. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which publish a median computed from live postings in that state once enough employers disclose pay.`
     },
     {
       question: `Can ${brand.niche.short}s prescribe controlled substances in all states?`,
@@ -213,7 +213,7 @@ export default function FPAGuidePage() {
     },
     {
       question: `What is the Nurse Licensure Compact (NLC) and how does it help ${brand.niche.short}s?`,
-      answer: `The NLC lets a registered nurse hold one multistate RN license that is recognized across member states. It covers the RN license underpinning your credential, not the APRN license itself (${brand.niche.short}s still apply for APRN licensure state by state), but it removes the RN endorsement step, which is often the slowest part of adding a state. Most states have joined and Washington D.C. has not, but membership moves as legislatures act and several jurisdictions sit between enactment and implementation, so we do not publish a count here. Check the current roster on the NCSBN compact map at ${NLC_MAP_URL} for each state you plan to cover, and plan extra lead time wherever the compact does not reach.`
+      answer: `The NLC lets a registered nurse hold one multistate RN license that is recognized across member states. It covers the RN license underpinning your credential, not the APRN license itself (${brand.niche.short}s still apply for APRN licensure state by state), but it removes the RN endorsement step, which is often the slowest part of adding a state. Most states have joined and Washington D.C. has not. Membership moves as legislatures act, and several jurisdictions sit between enactment and implementation. Check the current roster on the NCSBN compact map at ${NLC_MAP_URL} for each state you plan to cover, and plan extra lead time wherever the compact does not reach.`
     },
   ];
 
@@ -316,7 +316,7 @@ export default function FPAGuidePage() {
                 What is Full Practice Authority (FPA)?
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Full Practice Authority is one of three practice environments AANP uses to classify state law for {brand.niche.short}s ({brand.niche.descriptor}s). The cards below give AANP&apos;s meaning for each environment.
+                Full Practice Authority is one of three practice environments AANP uses to classify state law for {brand.niche.short}s ({brand.niche.descriptor}s).
               </p>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                 {WITHIN_TIER_NOTE} <strong>Read your state&apos;s entry in the <Link href={SCOPE_EXPLORER_PATH} className="hover:underline" style={{ color: 'var(--color-primary)' }}>scope of practice explorer</Link></strong> before deciding how you can practice there.
@@ -390,7 +390,7 @@ export default function FPAGuidePage() {
                 What Practice Authority Changes About Your Earning Options
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Practice authority is a legal classification, not a pay scale. It does not set your salary; it sets which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). What changes from state to state is the structure around that number:
+                Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). What changes from state to state is the structure around that number:
               </p>
               <ul className="space-y-3 text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you need an agreement to practice on your own.</strong> That turns on your state&apos;s own rules, not only its tier. Many Full Practice states allow independent practice once you are licensed, but several first require a transition period of collaborative or supervised practice. Most Reduced and Restricted states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience.</span></li>
@@ -422,7 +422,7 @@ export default function FPAGuidePage() {
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Some telehealth companies handle multi-state licensing and credentialing for you</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Where the patient&apos;s state requires a collaborative agreement, supervision or a transition period, that requirement applies to your practice there, and some states require your collaborator to hold a license in that state</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Pandemic-era telehealth waivers have mostly expired, so verify current requirements</span></li>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>The Nurse Licensure Compact can remove the RN endorsement step in member states, but not the APRN application. Membership and implementation dates change, so confirm each state against the <a href={NLC_MAP_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>NCSBN compact map</a> rather than a count published on a jobs board</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>The Nurse Licensure Compact can remove the RN endorsement step in member states, but not the APRN application. Membership and implementation dates change, so confirm each state against the <a href={NLC_MAP_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>NCSBN compact map</a></span></li>
               </ul>
               <p className="text-sm mt-4" style={{ color: 'var(--text-secondary)' }}>
                 Browse <Link href="/jobs/remote" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>remote {brand.niche.short} jobs</Link> or <Link href="/jobs/telehealth" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>telehealth positions</Link> that handle multi-state licensing.
@@ -466,12 +466,9 @@ export default function FPAGuidePage() {
 
           {/* CTA */}
           <div className="text-center py-8">
-            <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
               Find {brand.niche.short} Jobs in Your State
             </h2>
-            <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Browse open {brand.niche.descriptor} positions in every practice environment.
-            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/jobs" className="inline-block bg-pink-700 text-white px-8 py-3 rounded-lg font-medium hover:bg-pink-800 transition-colors">Browse All Jobs</Link>
               <Link href="/salary-guide" className="inline-block bg-white px-8 py-3 rounded-lg font-medium border border-pink-200 hover:bg-pink-50 transition-colors" style={{ color: 'var(--color-primary)' }}>View Salary Guide</Link>

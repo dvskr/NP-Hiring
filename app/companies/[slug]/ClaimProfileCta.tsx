@@ -26,8 +26,8 @@ import { createClient } from '@/lib/supabase/client';
  * THE PROMPT IS ONE SENTENCE (thin plan, CO deletions). It used to be four,
  * on every profile, above the fold of the page's least-used affordance. The
  * explanation of what a claim does and does not entitle an employer to now
- * sits where it is actually needed: next to the form fields for someone who
- * has opened the form, and in the confirmation after they submit. The prompt
+ * sits in the confirmation after they submit. The form fields carry no hint
+ * text (owner call, 2026-10-12). The prompt
  * text itself arrives as a prop so the wording lives in the one copy module
  * the copy lint covers (lib/pseo/listing-narrative.ts COMPANY_CLAIM_CTA)
  * rather than in a client bundle that cannot import it.
@@ -138,10 +138,9 @@ export default function ClaimProfileCta({ companyId, companyName, intro, profile
                             Claim submitted
                         </h2>
                         <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-                            Our team reviews claims by hand, and nothing on this page changes until a
-                            reviewer approves it. If they do, a &ldquo;Claimed by employer&rdquo; badge
-                            appears here. An approved claim does not let an employer edit the listings
-                            or the pay figures above; those stay derived from its live postings.
+                            Your claim is pending review. Once it is approved, a &ldquo;Claimed by
+                            employer&rdquo; badge appears on this page. Listings and pay figures still
+                            come from live job postings.
                         </p>
                     </div>
                 </div>
@@ -215,13 +214,6 @@ export default function ClaimProfileCta({ companyId, companyName, intro, profile
                                     disabled={phase === 'submitting'}
                                     style={{ ...fieldStyle, resize: 'vertical' }}
                                 />
-                                <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                                    We compare your account email&apos;s domain to this employer&apos;s website as one
-                                    signal among several. A mismatch is not a rejection; agencies, health
-                                    systems, and small practices routinely send mail from another domain.
-                                    This profile is built from public job postings, and a reviewer checks
-                                    every claim by hand before anything on it changes.
-                                </p>
                             </div>
 
                             {phase === 'error' && errorMsg && (

@@ -153,7 +153,7 @@ export default function ApplicantsTab() {
             console.error('Error fetching applicants:', err);
             setApplicants([]);
             setJobs([]);
-            setFetchError('We couldn’t load your applicants. This is a loading problem, not an empty pipeline.');
+            setFetchError('Your applicants are still there. Select Retry to load them again.');
         } finally {
             setLoading(false);
         }
@@ -459,11 +459,8 @@ export default function ApplicantsTab() {
                         ...cardBase, padding: '48px 24px', textAlign: 'center',
                     }}>
                         <User size={36} style={{ color: '#B0BEC5', margin: '0 auto 12px' }} />
-                        <p style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+                        <p style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>
                             No applicants {statusFilter !== 'all' ? `with status "${getStatusInfo(statusFilter).label}"` : 'yet'}
-                        </p>
-                        <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>
-                            Applicants will appear here when candidates apply to your jobs.
                         </p>
                     </div>
                 ) : (

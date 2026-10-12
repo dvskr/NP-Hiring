@@ -12,7 +12,6 @@ import {
   inputStyle, inputWithRightIcon, labelStyle, eyeBtnStyle,
   errorBannerStyle, linkStyle,
 } from './authTokens';
-import { brand } from '@/config/brand';
 
 type Role = 'seeker' | 'employer';
 
@@ -157,18 +156,19 @@ export default function LoginContent() {
       <h1 style={{
         fontSize: '28px', fontWeight: 800, color: '#1A2E35',
         fontFamily: 'var(--font-lora), Georgia, serif',
-        lineHeight: 1.25, letterSpacing: '-0.5px', margin: '0 0 4px',
+        lineHeight: 1.25, letterSpacing: '-0.5px',
+        margin: role !== 'employer' && applyingToJob ? '0 0 4px' : '0 0 14px',
         textAlign: 'center',
       }}>
         Sign in
       </h1>
-      <p style={{ fontSize: '14px', color: '#5A6B76', marginBottom: '14px', textAlign: 'center' }}>
-        {role === 'employer'
-          ? `Manage your job listings and find top ${brand.niche.short} talent.`
-          : applyingToJob
-            ? 'Sign in to continue your application. We will bring you back to the job.'
-            : 'Access your saved jobs, applications, and profile.'}
-      </p>
+      {/* Only the apply return gets a line under the heading; the generic
+          role taglines were removed (owner call, 2026-10-12). */}
+      {role !== 'employer' && applyingToJob && (
+        <p style={{ fontSize: '14px', color: '#5A6B76', marginBottom: '14px', textAlign: 'center' }}>
+          Sign in to continue your application. We will bring you back to the job.
+        </p>
+      )}
 
       {/* ═══ ROLE TOGGLE ═══ */}
       <div style={{

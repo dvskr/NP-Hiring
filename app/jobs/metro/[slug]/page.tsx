@@ -9,7 +9,7 @@ import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
 import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
-import { formatCount, pluralize, truncateOnWord } from '@/lib/display-text';
+import { pluralize, truncateOnWord } from '@/lib/display-text';
 import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
 import { getListingFacts, metroScopeWhere, MIX_MIN_POSTINGS_HUB, type ListingFacts } from '@/lib/pseo/listing-facts';
 import {
@@ -335,17 +335,15 @@ function buildSnapshotRows(metro: MetroCity, facts: ListingFacts, state: StateFi
   return rows;
 }
 
-interface GettingStartedStep { step: string; title: string; text: string }
-
-function buildSteps(metro: MetroCity, facts: ListingFacts, licensureNote: string): GettingStartedStep[] {
-  const apply = facts.total >= 1
-    ? `Browse the ${formatCount(facts.total, 'open position')} in the ${metro.city} area above and set an alert for new listings.`
-    : `Set an alert for ${metro.city} and we will email you when a role is posted.`;
+/**
+ * The licensure card. It used to be step 01 of two; the "Apply" step
+ * ("Browse the N open positions ... above and set an alert") repeated the
+ * listings, the alert card and the zero-job sentence, so it is gone (owner
+ * call, 2026-10-12), and a lone card carries no step number.
+ */
+function buildLicensureText(metro: MetroCity, licensureNote: string): string {
   const authority = `${metro.state} has ${metro.practiceAuthority} Practice Authority.`;
-  return [
-    { step: '01', title: 'Licensure', text: licensureNote ? `${authority} ${firstSentence(licensureNote)}.` : authority },
-    { step: '02', title: 'Apply', text: apply },
-  ];
+  return licensureNote ? `${authority} ${firstSentence(licensureNote)}.` : authority;
 }
 
 const bentoEyebrow: CSSProperties = {
@@ -622,12 +620,10 @@ export default async function MetroLandingPage({ params }: PageProps) {
           <p style={{ ...bentoEyebrow, color: '#E86C2C' }}>
             Why This Market
           </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: INK, textAlign: 'center', marginBottom: '8px' }}>Why {brand.niche.short}s Choose {metro.city}
+          {/* No subtitle: the authority tier is the first card's title and the
+              count is in the hero and the listings heading (owner call, 2026-10-12). */}
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: INK, textAlign: 'center', marginBottom: '48px' }}>Why {brand.niche.short}s Choose {metro.city}
           </h2>
-          <p style={{ fontSize: '15px', color: BODY, textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-            {metro.practiceAuthority} practice authority
-            {facts.total >= 1 ? ` · ${formatCount(facts.total, 'open role')} right now` : ''}
-          </p>
 
           <div className="metro-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Practice Authority (8, or 12 alone) + listing recency (4) */}
@@ -762,8 +758,8 @@ export default async function MetroLandingPage({ params }: PageProps) {
                     <p style={{ fontSize: '13px', color: BODY, margin: '10px 0 0', lineHeight: 1.6 }}>{settingsSentence}</p>
                   )}
                   <p style={{ fontSize: '11px', color: '#A09080', margin: '18px 0 0', lineHeight: 1.6 }}>
-                    Counted from live listings on this board and refreshed hourly, not from a national survey.
-                    {facts.benchmark ? ' Pay figures use only listings that post an annual salary, so they lag the full market.' : ''}
+                    Counted from live listings on this board and refreshed hourly.
+                    {facts.benchmark ? ' Pay figures use only listings that post an annual salary.' : ''}
                   </p>
                 </div>
               )}
@@ -801,7 +797,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '4px', padding: '14px 16px', borderRadius: '14px', background: 'rgba(190,24,93,0.05)' }}>
                 <Shield size={16} style={{ color: ACCENT, flexShrink: 0, marginTop: '2px' }} />
                 <p style={{ fontSize: '12px', color: MUTED, margin: 0, lineHeight: 1.6 }}>
-                  Practice authority follows the state, not the metro. {metro.state} is a{' '}
+                  Practice authority is set by the state. {metro.state} is a{' '}
                   {metro.practiceAuthority === 'Full' ? 'full' : metro.practiceAuthority.toLowerCase()}-practice
                   {' '}jurisdiction on the AANP State Practice Environment map. Editorial content for this metro was last reviewed {METRO_DATA_LAST_REVIEWED}.
                 </p>
@@ -820,14 +816,9 @@ export default async function MetroLandingPage({ params }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: INK, textAlign: 'center', marginBottom: '40px' }}>
             Getting Started in {metro.city}
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {buildSteps(metro, facts, licensureNote).map(r => (
-              <div key={r.step} className="metro-card" style={{ ...clayCard, padding: '28px 24px', borderTop: `3px solid ${ACCENT}` }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: INK, marginBottom: '8px' }}>{r.title}</h3>
-                <p style={{ fontSize: '13px', color: BODY, lineHeight: 1.6, margin: 0 }}>{r.text}</p>
-              </div>
-            ))}
+          <div className="metro-card" style={{ ...clayCard, padding: '28px 24px', borderTop: `3px solid ${ACCENT}`, maxWidth: '640px', margin: '0 auto' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: INK, marginBottom: '8px' }}>Licensure</h3>
+            <p style={{ fontSize: '13px', color: BODY, lineHeight: 1.6, margin: 0 }}>{buildLicensureText(metro, licensureNote)}</p>
           </div>
         </section>
       </div>

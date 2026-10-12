@@ -148,7 +148,7 @@ function LicensureGuidesBand({ guides }: { guides: readonly LicenseGuideState[] 
                     {NP} license guides by state
                 </h2>
                 <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-                    One guide per jurisdiction: practice authority, Nurse Licensure Compact status, the board you apply through and the current {NP} job market there. Grouped by the AANP practice-authority classification.
+                    Grouped by the AANP practice-authority classification.
                 </p>
                 {AUTHORITY_ORDER.map((tier) => {
                     const states = guides.filter((s) => s.authority === tier);
@@ -294,14 +294,10 @@ export default async function BlogIndexPage({
                     </p>
                     <h1 className="font-lora" style={{
                         fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
-                        color: '#1A2E35', marginBottom: '16px',
+                        color: '#1A2E35', marginBottom: '32px',
                     }}>
                         {NP} Career Guides
                     </h1>
-                    <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
-                        Data-driven guides, salary negotiation tips, state licensure rules and career strategies
-                        for {brand.niche.descriptor}s.
-                    </p>
 
                     {/* Stat Pills */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginBottom: '0' }}>

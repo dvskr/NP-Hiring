@@ -160,8 +160,8 @@ export default async function TestimonialsPage() {
                         }}
                     >
                         Every testimonial below was written by an employer with a real posting account on{' '}
-                        {brand.name} and is published only because that employer explicitly opted in. We do not
-                        solicit, script, edit, or incentivize them, and we do not invent them.
+                        {brand.name} and is published only because that employer explicitly opted in. They are
+                        unsolicited, unscripted, unedited, and unpaid.
                     </p>
                 </header>
 
@@ -250,7 +250,7 @@ export default async function TestimonialsPage() {
                         </li>
                         <li>
                             <strong>Consent is a hard requirement.</strong> A submission without an explicit
-                            public-display opt-in is rejected outright rather than stored for later.
+                            public-display opt-in is rejected and not stored.
                         </li>
                         <li>
                             <strong>You choose how you are named.</strong> Full name, first name with a last initial,
@@ -258,8 +258,8 @@ export default async function TestimonialsPage() {
                             widened, and an account email is never shown as attribution.
                         </li>
                         <li>
-                            <strong>Wording is theirs.</strong> We publish the text as submitted. We do not rewrite
-                            it, and nothing is offered in exchange for a positive one.
+                            <strong>Wording is theirs.</strong> We publish the text as submitted, and nothing is
+                            offered in exchange for a positive one.
                         </li>
                         <li>
                             <strong>Removal on request.</strong> Email{' '}
@@ -270,8 +270,8 @@ export default async function TestimonialsPage() {
                         </li>
                     </ul>
                     <p style={{ fontSize: '13.5px', color: MUTED_TEXT, margin: '14px 0 0', lineHeight: 1.7 }}>
-                        Our wider rules on what we will and will not publish, including our standing ban on
-                        fabricated people, quotes, and reviews, are in the{' '}
+                        Our wider publishing rules, including the ban on fabricated people, quotes, and reviews,
+                        are in the{' '}
                         <Link href="/editorial-policy" style={linkStyle}>
                             editorial policy
                         </Link>

@@ -635,7 +635,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         headlineLine2={isStandaloneRole ? 'Jobs' : brand.niche.short}
         headlineSub={isStandaloneRole ? `in ${stateName}.` : `jobs in ${stateName}.`}
         stats={heroStats}
-        description={`${noun} positions in ${stateName}. ${config.heroSubtitle}.`}
+        description={`${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
         ctaHref={`/jobs/${config.slug}`}
         secondaryCtaLabel={`All ${stateName} Jobs`}
@@ -782,9 +782,6 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           {/* P2 #15: the answer-summary block the Speakable schema points at. */}
           <div className="pseo-clay-split" style={{ ...clayCard, padding: 0, overflow: 'hidden', marginBottom: '20px' }}>
             <div id="answer-summary" data-speakable="true" style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>
-                {config.label} in {stateName}
-              </h3>
               <p className="font-lora" style={{ fontSize: '15px', lineHeight: 1.7, color: '#3A4A53', margin: 0 }}>
                 {narrative}
               </p>

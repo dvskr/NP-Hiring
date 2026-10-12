@@ -45,7 +45,6 @@ import {
   postedPaySentence,
   type LocationSpreadPlace,
 } from '@/components/seo/pseo';
-import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { getListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
 import {
   NATIONAL_MEDIAN_SENTENCE,
@@ -322,7 +321,6 @@ export default async function PartTimePage({ searchParams }: PageProps) {
         heroAlt={`Part-time ${brand.niche.short} leaving clinic`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('part-time') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Part-Time"
         headlineLine2={brand.niche.short}
         headlineSub="jobs on your terms."

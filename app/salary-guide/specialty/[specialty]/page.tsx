@@ -670,7 +670,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                     lede={`Medians over active postings with disclosed, non-estimated salary on ${brand.name}, published only for states with at least ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, none contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`}
                 >
                     <ClayTable
-                        caption={`Ranked on the gated per-state median over ${brand.name} postings that disclose annual pay, not on posting volume.`}
+                        caption={`Ranked by each state's median over ${brand.name} postings that disclose annual pay, not by posting volume.`}
                         columns={['State', { label: 'Posted median', numeric: true }, { label: 'Postings', numeric: true }, 'Open roles']}
                         rows={topStates.map((s) => [
                             <Link key="guide" href={`/salary-guide/${s.slug}`} style={clayLink}>{s.state}</Link>,
@@ -696,7 +696,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                     lede={`Medians across live ${page.label.toLowerCase()} postings with disclosed salary on this board, grouped by the experience each posting asks for and published only when a bucket clears the ${BENCHMARK_MIN_POSTINGS} posting, ${BENCHMARK_MIN_EMPLOYERS} employer minimum with no employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of it. Buckets overlap.`}
                 >
                     <ClayTable
-                        caption={`Gated medians per experience bucket over ${brand.name} postings that disclose annual pay.`}
+                        caption={`Medians per experience bucket over ${brand.name} postings that disclose annual pay.`}
                         columns={['Bucket', { label: 'Posted median', numeric: true }, { label: 'Postings', numeric: true }]}
                         rows={experienceBands.map((band) => [
                             band.label,
@@ -730,7 +730,6 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 <Band
                     eyebrow="Related guides"
                     title={`Guides readers compare with ${page.label}`}
-                    lede="Adjacent roles, grouped by the care they deliver and the certification path they share."
                 >
                     <div className="sp-grid">
                         {related.map((sibling, i) => (
@@ -779,7 +778,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                         index={3}
                         icon={BarChart3}
                         title="Pay across every state"
-                        desc="The board-wide medians, the states that publish one, and how the publishing gate works."
+                        desc="The board-wide medians, every state with a median of its own, and the sample each one needs."
                         action="Open the salary guide"
                         headingLevel={3}
                     />

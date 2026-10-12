@@ -323,7 +323,7 @@ describe('buildSettingStateNarrative leaves practice authority to the practice c
         expect(buildSettingStateNarrative.length).toBe(6);
         const text = buildSettingStateNarrative('remote', 'Texas', 'TX', 0, 0, 3);
         expect(text).toMatch(/^Remote .* listings for Texas/);
-        expect(text).toContain('The 3 active postings reflect');
+        expect(text).toContain('currently lists 3 active postings for Texas');
         // The retired parameters change nothing.
         expect(buildSettingStateNarrative('remote', 'Texas', 'TX', 140, 9, 3)).toBe(text);
     });

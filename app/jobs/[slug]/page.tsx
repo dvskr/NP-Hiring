@@ -659,13 +659,14 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
 
   // Dead-asset purge (2026-07): explore-card art moved off the retired
   // Supabase bucket onto lucide icons (local-asset pattern, b371b37).
-  const actionCards: { href: string; label: string; sub: string; icon: LucideIcon }[] = [
-    { href: '/jobs', label: 'Browse All Jobs', sub: 'View all open positions', icon: MapPin },
-    { href: '/jobs/remote', label: 'Remote Jobs', sub: 'Work from anywhere', icon: Laptop },
-    { href: '/jobs/telehealth', label: 'Telehealth Jobs', sub: `Virtual ${brand.niche.adjective} care`, icon: Video },
-    { href: '/jobs/travel', label: 'Travel Jobs', sub: 'Explore new locations', icon: Plane },
-    { href: '/jobs/outpatient', label: 'Outpatient Jobs', sub: 'Clinic-based roles', icon: Building2 },
-    { href: '/jobs/inpatient', label: 'Inpatient Jobs', sub: 'Hospital settings', icon: BedDouble },
+  // Label only, no description line under it (owner call, 2026-10-12).
+  const actionCards: { href: string; label: string; icon: LucideIcon }[] = [
+    { href: '/jobs', label: 'Browse All Jobs', icon: MapPin },
+    { href: '/jobs/remote', label: 'Remote Jobs', icon: Laptop },
+    { href: '/jobs/telehealth', label: 'Telehealth Jobs', icon: Video },
+    { href: '/jobs/travel', label: 'Travel Jobs', icon: Plane },
+    { href: '/jobs/outpatient', label: 'Outpatient Jobs', icon: Building2 },
+    { href: '/jobs/inpatient', label: 'Inpatient Jobs', icon: BedDouble },
   ];
 
   return (
@@ -707,7 +708,6 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
           <p style={{ fontSize: '15px', color: '#7A6A62', marginBottom: '0', lineHeight: 1.6 }}>
             {subtext}
           </p>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Browse the {brand.niche.short} positions open now.</p>
         </div>
 
         {/* Action Cards — 3×2 Grid */}
@@ -730,8 +730,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
                 }}>
                   <card.icon size={22} />
                 </span>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', marginBottom: '3px' }}>{card.label}</div>
-                <div style={{ fontSize: '11px', color: '#7A6A62' }}>{card.sub}</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35' }}>{card.label}</div>
               </a>
             ))}
           </div>
@@ -739,7 +738,6 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
 
         {/* Salary Guide CTA */}
         <div style={{ ...clayCard, padding: '28px 32px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>While you are here, review the latest {brand.niche.short} salary data:</p>
           <Link href="/salary-guide"
             className="gone-cta"
             style={{
@@ -802,7 +800,7 @@ export default async function JobPage({ params }: JobPageProps) {
         badge: 'Position Closed',
         badgeGradient: 'linear-gradient(135deg, #6b7280, #4b5563)',
         heading: 'This Position Is No Longer Listed',
-        subtext: 'The source that listed this job no longer carries it.',
+        subtext: 'The original posting has been taken down.',
         title: expiredTitle,
         employer: expiredEmployer,
       });

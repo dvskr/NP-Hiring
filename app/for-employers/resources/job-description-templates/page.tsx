@@ -96,7 +96,7 @@ export default function JdTemplateLibraryPage() {
               {brand.niche.short} Job Description Templates
             </h1>
             <p className="text-lg md:text-xl text-pink-100">
-              {JD_TEMPLATES.length} setting-specific, bullet-structured skeletons with bracketed prompts marking every detail to customize. The same starters are built into the post-job form.
+              {JD_TEMPLATES.length} setting-specific, bullet-structured skeletons with bracketed prompts marking every detail to customize.
             </p>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function JdTemplateLibraryPage() {
               <Link href="/for-employers/resources/job-description-guide" className="underline font-medium" style={{ color: 'var(--color-primary)' }}>
                 job-description guide
               </Link>{' '}
-              recommends. Text in [square brackets] is a prompt for you to replace with your actual specifics, such as visit lengths, EHR, schedule, and salary range. The shared qualification, compensation, and application sections stay consistent across all {JD_TEMPLATES.length} templates so the scope-of-practice language is reviewed once. Inside the post-job form, the same templates fill in your practice name and location from the fields you have already entered.
+              recommends. Text in [square brackets] is a prompt for you to replace with your actual specifics, such as visit lengths, EHR, schedule, and salary range.
             </p>
           </div>
 

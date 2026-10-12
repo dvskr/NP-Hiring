@@ -336,7 +336,7 @@ export default function HowToHireGuidePage() {
               <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Benchmarking the Salary</h2>
             </div>
             <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-              The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). {TYPICAL_BAND} is the typical W-2 comparison band this board&apos;s salary pipeline uses as a sanity check, but pay varies meaningfully by state, setting, and specialty. Anchoring to a national number alone will leave your range uncompetitive in some markets and overpriced in others.
+              The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). {TYPICAL_BAND} is a typical W-2 comparison band, but pay varies meaningfully by state, setting, and specialty. Anchoring to a national number alone will leave your range uncompetitive in some markets and overpriced in others.
             </p>
             <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
               Use the live salary guide to see disclosed-pay data for your state before setting the range, and post the range in the job description. A transparent range settles pay expectations before either side invests in interviews.

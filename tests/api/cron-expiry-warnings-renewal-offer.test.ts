@@ -227,7 +227,7 @@ describe('after the promo with paid posting on', () => {
         expect(postExpiryHtml('repeat')).toContain(`Renew for $${config.renewalPrice} (Save 40% vs. your next new post at $${config.postingPrice})`);
         expect(postExpiryHtml('first')).toContain(`Renew for $${config.renewalPrice} (Save 10% vs. your next new post at $${config.introPrice})`);
         // A renewal only moves the end date, within the cap.
-        expect(postExpiryHtml('repeat')).toContain('a renewal does not add unlocks or InMails.');
+        expect(postExpiryHtml('repeat')).toContain('carry over. A renewal does not add unlocks or InMails.');
         expect(postExpiryHtml('repeat')).toContain(`Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`);
     });
 

@@ -526,10 +526,9 @@ function SettingsPageInner() {
             Desktop (>= sm): single row with title left, actions right. */}
         <div className="settings-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4" style={{ marginBottom: '16px' }}>
           <div style={{ minWidth: 0 }}>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>
               Settings
             </h1>
-            <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>Manage your profile and preferences.</p>
           </div>
           <div className="settings-header-actions flex items-center gap-[10px] flex-wrap">
             <button
@@ -670,14 +669,12 @@ function SettingsPageInner() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <ToggleRow
                   label="Open to offers"
-                  description="Let employers know you're available"
                   icon={<Briefcase size={16} style={{ color: '#F472B6' }} />}
                   checked={profile.openToOffers}
                   onChange={(v) => updateProfile({ openToOffers: v })}
                 />
                 <ToggleRow
                   label="Profile visible to employers"
-                  description="Hide your profile from employer searches"
                   icon={<Eye size={16} style={{ color: '#818CF8' }} />}
                   checked={profile.profileVisible}
                   onChange={(v) => updateProfile({ profileVisible: v })}
@@ -695,51 +692,10 @@ function SettingsPageInner() {
                 <FileText size={20} style={{ color: '#F59E0B' }} />
                 Resume
               </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-                Upload your resume to apply to jobs quickly.
-              </p>
 
-              {/* AI autofill explainer — surfaces the feature so users
-                  don't blow past the modal that pops after upload. */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  padding: '14px 16px',
-                  marginBottom: '16px',
-                  borderRadius: '14px',
-                  background: 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(244,114,182,0.08))',
-                  border: '1px solid rgba(139,92,246,0.2)',
-                }}
-              >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '10px',
-                    background: 'rgba(139,92,246,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <span style={{ fontSize: '18px' }}>✨</span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>
-                    AI extracts your profile from this resume
-                  </p>
-                  <p style={{ fontSize: '12px', color: '#4A5E6A', margin: 0, lineHeight: 1.5 }}>
-                    After you upload, we read your name, contact details, NPI/DEA, every state license,
-                    certifications, education, and work history, then show you a review screen.
-                    Choose <strong>Fill empty fields</strong> to keep what you already have, or{' '}
-                    <strong>Replace everything</strong> to use the resume as the source of truth.
-                    Nothing is saved until you confirm.
-                  </p>
-                </div>
-              </div>
-
+              {/* No AI autofill explainer here (owner call, 2026-10-12): the
+                  review modal that opens after upload explains both options
+                  and that nothing is saved until the user chooses. */}
               <ResumeUpload
                 currentResumeUrl={profile.resumeUrl}
                 resumeParseStatus={profile.resumeParseStatus}
@@ -1646,10 +1602,7 @@ function SettingsPageInner() {
               )}
 
               {/* Password reset */}
-              <div style={{ paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '10px' }}>
-                  We&apos;ll send you an email with a link to reset your password.
-                </p>
+              <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
                 <button
                   onClick={handlePasswordReset}
                   disabled={sendingReset}
@@ -1917,15 +1870,14 @@ export default function SettingsPage() {
 }
 
 // ── Toggle row component ──
+// Label only: no description line under it (owner call, 2026-10-12).
 function ToggleRow({
   label,
-  description,
   icon,
   checked,
   onChange,
 }: {
   label: string
-  description: string
   icon: React.ReactNode
   checked: boolean
   onChange: (value: boolean) => void
@@ -1940,10 +1892,7 @@ function ToggleRow({
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {icon}
-        <div>
-          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{description}</div>
-        </div>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
       </div>
       <button
         type="button"

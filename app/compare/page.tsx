@@ -24,11 +24,11 @@ const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(
 )}&type=page`;
 
 export const metadata: Metadata = {
-    title: `${brand.name} vs Other ${brand.niche.short} Job Boards: Honest Comparisons`,
+    title: `${brand.name} vs Other ${brand.niche.short} Job Boards: Side-by-Side Comparisons`,
     description: `Side-by-side comparisons of ${brand.name} with Indeed, the AANP JobCenter, and ENP Network for ${brand.niche.descriptor} job searches and hiring. Every claim dated and checked against each competitor's own pages.`,
     openGraph: {
         title: `${brand.name} vs Other ${brand.niche.short} Job Boards`,
-        description: `Honest, dated, source-checked comparisons, including what each competitor does better than we do.`,
+        description: `Dated, source-checked comparisons, including what each competitor does better than we do.`,
         images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} comparisons` }],
     },
     twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
@@ -74,12 +74,9 @@ export default function CompareHubPage() {
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/10 mb-6">
                             <Scale className="w-8 h-8" aria-hidden="true" />
                         </div>
-                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold">
                             {brand.name} vs other {brand.niche.short} job boards
                         </h1>
-                        <p className="text-lg md:text-xl text-pink-100">
-                            Honest comparisons: what each competitor does well, where we differ, and how to choose.
-                        </p>
                     </div>
                 </div>
             </section>
@@ -98,12 +95,12 @@ export default function CompareHubPage() {
                             <ul className="space-y-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
                                 <li>
                                     Every factual claim about a competitor was checked against that competitor&apos;s own public
-                                    pages on {COMPARE_REVIEW_DATE_LABEL}; each page lists exactly which pages were reviewed.
+                                    pages on {COMPARE_REVIEW_DATE_LABEL}. Each comparison lists the pages reviewed.
                                 </li>
-                                <li>Claims we could not verify on that date were left out, even the ones that flatter us.</li>
-                                <li>Each page opens with what the competitor does well, because a comparison that skips that step is an advertisement.</li>
+                                <li>Claims we could not verify on that date were left out.</li>
+                                <li>Each comparison opens with what the competitor does well.</li>
                                 <li>
-                                    Competitor names are used only to identify the services compared; all trademarks belong to
+                                    Competitor names are used only to identify the services compared. All trademarks belong to
                                     their owners, and none of these companies is affiliated with {brand.name}.
                                 </li>
                                 <li>
@@ -148,9 +145,6 @@ export default function CompareHubPage() {
 
                     {/* CTA */}
                     <div className="text-center py-8">
-                        <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-                            Or skip the reading and judge the product directly. Browsing is open, and no account is required.
-                        </p>
                         <Link
                             href="/jobs"
                             className="inline-block bg-pink-700 text-white px-8 py-3 rounded-lg font-medium hover:bg-pink-800 transition-colors"

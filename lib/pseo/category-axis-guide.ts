@@ -2,7 +2,7 @@
  * lib/pseo/category-axis-guide.ts
  *
  * Per-axis editorial for the category surfaces: LAND-L5 ("How to use this
- * page") on the 45 landings and CC-K7 ("How this page is built") on the
+ * page") on the 45 landings and CC-K7 (also "How to use this page") on the
  * category x city pages. Written ONCE PER AXIS, not per category, so the
  * largest axis (specialty, 17 of 45 landings) stays under the 50% sibling
  * boilerplate line while every category still gets a paragraph.
@@ -70,7 +70,7 @@ export interface CityAxisGuideContext {
   labelSentence: string;
 }
 
-/** CC-K7: one "How this page is built" paragraph per axis, city aware. */
+/** CC-K7: one "How to use this page" paragraph per axis, city aware. */
 const CITY_AXIS_GUIDE: Readonly<Record<CategoryAxis, (ctx: CityAxisGuideContext) => string>> = {
   jobType: ({ city, label }) =>
     `This page lists active postings in ${city} whose job type matches ${label}. Employers set the job type, so confirm schedule, benefits and contract terms in each listing before applying.`,

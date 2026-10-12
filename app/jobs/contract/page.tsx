@@ -45,7 +45,6 @@ import {
   postedPaySentence,
   type LocationSpreadPlace,
 } from '@/components/seo/pseo';
-import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { getListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
 import {
   NATIONAL_MEDIAN_SENTENCE,
@@ -326,7 +325,6 @@ export default async function ContractPage({ searchParams }: PageProps) {
         heroAlt={`Contract ${brand.niche.short} signing agreement`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('contract') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Contract"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, fixed-term roles."

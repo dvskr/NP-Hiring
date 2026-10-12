@@ -372,7 +372,6 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
         heroAlt={`VA ${brand.niche.short} Veterans Affairs medical center`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('va') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="VA"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, federal benefits."
@@ -493,8 +492,7 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose VA & Government</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Service</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>VA roles are federal appointments, and each vacancy announcement states the benefits and loan repayment it authorizes.</p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Service</h2>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>

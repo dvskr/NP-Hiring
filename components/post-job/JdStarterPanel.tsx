@@ -162,11 +162,6 @@ const sx = {
     color: '#1A2E35',
     margin: 0,
   } satisfies React.CSSProperties,
-  heroSub: {
-    fontSize: '12px',
-    color: '#8A9BA6',
-    margin: 0,
-  } satisfies React.CSSProperties,
   pathGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -765,19 +760,18 @@ function EmptyStateHero({
   onAi: () => void;
   onBlank: () => void;
 }) {
+  // Path cards carry no description line (owner call, 2026-10-12); only the
+  // limit-reached status shows under the AI card.
   const aiDesc = aiLimitReached
     ? 'Daily AI limit reached. Browse a skeleton or write manually. Resets at midnight CT.'
-    : 'A fresh long-form draft in about 30 seconds, built from your form inputs and a short facts summary.';
+    : undefined;
 
   return (
     <div style={sx.hero}>
       <div style={{ ...sx.heroHeader, justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Wand2 size={18} style={{ color: '#BE185D' }} />
-          <div>
-            <h3 style={sx.heroTitle}>How would you like to start your job description?</h3>
-            <p style={sx.heroSub}>AI is the recommended path. You can switch at any time.</p>
-          </div>
+          <h3 style={sx.heroTitle}>How would you like to start your job description?</h3>
         </div>
         <UsageBadge usage={usage} />
       </div>
@@ -796,7 +790,6 @@ function EmptyStateHero({
         <PathCard
           icon={<PenSquare size={20} />}
           label="Write from scratch"
-          desc="Open the editor and start typing. You can switch later."
           onClick={onBlank}
         />
       </div>
@@ -824,7 +817,7 @@ function PathCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  desc: string;
+  desc?: string;
   onClick: () => void;
   highlight?: boolean;
   disabled?: boolean;
@@ -856,7 +849,7 @@ function PathCard({
     >
       <span style={sx.pathIcon}>{icon}</span>
       <h4 style={sx.pathLabel}>{label}</h4>
-      <p style={sx.pathDesc}>{desc}</p>
+      {desc && <p style={sx.pathDesc}>{desc}</p>}
     </button>
   );
 }
@@ -1009,12 +1002,7 @@ function TemplatePicker({
     <div style={sx.modalBackdrop} onClick={onClose} role="dialog" aria-modal="true">
       <div style={{ ...sx.modalCard, maxWidth: 900 }} onClick={(e) => e.stopPropagation()}>
         <div style={sx.modalHeader}>
-          <div>
-            <h3 style={sx.modalTitle}>Browse {brand.niche.short} skeleton starters</h3>
-            <p style={{ ...sx.heroSub, marginTop: 4 }}>
-              {builtInTotal} built-in bullet skeletons plus your saved templates. The [bracketed] prompts show where to fill in real specifics.
-            </p>
-          </div>
+          <h3 style={sx.modalTitle}>Browse {brand.niche.short} skeleton starters</h3>
           <button type="button" style={sx.closeBtn} onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
 
@@ -1094,11 +1082,7 @@ function TemplatePicker({
                 padding: '14px 16px', borderRadius: 12, border: '1px dashed rgba(0,0,0,0.12)',
                 background: '#FAFAFA', fontSize: 12, color: '#64748B', textAlign: 'center',
               }}>
-                {canSaveCurrent ? (
-                  <>You have not saved any templates yet. Click <strong>Save current draft to my templates</strong> above to reuse your current job description across postings.</>
-                ) : (
-                  <>Once you have a job description draft (50+ characters), click <strong>Save current draft to my templates</strong> above to keep a reusable copy.</>
-                )}
+                You have not saved any templates yet.
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
@@ -1468,12 +1452,7 @@ function AiDialog({
     <div style={sx.modalBackdrop} onClick={onClose} role="dialog" aria-modal="true">
       <div style={sx.modalCard} onClick={(e) => e.stopPropagation()}>
         <div style={sx.modalHeader}>
-          <div>
-            <h3 style={sx.modalTitle}>{title}</h3>
-            <p style={{ ...sx.heroSub, marginTop: '4px' }}>
-              The more real facts you provide, the less the AI has to invent. Tone and length tune the voice.
-            </p>
-          </div>
+          <h3 style={sx.modalTitle}>{title}</h3>
           <button type="button" style={sx.closeBtn} onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
 
@@ -1490,9 +1469,6 @@ function AiDialog({
                   {factsSummary.length} chars {factsSummary.length < FACTS_SUMMARY_MIN ? `(${FACTS_SUMMARY_MIN - factsSummary.length} more for AI grounding)` : '· ready'}
                 </span>
               </div>
-              <p style={{ fontSize: 12, color: '#64748B', marginBottom: '8px', lineHeight: 1.4 }}>
-                Tell the AI which specifics you have so it does not invent them: patient mix, schedule, EHR, compensation range, team size, and anything distinctive about your practice. Bullet points are fine.
-              </p>
               <textarea
                 value={factsSummary}
                 onChange={(e) => setFactsSummary(e.target.value)}
@@ -1559,9 +1535,6 @@ function AiDialog({
                   {mustHaves.length} of 8
                 </span>
               </div>
-              <p style={{ fontSize: 12, color: '#64748B', marginBottom: '8px', lineHeight: 1.4 }}>
-                Specific qualifications or preferences to surface in the Required and Preferred sections. Enter one per line or separate them with commas.
-              </p>
               <textarea
                 value={mustHavesText}
                 onChange={(e) => setMustHavesText(e.target.value)}
@@ -1640,10 +1613,6 @@ function SaveTemplateDialog({
   const canSubmit = labelValid && summaryValid && !submitting;
 
   const title = mode === 'rename' ? 'Rename saved template' : 'Save as template';
-  const description =
-    mode === 'rename'
-      ? 'Change the name or summary for this saved template. The body stays the same.'
-      : 'Save your current draft to your template library. You can reuse it across future job postings.';
   const submitLabel = mode === 'rename' ? 'Save changes' : 'Save template';
 
   const handleSubmit = async () => {
@@ -1657,10 +1626,7 @@ function SaveTemplateDialog({
     <div style={sx.modalBackdrop} onClick={onClose} role="dialog" aria-modal="true">
       <div style={{ ...sx.modalCard, maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
         <div style={sx.modalHeader}>
-          <div>
-            <h3 style={sx.modalTitle}>{title}</h3>
-            <p style={{ ...sx.heroSub, marginTop: 4 }}>{description}</p>
-          </div>
+          <h3 style={sx.modalTitle}>{title}</h3>
           <button type="button" style={sx.closeBtn} onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
 

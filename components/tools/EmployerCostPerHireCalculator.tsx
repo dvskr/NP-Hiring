@@ -87,7 +87,8 @@ const num = (raw: string): number => parsePlainAmount(raw) ?? 0;
 interface FieldProps {
     id: string;
     label: string;
-    hint: string;
+    /** Rendered under the field only when the label alone does not carry it. */
+    hint?: string;
     value: string;
     prefix?: string;
     suffix?: string;
@@ -96,7 +97,7 @@ interface FieldProps {
 }
 
 function NumberField({ id, label, hint, value, prefix, suffix, step = 1, onChange }: FieldProps) {
-    const hintId = `${id}-hint`;
+    const hintId = hint ? `${id}-hint` : undefined;
     return (
         <div>
             <label htmlFor={id} style={labelStyle}>{label}</label>
@@ -124,9 +125,11 @@ function NumberField({ id, label, hint, value, prefix, suffix, step = 1, onChang
                     </span>
                 )}
             </div>
-            <p id={hintId} style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>
-                {hint}
-            </p>
+            {hint && (
+                <p id={hintId} style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>
+                    {hint}
+                </p>
+            )}
         </div>
     );
 }
@@ -205,29 +208,24 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '14px 16px', borderRadius: '13px', background: '#EEF2FF', border: '1.5px solid rgba(67,56,202,0.18)', marginBottom: '22px' }}>
                 <ShieldCheck size={16} color="#4338CA" aria-hidden="true" style={{ flexShrink: 0, marginTop: '1px' }} />
                 <p style={{ fontSize: '12.5px', color: '#312E81', margin: 0, lineHeight: 1.6 }}>
-                    <strong>We sell job postings, so here is how this stays honest.</strong> The only prices filled in
-                    for you are ours, and they are the prices our checkout actually charges. We publish no benchmark
-                    for what a sponsored click, an agency fee, or a time-to-fill &ldquo;usually&rdquo; costs. Every
-                    figure in the other two columns is one you enter from your own invoices, and a column with nothing
-                    entered says so instead of showing a zero.
+                    <strong>We sell job postings.</strong> Only our prices are filled in, and they are the prices you
+                    pay at checkout. Enter every figure for the other two channels from your own invoices. A channel
+                    you leave empty shows &ldquo;not comparable&rdquo; instead of a zero.
                 </p>
             </div>
 
             {/* Hiring plan */}
-            <h3 style={groupHeading}>Your hiring plan</h3>
-            <p style={groupNote}>Applies to every channel: the same roles filled three different ways.</p>
+            <h3 style={{ ...groupHeading, marginBottom: '12px' }}>Your hiring plan</h3>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
                     id="cph-roles"
                     label="Roles to fill"
-                    hint="How many openings this plan covers."
                     value={draft.roles}
                     onChange={set('roles')}
                 />
                 <NumberField
                     id="cph-hires"
                     label="Hires per role"
-                    hint="Usually 1. Raise it if one posting reliably fills several seats."
                     value={draft.hiresPerRole}
                     onChange={set('hiresPerRole')}
                 />
@@ -257,7 +255,6 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                     id="cph-flat-mode"
                     className="tool-control"
                     value={flatFeeMode}
-                    aria-describedby="cph-flat-mode-hint"
                     onChange={(event) => setSelectedMode(event.target.value as FlatFeeMode)}
                     style={controlStyle}
                 >
@@ -265,17 +262,12 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                         <option key={mode} value={mode}>{label}</option>
                     ))}
                 </select>
-                <p id="cph-flat-mode-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>
-                    {promoPhase
-                        ? `The promo prices every post at zero until it ends; the two ${FLAT_FEE_PRICING.ladderStartsLabel} options price the same roles on the per-post ladder or on the Employer plan.`
-                        : 'Price the same roles on the per-post ladder or on the Employer plan.'}
-                </p>
             </div>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
                     id="cph-flat-applicants"
                     label="Applicants per role you expect"
-                    hint={`Starts at ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} because that is how many candidate unlocks a posting includes. It is a plan feature, not a benchmark. Replace it with what your postings actually draw.`}
+                    hint={`Starts at ${FLAT_FEE_PRICING.candidateUnlocksPerPosting}, the number of candidate unlocks a posting includes, not an expected response. Replace it with what your postings actually draw.`}
                     value={draft.flatFeeApplicantsPerRole}
                     onChange={set('flatFeeApplicantsPerRole')}
                 />
@@ -283,7 +275,7 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                     <NumberField
                         id="cph-plan-months"
                         label="Months on the Employer plan"
-                        hint={`Starts at ${DEFAULT_PLAN_MONTHS} because that is our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. That is a product fact, not how long anyone subscribes. There are no renewals to price, because ${PLAN_NO_RENEWALS_NOTE}.`}
+                        hint={`Starts at ${DEFAULT_PLAN_MONTHS}, our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. There are no renewals to price, because ${PLAN_NO_RENEWALS_NOTE}.`}
                         value={draft.planMonths}
                         suffix="months"
                         onChange={set('planMonths')}
@@ -320,13 +312,11 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
             )}
 
             {/* CPC */}
-            <h3 style={{ ...groupHeading, marginTop: '20px' }}>Sponsored / cost-per-click, from your invoice</h3>
-            <p style={groupNote}>Leave at zero to leave this channel out of the comparison.</p>
+            <h3 style={{ ...groupHeading, marginTop: '20px', marginBottom: '12px' }}>Sponsored / cost-per-click, from your invoice</h3>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
                     id="cph-cpc-spend"
                     label="Sponsored spend per role"
-                    hint="Total you spent on paid clicks for one comparable role. Read it off the invoice rather than estimating."
                     value={draft.cpcSpendPerRole}
                     prefix="$"
                     step={50}
@@ -335,20 +325,18 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                 <NumberField
                     id="cph-cpc-applicants"
                     label="Applicants that spend produced"
-                    hint="Completed applications, not clicks or impressions. Your ATS knows this number."
+                    hint="Completed applications, not clicks or impressions."
                     value={draft.cpcApplicantsPerRole}
                     onChange={set('cpcApplicantsPerRole')}
                 />
             </div>
 
             {/* Agency */}
-            <h3 style={{ ...groupHeading, marginTop: '20px' }}>Agency / contingency search, from your agreement</h3>
-            <p style={groupNote}>Leave the rate at zero to leave this channel out of the comparison.</p>
+            <h3 style={{ ...groupHeading, marginTop: '20px', marginBottom: '12px' }}>Agency / contingency search, from your agreement</h3>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
                     id="cph-agency-pct"
                     label="Contingency rate"
-                    hint="The percentage of first-year base in your signed agreement. We publish no typical rate; this has to come from your paperwork."
                     value={draft.agencyFeePct}
                     suffix="%"
                     onChange={set('agencyFeePct')}
@@ -367,17 +355,15 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
             {/* Vacancy overlay */}
             <h3 style={{ ...groupHeading, marginTop: '20px' }}>Optional: what the vacancy itself costs</h3>
             <p style={groupNote}>
-                Zero by default, which switches the overlay off entirely. Only you know what an unfilled seat costs
-                per day (coverage, lost visit revenue, overtime), and we will not guess it for you. The three
-                time-to-fill fields start at our {FLAT_FEE_PRICING.durationDays}-day posting window, which is a
-                product fact rather than a market average and is the same number for all three channels, so the
-                default cannot favor one.
+                Zero by default, which turns the overlay off. Enter what an unfilled seat costs you per day
+                (coverage, lost visit revenue, overtime). The three time-to-fill fields start at our{' '}
+                {FLAT_FEE_PRICING.durationDays}-day posting window, not a market average, and use the same number
+                for all three channels.
             </p>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
                     id="cph-vacancy-cost"
                     label="Cost per day unfilled"
-                    hint="Coverage, lost revenue, or overtime for one open seat, per day."
                     value={draft.dailyVacancyCost}
                     prefix="$"
                     step={50}
@@ -449,14 +435,14 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                     )}
                     {ourCostPerHire === 0 && (
                         <>
-                            {' '}That is the launch promo doing the work: {FREE_POST_SCOPE_NOTE}. It is a real price for
-                            a dated window rather than a rate, so switch to a {FLAT_FEE_PRICING.ladderStartsLabel} option
-                            above to see what the same roles cost once it ends.
+                            {' '}That is the launch promo doing the work: {FREE_POST_SCOPE_NOTE}. Switch to a{' '}
+                            {FLAT_FEE_PRICING.ladderStartsLabel} option above to see what the same roles cost once it
+                            ends.
                         </>
                     )}
                     {flat.mode === 'plan' && flat.planCount > 1 && (
                         <>
-                            {' '}Modelled as enough plans to hold every role at once; swapping roles through fewer slots
+                            {' '}Modelled as enough plans to hold every role at once. Swapping roles through fewer slots
                             costs less.
                         </>
                     )}
@@ -467,7 +453,7 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
             <div style={{ overflowX: 'auto', marginBottom: '14px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', minWidth: '620px' }}>
                     <caption style={{ captionSide: 'bottom', textAlign: 'left', fontSize: '11.5px', color: '#94A3B8', paddingTop: '8px' }}>
-                        Cost per hire by channel. Flat-fee figures are priced from our published rates; the other two
+                        Cost per hire by channel. Flat-fee figures are priced from our published rates. The other two
                         rows use only the numbers you entered.
                     </caption>
                     <thead>
@@ -524,8 +510,7 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                     On the numbers you entered, <strong>{ranked[0].label.toLowerCase()}</strong> comes out cheapest per
                     hire at {formatUsd(ranked[0].costPerHire as number)}, and{' '}
                     <strong>{ranked[ranked.length - 1].label.toLowerCase()}</strong> most expensive at{' '}
-                    {formatUsd(ranked[ranked.length - 1].costPerHire as number)}. That is a statement about your
-                    inputs, not about the channels in general.
+                    {formatUsd(ranked[ranked.length - 1].costPerHire as number)}.
                 </p>
             )}
 

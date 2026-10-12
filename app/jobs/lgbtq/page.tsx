@@ -296,7 +296,6 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
         heroAlt={`LGBTQ+ affirming ${brand.niche.short} care`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('lgbtq') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="LGBTQ+"
         headlineLine2={brand.niche.short}
         headlineSub="jobs in affirming care."

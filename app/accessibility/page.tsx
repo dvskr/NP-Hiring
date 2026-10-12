@@ -161,7 +161,7 @@ const SHIPPED_CONTROLS: { claim: string; criterion: string }[] = [
         criterion: 'WCAG 3.3.1 Error Identification · 3.3.2 Labels or Instructions',
     },
     {
-        claim: 'Blocking window.alert() has been removed from the product surfaces in favor of in-page messaging, and the removal is enforced by a test so it cannot creep back.',
+        claim: 'Feedback appears in the page itself instead of in blocking window.alert() pop-ups.',
         criterion: 'WCAG 2.2.1 Timing Adjustable (supporting)',
     },
 ];
@@ -174,17 +174,17 @@ const KNOWN_GAPS: { gap: string; impact: string; plan: string }[] = [
     {
         gap: 'Low-contrast secondary text.',
         impact: 'Several muted gray tokens used for metadata, helper text, and captions measure between roughly 1.9:1 and 4.2:1 against our light backgrounds, which is below the 4.5:1 minimum for normal-size text. Anyone with low vision, or reading on a bright screen outdoors, may lose that text.',
-        plan: 'We are darkening the muted text tokens site-wide. The primary body and heading colors already pass comfortably; this affects secondary copy.',
+        plan: 'We are darkening the muted text tokens site-wide. The primary body and heading colors already pass, so this affects secondary copy only.',
     },
     {
         gap: 'Focus is not trapped in every dialog.',
         impact: 'Nine dialogs share our focus-trap hook, but a few do not: the cookie banner, the resume-autofill review, and the three job-description starter modals. In those, Tab can walk out of the dialog into the page behind it, and closing the dialog does not return focus to the control that opened it, so a keyboard or screen-reader user loses their place. The cookie banner is also the one dialog missing aria-modal.',
-        plan: 'We are moving the remaining dialogs onto the same shared hook. Each one that moves across leaves this list and joins the list above in the same change.',
+        plan: 'We are moving the remaining dialogs onto the same shared hook.',
     },
     {
         gap: 'Status messages are not announced.',
         impact: 'Confirmation and error toasts appear visually but are not exposed in a live region, so screen-reader users may not hear that a save, apply, or alert action succeeded.',
-        plan: 'Adding a polite live region to the shared toast component is the next accessibility change queued.',
+        plan: 'We are adding a live region so screen readers announce these messages.',
     },
     {
         gap: 'Some data tables lack header associations.',
@@ -202,9 +202,9 @@ const KNOWN_GAPS: { gap: string; impact: string; plan: string }[] = [
         plan: 'Report a specific listing and we will contact the employer or correct the markup.',
     },
     {
-        gap: 'No independent audit and no automated checks in our test suite.',
-        impact: 'Everything above is a self-assessment by the team that builds the site. We have not commissioned a third-party audit, we do not publish a VPAT, and our continuous integration does not yet run automated accessibility scans.',
-        plan: 'Automated scanning in CI first, an external review after that. We will say so here when either lands.',
+        gap: 'No independent audit or automated accessibility testing yet.',
+        impact: 'This statement is based on our own review. There has been no third-party audit, and we do not publish a VPAT. Automated accessibility scans are not yet part of our testing.',
+        plan: 'Automated scanning comes first, then an external review. This page will be updated when either is in place.',
     },
 ];
 
@@ -255,8 +255,7 @@ export default function AccessibilityPage() {
                 <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '32px' }}>
                     {brand.name} (operated by <strong>{brand.legal.entityName}</strong>) is a job board for{' '}
                     {brand.niche.descriptor}s. People use it to find work, so it has to work with a keyboard, with a
-                    screen reader, at high zoom, and with motion turned off. This page states what we have actually
-                    built, what we know is still broken, and how to tell us when something blocks you.
+                    screen reader, at high zoom, and with motion turned off.
                 </p>
 
                 <div
@@ -269,19 +268,13 @@ export default function AccessibilityPage() {
                     }}
                 >
                     <p style={{ fontSize: '14px', color: '#78350F', margin: 0, lineHeight: 1.7 }}>
-                        <strong>Conformance status: partial.</strong> We build to {CONFORMANCE_TARGET} as our target,
-                        and we do <em>not</em> claim to fully meet it. The gaps listed further down are the ones we
-                        have found and confirmed ourselves. This is a self-assessment: no independent audit has been
-                        performed, and we do not publish a VPAT. We would rather publish an honest partial statement
-                        than a conformance badge we cannot stand behind.
+                        <strong>Conformance status: partial.</strong> We build to {CONFORMANCE_TARGET}, and we
+                        do <em>not</em> claim to fully meet it. The known gaps are listed below. This is a
+                        self-assessment. No independent audit has been performed, and we do not publish a VPAT.
                     </p>
                 </div>
 
                 <Section icon={<Keyboard size={20} />} title="What works today">
-                    <p style={{ marginBottom: '12px' }}>
-                        Each item below is a control that ships in the product right now, with the success criterion
-                        it is there to serve:
-                    </p>
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.8 }}>
                         {SHIPPED_CONTROLS.map((c) => (
                             <li key={c.criterion + c.claim.slice(0, 24)} style={{ marginBottom: '10px' }}>
@@ -294,11 +287,7 @@ export default function AccessibilityPage() {
                     </ul>
                 </Section>
 
-                <Section icon={<AlertTriangle size={20} />} title="Known gaps: the honest list">
-                    <p style={{ marginBottom: '14px' }}>
-                        These are real barriers on the site today. We publish them because you deserve to know what
-                        you will run into before you run into it.
-                    </p>
+                <Section icon={<AlertTriangle size={20} />} title="Known gaps">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         {KNOWN_GAPS.map((g) => (
                             <div
@@ -352,9 +341,9 @@ export default function AccessibilityPage() {
                         with the word &quot;accessibility&quot; in the subject. It helps if you can include:
                     </p>
                     <ul style={{ margin: '10px 0 0', paddingLeft: '20px', lineHeight: 1.85 }}>
-                        <li>the page address where it happened;</li>
-                        <li>what you were trying to do;</li>
-                        <li>your browser, and your screen reader or other assistive technology if you use one.</li>
+                        <li>the page address where it happened</li>
+                        <li>what you were trying to do</li>
+                        <li>your browser, and your screen reader or other assistive technology if you use one</li>
                     </ul>
                     <p style={{ marginTop: '12px' }}>
                         We aim to acknowledge accessibility reports within five business days. If a fix will take
@@ -367,7 +356,7 @@ export default function AccessibilityPage() {
                         <a href={`mailto:${brand.email.support}`} style={linkStyle}>
                             {brand.email.support}
                         </a>
-                        , which reaches the same team through a monitored operational queue.
+                        .
                     </p>
                 </Section>
 

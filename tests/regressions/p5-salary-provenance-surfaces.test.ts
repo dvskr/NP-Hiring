@@ -115,8 +115,10 @@ describe('A4 — buildProvenanceSentences claims exactly what its inputs support
         const [sentence] = buildProvenanceSentences({ live: { count: 1234, minimum: 3 } });
 
         expect(sentence).toBe(
-            `Based on 1,234 active postings with disclosed salary on ${brand.name}, recomputed as postings are ingested daily.`,
+            `Based on 1,234 active postings with disclosed salary on ${brand.name}, updated daily.`,
         );
+        // Pipeline vocabulary stays out of the visible line.
+        expect(sentence).not.toMatch(/ingest|recomputed/i);
     });
 
     it('renders a review date only from the literal it was given', () => {

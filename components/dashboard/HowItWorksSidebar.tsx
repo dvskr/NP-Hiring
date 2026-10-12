@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Zap, ExternalLink, Globe, ShieldCheck } from 'lucide-react';
+import { Zap, Globe, ShieldCheck } from 'lucide-react';
 import { brand } from '@/config/brand';
 
 const cardBase: React.CSSProperties = {
@@ -57,16 +57,13 @@ export default function HowItWorksSidebar(): React.JSX.Element {
         <aside style={{ ...cardBase, padding: '20px 22px' }} aria-labelledby="how-it-works-heading">
             <header style={{ marginBottom: '14px' }}>
                 <h2 id="how-it-works-heading" style={{
-                    margin: '0 0 4px',
+                    margin: 0,
                     fontSize: '15px', fontWeight: 800,
                     fontFamily: 'var(--font-lora), Georgia, serif',
                     color: '#1A2E35',
                 }}>
                     How this platform works
                 </h2>
-                <p style={{ margin: 0, fontSize: '12px', color: '#8A9BA6' }}>
-                    Three ways to apply, and what the badges mean.
-                </p>
             </header>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -75,7 +72,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     iconBg="#A7F3D0"
                     iconColor="#065F46"
                     title="⚡ Easy Apply"
-                    body={`One-click application on this platform. This is the fastest path. Posted by employers who hire on ${brand.name}.`}
+                    body={`One-click application on this platform. Posted by employers who hire on ${brand.name}.`}
                 />
 
                 <Row
@@ -94,17 +91,8 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     body="Aggregated from partner sources. These may redirect through the partner's site and occasionally have outdated links."
                 />
             </div>
-
-            <hr style={{ margin: '16px 0 12px', border: 0, borderTop: '1px solid rgba(0,0,0,0.06)' }} />
-
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <span style={pebble('#BE185D', '#FCE7F3')} aria-hidden="true">
-                    <ExternalLink size={14} strokeWidth={2.5} />
-                </span>
-                <p style={{ margin: 0, fontSize: '12px', color: '#6B7F8A', lineHeight: 1.5 }}>
-                    Your <strong style={{ color: '#1A2E35' }}>Recommended for you</strong> feed prioritizes Easy Apply and employer site listings, because they convert faster and do not send you through unnecessary redirects.
-                </p>
-            </div>
+            {/* No footer note on how the recommended feed is ordered (owner
+                call, 2026-10-12). */}
         </aside>
     );
 }

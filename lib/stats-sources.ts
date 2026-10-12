@@ -370,7 +370,7 @@ export const SALARY_BANDS = {
         min: TYPICAL.min,
         max: TYPICAL.max,
         formatted: `${asK(TYPICAL.min)} to ${asK(TYPICAL.max)}`,
-        basis: `the typical W-2 comparison band this board's salary pipeline uses as a sanity check, not a wage survey`,
+        basis: `the typical W-2 salary range this board compares posted pay against`,
     },
 
     /** The same band expressed hourly, for contract-vs-employee comparisons. */
@@ -390,7 +390,7 @@ export const SALARY_BANDS = {
         min: salaryConfig.normalizer.contractorHourlyMin,
         max: salaryConfig.normalizer.contractorHourlyMax,
         formatted: `${asDollars(salaryConfig.normalizer.contractorHourlyMin)} to ${asDollars(salaryConfig.normalizer.contractorHourlyMax)}/hr`,
-        basis: 'the contract/1099 hourly range this board validates postings against, across all NP and APRN specialties',
+        basis: 'the hourly range this board accepts for contract work across every NP and APRN specialty',
     },
 
     /**
@@ -403,7 +403,7 @@ export const SALARY_BANDS = {
         min: salaryConfig.normalizer.annualMin,
         max: salaryConfig.normalizer.annualMax,
         formatted: `${asK(salaryConfig.normalizer.annualMin)} to ${asK(salaryConfig.normalizer.annualMax)}`,
-        basis: 'the full W-2 annual range this board validates postings against, from a part-time new-grad floor to the CRNA ceiling',
+        basis: 'the full W-2 annual range this board accepts for a posting, from a part-time new-grad floor to the CRNA ceiling',
     },
 } as const satisfies Record<string, SalaryBand>;
 

@@ -110,7 +110,7 @@ const UNLOCKED_ACCESS_CLAUSE = 'for as long as they keep their profile visible a
  * employer posts again into that slot without a new charge.
  */
 function planTerms(slots: number = config.planSlots): string {
-  return `${slots} active job slot${slots === 1 ? '' : 's'} while you're subscribed. Each plan post runs ${config.durationDays} days; when one ends, post again into the free slot at no extra charge. Cancel any time.`;
+  return `${slots} active job slot${slots === 1 ? '' : 's'} while you're subscribed. Each plan post runs ${config.durationDays} days. When one ends, post again into the free slot at no extra charge. Cancel any time.`;
 }
 
 /**
@@ -348,7 +348,7 @@ export async function sendWelcomeEmail(email: string, unsubscribeToken: string):
     const html = emailShellV2(`
       ${headerBlockV2('Your Alerts Are Live', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-alert-subscription.png', `Your job alerts are now active. We scan thousands of ${brand.niche.short} positions daily and deliver matches straight to your inbox \u2014 so you never miss the right opportunity.`)}
+      ${simpleBlock('hero-alert-subscription.png', `Your job alerts are now active. We scan thousands of ${brand.niche.short} positions daily and deliver matches straight to your inbox, so you never miss the right opportunity.`)}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Browse Open Positions', `${BASE_URL}/jobs`)}
@@ -362,7 +362,7 @@ export async function sendWelcomeEmail(email: string, unsubscribeToken: string):
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: 'Welcome — Your Job Alerts Are Active!',
+      subject: 'Welcome! Your Job Alerts Are Active',
       html,
     }, 'welcome_alert', undefined, `${BASE_URL}/unsubscribe?token=${unsubscribeToken}`);
 
@@ -434,7 +434,7 @@ export async function sendSignupWelcomeEmail(
       html = emailShellV2(`
             ${headerBlockV2(`Welcome to ${brand.name}`, '')}
             ${spacerV2(20)}
-            <tr><td class="content-pad" style="padding:0 40px;"><p style="margin:0;font-family:${SERIF_V2};font-size:17px;color:${V2.textBody};line-height:1.7;text-align:center;">You have unlocked a new way to find your perfect role. Search curated positions, get matched by AI, and connect directly with hiring managers \u2014 no recruiters, no middlemen.</p></td></tr>
+            <tr><td class="content-pad" style="padding:0 40px;"><p style="margin:0;font-family:${SERIF_V2};font-size:17px;color:${V2.textBody};line-height:1.7;text-align:center;">You have unlocked a new way to find your perfect role. Search curated positions, get matched by AI, and connect directly with hiring managers. No recruiters, no middlemen.</p></td></tr>
             ${spacerV2(36)}
             <tr><td class="content-pad" style="padding:0 40px;"><p style="margin:0;font-family:${SERIF_V2};font-size:26px;font-weight:700;color:${V2.textHeading};text-align:center;">Here is how to get started</p></td></tr>
             ${spacerV2(20)}
@@ -450,7 +450,7 @@ export async function sendSignupWelcomeEmail(
             ${spacerV2(48)}
             ${closeContentV2()}`,
           unsubscribeFooterV2('sample'),
-          `Welcome ${firstName || ''} \u2014 find your perfect ${brand.niche.short} role.`
+          `Welcome${firstName ? `, ${firstName}` : ''}! Find your perfect ${brand.niche.short} role.`
       );
     }
 
@@ -584,7 +584,7 @@ export async function sendConfirmationEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: employerEmail,
-      subject: `✅ Your ${brand.niche.short} job post is live — "${jobTitle}"`,
+      subject: `✅ Your ${brand.niche.short} job post is live: "${jobTitle}"`,
       html,
     }, 'job_confirmation', { jobId, mode }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -643,7 +643,7 @@ export async function sendRenewalConfirmationEmail(
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;">
           <p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">Receipt</p>
           <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Renewal: $${config.renewalPrice}.00 · ${invoiceLine}</p>
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">A renewal adds days only: this posting keeps its applicants, stats and remaining unlocks and InMails, and does not get new ones.</p>
+          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">A renewal adds days only. This posting keeps its applicants, stats, and remaining unlocks and InMails, but gets no new ones.</p>
         </div>
       </td></tr>
       ${spacerV2(28)}
@@ -758,7 +758,7 @@ function planExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
     preheader: `Your plan post reaches the end of its ${config.durationDays}-day run in ${dayCount(c.days)}. When it ends, post again into the free slot at no extra charge.`,
     lead: `Your plan post for ${c.title} reaches the end of its ${config.durationDays}-day run on ${c.expiryDateStr}.`,
     cardLabel: 'Employer plan post',
-    cardBody: `Each plan post runs ${config.durationDays} days. When this one ends, its slot is free again: post a job into it at no extra charge while you're subscribed, with ${c.fresh}.`,
+    cardBody: `Each plan post runs ${config.durationDays} days. When this one ends, post a new job into its slot at no extra charge while you're subscribed, with ${c.fresh}.`,
     ctaLabel: 'Go to Your Dashboard',
     ctaUrl: c.dashboardUrl,
   };
@@ -954,7 +954,7 @@ export async function sendRefundConfirmationEmail(
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;">
           <p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">${refundType}</p>
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${formattedAmount} will appear on the original payment method within <strong>5–10 business days</strong>, depending on your bank or card issuer.</p>
+          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${formattedAmount} will appear on the original payment method within <strong>5 to 10 business days</strong>, depending on your bank or card issuer.</p>
           <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Reference for your records: this refund relates to the posting "${escapeHtml(jobTitle)}".</p>
         </div>
       </td></tr>
@@ -963,7 +963,7 @@ export async function sendRefundConfirmationEmail(
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubscribeToken || 'sample'),
-      `${refundType} of ${formattedAmount} processed — appears in 5–10 business days.`,
+      `${refundType} of ${formattedAmount} processed. It appears in 5 to 10 business days.`,
     );
 
     const unsubToken = unsubscribeToken ?? await getOrCreateUnsubToken(email);
@@ -971,7 +971,7 @@ export async function sendRefundConfirmationEmail(
       {
         from: EMAIL_FROM,
         to: email,
-        subject: `${refundType} processed — ${formattedAmount} for "${jobTitle}"`,
+        subject: `${refundType} processed: ${formattedAmount} for "${jobTitle}"`,
         html,
       },
       'refund_confirmation',
@@ -1129,16 +1129,16 @@ export async function sendPlanPausedEmail(
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubToken),
       isCancelled
-        ? `Your Employer plan has ended — ${postsPhrase} been paused.`
-        : `Your Employer plan payment failed — ${postsPhrase} been paused.`
+        ? `Your Employer plan has ended, so ${postsPhrase} been paused.`
+        : `Your Employer plan payment failed, so ${postsPhrase} been paused.`
     );
 
     await sendAndLog({
       from: EMAIL_FROM,
       to,
       subject: isCancelled
-        ? `Your ${brand.name} Employer plan has ended — ${pausedCount} post${pausedCount === 1 ? '' : 's'} paused`
-        : `Action needed: ${brand.name} Employer plan payment failed — ${pausedCount} post${pausedCount === 1 ? '' : 's'} paused`,
+        ? `Your ${brand.name} Employer plan has ended: ${pausedCount} post${pausedCount === 1 ? '' : 's'} paused`
+        : `Action needed: ${brand.name} Employer plan payment failed, ${pausedCount} post${pausedCount === 1 ? '' : 's'} paused`,
       html,
     }, 'plan_paused', { reason, pausedCount }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -1209,7 +1209,7 @@ async function sendPlanCancelledNoticeEmail(to: string, liveUntil: Date): Promis
   return sendPlanNotice(to, 'plan_paused', {
     subject: `Your ${brand.name} Employer plan is cancelled: your paid period runs through ${dateStr}`,
     headline: 'Your Employer Plan Is Cancelled',
-    lead: `Your Employer plan has been cancelled and you will not be charged again. Plan posts still inside their ${config.durationDays}-day run stay live through <strong>${dateStr}</strong>, the end of the period you already paid for; after that they are paused and hidden from candidates.`,
+    lead: `Your Employer plan has been cancelled and you will not be charged again. Plan posts still inside their ${config.durationDays}-day run stay live through <strong>${dateStr}</strong>, the end of the period you already paid for. After that they are paused and hidden from candidates.`,
     cardLabel: 'Changed your mind?',
     cardBody: `Resubscribe any time: paused posts that have not reached their ${config.durationDays}-day limit come back automatically, newest first, up to your plan's slots.`,
     buttonLabel: 'Manage Your Plan',
@@ -1240,7 +1240,7 @@ export async function sendPlanPaymentFailedEmail(to: string, opts: PlanPaymentFa
     cardLabel: 'Update your payment method',
     cardBody: `${deadline} Open your dashboard and choose <strong>Manage billing</strong> to update the card on file.`,
     buttonLabel: 'Update Payment Method',
-    preview: 'Your Employer plan payment failed — update your card to keep your posts live.',
+    preview: 'Your Employer plan payment failed. Update your card to keep your posts live.',
   }, { nextPaymentAttempt: opts.nextPaymentAttempt?.toISOString() ?? null });
 }
 
@@ -1253,7 +1253,7 @@ export async function sendPlanLinkPendingEmail(to: string): Promise<EmailResult>
   return sendPlanNotice(to, 'plan_link_pending', {
     subject: `We received your ${brand.name} Employer plan payment`,
     headline: 'We Received Your Payment',
-    lead: 'Thank you — your Employer plan payment went through. We could not match it to an employer account automatically, so our team is linking it to your account now.',
+    lead: 'Thank you. Your Employer plan payment went through, and we are linking it to your employer account now.',
     cardLabel: 'What happens next',
     cardBody: `You will get a confirmation as soon as your plan is active. To speed things up, reply with the email address you use to sign in to ${brand.name}.`,
     buttonLabel: 'Go to Your Dashboard',
@@ -1284,7 +1284,7 @@ export function buildContactConfirmationHtml(name: string, subject: string): str
       </div>
     </td></tr>
     ${spacerV2(24)}
-    ${bodyTextV2(`Thank you for reaching out, ${escapeHtml(name)}. Our team will review your inquiry and respond within <strong>one business day</strong>.`)}
+    ${bodyTextV2(`Thank you for reaching out, ${escapeHtml(name)}. We will respond within <strong>one business day</strong>.`)}
     ${spacerV2(20)}
     <tr><td style="padding:0 40px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #E8ECE9;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
@@ -1294,7 +1294,7 @@ export function buildContactConfirmationHtml(name: string, subject: string): str
         </td></tr>
         <tr><td style="padding:16px 20px;">
           <p style="margin:0 0 2px;font-family:${SANS_V2};font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:1.5px;">Expected Response</p>
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textBody};">Within 24 hours &middot; Mon&ndash;Fri 9AM&ndash;5PM CT</p>
+          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textBody};">Within 24 hours &middot; Monday to Friday, 9AM to 5PM CT</p>
         </td></tr>
       </table>
     </td></tr>
@@ -1388,7 +1388,7 @@ export function buildSalaryGuideHtml(pdfUrl: string, unsubscribeToken: string): 
   return emailShellV2(`
     ${headerBlockV2(`Your ${SALARY_GUIDE_EDITION_YEAR} Salary Guide`, '')}
     ${spacerV2(12)}
-    ${simpleBlock('hero-salary-guide.png', `Your ${brand.niche.short} compensation report is ready. It covers the federal national wage benchmark, pay by experience level, practice setting and specialty premium, and what to check before you negotiate. State-by-state pay changes daily, so the guide points you to the free live table on the site rather than freezing a snapshot.`)}
+    ${simpleBlock('hero-salary-guide.png', `Your ${brand.niche.short} compensation report is ready. It covers the federal national wage benchmark, pay by experience level, practice setting and specialty premium, and what to check before you negotiate.`)}
     ${spacerV2(32)}
     <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
       ${primaryButtonV2('Download Salary Guide (PDF)', pdfUrl)}
@@ -1426,7 +1426,7 @@ export async function sendEmployerMessageNotification(
     const html = emailShellV2(`
       ${headerBlockV2('New Message Received', '')}
       ${spacerV2(12)}
-      ${bodyTextV2(`${greeting} a candidate has reached out about a potential opportunity. Respond within 24 hours for the best results.`)}
+      ${bodyTextV2(`${greeting} an employer has reached out about a potential opportunity. Respond within 24 hours for the best results.`)}
       ${spacerV2(20)}
       <tr><td style="padding:0 40px;">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #E8ECE9;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
@@ -1463,13 +1463,13 @@ export async function sendEmployerMessageNotification(
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2('sample'),
-      `${fromLine} sent you a message${jobTitle ? ` about "${escapeHtml(jobTitle)}"` : ''} \u2014 view it now!`
+      `${fromLine} sent you a message${jobTitle ? ` about "${escapeHtml(jobTitle)}"` : ''}. View it now.`
     );
 
     await sendAndLog({
       from: EMAIL_FROM,
       to: recipientEmail,
-      subject: `📩 New message from ${fromLine}${jobTitle ? ` — ${jobTitle}` : ''}`,
+      subject: `📩 New message from ${fromLine}${jobTitle ? ` about ${jobTitle}` : ''}`,
       html,
     }, 'employer_message', { senderName, jobTitle });
 
@@ -1542,7 +1542,7 @@ export async function sendCandidateInquiryNotification(
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2('sample'),
-      `${escapeHtml(candidateName)} has a question about your "${escapeHtml(jobTitle || 'job')}" posting \u2014 reply now!`
+      `${escapeHtml(candidateName)} has a question about your "${escapeHtml(jobTitle || 'job')}" posting. Reply now.`
     );
 
     await sendAndLog({
@@ -1748,7 +1748,7 @@ export async function sendNewApplicationEmail(params: NewApplicationEmailParams)
     await sendAndLog({
       from: EMAIL_FROM,
       to: employerEmail,
-      subject: `📋 New application for "${jobTitle}" — ${candidateName}`,
+      subject: `📋 New application for "${jobTitle}" from ${candidateName}`,
       html,
     }, 'application_notification', { jobTitle, candidateName });
 
@@ -1807,7 +1807,7 @@ export async function sendApplicationConfirmationEmail(params: ApplicationConfir
     await sendAndLog({
       from: EMAIL_FROM,
       to: candidateEmail,
-      subject: `✅ Application received — ${jobTitle} at ${employerName}`,
+      subject: `✅ Application received: ${jobTitle} at ${employerName}`,
       html,
     }, 'application_confirmation', { jobTitle, employerName });
 
@@ -1871,13 +1871,13 @@ export async function sendStatusUpdateEmail(params: StatusUpdateEmailParams): Pr
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2('sample'),
-      `Update on your application \u2014 moved to ${statusInfo.label.toLowerCase()} stage.`
+      `Your application moved to the ${statusInfo.label.toLowerCase()} stage.`
     );
 
     await sendAndLog({
       from: EMAIL_FROM,
       to: candidateEmail,
-      subject: `${statusInfo.emoji} Application update — ${jobTitle} at ${employerName}`,
+      subject: `${statusInfo.emoji} Application update: ${jobTitle} at ${employerName}`,
       html,
     }, 'status_update', { jobTitle, newStatus });
 
@@ -1958,7 +1958,7 @@ export async function sendPerformanceReportEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: `📊 ${periodLabel} Report: ${totalViews} views, ${totalApps} applications — ${employerName}`,
+      subject: `📊 ${periodLabel} Report for ${employerName}: ${totalViews} views, ${totalApps} applications`,
       html,
     }, 'performance_report', { employerName, totalViews, totalApps }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -2007,7 +2007,7 @@ export async function sendSavedJobReminderEmail(
         ? Math.round((job.normalizedMinSalary || job.minSalary)! / 1000) : 0;
       const maxK = (job.normalizedMaxSalary || job.maxSalary) && (job.normalizedMaxSalary || job.maxSalary)! > 0
         ? Math.round((job.normalizedMaxSalary || job.maxSalary)! / 1000) : 0;
-      const salaryText = minK && maxK ? `$${minK}k–$${maxK}k` : minK ? `$${minK}k+` : maxK ? `Up to $${maxK}k` : '';
+      const salaryText = minK && maxK ? `$${minK}k to $${maxK}k` : minK ? `$${minK}k+` : maxK ? `Up to $${maxK}k` : '';
       return renderJobCardHtml({
         title: job.title,
         employer: job.employer,
@@ -2024,8 +2024,8 @@ export async function sendSavedJobReminderEmail(
 
     const headline = jobs.length === 1 ? 'Your Saved Job Is Still Open' : `${jobs.length} Saved Jobs Still Open`;
     const bodyMsg = jobs.length === 1
-      ? `You saved this position recently. It's still accepting applications \u2014 do not miss your window.`
-      : `You saved <strong>${jobs.length} jobs</strong> recently. These positions are still accepting applications \u2014 do not miss your window.`;
+      ? `You saved this position recently. It's still accepting applications, so apply while it's open.`
+      : `You saved <strong>${jobs.length} jobs</strong> recently. These positions are still accepting applications, so apply while they're open.`;
 
     const html = emailShellV2(`
       ${headerBlockV2(headline, '')}
@@ -2046,7 +2046,7 @@ export async function sendSavedJobReminderEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: `💾 ${jobs.length} job${jobs.length !== 1 ? 's' : ''} you saved ${jobs.length !== 1 ? 'are' : 'is'} still open — apply now!`,
+      subject: `💾 ${jobs.length} job${jobs.length !== 1 ? 's' : ''} you saved ${jobs.length !== 1 ? 'are' : 'is'} still open. Apply now!`,
       html,
     }, 'saved_job_reminder', { jobCount: jobs.length }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -2080,7 +2080,7 @@ export async function sendInactivityPurgeWarningEmail(
       ${spacerV2(12)}
       ${bodyTextV2(`We noticed you haven't used your ${brand.name} account in a while. To respect your privacy, accounts that stay inactive are automatically removed.`)}
       ${spacerV2(8)}
-      ${bodyTextV2(`<strong>If you do nothing, your account and data will be deleted in ${graceDays} days.</strong> To keep it, just sign in once — that's all it takes.`)}
+      ${bodyTextV2(`<strong>If you do nothing, your account and data will be deleted in ${graceDays} days.</strong> To keep it, sign in once.`)}
       ${spacerV2(24)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Keep my account →', `${BASE_URL}/login`)}

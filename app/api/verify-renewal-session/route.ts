@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const stripe = getStripe();
     if (!stripe) {
-      return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
+      return NextResponse.json({ error: 'We could not verify your renewal right now. Please check your dashboard.' }, { status: 503 });
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     if (!sessionId) {
       return NextResponse.json(
-        { error: 'Missing session ID' },
+        { error: 'This link is missing its checkout details. Please check your dashboard.' },
         { status: 400 }
       );
     }
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     if (!session || session.payment_status !== 'paid') {
       return NextResponse.json(
-        { error: 'Invalid or unpaid session' },
+        { error: 'We could not find a completed payment for this renewal.' },
         { status: 400 }
       );
     }
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     if (!jobId || type !== 'renewal') {
       return NextResponse.json(
-        { error: 'Invalid renewal session' },
+        { error: 'This link is not for a renewal checkout.' },
         { status: 400 }
       );
     }
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
           userId: authedUser.id,
         });
         return NextResponse.json(
-          { error: 'This renewal session belongs to a different account' },
+          { error: 'This renewal belongs to a different account.' },
           { status: 403 }
         );
       }
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error('Error verifying renewal session:', error);
     return NextResponse.json(
-      { error: 'Failed to verify session' },
+      { error: 'We could not verify your renewal.' },
       { status: 500 }
     );
   }

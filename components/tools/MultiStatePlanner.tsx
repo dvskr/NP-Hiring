@@ -194,9 +194,6 @@ export default function MultiStatePlanner({ states }: Props) {
           <h2 style={{ fontSize: '21px', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
             Multi-state licensure planner
           </h2>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.72)', margin: '4px 0 0' }}>
-            What changes from state to state: practice authority, the licensure guide, and where the roles are
-          </p>
         </div>
       </div>
 
@@ -279,11 +276,8 @@ export default function MultiStatePlanner({ states }: Props) {
           >
             <BadgeCheck size={30} />
           </span>
-          <p style={{ fontSize: '16px', fontWeight: 700, color: '#94A3B8', margin: '0 0 4px' }}>
+          <p style={{ fontSize: '16px', fontWeight: 700, color: '#94A3B8', margin: 0 }}>
             Pick the states you are considering
-          </p>
-          <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>
-            The planner will list them by practice authority and link each one&apos;s licensure guide.
           </p>
         </div>
       ) : (
@@ -333,8 +327,8 @@ export default function MultiStatePlanner({ states }: Props) {
                       </p>
                     )}
                     <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                      <strong>APRN layer:</strong> {s.name} issues its own APRN license; the compact does not
-                      cover it. Confirm current requirements with the {s.name} board of nursing.
+                      <strong>APRN layer:</strong> {s.name} issues its own APRN license, which the compact does
+                      not cover. Confirm current requirements with the {s.name} board of nursing.
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', alignItems: 'flex-end' }}>
@@ -401,10 +395,9 @@ export default function MultiStatePlanner({ states }: Props) {
             non-member state, you need an RN license by endorsement as well as that state&apos;s APRN license.
           </li>
           <li style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6 }}>
-            <strong>We do not publish a per-state member list here.</strong> Membership changes: jurisdictions
-            enact the compact and implement it on separate timelines, and some are only partially implemented,
-            so a stale list would be worse than none on a decision this size. Check the current list at the
-            source before you plan around it.
+            <strong>Check membership with NCSBN.</strong> Jurisdictions enact the compact and implement it on
+            separate timelines, and some are only partly implemented. Check the current list before you plan
+            around it.
           </li>
         </ul>
         <a

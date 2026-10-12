@@ -383,7 +383,7 @@ export default function CookieConsent({ initialConsent }: Props) {
                         />
                         <CategoryRow
                             title="Marketing"
-                            description="Personalized job recommendations and advertising relevance. (Currently no advertising partners; reserved for future use.)"
+                            description="Personalized job recommendations and advertising relevance. We have no advertising partners today."
                             checked={cats.marketing}
                             onChange={(v) => setCats((p) => ({ ...p, marketing: v }))}
                         />

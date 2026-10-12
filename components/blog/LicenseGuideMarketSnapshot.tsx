@@ -197,7 +197,7 @@ export function buildSnapshotPaySentence(stateName: string, salary: GatedSalary)
   // CQ-15: the gate also withholds a median when one employer holds more
   // than the cap, so the sentence states the whole rule instead of claiming
   // that too few postings disclose pay.
-  return `${brand.name} does not publish a ${stateName} median yet: it needs at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`;
+  return `A ${stateName} median appears here once there are at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`;
 }
 
 function Paragraph({ children }: { children: ReactNode }) {

@@ -68,7 +68,7 @@ export default function OpenEndedResponsesSection({ showMsg }: Props) {
                 <MessageSquare size={20} style={{ color: clayPalette.purple }} /> Saved Application Responses
             </h3>
             <p style={{ fontSize: '13px', color: clayPalette.textMuted, marginBottom: '24px', marginTop: 0 }}>
-                {filledCount} of {QUESTIONS.length} written. These auto-fill on job applications.
+                {filledCount} of {QUESTIONS.length} written
             </p>
 
             {loading ? (

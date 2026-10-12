@@ -297,9 +297,12 @@ describe('P3 #2 — state narrative makes no false designation claim in either p
 
     it('the live-demand sentence stays on every page and agrees on plurality', () => {
         expect(buildSettingStateNarrative('remote', 'Texas', 'TX', 103, 0, 1))
-            .toContain('The 1 active posting reflects');
+            .toContain('currently lists 1 active posting for Texas in this category.');
         expect(buildSettingStateNarrative('remote', 'Texas', 'TX', 103, 0, 25))
-            .toContain('The 25 active postings reflect');
+            .toContain('currently lists 25 active postings for Texas in this category.');
+        // The count is stated plainly, with no defensive aside about the wider market.
+        expect(buildSettingStateNarrative('remote', 'Texas', 'TX', 103, 0, 25))
+            .not.toMatch(/not an estimate|wider market/);
     });
 });
 
@@ -559,8 +562,8 @@ describe('P3 #5 — CategoryHero renders every prop it accepts', () => {
     });
 
     it('row 1 degrades when a slot is absent', () => {
-        // pSEO templates pass breadcrumbs={[]} and no indexLabel; a fixed
-        // 3-column grid shifted the remaining slots into the wrong columns.
+        // pSEO templates pass breadcrumbs={[]}; a fixed column grid
+        // shifted the remaining slot into the wrong column.
         expect(src()).not.toMatch(/\.cath5-row1 \{[^}]*grid-template-columns/);
         expect(src()).toMatch(/\.cath5-row1 \{[^}]*display: flex/);
     });

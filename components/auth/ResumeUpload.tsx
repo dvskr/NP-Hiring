@@ -215,7 +215,7 @@ export default function ResumeUpload({
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok || !body?.parsed) {
-        const baseMsg = body?.error || `Failed to read the resume (HTTP ${res.status}).`
+        const baseMsg = body?.error || 'We could not read this resume. Please try again.'
         // Append underlying detail when present so the user (and we, in
         // bug reports) see exactly what extraction failed and why,
         // rather than a generic "try a text-based PDF" line.
@@ -250,7 +250,7 @@ export default function ResumeUpload({
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body?.error || `Failed to apply the autofill (HTTP ${res.status}).`)
+        throw new Error(body?.error || 'We could not fill your profile from this resume. Please try again.')
       }
       setReviewOpen(false)
       setToast(true)
@@ -425,27 +425,17 @@ export default function ResumeUpload({
           {progressBar}
         </div>
 
-        {/* Value props */}
-        <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {[
-            'Quick Apply to jobs with one click',
-            'Get matched with relevant positions',
-            'Let employers discover your profile',
-          ].map((text) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-              <CheckCircle size={15} style={{ color: '#F472B6', flexShrink: 0 }} />
-              {text}
-            </div>
-          ))}
-        </div>
-
+        {/* No value-prop checklist under the drop zone (owner call,
+            2026-10-12). The privacy note stays, and it is now the one place
+            that discloses AI processing before upload: the settings and
+            dashboard explainers were removed in the same cleanup. */}
         {/* Privacy note */}
         <p style={{
           marginTop: '14px', fontSize: '11px', color: 'var(--text-muted)',
           display: 'flex', alignItems: 'center', gap: '5px',
         }}>
           <Shield size={12} style={{ flexShrink: 0 }} />
-          Your resume is only shared when you apply or if you enable &ldquo;Profile visible to employers&rdquo;.
+          AI reads your resume to fill in your profile, and you review the fields before they are saved. Your resume is only shared when you apply or if you enable &ldquo;Profile visible to employers&rdquo;.
         </p>
 
         {errorEl}

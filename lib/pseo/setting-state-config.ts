@@ -194,7 +194,7 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     fullLabel: 'Adult-Gerontology NP (AGNP)',
     heroSubtitle: 'Adult-gerontology nurse practitioner positions',
     benefits: [
-      { title: 'Two Career Tracks', description: 'Primary care (AGPCNP) clinic panels or acute care (AGACNP) hospital services; both post roles across the state.', iconName: 'Activity' },
+      { title: 'Two Career Tracks', description: 'Primary care (AGPCNP) clinic panels or acute care (AGACNP) hospital services. Both post roles across the state.', iconName: 'Activity' },
       { title: 'Lifespan Breadth', description: 'Patients range from young adults through advanced age, across primary care, long-term care, and hospital services.', iconName: 'Users' },
       { title: 'Complex-Care Depth', description: 'Multimorbidity, polypharmacy, and geriatric syndromes reward strong clinical reasoning.', iconName: 'Lightbulb' },
     ],
@@ -250,7 +250,7 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     benefits: [
       { title: 'High-Acuity Practice', description: 'ICUs, step-down units, and hospital specialty services, serving complex adult patients.', iconName: 'Activity' },
       { title: 'Procedural Scope', description: 'Lines, airway support, and bedside procedures within hospital privileges.', iconName: 'Shield' },
-      { title: 'Shift Structure', description: 'Hospital services run around the clock, so shift patterns and differentials are part of the offer; confirm both in each listing.', iconName: 'Clock' },
+      { title: 'Shift Structure', description: 'Hospital services run around the clock, so shift patterns and differentials are part of the offer. Confirm both in each listing.', iconName: 'Clock' },
     ],
     tips: [
       'Ask about orientation length, procedure training, and overnight support',
@@ -274,7 +274,7 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
       'Clarify the day/overnight mix and holiday rotation up front',
       'Ask which procedures NPs own in this ED and what training is provided',
       'Confirm fast-track versus main-ED assignment expectations',
-      'ACLS and PALS are standard; trauma course completion strengthens offers',
+      'ACLS and PALS are standard, and a completed trauma course strengthens offers',
       'Ask how night and weekend differentials are structured',
     ],
   }),
@@ -287,7 +287,7 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     // literals: the ceiling in niche-copy-pseo-templates.test.ts caps
     // this file's count at the existing intentional mentions above.
     benefits: [
-      { title: 'Telehealth Reach', description: 'Virtual-care platforms post roles for this specialty; each listing names the states where a license is required.', iconName: 'Globe' },
+      { title: 'Telehealth Reach', description: 'Virtual-care platforms post roles for this specialty. Each listing names the states where a license is required.', iconName: 'Globe' },
       { title: 'Setting Range', description: 'Outpatient clinics, hospital units, telehealth platforms, and integrated care teams all post roles for this specialty.', iconName: 'Building2' },
       { title: 'Therapeutic Continuity', description: 'Longitudinal medication management builds deep, ongoing patient relationships.', iconName: 'Heart' },
     ],
@@ -344,7 +344,7 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     benefits: [
       { title: 'Continuity Panels', description: 'A panel of your own patients, followed across years, is the core of primary care.', iconName: 'Heart' },
       { title: 'Urban to Rural Reach', description: 'Primary care roles post across urban FQHCs, suburban groups, and rural health clinics alike.', iconName: 'Building2' },
-      { title: 'Loan-Repayment Programs', description: 'Ask whether a site holds an active NHSC approval and whether the employer qualifies for PSLF; both depend on the specific site.', iconName: 'Lightbulb' },
+      { title: 'Loan-Repayment Programs', description: 'Ask whether a site holds an active NHSC approval and whether the employer qualifies for PSLF. Both depend on the specific site.', iconName: 'Lightbulb' },
     ],
     tips: [
       'Ask about panel size, visit cadence, and documentation time',
@@ -387,7 +387,7 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
       'Ask about ECG and device-interrogation training support',
       'Inpatient roles: clarify call stipends and weekend rotation',
       'Fluency in guideline-directed heart-failure therapy is the common screen, so prepare for it',
-      'ACLS is standard; verify credentialing timelines for hospital roles',
+      'Expect ACLS, and verify credentialing timelines for hospital roles',
     ],
   }),
   hospitalist: buildNpSpecialtyConfig({
@@ -432,9 +432,9 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     fullLabel: 'Urgent Care NP',
     heroSubtitle: 'Walk-in clinic & urgent care nurse practitioner positions',
     benefits: [
-      { title: 'Shift-Based Schedules', description: 'Defined shifts with no after-hours panel work; when the clinic closes, the day is done.', iconName: 'Clock' },
+      { title: 'Shift-Based Schedules', description: 'Defined shifts with no after-hours panel work. When the clinic closes, the day is done.', iconName: 'Clock' },
       { title: 'Broad Case Mix', description: 'Procedures, radiograph reads, and undifferentiated complaints across the lifespan.', iconName: 'Activity' },
-      { title: 'Site Types', description: 'Urgent care chains, health-system clinics, and retail health sites all post these roles; each listing names the site and hours.', iconName: 'Building2' },
+      { title: 'Site Types', description: 'Urgent care chains, health-system clinics, and retail health sites all post these roles. Each listing names the site and hours.', iconName: 'Building2' },
     ],
     tips: [
       'Clarify the evening, weekend, and holiday rotation up front',
@@ -480,8 +480,8 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('remote'),
     }),
     benefits: [
-      { title: 'Flexible Schedule', description: 'Remote listings describe their own scheduling model, from fixed telehealth blocks to self-set hours; confirm which applies before applying.', iconName: 'Clock' },
-      { title: 'No Commute', description: 'Practice from a home office anywhere in the state; each listing states the equipment and workspace it requires.', iconName: 'Home' },
+      { title: 'Flexible Schedule', description: 'Remote listings describe their own scheduling model, from fixed telehealth blocks to self-set hours. Confirm which applies before applying.', iconName: 'Clock' },
+      { title: 'No Commute', description: 'Practice from a home office anywhere in the state. Each listing states the equipment and workspace it requires.', iconName: 'Home' },
       { title: 'Statewide Reach', description: 'Serve patients across the state by video and phone, subject to the licensure each listing requires.', iconName: 'Globe' },
     ],
     tips: [
@@ -504,7 +504,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('telehealth'),
     }),
     benefits: [
-      { title: 'Virtual Visit Models', description: 'Listings range from scheduled video visits to asynchronous care; each states the platform and visit model it uses.', iconName: 'Monitor' },
+      { title: 'Virtual Visit Models', description: 'Listings range from scheduled video visits to asynchronous care. Each states the platform and visit model it uses.', iconName: 'Monitor' },
       { title: 'Patient Accessibility', description: 'Reach patients in rural and underserved areas who lack access to in-person care.', iconName: 'Users' },
       { title: 'Flexible Practice', description: 'Choose between full-time telehealth positions or supplement in-person work with virtual sessions.', iconName: 'Clock' },
     ],
@@ -528,7 +528,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('inpatient'),
     }),
     benefits: [
-      { title: 'Shift Differentials', description: 'Hospital listings often state night, weekend, and holiday differentials separately from base pay; read both lines before comparing offers.', iconName: 'DollarSign' },
+      { title: 'Shift Differentials', description: 'Hospital listings often state night, weekend, and holiday differentials separately from base pay. Read both lines before comparing offers.', iconName: 'DollarSign' },
       { title: 'Structured Environment', description: 'Hospital settings offer built-in support teams, protocols, and multidisciplinary care teams.', iconName: 'Shield' },
       { title: 'Defined Schedules', description: 'Many inpatient roles run on shift-based schedules, such as seven on and seven off, with no after-hours calls.', iconName: 'Clock' },
     ],
@@ -552,7 +552,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('outpatient'),
     }),
     benefits: [
-      { title: 'Weekday Schedules', description: 'Clinic hours are set by the practice; listings state whether evenings, weekends, or call are part of the role.', iconName: 'Clock' },
+      { title: 'Weekday Schedules', description: 'Clinic hours are set by the practice. Listings state whether evenings, weekends, or call are part of the role.', iconName: 'Clock' },
       { title: 'Long-Term Relationships', description: 'Build meaningful patient relationships through ongoing primary, preventive, and chronic care.', iconName: 'Heart' },
       { title: 'Private Practice Path', description: 'Outpatient experience is the usual foundation for a later private practice, where state practice authority sets what independence looks like.', iconName: 'DollarSign' },
     ],
@@ -580,8 +580,8 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('travel'),
     }),
     benefits: [
-      { title: 'Packaged Pay', description: 'Travel packages combine an hourly rate with housing and travel stipends; compare the full package, not the rate alone.', iconName: 'DollarSign' },
-      { title: 'Defined Assignments', description: 'Assignments have stated start and end dates; each listing says how long it runs and whether extensions are possible.', iconName: 'Calendar' },
+      { title: 'Packaged Pay', description: 'Travel packages combine an hourly rate with housing and travel stipends. Compare the full package, not the rate alone.', iconName: 'DollarSign' },
+      { title: 'Defined Assignments', description: 'Assignments have stated start and end dates. Each listing says how long it runs and whether extensions are possible.', iconName: 'Calendar' },
       { title: 'Explore New Places', description: 'Work across the state while experiencing different healthcare settings and patient populations.', iconName: 'MapPin' },
     ],
     tips: [
@@ -604,7 +604,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('full-time'),
     }),
     benefits: [
-      { title: 'Benefits Package', description: 'Full-time offers are where health insurance, retirement match, PTO, CME allowance, and malpractice coverage are negotiated; confirm each in the offer letter.', iconName: 'Shield' },
+      { title: 'Benefits Package', description: 'Full-time offers are where health insurance, retirement match, PTO, CME allowance, and malpractice coverage are negotiated. Confirm each in the offer letter.', iconName: 'Shield' },
       { title: 'Career Stability', description: 'W-2 employment brings predictable income, regular schedules, and a long-term home at a single organization.', iconName: 'TrendingUp' },
       { title: 'Professional Development', description: 'Ask whether continuing education, conference attendance, and specialty certification fees are funded.', iconName: 'Lightbulb' },
     ],
@@ -628,8 +628,8 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('part-time'),
     }),
     benefits: [
-      { title: 'Schedule Flexibility', description: 'Part-time listings state the days or hours expected; the rest of the week stays open for private practice, family, or other work.', iconName: 'Clock' },
-      { title: 'Hourly Pay', description: 'Part-time roles are usually paid hourly; weigh the posted rate against whatever benefits, if any, are included.', iconName: 'DollarSign' },
+      { title: 'Schedule Flexibility', description: 'Part-time listings state the days or hours expected. The rest of the week stays open for private practice, family, or other work.', iconName: 'Clock' },
+      { title: 'Hourly Pay', description: 'Part-time roles are usually paid hourly. Weigh the posted rate against whatever benefits, if any, are included.', iconName: 'DollarSign' },
       { title: 'Stack Multiple Roles', description: 'Combine part-time positions across different settings for clinical variety and steadier income.', iconName: 'Activity' },
     ],
     tips: [
@@ -652,9 +652,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('contract'),
     }),
     benefits: [
-      { title: 'Hourly Terms', description: 'Contract pay is quoted hourly and trades off benefits and tenure; compare the full package against a permanent offer.', iconName: 'DollarSign' },
+      { title: 'Hourly Terms', description: 'Contract pay is quoted hourly and trades off benefits and tenure. Compare the full package against a permanent offer.', iconName: 'DollarSign' },
       { title: 'Try Before You Commit', description: 'Contract roles let you evaluate an employer, location, and patient population before converting to permanent.', iconName: 'Lightbulb' },
-      { title: 'Know the Structure', description: 'Contract roles come as agency W-2 or 1099; the structure decides who handles taxes, malpractice, and benefits, so confirm it first.', iconName: 'Shield' },
+      { title: 'Know the Structure', description: 'Contract roles come as agency W-2 or 1099. The structure decides who handles taxes, malpractice, and benefits, so confirm it first.', iconName: 'Shield' },
     ],
     tips: [
       'Negotiate contract length, extension clauses, and cancellation terms',
@@ -700,9 +700,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       '1099',
     ),
     benefits: [
-      { title: 'Gross Versus Net', description: 'Contractor rates are quoted before self-employment tax, malpractice, and the benefits you fund yourself; model the after-tax figure before comparing to W-2 pay.', iconName: 'DollarSign' },
+      { title: 'Gross Versus Net', description: 'Contractor rates are quoted before self-employment tax, malpractice, and the benefits you fund yourself. Model the after-tax figure before comparing to W-2 pay.', iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, work with multiple clients, and control your patient volume and caseload.', iconName: 'Clock' },
-      { title: 'Business Structure', description: 'Business expenses and retirement contributions are handled as a self-employed clinician; an accountant who works with clinicians can map what applies to you.', iconName: 'Shield' },
+      { title: 'Business Structure', description: 'Business expenses and retirement contributions are handled as a self-employed clinician. An accountant who works with clinicians can map what applies to you.', iconName: 'Shield' },
     ],
     tips: [
       'Form an LLC or PLLC before signing your first contract',
@@ -725,7 +725,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     }),
     benefits: [
       { title: 'Shift Flexibility', description: 'Pick up shifts that fit your schedule with no fixed weekly commitment.', iconName: 'Clock' },
-      { title: 'Hourly Without Benefits', description: 'Per-diem pay is hourly and usually excludes benefits; weigh the posted rate against the coverage you fund yourself.', iconName: 'DollarSign' },
+      { title: 'Hourly Without Benefits', description: 'Per-diem pay is hourly and usually excludes benefits. Weigh the posted rate against the coverage you fund yourself.', iconName: 'DollarSign' },
       { title: 'Setting Variety', description: 'Rotate across facilities and care settings while keeping your primary role or practice.', iconName: 'Activity' },
     ],
     tips: [
@@ -748,9 +748,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('locum-tenens'),
     }),
     benefits: [
-      { title: 'Packaged Pay', description: 'Locum packages pair an hourly rate with agency-covered malpractice and, often, travel and housing; compare the whole package.', iconName: 'DollarSign' },
+      { title: 'Packaged Pay', description: 'Locum packages pair an hourly rate with agency-covered malpractice and, often, travel and housing. Compare the whole package.', iconName: 'DollarSign' },
       { title: 'Defined Terms', description: 'Assignments run from a few weeks to several months with clear start and end dates.', iconName: 'Calendar' },
-      { title: 'Geographic Freedom', description: 'Work across states; agencies commonly help with licensing and credentialing paperwork, and each assignment state still issues its own APRN license.', iconName: 'MapPin' },
+      { title: 'Geographic Freedom', description: 'Work across states. Agencies commonly help with licensing and credentialing paperwork, and each assignment state still issues its own APRN license.', iconName: 'MapPin' },
     ],
     tips: [
       'Work with reputable staffing agencies and compare contract terms',

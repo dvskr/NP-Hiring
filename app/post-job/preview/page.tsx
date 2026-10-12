@@ -394,10 +394,9 @@ export default function PreviewPage() {
 
         {/* Header */}
         <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>
             Preview Your Job Post
           </h1>
-          <p style={{ fontSize: '14px', color: '#8A9BA6', margin: 0 }}>Review how your job will appear to candidates</p>
         </div>
 
         {/* Section 1: Card Preview — uses the REAL <JobCard> component so this
@@ -581,37 +580,22 @@ export default function PreviewPage() {
               padding: '24px',
             }}>
               {formData.applyOnPlatform ? (
-                <div>
-                  <div style={{
-                    ...clayBtn,
-                    width: '100%', justifyContent: 'center',
-                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
-                    boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
-                  }}>Apply Now</div>
-                  <div style={{
-                    marginTop: '12px', padding: '10px 14px', borderRadius: '12px',
-                    background: '#FDF2F8', border: '1px solid #FBCFE8',
-                    display: 'flex', alignItems: 'flex-start', gap: '8px',
-                  }}>
-                    <span style={{ color: '#BE185D', fontSize: '14px' }}>✅</span>
-                    <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.5 }}>
-                      Candidates apply directly on this platform. Applications appear in your dashboard.
-                    </p>
-                  </div>
-                </div>
+                <div style={{
+                  ...clayBtn,
+                  width: '100%', justifyContent: 'center',
+                  background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+                  boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                }}>Apply Now</div>
               ) : (
-                <>
-                  <a href={formData.applyUrl} target="_blank" rel="noopener noreferrer" style={{
-                    ...clayBtn,
-                    width: '100%', justifyContent: 'center',
-                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
-                    boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
-                    textDecoration: 'none',
-                  }}>
-                    Apply Now <ExternalLink size={16} />
-                  </a>
-                  <p style={{ marginTop: '8px', fontSize: '11px', color: '#B0BEC5', textAlign: 'center' }}>Opens in a new tab. Verify that your link works.</p>
-                </>
+                <a href={formData.applyUrl} target="_blank" rel="noopener noreferrer" style={{
+                  ...clayBtn,
+                  width: '100%', justifyContent: 'center',
+                  background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+                  boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                  textDecoration: 'none',
+                }}>
+                  Apply Now <ExternalLink size={16} />
+                </a>
               )}
             </div>
           </div>
@@ -656,7 +640,7 @@ export default function PreviewPage() {
               {priceCaption}
               {willBePaid && (
                 <>
-                  {' · '}Posting fees are generally non-refundable; refund requests inside 7 days are reviewed case
+                  {' · '}Posting fees are generally non-refundable. Refund requests within 7 days are reviewed case
                   by case (<Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>Terms §8</Link>).
                 </>
               )}

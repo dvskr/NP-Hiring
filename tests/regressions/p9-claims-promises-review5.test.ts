@@ -124,15 +124,19 @@ describe('WP-5 — falsified promises stay removed from all production copy', ()
     it('the softened claims state the screen, not the absolute', () => {
         const employers = read('app/for-employers/page.tsx');
         expect(employers).toContain('This board is built exclusively for');
-        expect(employers).toContain('screened at ingest');
+        // The hero and the FAQ answer both state the screen (plain copy since
+        // 2026-10-12: no "at ingest" pipeline jargon).
+        expect(employers.match(/Listings are screened and removed when/g) ?? []).toHaveLength(2);
+        expect(employers).not.toContain('at ingest');
         // The FAQ answer feeds FAQPage JSON-LD — it must carry the same
         // screening commitment, not "only carries".
         expect(employers).toContain(
-            'listings are screened at ingest and removed when flagged out of scope',
+            'Listings are screened and removed when flagged out of scope',
         );
 
         const about = read('app/about/AboutClient.tsx');
-        expect(about).toContain('screened at ingest');
+        expect(about).toContain('Listings are screened and removed when flagged out of scope');
+        expect(about).not.toContain('at ingest');
         // 8d replacement: the measurable feature the product actually has.
         expect(about).toContain('Filter alerts by state, compact eligibility, and specialty');
     });
@@ -153,7 +157,7 @@ describe('WP-5 — one audited comparison table, consumed by both pages', () => 
     it('the shared row set carries the screening commitment, not the absolutes', () => {
         const comparison = read('lib/employer-comparison.ts');
         expect(comparison).toContain('${brand.niche.medium}-Focused Job Inventory');
-        expect(comparison).toContain('screened at ingest and removed when flagged out of scope');
+        expect(comparison).toContain('Listings are screened and removed when flagged out of scope');
         const stripped = code(comparison);
         expect(stripped).not.toContain('No Unqualified Applicants');
         expect(stripped).not.toMatch(/100%[^,\n]*Audience/i);

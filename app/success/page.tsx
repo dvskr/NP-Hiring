@@ -187,8 +187,7 @@ function SuccessContent() {
         <div style={{ maxWidth: '640px', margin: '0 auto', paddingTop: '32px' }}>
           <div style={{ ...clayCard, textAlign: 'center' }}>
             <Loader2 style={{ width: '44px', height: '44px', margin: '0 auto 16px', color: '#BE185D', animation: 'spin 0.9s linear infinite' }} />
-            <p style={{ fontSize: '16px', color: '#1A2E35', fontWeight: 600, margin: '0 0 4px' }}>Verifying your payment…</p>
-            <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>This usually takes just a few seconds.</p>
+            <p style={{ fontSize: '16px', color: '#1A2E35', fontWeight: 600, margin: 0 }}>Verifying your payment…</p>
           </div>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -261,44 +260,8 @@ function SuccessContent() {
               : "We've sent a confirmation email with your receipt and a link to your dashboard."}
           </p>
 
-          {/* "What happens next" — claymorphic teal panel */}
-          <div style={{
-            background: '#FDF2F8',
-            border: '1px solid rgba(190,24,93,0.18)',
-            borderRadius: '18px',
-            padding: '20px 24px',
-            marginBottom: '28px',
-            boxShadow: 'inset 2px 2px 5px rgba(190,24,93,0.06), inset -1px -1px 3px rgba(255,255,255,0.5)',
-            textAlign: 'left',
-          }}>
-            <h2 style={{
-              fontSize: '13px', fontWeight: 700,
-              color: '#9D174D', textTransform: 'uppercase', letterSpacing: '0.06em',
-              margin: '0 0 12px', textAlign: 'center',
-            }}>What happens next?</h2>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {[
-                'Your job is now visible to candidates',
-                'Your listing will appear in search results',
-                'Candidates can start applying immediately',
-                'You can manage everything from your dashboard',
-              ].map((item) => (
-                <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: '#831843', lineHeight: 1.5 }}>
-                  <span style={{
-                    flexShrink: 0,
-                    width: '20px', height: '20px', borderRadius: '50%',
-                    background: 'linear-gradient(145deg, #10B981, #059669)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '2px 2px 4px rgba(16,185,129,0.2)',
-                    marginTop: '1px',
-                  }}>
-                    <CheckCircle size={11} color="#fff" strokeWidth={3} />
-                  </span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* No "What happens next" list: it restated the live message
+              above and the dashboard button below (owner call, 2026-10-12). */}
 
           {/* Action buttons — flex-wrap so they grid nicely on mobile/desktop */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>

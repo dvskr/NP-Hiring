@@ -145,12 +145,9 @@ export default function MessageEmployerModal({
                 >
                     <div style={{ textAlign: 'center' }}>
                         <MessageSquare size={40} style={{ color: '#F472B6', margin: '0 auto 16px' }} />
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 24px' }}>
                             Log in to message {employerName}
                         </h3>
-                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 24px' }}>
-                            Create a free account or log in to send a message about this position.
-                        </p>
                         <button
                             onClick={() => router.push(`/login?redirect=/jobs/${encodeURIComponent(jobId)}`)}
                             style={{
@@ -307,7 +304,7 @@ export default function MessageEmployerModal({
                                 Almost there
                             </h4>
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
-                                To message employers, please add your <strong>first name</strong> to your profile. It only takes a moment.
+                                To message employers, please add your <strong>first name</strong> to your profile.
                             </p>
                             {missingFields.length > 0 && (
                                 <ul style={{ textAlign: 'left', fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 20px', paddingLeft: '20px' }}>
@@ -393,10 +390,9 @@ export default function MessageEmployerModal({
                                     }}
                                 />
                                 <div style={{
-                                    display: 'flex', justifyContent: 'space-between',
+                                    display: 'flex', justifyContent: 'flex-end',
                                     fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px',
                                 }}>
-                                    <span>Ctrl+Enter to send</span>
                                     <span style={{ color: body.length > 1800 ? '#F59E0B' : 'var(--text-tertiary)' }}>
                                         {body.length}/2000
                                     </span>

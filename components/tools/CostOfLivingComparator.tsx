@@ -192,10 +192,6 @@ export default function CostOfLivingComparator({ options, defaultPair }: Props) 
           </button>
           {renderPicker('col-city-b', 'Against this city', slugB, setSlugB)}
         </div>
-        <p style={{ fontSize: '12px', color: '#94A3B8', margin: '12px 0 0', lineHeight: 1.55 }}>
-          {options.length.toLocaleString('en-US')} cities available. Where a city has at least three of its own
-          salaried postings we use them; otherwise the state median stands in, and each column says which.
-        </p>
       </div>
 
       {/* ─── Result ─── */}
@@ -211,10 +207,7 @@ export default function CostOfLivingComparator({ options, defaultPair }: Props) 
           >
             <Building2 size={30} />
           </span>
-          <p style={{ fontSize: '16px', fontWeight: 700, color: '#94A3B8', margin: '0 0 4px' }}>Pick two cities</p>
-          <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>
-            We will show posted pay, the cost-of-living index, and what the salary is actually worth in each.
-          </p>
+          <p style={{ fontSize: '16px', fontWeight: 700, color: '#94A3B8', margin: 0 }}>Pick two cities</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

@@ -197,7 +197,6 @@ describe('the dashboard "How this platform works" sidebar', () => {
     const html = renderToStaticMarkup(React.createElement(HowItWorksSidebar));
     expect(html).toContain('↗ Apply on employer site');
     expect(html).toContain('After you sign in, the application continues on the employer&#x27;s own careers site.');
-    expect(html).toContain('Easy Apply and employer site listings');
     expect(html).not.toMatch(/direct apply/i);
     expect(html.replace(/<[^>]+>/g, ' ')).not.toMatch(DASH_RE);
   });

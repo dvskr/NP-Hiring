@@ -188,7 +188,9 @@ describe('B64: talent-search fails loudly on save and browse', () => {
     it('browse fetch failures set a dedicated error state', () => {
         expect(talentSearch).toContain('const [browseError, setBrowseError]');
         // Non-OK and network failures both surface.
-        expect(talentSearch).toMatch(/setBrowseError\(`Couldn’t load candidates \(request failed with status \$\{res\.status\}\)\.`\)/);
+        expect(talentSearch).toContain("setBrowseError('Something went wrong on our end. Please try again.')");
+        // The HTTP status code is internal state and stays out of the copy.
+        expect(talentSearch).not.toMatch(/setBrowseError\(`[^`]*\$\{res\.status\}/);
         expect(talentSearch).toContain('Couldn’t load candidates. Check your connection and try again.');
         // The old silent swallow on the browse path is gone.
         const browse = talentSearch.slice(

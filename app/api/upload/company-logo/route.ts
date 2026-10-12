@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         } catch (encodeErr) {
             console.error('sharp WebP encode failed:', encodeErr);
             return NextResponse.json(
-                { error: 'Could not process image — file may be corrupted' },
+                { error: 'We could not process this image. The file may be damaged.' },
                 { status: 400 },
             );
         }
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         if (!serviceRoleKey) {
             console.error('SUPABASE_SERVICE_ROLE_KEY is not set');
             return NextResponse.json(
-                { error: 'Server configuration error — missing service role key' },
+                { error: 'Logo upload is unavailable right now. Please try again later.' },
                 { status: 500 }
             );
         }
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
         if (error) {
             console.error('Supabase storage upload error:', error);
             return NextResponse.json(
-                { error: `Upload failed: ${error.message}` },
+                { error: 'Upload failed. Please try again.' },
                 { status: 500 }
             );
         }

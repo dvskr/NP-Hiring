@@ -20,8 +20,8 @@
  *     (2026-08-19): the live inventory carried out-of-scope listings
  *     (review items 1a–1d), so an absolute inventory guarantee is not
  *     currently true. The row now states what the pipeline actually
- *     does: listings are screened at ingest and removed when flagged
- *     out of scope. The absolute claim may return ONLY when the WP-1
+ *     does: listings are screened and removed when flagged out of
+ *     scope (plain copy since 2026-10-12, no "at ingest"). The absolute claim may return ONLY when the WP-1
  *     inventory-invariant test is green over the live inventory.
  *   - "No Unqualified Applicants" — DELETED (P2 #16). Anyone can click
  *     Apply here too; it was an unenforceable guarantee.
@@ -68,7 +68,7 @@ export interface ComparisonRow {
 
 // Each row is one line: tests/regressions/p2-trust-surfaces-point-of-sale.test.ts
 // reads the rows from this source and renders every cell as English.
-const INVENTORY_ROW: ComparisonRow = { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened at ingest and removed when flagged out of scope` };
+const INVENTORY_ROW: ComparisonRow = { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened and removed when flagged out of scope` };
 /** Only while the launch promo runs. */
 const FREE_POSTING_ROW: ComparisonRow = { feature: `Free Posting Through ${config.promoEndsLabel}`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post is free during our launch period; others offer limited free listings` };
 /** While the launch promo runs: the ladder is announced for its start date. */

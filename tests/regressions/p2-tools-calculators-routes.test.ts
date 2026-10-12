@@ -447,7 +447,8 @@ describe('licensure checker + multi-state planner (P2 #6)', () => {
     it('sends the reader to NCSBN for the current member list instead', () => {
       const planner = read(PLANNER);
       expect(planner).toContain('nursecompact.com');
-      expect(planner).toContain('We do not publish a per-state member list here');
+      expect(planner).toContain('Check membership with NCSBN.');
+      expect(planner).not.toContain('We do not publish a per-state member list here');
       // And the omission is declared where the page declares what it excludes.
       expect(src).toContain('Which specific states are Nurse Licensure Compact members');
     });

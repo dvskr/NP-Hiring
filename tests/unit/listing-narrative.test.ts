@@ -381,7 +381,7 @@ describe('recency', () => {
 
   it('CITY-C4 freshness needs a dated row; CS-S5 needs a newest date', () => {
     expect(buildFreshnessSentence(recency({ datedCount: 0 }))).toBeNull();
-    expect(keep(buildFreshnessSentence(recency({ last30: 0 })))).toBe('None of the 5 listings were first posted in the last 30 days; the most recent was first posted on September 1, 2026.');
+    expect(keep(buildFreshnessSentence(recency({ last30: 0 })))).toBe('None of the 5 listings were first posted in the last 30 days. The most recent was first posted on September 1, 2026.');
     expect(keep(buildFreshnessSentence(recency({ last30: 1 })))).toBe('1 of the 5 listings was first posted in the last 30 days. The most recent was first posted on September 1, 2026.');
     expect(keep(buildFreshnessSentence(recency({ last30: 2 })))).toBe('2 of the 5 listings were first posted in the last 30 days. The most recent was first posted on September 1, 2026.');
     expect(buildRecencySentence(recency({ newestPostedAt: null }))).toBeNull();
@@ -395,26 +395,33 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ benchmark: BENCH }) })))
       .toBe(`The median posted salary for ${NP} roles in Texas is $132K, and the middle half of postings runs $118K to $150K. It is based on 6 postings from 3 employers that list annual pay. Hourly, estimated and non-${NP} postings are excluded.`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 0 }) })))
-      .toBe(`No current posting in Texas states a salary, so this site publishes no state figure. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+      .toBe(`No current posting in Texas states a salary. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Austin', scopeNoun: 'metro', facts: facts({ salaryDisclosedCount: 1, salaryDisclosedEmployers: 1 }) })))
-      .toBe(`1 posting in Austin states a salary. This site publishes a metro figure only once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+      .toBe(`1 posting in Austin states a salary. A metro median appears once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+    // The rule is stated plainly: no narration of what this site publishes.
+    for (const d of [0, 1, 2]) {
+      const text = buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: d }) });
+      expect(text).not.toMatch(/this site publishes|publishes no/i);
+    }
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 2 }) }))).toMatch(/^2 postings in Texas state a salary/);
   });
 
   it('the below-gate sentence names the condition that failed (CQ-08)', () => {
     // Enough postings, too few employers: the Illinois directory case.
     expect(keep(buildHubPayParagraph({ scopeName: 'Illinois', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 13, salaryDisclosedEmployers: 2 }) })))
-      .toBe(`13 postings in Illinois state a salary, but they come from only 2 employers, and this site publishes a state figure only once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+      .toBe(`13 postings in Illinois state a salary, but they come from only 2 employers. A state median appears once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Maine', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 6, salaryDisclosedEmployers: 1 }) })))
-      .toMatch(/^6 postings in Maine state a salary, but they come from only 1 employer, /);
+      .toMatch(/^6 postings in Maine state a salary, but they come from only 1 employer\. /);
     // Both counts clear, so the annual-pay rule or the employer-share cap
     // (CQ-15) failed; the facts cannot tell which, so the whole rule is stated.
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 14, salaryDisclosedEmployers: 4 }) })))
-      .toBe(`14 postings in Texas state a salary from 4 employers, but this site publishes a state figure only once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers list annual pay for an ${NP} role, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them, and that is not met yet. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+      .toBe(`14 postings in Texas state a salary from 4 employers. A state median appears once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers list annual pay for an ${NP} role, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     // No sentence ever claims a count that passed is "below the minimum".
     for (const [d, e] of [[13, 2], [14, 4], [5, 3], [2, 1]]) {
       const text = buildHubPayParagraph({ scopeName: 'Ohio', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: d, salaryDisclosedEmployers: e }) });
       expect(text).not.toContain('below the minimum');
+      // No pipeline state ("not met yet") and no narration of what the site does.
+      expect(text).not.toMatch(/not met yet|this site publishes/i);
     }
   });
 
@@ -422,7 +429,7 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 8, benchmark: BENCH }) })))
       .toBe('Across 6 listings from 3 employers that state an annual salary, the median posted pay is $132K. The middle half of those listings fall between $118K and $150K.');
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 2 }) })))
-      .toBe(`2 of 5 listings state an annual salary. This site publishes a median only once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them, so compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`);
+      .toBe(`2 of 5 listings state an annual salary. A median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. Until then, compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`);
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 1, salaryDisclosedCount: 1 }) }))).toMatch(/^1 of 1 listing states an annual salary\./);
     expect(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 0 }) })).toBeNull();
   });
@@ -446,7 +453,7 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
     expect(keep(buildCityPayParagraph({ city: 'Austin', benchmark: BENCH })))
       .toBe(`Across 6 listings from 3 employers that disclose annual pay, the median in Austin is $132,000. The middle half falls between $118,000 and $150,000. ${NATIONAL_REFERENCE_SENTENCE}`);
     expect(keep(buildCityPayParagraph({ city: 'Austin', benchmark: null })))
-      .toBe(`This page does not publish a local figure until at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers in Austin disclose annual pay, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. ${NATIONAL_REFERENCE_SENTENCE}`);
+      .toBe(`A local median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers in Austin disclose annual pay, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. ${NATIONAL_REFERENCE_SENTENCE}`);
   });
 
   it('CC-K3 has three branches', () => {
@@ -455,7 +462,7 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: null, cityBenchmark: BENCH })))
       .toMatch(new RegExp(`^No median is published for remote listings alone\\. Across 6 listings from 3 employers that disclose annual pay, the median across all ${NP} listings in Austin is \\$132,000\\.`));
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: null, cityBenchmark: null })))
-      .toMatch(/^This page does not publish a local figure until at least 5 listings from at least 3 employers in Austin disclose annual pay, with no single employer above 40% of them\./);
+      .toMatch(/^A local median appears once at least 5 listings from at least 3 employers in Austin disclose annual pay, with no single employer above 40% of them\./);
   });
 
   it('DIR-L3 card line and CO-C2 count sentence', () => {
@@ -532,14 +539,16 @@ describe('small blocks pluralize at one and carry no trend claims', () => {
   it('SAL-S4 omits every zero clause', () => {
     expect(buildHiringForSentence(facts())).toBeNull();
     expect(keep(buildHiringForSentence(facts({ total: 5, distinctEmployers: 2, workMode: mode(5, 2, 0, 3), recency: recency({ last7: 0, last30: 1 }), newGradFriendly: 1 }))))
-      .toBe('5 open roles from 2 employers. 2 remote, 3 on site. 1 was added in the last 30 days; the newest was posted on September 1, 2026. 1 is marked open to new graduates.');
+      .toBe('5 open roles from 2 employers. 2 remote, 3 on site. 1 was added in the last 30 days. The newest was posted on September 1, 2026. 1 is marked open to new graduates.');
     expect(keep(buildHiringForSentence(facts({ total: 1, distinctEmployers: 1, workMode: mode(1, 0, 0, 1), recency: recency({ total: 1, last7: 0, last30: 0 }) }))))
       .toBe('1 open role from 1 employer. 1 on site. The newest was posted on September 1, 2026.');
   });
 
   it('SAL-S5 caption, SPEC CTA, CO-C1 footprint, DIR-L5 editorial', () => {
-    expect(keep(SALARY_NEARBY_NOT_PUBLISHED)).toBe('Not published (sample does not meet the rule)');
+    expect(keep(SALARY_NEARBY_NOT_PUBLISHED)).toBe('Not published');
     expect(keep(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL))).toContain(`published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`);
+    // The caption is split into sentences, never chained with semicolons.
+    expect(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL)).not.toContain(';');
     expect(buildSpecialtyCtaLine({ label: 'Family Practice', total: 0 })).toBeNull();
     expect(keep(buildSpecialtyCtaLine({ label: 'Family Practice', total: 1 }))).toBe('1 Family Practice opening is live right now.');
     expect(keep(buildSpecialtyCtaLine({ label: 'Family Practice', total: 4 }))).toBe('4 Family Practice openings are live right now.');

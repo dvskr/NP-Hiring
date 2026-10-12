@@ -330,15 +330,12 @@ export default async function ResourcesPage() {
           <h1 className="stk-h1 font-heading">
             {brand.niche.short} Resources & Guides
           </h1>
-          <p className="stk-lede" style={{ margin: '16px auto 32px' }}>
-            Everything you need for your {brand.niche.short} career, from licensure requirements to salary negotiation.
-          </p>
 
           {/* Stat stickers: count stickers render only when the content actually
               exists (audit F12: no advertised inventory the page cannot deliver).
               "Articles" and "State Guides" count separate posts (articleCount
               above), so no post is counted twice. */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginBottom: '56px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginTop: '32px', marginBottom: '56px' }}>
             {[
               ...(articleCount > 0 ? [{ value: `${articleCount}`, label: 'Articles' }] : []),
               ...(sortedStates.length > 0 ? [{ value: `${sortedStates.length}`, label: 'State Guides' }] : []),
@@ -439,9 +436,6 @@ export default async function ResourcesPage() {
             <h2 className="stk-h2 font-heading">
               {brand.niche.short} Licensure Checker
             </h2>
-            <p className="stk-lede">
-              Select your state to instantly see requirements, practice authority, salary data, and timeline.
-            </p>
           </div>
 
           {/* ─── Licensure Checker Tool, framed as one large sticker ─── */}
@@ -472,9 +466,6 @@ export default async function ResourcesPage() {
             <h2 className="stk-h2 font-heading">
               Browse All Licensure Guides
             </h2>
-            <p className="stk-lede">
-              Requirements, board links, salary data, and step-by-step instructions for every state.
-            </p>
           </div>
 
           <div className="res-state-grid" style={{
@@ -671,10 +662,7 @@ export default async function ResourcesPage() {
             <span className="stk-icon stk-icon-lg stk-icon-on-berry" aria-hidden="true">
               <Briefcase size={26} strokeWidth={2.25} />
             </span>
-            <h2 className="stk-cta-title font-heading">Ready to Find Your Next {brand.niche.short} Role?</h2>
-            <p className="stk-cta-lede">
-              Browse hundreds of {brand.niche.descriptor} positions updated daily.
-            </p>
+            <h2 className="stk-cta-title font-heading" style={{ marginBottom: '28px' }}>Ready to Find Your Next {brand.niche.short} Role?</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px' }}>
               <Link href="/jobs" className="stk-btn">Browse Jobs <ArrowRight size={16} aria-hidden="true" /></Link>
               <Link href="/job-alerts" className="stk-btn stk-btn-ghost">Set Up Job Alerts</Link>

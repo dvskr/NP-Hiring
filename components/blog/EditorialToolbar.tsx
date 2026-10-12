@@ -161,7 +161,7 @@ export default function EditorialToolbar({ slug, title, url }: EditorialToolbarP
         <div className="ed-newsletter-form">
           <BlogEmailSignup source={`blog_sidebar_${slug}`} />
         </div>
-        <p className="ed-newsletter-fineprint">Unsubscribe anytime · No spam</p>
+        <p className="ed-newsletter-fineprint">Unsubscribe anytime</p>
       </div>
     </div>
   );

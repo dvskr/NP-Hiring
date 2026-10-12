@@ -261,12 +261,9 @@ export default function SavedCandidatesTab() {
         return (
             <div style={{ ...cardBase, padding: '60px 24px', textAlign: 'center' }}>
                 <Bookmark size={36} style={{ color: '#B0C4BC', marginBottom: '12px' }} />
-                <h3 style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', marginBottom: '6px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>
                     No saved candidates
                 </h3>
-                <p style={{ fontSize: '13px', color: '#8A9BA6', maxWidth: '400px', margin: '0 auto' }}>
-                    Browse the Talent Pool and bookmark candidates you&apos;re interested in. They&apos;ll appear here for easy access.
-                </p>
             </div>
         );
     }

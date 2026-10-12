@@ -83,7 +83,7 @@ import { isCategoryFaqSlug } from '@/lib/pseo/category-faq-data';
 // hardcode asset paths here.
 import { CATEGORY_ASSET_REGISTRY } from '@/lib/pseo/category-asset-registry';
 import { getCategoryLandingContent } from '@/lib/pseo/category-landing-content';
-import { ALL_CATEGORY_SLUGS, CATEGORY_AXES, STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { CATEGORY_AXES, STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { getListingFacts, type ListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
 import {
@@ -709,7 +709,6 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                     heroAlt={`${role} illustration`}
                     badgeText={heroBadge}
                     breadcrumbs={breadcrumbTrail.map((crumb) => ({ label: crumb.name, href: crumb.url }))}
-                    indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf(slug) + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
                     headlineLine1={label}
                     headlineLine2={noun === label ? 'Jobs' : `${brand.niche.short} Jobs`}
                     // CQ-16: the H1 reads as one noun phrase ("Remote NP Jobs

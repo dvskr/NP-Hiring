@@ -324,7 +324,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
           <p style={{ fontSize: '16px', color: '#5A4A42', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
             {/* Honest range label — never claims to show more than it renders. */}
             Showing {pageRangeLabel(currentPage, listed.length, totalCompanies)} employers with active{' '}
-            {brand.niche.descriptor} positions. Jump to a letter, or browse the full A to Z list below.
+            {brand.niche.descriptor} positions.
           </p>
         </section>
 
@@ -343,10 +343,9 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
               include health systems, community health centers, Federally
               Qualified Health Centers (FQHCs), VA medical centers, telehealth
               platforms, and private practices, alongside <strong>staffing agencies</strong>{' '}
-              that place {brand.niche.short}s into locum and travel assignments. We pull active
-              postings from each employer&apos;s career pages and ATS feeds twice
-              daily, so the company list reflects who is genuinely hiring now, not
-              a static directory.
+              that place {brand.niche.short}s into locum and travel assignments. The list
+              updates every day from each employer&apos;s career pages and job feeds,
+              so it shows who is hiring now.
             </p>
             <p style={{ marginBottom: '16px' }}>
               When evaluating an {brand.niche.short} employer, the questions that matter most are
@@ -358,14 +357,14 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
               if your state needs them, and what they cover on{' '}
               <strong>malpractice, CME, and EMR/billing infrastructure</strong>.
               Larger health systems and federal employers (VA, IHS) tend to
-              standardize these; private practices and telehealth startups vary
+              standardize these. Private practices and telehealth startups vary
               widely.
             </p>
             <p style={{ marginBottom: 0 }}>
               Compensation patterns differ by employer type too. VA roles bundle a
-              federal pension with EDRP loan repayment up to $200K; FQHCs and CMHCs
-              qualify for NHSC repayment; telehealth platforms typically offer the
-              highest hourly rates but no benefits; hospital systems offer signing
+              federal pension with EDRP loan repayment up to $200K. At FQHCs and CMHCs,
+              NHSC loan repayment depends on the site&apos;s approval. Telehealth platforms typically offer the
+              highest hourly rates but no benefits. Hospital systems offer signing
               bonuses and relocation. Open one of the listings below to see specific
               roles, compensation ranges, and apply paths for that employer.
             </p>
@@ -380,13 +379,10 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
           <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px 0' }}>
             <h2
               className="font-lora"
-              style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}
+              style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 20px' }}
             >
               Employers with the most open roles
             </h2>
-            <p style={{ fontSize: '14px', color: '#7A6A62', margin: '0 0 20px', lineHeight: 1.6 }}>
-              Ranked by live active postings, refreshed hourly.
-            </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
               {spotlight.map((entry) => (
                 <CompanyCard key={`spotlight-${entry.id}`} entry={entry} />
@@ -647,10 +643,9 @@ function CompanyCard({ entry }: { entry: DirectoryEntry }) {
               {entry.activeJobs} open {entry.activeJobs === 1 ? 'position' : 'positions'}
             </span>
             {entry.isClaimed && (
-              // Same wording and palette as the profile page badge, so the
+              // Same label and palette as the profile page badge, so the
               // hub never asserts anything the profile does not.
               <span
-                title="An employer asked to be recognized as the owner of this profile, and our team approved the request."
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

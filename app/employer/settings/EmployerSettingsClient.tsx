@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { brand } from '@/config/brand';
 import {
     Save, Loader2, Globe, Mail,
     Phone, CheckCircle, AlertTriangle, FileText, Lock,
@@ -395,11 +394,11 @@ export default function EmployerSettingsClient() {
     }
 
     const sections = [
-        { key: 'company' as const, label: 'Company Profile', icon: <Building2 size={18} />, color: '#BE185D', bg: '#FCE7F3', desc: 'Brand & details' },
-        { key: 'billing' as const, label: 'Billing & Plans', icon: <CreditCard size={18} />, color: '#7C3AED', bg: '#EDE9FE', desc: 'Invoices & receipts' },
-        { key: 'alerts' as const, label: 'Candidate Alerts', icon: <BellRing size={18} />, color: '#F59E0B', bg: '#FEF3C7', desc: 'Match notifications' },
-        { key: 'notifications' as const, label: 'Notifications', icon: <Bell size={18} />, color: '#EC4899', bg: '#FCE7F3', desc: 'Newsletter & applications' },
-        { key: 'account' as const, label: 'Account Security', icon: <ShieldCheck size={18} />, color: '#0EA5E9', bg: '#DBEAFE', desc: 'Password & access' },
+        { key: 'company' as const, label: 'Company Profile', icon: <Building2 size={18} />, color: '#BE185D', bg: '#FCE7F3' },
+        { key: 'billing' as const, label: 'Billing & Plans', icon: <CreditCard size={18} />, color: '#7C3AED', bg: '#EDE9FE' },
+        { key: 'alerts' as const, label: 'Candidate Alerts', icon: <BellRing size={18} />, color: '#F59E0B', bg: '#FEF3C7' },
+        { key: 'notifications' as const, label: 'Notifications', icon: <Bell size={18} />, color: '#EC4899', bg: '#FCE7F3' },
+        { key: 'account' as const, label: 'Account Security', icon: <ShieldCheck size={18} />, color: '#0EA5E9', bg: '#DBEAFE' },
     ];
 
     const Label = ({ children }: { children: React.ReactNode }) => (
@@ -448,10 +447,7 @@ export default function EmployerSettingsClient() {
                             }}>
                                 {s.icon}
                             </div>
-                            <div style={{ textAlign: 'left' }}>
-                                <div style={{ fontSize: '14px', fontWeight: 700, color: activeSection === s.key ? '#1A2E35' : '#8A9BA6' }}>{s.label}</div>
-                                <div style={{ fontSize: '11.5px', color: '#B0BEC5', fontWeight: 500, marginTop: '2px' }}>{s.desc}</div>
-                            </div>
+                            <div style={{ textAlign: 'left', fontSize: '14px', fontWeight: 700, color: activeSection === s.key ? '#1A2E35' : '#8A9BA6' }}>{s.label}</div>
                         </button>
                     ))}
                 </div>
@@ -533,7 +529,6 @@ export default function EmployerSettingsClient() {
                                             }}
                                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                         />
-                                        <span style={{ fontSize: '12px', color: '#B0BEC5' }}>Logo preview</span>
                                     </div>
                                 )}
                             </div>
@@ -611,7 +606,7 @@ export default function EmployerSettingsClient() {
                                 <FileText size={24} color="#B0BEC5" />
                             </div>
                             <p style={{ color: '#8A9BA6', fontSize: '14px', margin: 0 }}>
-                                No payment history yet. Post your first job to get started.
+                                No payment history yet.
                             </p>
                         </div>
                     ) : (
@@ -763,9 +758,6 @@ export default function EmployerSettingsClient() {
                             </button>
                         </div>
                     </div>
-                    <p style={{ color: '#8A9BA6', fontSize: '13px', marginBottom: '20px' }}>
-                        Receive a notification when new {brand.niche.short} candidates match your criteria.
-                    </p>
 
                     {/* Specialties */}
                     <div style={{ marginBottom: '20px' }}>
@@ -838,9 +830,6 @@ export default function EmployerSettingsClient() {
                             <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>
                                 Employer Newsletter
                             </h3>
-                            <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '4px 0 0' }}>
-                                Hiring tips, salary benchmarks, and {brand.niche.short} market insights delivered monthly.
-                            </p>
                         </div>
                         {newsletterChecked ? (
                             <div style={{
@@ -887,13 +876,10 @@ export default function EmployerSettingsClient() {
                             <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>
                                 Application Notifications
                             </h3>
-                            <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '4px 0 0' }}>
-                                Choose which job postings should email you when a new candidate applies.
-                            </p>
                         </div>
                         {notifPrefs.length === 0 ? (
                             <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0, padding: '16px 0' }}>
-                                You do not have any active job postings yet. Once you post a job, notification toggles for each listing will appear here.
+                                You do not have any active job postings yet.
                             </p>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

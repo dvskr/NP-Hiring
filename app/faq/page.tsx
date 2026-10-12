@@ -81,7 +81,7 @@ export default function FAQPage() {
       // (lib/apply-intent.ts), and Easy Apply jobs never leave the job page.
       // This answer is also in the FAQPage JSON-LD, so it must match the flow.
       question: "How do I apply to a job?",
-      answer: `Open the job and click its Apply button. Applying takes a free ${brand.name} account: create one or sign in, and we bring you straight back to the job. On an Easy Apply job you send your ${brand.name} profile and resume from the job page; on any other job you continue to the employer's application in a new tab.`
+      answer: `Open the job and click its Apply button. Applying takes a free ${brand.name} account: create one or sign in, and we bring you straight back to the job. On an Easy Apply job you send your ${brand.name} profile and resume from the job page. On any other job you continue to the employer's application in a new tab.`
     },
     {
       question: "Can I track my applications?",
@@ -188,7 +188,7 @@ export default function FAQPage() {
     },
     {
       question: `What are good first ${brand.niche.short} jobs for new grads?`,
-      answer: `Three settings are worth a close look. 1) Federally Qualified Health Centers (FQHCs): structured settings with mentorship; ask whether the site participates in a federal loan repayment program. 2) Outpatient group practices: collaborative environments where you can ask for a gradual caseload ramp-up. 3) VA ${brand.niche.short} positions: federal benefits, and some facilities run residency programs for new graduates.`
+      answer: `Three settings are worth a close look. 1) Federally Qualified Health Centers (FQHCs): structured settings with mentorship. Ask whether the site participates in a federal loan repayment program. 2) Outpatient group practices: collaborative environments where you can ask for a gradual caseload ramp-up. 3) VA ${brand.niche.short} positions: federal benefits, and some facilities run residency programs for new graduates.`
     },
   ];
 
@@ -209,7 +209,7 @@ export default function FAQPage() {
     },
     {
       question: `Does having a DNP vs MSN affect an ${brand.niche.short}'s salary?`,
-      answer: `In clinical roles, DNP and MSN ${brand.niche.short}s typically earn similar salaries; the degree itself rarely commands a higher clinical wage. However, DNP holders have advantages in academic positions and executive leadership roles, and they may qualify for higher-tier positions in hospital systems.`
+      answer: `In clinical roles, DNP and MSN ${brand.niche.short}s typically earn similar salaries. The degree itself rarely commands a higher clinical wage. However, DNP holders have advantages in academic positions and executive leadership roles, and they may qualify for higher-tier positions in hospital systems.`
     },
     {
       question: `How can you make the most money as an ${brand.niche.short}?`,
@@ -283,12 +283,9 @@ export default function FAQPage() {
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: '#FFF1F2', color: '#E11D48', borderRadius: '20px', fontSize: '13px', fontWeight: 700, marginBottom: '24px' }}>
                       <HelpCircle size={14} /> Knowledge Base
                   </div>
-                  <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 3.5rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', marginBottom: '16px', lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                  <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 3.5rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
                       Frequently Asked <span style={{ color: '#E11D48' }}>Questions</span>
                   </h1>
-                  <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
-                      Find answers to common questions about {brand.name}, platform features, salary benchmarks, and clinical credentials.
-                  </p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                   {/* Exact-DPR ladder (scripts/regen-image-ladders.mjs) — reuses the
@@ -399,7 +396,7 @@ export default function FAQPage() {
               Still Have Questions?
             </h2>
             <p className="mb-6 max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Did not find your answer? We are here to help. Reach out and we will get back to you within 24 to 48 hours.
+              Reach out and we will get back to you within 24 to 48 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
               <a href={`mailto:${brand.email.support}`} className="w-full sm:w-auto">
@@ -421,7 +418,6 @@ export default function FAQPage() {
           @media (max-width: 768px) {
               .faq-hero-grid { grid-template-columns: 1fr !important; text-align: center; }
               .faq-hero-grid > div:last-child { order: -1; }
-              .faq-hero-grid > div:first-child p { margin-left: auto; margin-right: auto; }
           }
       ` }} />
     </div>

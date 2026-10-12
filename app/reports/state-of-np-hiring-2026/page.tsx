@@ -166,8 +166,7 @@ function EmployerShareHoldNote() {
             }}
         >
             Not published: one employer accounts for more than {MAX_EMPLOYER_SHARE_PERCENT}% of the
-            postings that state pay, and this report publishes a pay figure only when no single
-            employer does.
+            postings that state pay.
         </p>
     );
 }
@@ -184,9 +183,7 @@ function SampleTooSmallNote({ what }: { what: string }) {
                 color: MUTED_TEXT,
             }}
         >
-            Sample too small to publish. We do not print {what} until the underlying sample clears
-            the minimums stated in the methodology below, because a small-sample figure would read
-            as market signal that it is not.
+            Sample too small to publish {what}. The minimums are listed in the methodology below.
         </p>
     );
 }
@@ -243,7 +240,7 @@ function buildSchemas(snapshot: HiringReportSnapshot | null) {
               description:
                   `Aggregates over ${brand.name}'s own active ${brand.niche.descriptor} job postings ` +
                   `as of ${snapshot.asOf.slice(0, 10)} (${snapshot.inventory.totalActive} active postings). ` +
-                  `Describes this job board's inventory only; it is not a national census and not a wage survey.`,
+                  `Describes this job board's listings only. It is not a national census and not a wage survey.`,
               url: PAGE_URL,
               creator: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
               dateModified: snapshot.asOf.slice(0, 10),
@@ -352,30 +349,23 @@ export default async function StateOfHiring2026Page() {
                 </header>
 
                 <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '28px' }}>
-                    This report is built from one dataset we know completely: the active{' '}
-                    {brand.niche.descriptor} postings on {brand.name} itself. That makes it precise
-                    about what it covers and silent about what it does not: it describes this
-                    board&apos;s inventory, not the national {brand.niche.short} labor market. Where a
-                    figure&apos;s sample is too small to mean anything, we say so instead of printing
-                    it. National context, where shown, is cited to the federal and professional
-                    sources that actually publish it.
+                    This report is built from the active {brand.niche.descriptor} postings on{' '}
+                    {brand.name}. It describes this board&apos;s listings, not the national{' '}
+                    {brand.niche.short} labor market. Where a sample is too small, the report says so
+                    instead of showing a figure. National context is cited to the federal and
+                    professional sources that publish it.
                 </p>
 
                 {!snapshot && (
                     <p style={{ ...clayCard, padding: '16px 20px', marginTop: '24px', fontSize: '14px', color: MUTED_TEXT }}>
-                        The live aggregates are unavailable right now, so every board-derived section
-                        of this report is omitted rather than rendered from stored constants. The
-                        cited national context and the methodology below remain valid; reload later
-                        for the live figures.
+                        The live aggregates are unavailable right now, so the sections built from our
+                        listings are hidden. The national context and methodology below still apply.
+                        Reload later for the live figures.
                     </p>
                 )}
 
                 {snapshot && (
                     <Section icon={<Building2 size={20} />} title="The board at a glance" id="inventory">
-                        <p>
-                            A live count of this board&apos;s indexable inventory at the timestamp
-                            above, which is the population every figure below is computed from:
-                        </p>
                         <div
                             style={{
                                 display: 'grid',
@@ -405,9 +395,9 @@ export default async function StateOfHiring2026Page() {
                         {specialty.total >= REPORT_MIN_SHARE_SAMPLE ? (
                             <>
                                 <p>
-                                    Active postings matching each clinical specialty on our taxonomy. A
-                                    posting can match more than one specialty (and some match none), so
-                                    rows are overlapping counts, not slices of a pie:
+                                    Active postings in each clinical specialty. A posting can match more
+                                    than one specialty (and some match none), so the rows overlap and do
+                                    not add up to the total:
                                 </p>
                                 <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0 }}>
                                     {specialty.shown.map((row) => (
@@ -424,8 +414,8 @@ export default async function StateOfHiring2026Page() {
                                         {specialty.otherGroups} further{' '}
                                         {specialty.otherGroups === 1 ? 'specialty has' : 'specialties have'} fewer
                                         than {REPORT_MIN_GROUP_COUNT} matching postings each (
-                                        {specialty.otherCount.toLocaleString('en-US')} combined) and are folded
-                                        here rather than shown as one-posting rows.
+                                        {specialty.otherCount.toLocaleString('en-US')} combined) and are grouped
+                                        here.
                                     </p>
                                 )}
                             </>
@@ -533,9 +523,9 @@ export default async function StateOfHiring2026Page() {
                 {snapshot && (
                     <Section icon={<Wallet size={20} />} title={LIVE_SECTION_TITLES.pay} id="pay">
                         <p>
-                            What employers advertise, from postings that state a real pay range.
-                            Figures our pipeline estimated are excluded, and a state publishes only
-                            with at least {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
+                            What employers advertise, from postings that state a pay range. Estimated
+                            pay is excluded, and a state appears only with at least{' '}
+                            {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
                             {BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more
                             than {MAX_EMPLOYER_SHARE_PERCENT}% of them (the same gates as our{' '}
                             <Link href="/tools/salary-benchmark" style={linkStyle}>
@@ -555,8 +545,8 @@ export default async function StateOfHiring2026Page() {
                                             paddingTop: '10px',
                                         }}
                                     >
-                                        Midpoints of employer-advertised annual ranges on {brand.name};
-                                        p25/p75 are the 25th/75th percentiles of those midpoints.
+                                        Midpoints of employer-advertised annual ranges on {brand.name}.
+                                        p25 and p75 are the 25th and 75th percentiles of those midpoints.
                                     </caption>
                                     <thead>
                                         <tr style={{ textAlign: 'left', color: MUTED_TEXT, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
@@ -590,8 +580,7 @@ export default async function StateOfHiring2026Page() {
                             <SampleTooSmallNote what="an advertised-pay distribution" />
                         )}
                         <p style={{ fontSize: '13px', color: MUTED_TEXT, marginTop: '10px' }}>
-                            How many postings disclose pay at all, and how we hold ourselves to that
-                            number, is its own report:{' '}
+                            How many postings disclose pay at all is covered in its own report:{' '}
                             <Link href="/reports/pay-transparency" style={linkStyle}>
                                 pay transparency on {brand.name}
                             </Link>
@@ -601,11 +590,6 @@ export default async function StateOfHiring2026Page() {
                 )}
 
                 <Section icon={<Landmark size={20} />} title="National context, cited" id="context">
-                    <p>
-                        For scale beyond this board, the figures we republish come from the sources
-                        below. We do not survey, model, or adjust them, and each is quoted with its
-                        vintage:
-                    </p>
                     <div style={{ ...clayCard, padding: '16px 20px', marginTop: '12px', overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                             <caption
@@ -651,10 +635,9 @@ export default async function StateOfHiring2026Page() {
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>
                         <li>
                             <strong>Basis.</strong> Every live figure is computed from {brand.name}&apos;s
-                            own active postings at the &quot;as of&quot; timestamp shown in the header,
-                            counted with the same published, unexpired, not-repeatedly-dead-linked
-                            filter our sitemaps use. Nothing is sampled, imputed, or carried over from
-                            a previous run.
+                            own active postings (published, unexpired, and not flagged for a repeatedly
+                            broken link) at the &quot;as of&quot; time shown in the header. Nothing is
+                            sampled, imputed, or carried over from a previous run.
                         </li>
                         <li>
                             <strong>This is not a national census.</strong> It describes one job
@@ -665,23 +648,22 @@ export default async function StateOfHiring2026Page() {
                         <li>
                             <strong>Not a wage survey.</strong> Pay figures are midpoints of
                             employer-advertised ranges, which skew toward employers willing to
-                            advertise pay at all. Pipeline-estimated figures are excluded entirely.
+                            advertise pay at all. Estimated pay is excluded.
                         </li>
                         <li>
-                            <strong>Sample gates.</strong> Percentages publish only over at least{' '}
-                            {REPORT_MIN_SHARE_SAMPLE} postings; a distribution row shows individually
-                            only with at least {REPORT_MIN_GROUP_COUNT} postings; pay rows require at
-                            least {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
+                            <strong>Minimum samples.</strong> Percentages appear only over at least{' '}
+                            {REPORT_MIN_SHARE_SAMPLE} postings. A distribution row shows on its own only
+                            with at least {REPORT_MIN_GROUP_COUNT} postings. Pay rows need at least{' '}
+                            {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
                             {BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer above{' '}
-                            {MAX_EMPLOYER_SHARE_PERCENT}% of them. Below a size gate the section says
-                            &quot;sample too small&quot;, and a state held by the employer share cap is left out
-                            of the pay table; neither ever renders a padded number.
+                            {MAX_EMPLOYER_SHARE_PERCENT}% of them. Below a minimum the section says
+                            &quot;sample too small&quot;, and a state where one employer exceeds that share is
+                            left out of the pay table.
                         </li>
                         <li>
                             <strong>National context is republished, not produced.</strong> Those
                             figures come from the cited federal and professional sources, with their
-                            vintages shown, via the same audited source file every page of this site
-                            quotes from.
+                            dates shown, and every page of this site quotes the same figures.
                         </li>
                         <li>
                             <strong>Editions.</strong> This is the {EDITION.year} edition. Future
@@ -694,7 +676,7 @@ export default async function StateOfHiring2026Page() {
                         <Link href="/editorial-policy" style={linkStyle}>
                             editorial policy
                         </Link>
-                        ; citation format and custom cuts are on the{' '}
+                        . Citation format and custom cuts are on the{' '}
                         <Link href="/press" style={linkStyle}>
                             press &amp; data room
                         </Link>

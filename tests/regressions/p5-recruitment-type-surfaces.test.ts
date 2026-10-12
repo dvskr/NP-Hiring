@@ -4,9 +4,9 @@
  * badge, and the admin queue's reachability.
  *
  * The UX invariants under test:
- *   1. HONESTY — the facet names the unclassified bucket with a live count so
- *      filtering to a type never silently hides inventory, and the copy says
- *      outright that "not classified" does not mean "staffing agency".
+ *   1. QUIET — the facet is two labelled checkboxes with no explanatory copy
+ *      (owner call, 2026-10-12); the deep-link pill for the unclassified
+ *      bucket says "No employer type", never anything that reads as an agency.
  *   2. NEUTRALITY — badges render facts ("Direct employer" / "Staffing
  *      agency"), never warnings, and NULL renders as nothing everywhere.
  *   3. NO SILENT DROP — JobsPageClient.fetchJobs serializes its /api/jobs
@@ -36,13 +36,20 @@ describe('/jobs facet (components/jobs/LinkedInFilters.tsx)', () => {
         expect(src).toMatch(/recruitmentType === 'staffing_agency' \? null : 'staffing_agency'/);
     });
 
-    it('exposes the unclassified count and says what picking a type hides', () => {
-        expect(src).toContain('unclassifiedCount');
-        expect(src).toMatch(/have not classified yet/);
-        expect(src).toMatch(/does not\s+mean staffing agency/);
-        // The count renders only when known — a failed probe must hide the
-        // line, never fabricate a zero.
-        expect(src).toMatch(/unclassifiedCount !== null && unclassifiedCount > 0/);
+    it('carries no explanatory copy under the two options (owner call, 2026-10-12)', () => {
+        // No definitions, no process narration, no unclassified-count line.
+        expect(src).not.toMatch(/Our team labels employers/);
+        expect(src).not.toMatch(/ranks a job higher/);
+        expect(src).not.toMatch(/not classified does not mean/);
+        expect(src).not.toMatch(/hire for their own staff/);
+        // The count line was the only consumer of the unclassified probe, so
+        // the extra /api/jobs request went with it.
+        expect(src).not.toContain('unclassifiedCount');
+        expect(src).not.toMatch(/recruitmentType: 'unclassified'/);
+        // The deep-link pill for the unclassified bucket uses neutral
+        // wording, never our backlog state ("not yet classified").
+        expect(src).toContain(": 'No employer type',");
+        expect(src).not.toMatch(/'Employers not yet classified'/);
     });
 
     it('stays SPA — no hard-navigation guard now that fetchJobs forwards the param', () => {
@@ -125,8 +132,11 @@ describe('company profile badge (app/companies/[slug]/page.tsx)', () => {
         expect(src).toMatch(/THIRD member/);
     });
 
-    it('explains the staffing label as a fact, not a quality judgment', () => {
-        expect(src).toContain('not a quality judgment');
+    it('shows the badge alone, with no explanatory sentence or defensive aside (owner call, 2026-10-12)', () => {
+        expect(src).not.toContain('hires clinicians for its own staff.');
+        expect(src).not.toContain('recruits clinicians for client organizations.');
+        expect(src).not.toContain('not a quality judgment');
+        expect(src).not.toMatch(/Our team classified/);
     });
 });
 

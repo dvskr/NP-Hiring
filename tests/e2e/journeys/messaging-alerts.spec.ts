@@ -677,7 +677,7 @@ test.describe('messaging: employer InMail → candidate inbox', () => {
     await composer.press('Enter');
     const banner = thread.getByRole('alert');
     await expect(banner).toContainText(/under 2000 characters/i);
-    await expect(banner).toContainText('your message was not delivered');
+    await expect(banner).toContainText('Your message was not delivered.');
     await expect(banner.getByRole('button', { name: 'Retry' })).toBeVisible();
     await expect(composer).toHaveValue('y'.repeat(2001));
 
@@ -949,7 +949,7 @@ test.describe('messaging: employer InMail → candidate inbox', () => {
     const readBubble = thread.locator('.msg-row').filter({ hasText: readText }).first();
     await readBubble.hover();
     await readBubble.getByRole('button', { name: 'Delete' }).click();
-    await expect(page.getByText('This message has already been read. It will only be removed from your view; the recipient will still see it.')).toBeVisible();
+    await expect(page.getByText('This message has already been read. It will be removed from your view only. The recipient will still see it.')).toBeVisible();
     await page.getByRole('dialog', { name: 'Delete message?' }).getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.getByText('Message removed from your view')).toBeVisible();
     await expect(thread.locator('.msg-row').filter({ hasText: readText })).toHaveCount(0);
@@ -989,7 +989,7 @@ test.describe('messaging: employer InMail → candidate inbox', () => {
     await composer.fill(text);
     await thread.getByRole('button', { name: 'Send message' }).click();
     const banner = thread.getByRole('alert');
-    await expect(banner).toContainText('your message was not delivered');
+    await expect(banner).toContainText('Your message was not delivered. Please try again.');
     await expect(composer, 'draft preserved on failure').toHaveValue(text);
     await expect(thread.locator('.msg-row').filter({ hasText: text })).toHaveCount(0);
 
@@ -1310,7 +1310,7 @@ test.describe('job alerts: create, manage, downsell, unsubscribe', () => {
     await expect(page.getByRole('heading', { name: 'Something Went Wrong' })).toBeVisible();
     await expect(page.getByText(/couldn.t find this job alert|job alert not found/i)).toBeVisible();
     await page.goto('/job-alerts/unsubscribe');
-    await expect(page.getByText('Invalid unsubscribe link. No token provided.')).toBeVisible();
+    await expect(page.getByText('This unsubscribe link is incomplete. Please use the link in your alert email.')).toBeVisible();
   });
 
   test('unsubscribe page: a failed PATCH reports the error and keeps the alert unchanged', async ({ page }) => {

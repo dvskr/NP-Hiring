@@ -190,7 +190,6 @@ export default function PracticeRevenueProjector() {
                     id="practice-scenario"
                     className="tool-control"
                     value={scenarioKey}
-                    aria-describedby="practice-scenario-hint"
                     onChange={(event) => applyScenario(event.target.value)}
                     style={selectStyle}
                 >
@@ -198,10 +197,6 @@ export default function PracticeRevenueProjector() {
                         <option key={s.key} value={s.key}>{s.label}</option>
                     ))}
                 </select>
-                <p id="practice-scenario-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>
-                    Loads the midpoint of that scenario&rsquo;s published volume and overhead bands. Selecting a
-                    scenario overwrites the fields below; you can then change any value.
-                </p>
             </div>
 
             {/* Controls */}
@@ -240,7 +235,7 @@ export default function PracticeRevenueProjector() {
                 <NumberField
                     id="practice-noshow"
                     label="No-shows and late cancellations"
-                    hint="Your assumption; we publish no figure for this. Starts at 0, which assumes every scheduled visit completes."
+                    hint="Your assumption. Starts at 0, which assumes every scheduled visit completes."
                     value={draft.noShowPct}
                     suffix="%"
                     onChange={set('noShowPct')}
@@ -248,7 +243,7 @@ export default function PracticeRevenueProjector() {
                 <NumberField
                     id="practice-fixed"
                     label="Fixed annual costs on top"
-                    hint="Your assumption, such as a lease or a specific EHR or billing contract. Starts at 0 because vendor pricing changes and we will not print a figure that expires."
+                    hint="Your assumption, such as a lease or a specific EHR or billing contract. Starts at 0."
                     value={draft.fixedAnnualCosts}
                     prefix="$"
                     step={1000}
@@ -301,7 +296,7 @@ export default function PracticeRevenueProjector() {
                     </Link>{' '}
                     publishes {scenario.label.toLowerCase()} as {formatUsdK(band.grossMin)} to {formatUsdK(band.grossMax)}{' '}
                     gross and {formatUsdK(band.netMin)} to {formatUsdK(band.netMax)} net, pairing its lowest volume with
-                    its highest overhead and vice versa. The figure above is a single point inside that method; the
+                    its highest overhead and vice versa. The figure above is a single point inside that method. The
                     preset loads the midpoint of both bands.
                 </p>
             </div>
@@ -320,9 +315,8 @@ export default function PracticeRevenueProjector() {
                         {trim(overheadRow.baseValue + overheadUp.step * 100)}%.
                     </>
                 )}
-                {' '}Each cell prints the value the model used beneath the net it produced. The swing column
-                is what that single input is worth to your net across the range; the largest swing is the number to
-                verify first.
+                {' '}The swing column is what that single input is worth to your net across the range. The largest
+                swing is the number to verify first.
             </p>
             <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', minWidth: '520px' }}>
@@ -368,8 +362,7 @@ export default function PracticeRevenueProjector() {
 
             <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 16px', lineHeight: 1.6, padding: '13px 15px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.05)' }}>
                 One more scheduled visit a week, all else equal, is worth{' '}
-                <strong>{formatUsd(perExtraVisit)}</strong> a year at these inputs. That is the number to hold your
-                caseload plan against.
+                <strong>{formatUsd(perExtraVisit)}</strong> a year at these inputs.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '9px' }}>

@@ -336,7 +336,6 @@ export default async function HospitalPage({ searchParams }: PageProps) {
         heroAlt={`Hospital based ${brand.niche.short} acute care`}
         badgeText={facts.total > 0 ? buildLiveRolesBadge(facts.total) : `${brand.niche.long} Careers`}
         breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Hospital", url: `${brand.baseUrl}/jobs/hospital` }])}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('hospital') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Hospital"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, acute inpatient care."

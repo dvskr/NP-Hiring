@@ -291,7 +291,8 @@ describe('the category x city FAQ array is the FAQPage graph', () => {
         expect(pay).toBeDefined();
         // No local median is published, and the one dollar figure that remains
         // names its source in the same sentence.
-        expect(pay!.answer).toContain('does not publish a local figure');
+        expect(pay!.answer).toContain('A local median appears once');
+        expect(pay!.answer).not.toContain('does not publish');
         expect(pay!.answer.match(/\$[\d,]+/g)).toHaveLength(1);
         expect(pay!.answer).toContain('BLS OEWS');
     });

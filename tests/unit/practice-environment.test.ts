@@ -77,7 +77,7 @@ describe('getPracticeEnvironment', () => {
 describe('nlcSentence has three branches and always talks about the RN license', () => {
   it('member branch', () => {
     expect(nlcSentence('Texas')).toBe(
-      'Texas is a Nurse Licensure Compact member. The compact covers the RN license beneath your APRN credential; the APRN license itself is still issued by Texas.',
+      'Texas is a Nurse Licensure Compact member. The compact covers the RN license beneath your APRN credential. The APRN license itself is still issued by Texas.',
     );
   });
 

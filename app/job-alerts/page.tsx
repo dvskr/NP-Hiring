@@ -248,7 +248,6 @@ function JobAlertsContent() {
         heroAlt="Job Alerts"
         badgeText="Job Alerts"
         breadcrumbs={['Home', 'Job Alerts']}
-        indexLabel="№ 03"
         headlineLine1="Never Miss"
         headlineLine2="a Dream Job"
         headlineSub="Personalized alerts"
@@ -274,11 +273,8 @@ function JobAlertsContent() {
               <h2 style={{
                 fontSize: '18px', fontWeight: 700,
                 fontFamily: 'var(--font-lora), Georgia, serif',
-                color: '#1A2E35', marginBottom: '6px',
+                color: '#1A2E35', marginBottom: '20px',
               }}>Create Your Job Alert</h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '24px', lineHeight: 1.5 }}>
-                Enter your details below and we&apos;ll notify you when matching jobs are posted.
-              </p>
 
               {/* Success */}
               {message.type === 'success' && (
@@ -365,9 +361,6 @@ function JobAlertsContent() {
                         <option key={suggestion} value={suggestion} />
                       ))}
                     </datalist>
-                    <p style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
-                      Matched against the job title and employer name.
-                    </p>
                   </div>
 
                   {/* Location */}
@@ -453,14 +446,10 @@ function JobAlertsContent() {
                         type="checkbox"
                         checked={newGradOnly}
                         onChange={(e) => setNewGradOnly(e.target.checked)}
-                        aria-describedby="alert-new-grad-note"
                         style={{ width: '15px', height: '15px', accentColor: '#BE185D' }}
                       />
                       Only jobs open to new grads <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
                     </label>
-                    <p id="alert-new-grad-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
-                      Employers open to candidates with little or no experience.
-                    </p>
                   </div>
 
                   <div>
@@ -471,7 +460,6 @@ function JobAlertsContent() {
                       id="alert-min-years"
                       value={minYears}
                       onChange={(e) => setMinYears(e.target.value)}
-                      aria-describedby="alert-min-years-note"
                       style={clayInput}
                     >
                       <option value="">Any experience level</option>
@@ -479,11 +467,6 @@ function JobAlertsContent() {
                         <option key={years} value={String(years)}>I have {years}+ years</option>
                       ))}
                     </select>
-                    <p id="alert-min-years-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
-                      Select your years of experience and we&apos;ll only send roles you
-                      qualify for: jobs asking for at most that much experience, plus
-                      jobs that don&apos;t state a minimum.
-                    </p>
                   </div>
 
                   {/* Minimum salary — the BUCKETS are shared with the /jobs
@@ -506,9 +489,9 @@ function JobAlertsContent() {
                       "View All Matching Jobs" button at /jobs?salaryMin=,
                       the email and the page it links to can return different
                       sets. Aligning them means changing the digest matcher,
-                      which lives outside this package; until that happens the
-                      note below states the alert's REAL rule rather than
-                      promising parity.
+                      which lives outside this package (docs/PENDING_WORK.md
+                      2.18). The field carries no explanatory note (owner
+                      call, 2026-10-12); fix the matcher, not the copy.
 
                       NB: neither rule is uniformly "stricter" — they diverge
                       in BOTH directions. The board drops salary-less jobs the
@@ -517,8 +500,7 @@ function JobAlertsContent() {
                       returns {min, max: null} for any single-figure salary
                       text ("$130,000/yr" hits the ANNUAL branch with no
                       second capture), so those postings are invisible to a
-                      $100k+ alert. Do not simplify this copy back to
-                      "the board is stricter" — that is backwards here. */}
+                      $100k+ alert. */}
                   <div>
                     <label htmlFor="alert-min-salary" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
                       Minimum Salary <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
@@ -527,7 +509,6 @@ function JobAlertsContent() {
                       id="alert-min-salary"
                       value={minSalary}
                       onChange={(e) => setMinSalary(e.target.value)}
-                      aria-describedby="alert-min-salary-note"
                       style={clayInput}
                     >
                       <option value="">Any Salary</option>
@@ -535,14 +516,6 @@ function JobAlertsContent() {
                         <option key={bucket.value} value={String(bucket.value)}>{bucket.label}</option>
                       ))}
                     </select>
-                    <p id="alert-min-salary-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
-                      Your alert matches a job when the top of its posted range reaches
-                      this figure, and it keeps jobs that don&apos;t publish a salary at
-                      all, because filtering those out would hide most postings. Jobs
-                      advertising a single figure rather than a range (&ldquo;$130,000/yr&rdquo;)
-                      are missed even when that figure clears your minimum, and the jobs
-                      board does show those, so the two lists won&apos;t be identical.
-                    </p>
                   </div>
 
                   {/* Frequency */}
@@ -616,13 +589,6 @@ function JobAlertsContent() {
                       </>
                     )}
                   </button>
-
-                  <p style={{ fontSize: '11px', color: '#B0C4BC', textAlign: 'center', margin: 0 }}>
-                    You can unsubscribe anytime from the email or{' '}
-                    <Link href="/job-alerts/manage" style={{ color: '#BE185D', textDecoration: 'underline' }}>
-                      manage your alerts
-                    </Link>.
-                  </p>
                 </div>
               </form>
             </div>
@@ -689,25 +655,6 @@ function JobAlertsContent() {
                     {link.icon}{link.label}
                   </Link>
                 ))}
-              </div>
-            </div>
-
-            {/* Stats — P0 #5: evergreen cadence/price claims only. The
-                previous tiles carried fabricated inventory counts
-                (config/niche/copy.ts RULE: no hardcoded counts). */}
-            <div style={{ ...cardBase, padding: '20px' }}>
-              <p style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Why set an alert?
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ ...cardRecessed, padding: '12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>Daily</p>
-                  <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>New job updates</p>
-                </div>
-                <div style={{ ...cardRecessed, padding: '12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>Free</p>
-                  <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>No cost, ever</p>
-                </div>
               </div>
             </div>
 

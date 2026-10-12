@@ -113,10 +113,6 @@ export default function SalaryInsights({
             </div>
 
             <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
-                <p className="text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
-                    {brand.niche.short} salaries vary based on experience, setting, and location.
-                    Telehealth positions often offer competitive rates with added flexibility.
-                </p>
                 <Link
                     href="/salary-guide"
                     className="text-sm font-medium hover:underline"

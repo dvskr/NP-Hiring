@@ -5,7 +5,6 @@ import { normalizeDisplaySalary } from '@/lib/salary-display';
 import { displayText, normalizeDisplayText } from '@/lib/display-text';
 import Link from 'next/link';
 import { Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, Bookmark, MapPin, RefreshCw } from 'lucide-react';
-import { brand } from '@/config/brand';
 import ConfirmDialog, { type ConfirmConfig } from '@/components/ui/ConfirmDialog';
 
 interface Application {
@@ -162,7 +161,7 @@ export default function MyApplicationsPage() {
     const requestWithdraw = (applicationId: string, jobTitle: string) => {
         setConfirm({
             title: 'Withdraw this application?',
-            description: `${jobTitle}: the employer still sees this application, marked “Withdrawn”, with your name on it. Your cover letter text and résumé are removed from it; a cover letter you uploaded as a file stays attached. This cannot be undone.`,
+            description: `The employer still sees your application for ${jobTitle}, marked “Withdrawn”, with your name on it. Your cover letter text and résumé are removed. A cover letter you uploaded as a file stays attached. This cannot be undone.`,
             confirmLabel: 'Withdraw',
             variant: 'danger',
             onConfirm: () => {
@@ -187,14 +186,10 @@ export default function MyApplicationsPage() {
                     <h1 style={{
                         fontSize: '28px', fontWeight: 800,
                         fontFamily: 'var(--font-lora), Georgia, serif',
-                        color: '#1A2E35', marginBottom: '6px',
+                        color: '#1A2E35', marginBottom: '12px',
                     }}>
                         My Applications
                     </h1>
-                    <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 12px' }}>
-                        Applications you submitted through {brand.name}, with the status the
-                        employer has set.
-                    </p>
                     {/* P2 #23: /saved carries an "Applied" tab listing jobs the
                         visitor marked as applied themselves (including
                         click-throughs to external sites). Two different things
@@ -301,14 +296,8 @@ export default function MyApplicationsPage() {
                         <h2 style={{
                             fontSize: '18px', fontWeight: 700,
                             fontFamily: 'var(--font-lora), Georgia, serif',
-                            color: '#1A2E35', marginBottom: '8px',
+                            color: '#1A2E35', marginBottom: '24px',
                         }}>No applications yet</h2>
-                        <p style={{
-                            color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
-                            maxWidth: '340px', marginInline: 'auto', lineHeight: 1.6,
-                        }}>
-                            Find your next {brand.niche.short} role and apply today.
-                        </p>
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                             <Link href="/jobs" style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '8px',

@@ -102,7 +102,7 @@ export async function evaluateEmailChange(
         const domainLabel = oldDomain ?? 'your current domain';
         return {
             allowed: false,
-            reason: `Email domain changes aren't allowed once jobs have been posted from ${domainLabel} — posting terms are per company domain. Contact ${brand.email.support} if your company domain has actually changed.`,
+            reason: `You can't change your email domain after posting jobs from ${domainLabel}, because posting terms apply per company domain. If your company domain has changed, contact ${brand.email.support}.`,
             lockedDomain: oldDomain ?? undefined,
         };
     }

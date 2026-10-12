@@ -378,7 +378,7 @@ export function buildNearbyStatesSentence(rows: ReadonlyArray<NearbyStateCount>)
 }
 
 export const NEARBY_STATES_NOTE =
-  "If you live near a state line, compare each state's own practice rules before applying, not only its AANP classification, because those rules change how a role is structured and what paperwork you file.";
+  "If you live near a state line, check each state's own practice rules before applying, not just its AANP classification. They shape how a role is structured and what paperwork you file.";
 
 // ─── Mixes (HUB-S4, HUB-S5, CITY-C3, CS-S3, CC-K2, DIR-L4, METRO-M5) ─────────
 
@@ -525,7 +525,7 @@ export function buildFreshnessSentence(recency: RecencyFacts): string | null {
   if (recency.datedCount < 1 || !recency.newestPostedAt) return null;
   const date = formatUtcDate(recency.newestPostedAt);
   const n = formatCount(recency.total, 'listing');
-  if (recency.last30 === 0) return `None of the ${n} were first posted in the last 30 days; the most recent was first posted on ${date}.`;
+  if (recency.last30 === 0) return `None of the ${n} were first posted in the last 30 days. The most recent was first posted on ${date}.`;
   return `${recency.last30} of the ${n} ${wasWere(recency.last30)} first posted in the last 30 days. The most recent was first posted on ${date}.`;
 }
 
@@ -577,14 +577,14 @@ function belowGatePaySentence(input: { scopeName: string; scopeNoun: 'state' | '
   const requirement = `at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers`;
   const lead = `${formatCount(d, 'posting')} in ${scopeName} ${d === 1 ? 'states' : 'state'} a salary`;
   if (d < BENCHMARK_MIN_POSTINGS) {
-    return `${lead}. This site publishes a ${scopeNoun} figure only once ${requirement} do${CAP_CLAUSE}.`;
+    return `${lead}. A ${scopeNoun} median appears once ${requirement} do${CAP_CLAUSE}.`;
   }
   if (e !== undefined && e < BENCHMARK_MIN_EMPLOYERS) {
     const from = e === 1 ? 'only 1 employer' : `only ${e} employers`;
-    return `${lead}, but they come from ${from}, and this site publishes a ${scopeNoun} figure only once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do.`;
+    return `${lead}, but they come from ${from}. A ${scopeNoun} median appears once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do.`;
   }
   const from = e !== undefined ? ` from ${formatCount(e, 'employer')}` : '';
-  return `${lead}${from}, but this site publishes a ${scopeNoun} figure only once ${requirement} list annual pay for an ${NP} role${CAP_CLAUSE}, and that is not met yet.`;
+  return `${lead}${from}. A ${scopeNoun} median appears once ${requirement} list annual pay for an ${NP} role${CAP_CLAUSE}.`;
 }
 
 /**
@@ -592,7 +592,7 @@ function belowGatePaySentence(input: { scopeName: string; scopeNoun: 'state' | '
  * employer holds more than the cap. States the whole rule, claims neither.
  */
 function gateFailClause(scope: string): string {
-  return `This page does not publish a local figure until at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers ${scope} disclose annual pay${CAP_CLAUSE}.`;
+  return `A local median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers ${scope} disclose annual pay${CAP_CLAUSE}.`;
 }
 
 function medianClause(row: BenchmarkRow, scope: string, subject = 'listings'): string {
@@ -614,7 +614,7 @@ export function buildHubPayParagraph(
   }
   const d = facts.salaryDisclosedCount;
   const bls = `The national median for ${NP_PROSE_PLURAL} is ${BLS_REFERENCE}.`;
-  if (d < 1) return `No current posting in ${scopeName} states a salary, so this site publishes no ${scopeNoun} figure. ${bls}`;
+  if (d < 1) return `No current posting in ${scopeName} states a salary. ${bls}`;
   return `${belowGatePaySentence({ scopeName, scopeNoun, facts })} ${bls}`;
 }
 
@@ -627,7 +627,7 @@ export function buildPostedPaySentence(input: { slug: string; facts: PayFacts & 
   }
   const d = facts.salaryDisclosedCount;
   if (d < 1 || !receivesNpMedian(slug)) return null;
-  return `${d} of ${formatCount(facts.total, 'listing')} ${d === 1 ? 'states' : 'state'} an annual salary. This site publishes a median only once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do${CAP_CLAUSE}, so compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`;
+  return `${d} of ${formatCount(facts.total, 'listing')} ${d === 1 ? 'states' : 'state'} an annual salary. A median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do${CAP_CLAUSE}. Until then, compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`;
 }
 
 /** CITY-C5: always one paragraph, two branches, national reference in both. */
@@ -849,7 +849,7 @@ export function buildHiringForSentence(
   if (facts.total < 1) return null;
   const modes = nonZeroModes(facts.workMode, ['remote', 'hybrid', 'onsite']).map((m) => `${m.n} ${MODE_LABEL[m.key]}`);
   const recency = facts.recency.newestPostedAt
-    ? `${facts.recency.last30 > 0 ? `${facts.recency.last30} ${wasWere(facts.recency.last30)} added in the last 30 days; the` : 'The'} newest was posted on ${formatUtcDate(facts.recency.newestPostedAt)}.`
+    ? `${facts.recency.last30 > 0 ? `${facts.recency.last30} ${wasWere(facts.recency.last30)} added in the last 30 days. The` : 'The'} newest was posted on ${formatUtcDate(facts.recency.newestPostedAt)}.`
     : null;
   return [
     `${formatCount(facts.total, 'open role')} from ${formatCount(facts.distinctEmployers, 'employer')}.`,
@@ -862,14 +862,13 @@ export function buildHiringForSentence(
 /**
  * SAL-S5 table cell for states whose median is withheld. Since CQ-15 a state
  * can be withheld with a full sample (one employer above the cap), so the
- * cell points at the rule the caption states instead of claiming a small
- * sample.
+ * cell claims no reason: the caption states the rule.
  */
-export const SALARY_NEARBY_NOT_PUBLISHED = 'Not published (sample does not meet the rule)';
+export const SALARY_NEARBY_NOT_PUBLISHED = 'Not published';
 
 /** SAL-S5 table caption. */
 export function buildSalaryNearbyCaption(nlcVerifiedLabel: string): string {
-  return `Practice classifications from AANP; compact status verified against the NCSBN roster on ${nlcVerifiedLabel}; medians from ${brand.name} postings with disclosed pay, published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers${CAP_CLAUSE}.`;
+  return `Practice classifications from AANP. Compact status verified against the NCSBN roster on ${nlcVerifiedLabel}. Medians from ${brand.name} postings with disclosed pay, published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers${CAP_CLAUSE}.`;
 }
 
 /** SPEC CTA line, count based; null at 0. */

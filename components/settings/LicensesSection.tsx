@@ -333,7 +333,7 @@ export default function LicensesSection({ showMsg }: Props) {
 
                     {licenses.length === 0 && !showForm && (
                         <p style={{ color: clayPalette.textMuted, fontSize: '13px', marginBottom: '16px' }}>
-                            No licenses added yet. Add your professional licenses to autofill applications.
+                            No licenses added yet.
                         </p>
                     )}
 

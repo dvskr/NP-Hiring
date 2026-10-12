@@ -62,15 +62,16 @@ type NumericField = Exclude<keyof TakeHomeInputs, 'filingStatus'>;
 interface FieldDef {
   key: NumericField;
   label: string;
-  hint: string;
+  /** Rendered under the field only when the label alone does not carry it. */
+  hint?: string;
   prefix?: string;
   suffix?: string;
   step: number;
 }
 
 const SHARED_FIELDS: readonly FieldDef[] = [
-  { key: 'hoursPerWeek', label: 'Hours worked per week', hint: 'Applied to both columns so the comparison holds hours constant.', suffix: 'hrs', step: 1 },
-  { key: 'paidDaysOff', label: 'Days off per year', hint: 'PTO plus holidays. Paid on W-2; unpaid on 1099, where it reduces billable hours.', suffix: 'days', step: 1 },
+  { key: 'hoursPerWeek', label: 'Hours worked per week', suffix: 'hrs', step: 1 },
+  { key: 'paidDaysOff', label: 'Days off per year', hint: 'PTO plus holidays. Paid on W-2. Unpaid on 1099, where it reduces billable hours.', suffix: 'days', step: 1 },
 ];
 
 const W2_FIELDS: readonly FieldDef[] = [
@@ -178,7 +179,7 @@ export default function TakeHomeCalculator() {
 
   const renderField = (field: FieldDef) => {
     const inputId = `takehome-${field.key}`;
-    const hintId = `${inputId}-hint`;
+    const hintId = field.hint ? `${inputId}-hint` : undefined;
     return (
       <div key={field.key}>
         <label htmlFor={inputId} style={labelStyle}>{field.label}</label>
@@ -210,7 +211,9 @@ export default function TakeHomeCalculator() {
             </span>
           )}
         </div>
-        <p id={hintId} style={{ fontSize: '11.5px', color: '#64748B', margin: '5px 0 0', lineHeight: 1.45 }}>{field.hint}</p>
+        {field.hint && (
+          <p id={hintId} style={{ fontSize: '11.5px', color: '#64748B', margin: '5px 0 0', lineHeight: 1.45 }}>{field.hint}</p>
+        )}
       </div>
     );
   };
@@ -230,8 +233,7 @@ export default function TakeHomeCalculator() {
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#1A2E35', margin: '0 0 4px' }}>Your numbers</h2>
               <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                Every field starts on a placeholder. Replace them with the offers in front of you;
-                nothing here is a published benchmark.
+                Every field starts on a placeholder. Replace each one with the offers in front of you.
               </p>
             </div>
             <button
@@ -254,16 +256,12 @@ export default function TakeHomeCalculator() {
               className="tool-control"
               value={filingStatus}
               onChange={(e) => setFilingStatus(e.target.value as FilingStatus)}
-              aria-describedby="takehome-filing-hint"
               style={selectStyle}
             >
               {(Object.keys(FILING_STATUS_LABELS) as FilingStatus[]).map((status) => (
                 <option key={status} value={status}>{FILING_STATUS_LABELS[status]}</option>
               ))}
             </select>
-            <p id="takehome-filing-hint" style={{ fontSize: '11.5px', color: '#64748B', margin: '5px 0 0' }}>
-              Sets the standard deduction and bracket table for tax year {TAX_MODEL_YEAR}.
-            </p>
           </div>
 
           <fieldset style={{ border: 0, padding: 0, margin: '0 0 18px' }}>
@@ -394,7 +392,7 @@ export default function TakeHomeCalculator() {
               <StatRow label="Taxable income after standard deduction" value={formatUsd(result.contract.taxableIncome)} />
             </div>
             <p style={{ fontSize: '12px', color: '#64748B', margin: '12px 0 0', lineHeight: 1.55 }}>
-              Federal only, tax year {TAX_MODEL_YEAR}. State and local income tax are not modeled; see the
+              Federal only, tax year {TAX_MODEL_YEAR}. State and local income tax are not included. Read the
               assumptions below before you rely on any figure here.
             </p>
           </div>

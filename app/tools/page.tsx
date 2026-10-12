@@ -117,9 +117,7 @@ export default function ToolsHubPage() {
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               {TOOLS.length} tools built on the same data as the rest of this site: live postings, published
-              federal tax figures, sourced regulatory data, and our own published prices. Each one shows its
-              working: what it assumes, what it excludes, and where the numbers came from. Where we have no
-              defensible figure, the field starts empty and says so rather than guessing.
+              federal tax figures, sourced regulatory data, and our own published prices.
             </p>
           </div>
 
@@ -156,13 +154,9 @@ export default function ToolsHubPage() {
 
       <section style={{ background: '#FFF', padding: '56px 20px 72px' }}>
         <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center' }}>
-          <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35', margin: '0 0 12px' }}>
+          <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35', margin: '0 0 22px' }}>
             Prefer to read?
           </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.65, margin: '0 0 22px' }}>
-            The guides go deeper than the calculators: full practice authority state by state, private-practice
-            startup mechanics, and the full 1099 vs W2 comparison.
-          </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px' }}>
             {[
               { href: '/resources', label: 'Career resources' },

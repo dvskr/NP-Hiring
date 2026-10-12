@@ -189,7 +189,7 @@ function medianPayAnswer(roleLabel: string, medianSalary?: number): string {
 function aprnPayAnswer(roleLabel: string, variesWith: string, medianSalary?: number): string {
     return medianSalary
         ? `The median posted salary across ${roleLabel} listings on ${brand.name} that disclose annual pay is ${formatDollars(medianSalary)}. Pay varies with ${variesWith}.`
-        : `${roleLabel} pay varies with ${variesWith}. ${brand.name} publishes a median for a page only once enough listings from enough employers disclose annual pay; until then, compare the ranges employers post listing by listing.`;
+        : `${roleLabel} pay varies with ${variesWith}. Compare the ranges employers post listing by listing.`;
 }
 
 /**
@@ -216,7 +216,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     remote: ({ totalJobs, avgSalary }) => [
         {
             question: `How many remote ${NP} jobs are available?`,
-            answer: `There ${isAre(totalJobs)} currently ${totalJobs} remote ${NP} ${pluralize(totalJobs, 'job opening', 'job openings')} listed on ${brand.name}. Each one is fully remote: hybrid roles that need days on site are not counted here, and each listing names the states where it requires licensure.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} remote ${NP} ${pluralize(totalJobs, 'job opening', 'job openings')} listed on ${brand.name}. Each one is fully remote, with no days on site, and each listing names the states where it requires licensure.`,
         },
         {
             question: `What do remote ${NP} jobs pay?`,
@@ -224,7 +224,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do remote ${NP} jobs require multi-state licensure?`,
-            answer: 'It depends on the employer. Some telehealth companies require you to be licensed in the states where your patients reside, while others only schedule you with patients in states where you already hold an active license. Some employers assist with multi-state licensure costs; the listing usually says so.',
+            answer: 'It depends on the employer. Some telehealth companies require you to be licensed in the states where your patients reside, while others only schedule you with patients in states where you already hold an active license. Some employers assist with multi-state licensure costs, and the listing usually says so.',
         },
         {
             question: `What platforms do remote ${NP}s use for telehealth?`,
@@ -252,7 +252,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     travel: ({ totalJobs, avgSalary }) => [
         {
             question: `How many travel ${NP} jobs are currently available?`,
-            answer: `There ${isAre(totalJobs)} currently ${totalJobs} travel ${NP} ${pluralize(totalJobs, 'position', 'positions')} listed on ${brand.name}. These are short-term assignments with a stated length; locum tenens assignments have their own listings.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} travel ${NP} ${pluralize(totalJobs, 'position', 'positions')} listed on ${brand.name}. These are short-term assignments with a stated length. Locum tenens assignments have their own listings.`,
         },
         {
             question: `How much do travel ${NP} positions pay?`,
@@ -264,7 +264,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do I need experience for travel ${NP} positions?`,
-            answer: `Most agencies place clinicians who can practice independently with minimal orientation, and each listing states the experience it expects. Some agencies offer first-time traveler programs with additional support. The Nurse Licensure Compact covers the RN license beneath your APRN credential; the APRN license itself comes from each assignment state.`,
+            answer: `Most agencies place clinicians who can practice independently with minimal orientation, and each listing states the experience it expects. Some agencies offer first-time traveler programs with additional support. The Nurse Licensure Compact covers the RN license beneath your APRN credential. The APRN license itself comes from each assignment state.`,
         },
     ],
     'new-grad': ({ totalJobs }) => [
@@ -346,7 +346,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What do community health ${NP} jobs pay?`,
-            answer: `${medianPayAnswer(`community health ${NP}`, avgSalary)} FQHC listings often describe loan-repayment programs and public-service benefits; confirm the site's current NHSC status and PSLF eligibility with the employer.`,
+            answer: `${medianPayAnswer(`community health ${NP}`, avgSalary)} FQHC listings often describe loan-repayment programs and public-service benefits. Confirm the site's current NHSC status and PSLF eligibility with the employer.`,
         },
         {
             question: `What qualifications are needed for community health ${NP} roles?`,
@@ -392,7 +392,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do part-time ${NP} positions include benefits?`,
-            answer: `It varies by employer. Some organizations prorate health insurance, PTO, and retirement contributions once you work a minimum number of weekly hours; others reserve benefits for full-time staff. Ask where the eligibility threshold sits, and budget for your own malpractice coverage if the employer does not provide it.`,
+            answer: `It varies by employer. Some organizations prorate health insurance, PTO, and retirement contributions once you work a minimum number of weekly hours. Others reserve benefits for full-time staff. Ask where the eligibility threshold sits, and budget for your own malpractice coverage if the employer does not provide it.`,
         },
         {
             question: `Can I combine multiple part-time ${NP} roles?`,
@@ -544,7 +544,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Where do women's health ${NP}s work?`,
-            answer: `OB/GYN group practices, family planning and reproductive health clinics, fertility centers, public health programs, and telehealth platforms all post WHNP roles. Some roles focus on gynecology only; others include prenatal and postpartum panels, so confirm the scope in each listing.`,
+            answer: `OB/GYN group practices, family planning and reproductive health clinics, fertility centers, public health programs, and telehealth platforms all post WHNP roles. Some roles focus on gynecology only, while others include prenatal and postpartum panels, so confirm the scope in each listing.`,
         },
         {
             question: `Can women's health ${NP}s practice independently?`,
@@ -580,7 +580,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `How do I become an emergency ${NP}?`,
-            answer: `Most ENPs first certify as family nurse practitioners (AANP FNP-C or ANCC FNP-BC), then add emergency-specific training or experience. The dedicated ENP-C specialty credential is offered through AANP's certification board to certified FNPs with emergency preparation. Some emergency roles are also filled by acute care-certified NPs; check each listing's requirements.`,
+            answer: `Most ENPs first certify as family nurse practitioners (AANP FNP-C or ANCC FNP-BC), then add emergency-specific training or experience. The dedicated ENP-C specialty credential is offered through AANP's certification board to certified FNPs with emergency preparation. Some emergency roles are also filled by acute care-certified NPs, so check each listing's requirements.`,
         },
         {
             question: `What is the median emergency ${NP} salary?`,
@@ -588,7 +588,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What schedules do emergency ${NP}s work?`,
-            answer: `Emergency departments run around the clock, so ENP schedules are shift-based and typically include nights, weekends, and holidays. Many EDs use block scheduling; clarify the shift length and the mix of day and overnight coverage before accepting an offer.`,
+            answer: `Emergency departments run around the clock, so ENP schedules are shift-based and typically include nights, weekends, and holidays. Many EDs use block scheduling, so clarify the shift length and the mix of day and overnight coverage before accepting an offer.`,
         },
         {
             question: `Can emergency ${NP}s practice independently?`,
@@ -628,7 +628,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `How much do certified nurse midwives earn?`,
-            answer: aprnPayAnswer('CNM', 'birth volume, call requirements, and setting; hospital-employed, birth center, and private practice models pay differently', avgSalary),
+            answer: aprnPayAnswer('CNM', 'birth volume, call requirements, and setting. Hospital-employed, birth center, and private practice models pay differently', avgSalary),
         },
         {
             question: `Can nurse midwives practice independently?`,
@@ -710,7 +710,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do oncology ${NP}s need?`,
-            answer: `Oncology roles are filled by ${NP}s certified through AANP or ANCC on the track matching the population (family or adult-gerontology; pediatric oncology roles use PNCB certification). The optional AOCNP credential through ONCC (Oncology Nursing Certification Corporation) recognizes accumulated oncology NP practice hours.`,
+            answer: `Oncology roles are filled by ${NP}s certified through AANP or ANCC on the track matching the population (family or adult-gerontology, while pediatric oncology roles use PNCB certification). The optional AOCNP credential through ONCC (Oncology Nursing Certification Corporation) recognizes accumulated oncology NP practice hours.`,
         },
         {
             question: `What is the median oncology ${NP} salary?`,
@@ -740,7 +740,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Where do cardiology ${NP}s work?`,
-            answer: `Heart failure clinics, general cardiology practices, device and electrophysiology programs, cath lab teams, and cardiovascular surgery step-down units. Clinic-only, inpatient-only, and hybrid roles all appear on this board; check each listing's setting.`,
+            answer: `Heart failure clinics, general cardiology practices, device and electrophysiology programs, cath lab teams, and cardiovascular surgery step-down units. Clinic-only, inpatient-only, and hybrid roles all appear on this board, so check each listing's setting.`,
         },
     ],
     'primary-care': ({ totalJobs, avgSalary }) => [
@@ -754,7 +754,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is the median primary care ${NP} salary?`,
-            answer: `${medianPayAnswer('Primary care NP', avgSalary)} FQHC listings often describe loan-repayment programs; whether NHSC repayment applies depends on the specific site's approval and your discipline.`,
+            answer: `${medianPayAnswer('Primary care NP', avgSalary)} FQHC listings often describe loan-repayment programs. Whether NHSC repayment applies depends on the specific site's approval and your discipline.`,
         },
         {
             question: `Can primary care ${NP}s practice independently?`,
@@ -772,7 +772,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do hospitalist ${NP}s need?`,
-            answer: `Adult inpatient medicine teams prefer the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. Some services consider family-track ${NP}s with inpatient experience; check each listing. Hospital credentialing and privileging define the final scope.`,
+            answer: `Adult inpatient medicine teams prefer the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. Some services consider family-track ${NP}s with inpatient experience, so check each listing. Hospital credentialing and privileging define the final scope.`,
         },
         {
             question: `What is the median hospitalist ${NP} salary?`,
@@ -780,7 +780,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What schedules do hospitalist ${NP}s work?`,
-            answer: `Block schedules dominate, commonly seven days on and seven days off, with day and night rotations. That concentration makes hospitalist work attractive for clinicians who want extended time off between blocks; clarify the night-shift share before signing.`,
+            answer: `Block schedules dominate, commonly seven days on and seven days off, with day and night rotations. That concentration makes hospitalist work attractive for clinicians who want extended time off between blocks. Clarify the night-shift share before signing.`,
         },
     ],
     dermatology: ({ totalJobs, avgSalary }) => [
@@ -834,7 +834,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Where do clinical nurse specialists work?`,
-            answer: `Predominantly health systems and hospitals, across critical care, perioperative, medical-surgical, oncology, and pediatric service lines, plus quality departments and professional-development teams. Compensation varies with the system's model for the role; compare posted ranges on individual listings.`,
+            answer: `Predominantly health systems and hospitals, across critical care, perioperative, medical-surgical, oncology, and pediatric service lines, plus quality departments and professional-development teams. Compensation varies with the system's model for the role, so compare posted ranges on individual listings.`,
         },
     ],
     // ── 2026-07 P1 #15 verticals ────────────────────────────────────────────
@@ -845,11 +845,11 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do aesthetic ${NP}s need?`,
-            answer: `A national ${NP} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Aesthetics itself is learned in practice; employers screen for injectable and device training, often through manufacturer-led programs. The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours.`,
+            answer: `A national ${NP} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Aesthetics itself is learned in practice. Employers screen for injectable and device training, often through manufacturer-led programs. The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours.`,
         },
         {
             question: `Can ${brand.niche.descriptor}s own an aesthetics practice?`,
-            answer: `It depends on the state. Ownership, medical-director, and delegation rules for cosmetic procedures are set by state law and vary widely; some states allow ${brand.niche.descriptor}-owned practices outright, while others require a physician relationship. Confirm the current rules with your state board of nursing and medical board before planning ownership.`,
+            answer: `It depends on the state. Ownership, medical-director, and delegation rules for cosmetic procedures are set by state law and vary widely. Some states allow ${brand.niche.descriptor}-owned practices outright, while others require a physician relationship. Confirm the current rules with your state board of nursing and medical board before planning ownership.`,
         },
         {
             question: `What is the median aesthetic ${NP} salary?`,

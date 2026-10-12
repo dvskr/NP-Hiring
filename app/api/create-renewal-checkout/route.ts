@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
     // convert the row to 'paid' and confuse both the slot count and billing.
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
-        { error: `Employer plan posts are not renewed. Each runs ${config.durationDays} days; when this one ends, post again into your free plan slot at no extra charge.` },
+        { error: `Employer plan posts are not renewed. Each runs ${config.durationDays} days. When this one ends, post again into your free plan slot at no extra charge.` },
         { status: 409 }
       );
     }

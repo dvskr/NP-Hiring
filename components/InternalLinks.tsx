@@ -110,11 +110,8 @@ export default function InternalLinks({
                 <h3 style={{
                     fontSize: '14px', fontWeight: 700,
                     fontFamily: 'var(--font-lora), Georgia, serif',
-                    color: '#1F2937', margin: '0 0 4px',
+                    color: '#1F2937', margin: '0 0 14px',
                 }}>Explore More Opportunities</h3>
-                <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 14px', lineHeight: 1.4 }}>
-                    Discover roles by location and type.
-                </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {displayLinks.map((link) => (

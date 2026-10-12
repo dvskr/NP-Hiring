@@ -283,7 +283,6 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
         heroAlt={`Travel ${brand.niche.short} nationwide assignments`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('travel') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Travel"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, explore the country."

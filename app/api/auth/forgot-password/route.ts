@@ -91,9 +91,9 @@ function buildResetEmailHtml(resetUrl: string): string {
       ${spacerV2(48)}
       ${closeContentV2()}`,
         `<p style="margin:0;font-family:${SANS};font-size:12px;color:${V2.textMuted};">
-        If you didn’t request a password reset, you can safely ignore this email — your password won’t change.
+        If you didn’t request a password reset, you can safely ignore this email. Your password won’t change.
       </p>`,
-        `Reset your ${brand.name} password — one click to choose a new one.`
+        `Reset your ${brand.name} password. One click to choose a new one.`
     );
 }
 

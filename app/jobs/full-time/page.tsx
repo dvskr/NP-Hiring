@@ -287,7 +287,6 @@ export default async function FullTimePage({ searchParams }: PageProps) {
         heroAlt={`Full-time ${brand.niche.short} in clinic office`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('full-time') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Full-Time"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, salaried and ongoing."

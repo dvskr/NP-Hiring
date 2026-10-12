@@ -430,7 +430,7 @@ export default function MessagesPage() {
                 if (data?.awaitingReply) {
                     showToast('⏳ Please wait for the employer to respond before sending another message.');
                 } else {
-                    setSendError(data?.error || 'Failed to send');
+                    setSendError(data?.error || 'Please try again.');
                 }
                 return;
             }
@@ -450,7 +450,7 @@ export default function MessagesPage() {
             ));
         } catch (err) {
             console.error('Error sending reply:', err);
-            setSendError('Failed to send');
+            setSendError('Please try again.');
         } finally {
             sendingRef.current = false;
             setSending(false);
@@ -610,12 +610,9 @@ export default function MessagesPage() {
                     boxShadow: '6px 6px 16px rgba(0,0,0,0.05), -3px -3px 10px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6)',
                 }}>
                     <img src="/illustrations/empty-messages.png" alt="" style={{ width: '100px', height: '100px', margin: '0 auto 16px', objectFit: 'contain', opacity: 0.85 }} />
-                    <h2 style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 8px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>
                         No messages yet
                     </h2>
-                    <p style={{ fontSize: '14px', color: '#6B7F8A', maxWidth: '380px', margin: '0 auto' }}>
-                        Conversations with employers and candidates will appear here.
-                    </p>
                 </div>
             ) : (
                 <div className="msg-grid" style={{
@@ -1192,7 +1189,7 @@ export default function MessagesPage() {
                                             border: '1px solid rgba(239,68,68,0.25)',
                                             fontSize: '13px', color: '#EF4444',
                                         }}>
-                                            <span style={{ flex: 1 }}>{sendError}: your message was not delivered.</span>
+                                            <span style={{ flex: 1 }}>Your message was not delivered. {sendError}</span>
                                             <button
                                                 onClick={handleSendReply}
                                                 disabled={sending}
@@ -1349,7 +1346,7 @@ export default function MessagesPage() {
                             {deleteModal.type === 'conversation'
                                 ? 'This conversation will be removed from your inbox. The other person will still be able to see it.'
                                 : deleteModal.isRead
-                                    ? 'This message has already been read. It will only be removed from your view; the recipient will still see it.'
+                                    ? 'This message has already been read. It will be removed from your view only. The recipient will still see it.'
                                     : "This message hasn't been read yet. It will be deleted for everyone."
                             }
                         </p>

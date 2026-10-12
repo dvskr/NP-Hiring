@@ -339,7 +339,7 @@ const faqData = [
   // which the P1 PDF parity guard pins byte-identically) — it is attributed,
   // so the answer no longer presents it alongside a cited BLS median as
   // though both carry the same weight. See SALARY_FIGURE_PROVENANCE above.
-  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}); that is the one figure on this page taken from a public dataset. The experience ranges shown alongside it, roughly $95,000-$115,000 for new graduates and $150,000-$180,000+ for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
+  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}). The experience ranges shown alongside it, roughly $95,000-$115,000 for new graduates and $150,000-$180,000+ for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
   { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets; California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
   // SECOND PASS: attributed for the same reason as the two answers above.
   // It is the fourth uncited range in this array; leaving it bare while
@@ -449,7 +449,7 @@ export default async function SalaryGuidePage() {
               {brand.niche.short} Salary Guide
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-              National median <strong>{NATIONAL_SALARY.formatted}</strong> per year (BLS OEWS, {NATIONAL_SALARY_VINTAGE}). State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
+              National median <strong>{NATIONAL_SALARY.formatted}</strong> per year (BLS OEWS, {NATIONAL_SALARY_VINTAGE}).
             </p>
             {/* CQ-12: the visible authorship line, matching the Article
                 JSON-LD below (the editorial team until a named author or
@@ -598,12 +598,9 @@ export default async function SalaryGuidePage() {
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
               Salary by Location
             </p>
-            <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+            <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
               {brand.niche.short} Salary by State
             </h2>
-            <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '500px', margin: '0 auto 12px', lineHeight: 1.6 }}>
-              See how {brand.niche.short} salaries compare across different states. Click any state name for its full salary breakdown.
-            </p>
 
             {/* Note */}
             <div style={{
@@ -620,7 +617,7 @@ export default async function SalaryGuidePage() {
                     readers here. */}
                 <strong>Note:</strong> Each figure is the <strong>median</strong> of that state&apos;s active {brand.niche.short}-eligible postings with disclosed,
                 non-estimated salary (screened by job title), recomputed daily. A state appears with a figure only when it has at least {BENCHMARK_MIN_POSTINGS} such
-                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers, with no single employer contributing more than {MAX_EMPLOYER_SHARE_PERCENT}% of them; states that miss either condition are listed separately without a figure.
+                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers, with no single employer contributing more than {MAX_EMPLOYER_SHARE_PERCENT}% of them. States that miss either condition are listed separately without a figure.
                 {' '}Each state name links to a detailed page with pay by setting and top employers.
               </p>
               {/* A4: the table's own snapshot basis — the same national
@@ -1011,8 +1008,7 @@ export default async function SalaryGuidePage() {
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           {/* Citation */}
           <div style={{ ...clayCard, padding: '24px 28px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
-            <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this salary guide:</p>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 14px' }}>📋 Cite This Page</h3>
             <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State." ${brand.name}, February 2026, ${brand.domain}/salary-guide.`} />
             <p style={{ fontSize: '11px', color: '#64748B', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
           </div>
@@ -1030,13 +1026,10 @@ export default async function SalaryGuidePage() {
             display: 'grid', gridTemplateColumns: '1fr 320px', alignItems: 'center',
           }}>
             <div style={{ padding: '36px 32px' }}>
-              <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>
+              <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', margin: '0 0 20px' }}>
                 Find Your Next High-Paying{' '}
                 <span style={{ color: '#BE185D' }}>{brand.niche.short} Job</span>
               </h2>
-              <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px', maxWidth: '380px' }}>
-                Browse positions with competitive salaries. Filter by location, salary, and work type.
-              </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 <Link href="/jobs" className="emp-cta-primary" style={{
                   padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',

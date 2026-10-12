@@ -136,7 +136,7 @@ export default async function JdTemplateDetailPage({ params }: Props) {
           <div className="mb-8 rounded-xl p-5 flex gap-3" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
             <Info className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              This is a skeleton, not a finished posting: everything in [square brackets] is a prompt to replace with your actual specifics, such as visit lengths, EHR, schedule, and salary range. Inside the{' '}
+              This is a skeleton. Replace everything in [square brackets] with your actual specifics, such as visit lengths, EHR, schedule, and salary range. Inside the{' '}
               <Link href="/post-job" className="underline font-medium" style={{ color: 'var(--color-primary)' }}>post-job form</Link>, picking this template also fills in your practice name and location from the fields you have already entered.
             </p>
           </div>

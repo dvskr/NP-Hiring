@@ -78,27 +78,27 @@ export const metadata: Metadata = {
 
 const ASSUMPTIONS: readonly string[] = [
   `The whole model is one line of arithmetic: scheduled visits per week × working weeks × the amount collected per completed visit, less overhead as a share of collections, less any fixed annual costs you add.`,
-  `The presets are the ${GUIDE_SCENARIOS.length} scenarios published in our private practice guide (${SCENARIO_LABELS}). Selecting one loads the MIDPOINT of that scenario's volume and overhead bands; the guide's full band is shown next to the result so you can see what the midpoint left out.`,
+  `The presets are the ${GUIDE_SCENARIOS.length} scenarios published in our private practice guide (${SCENARIO_LABELS}). Selecting one loads the MIDPOINT of that scenario's volume and overhead bands. The guide's full band is shown next to the result so you can see what the midpoint left out.`,
   `Working weeks default to ${GUIDE_MODEL.workingWeeksPerYear}: 52 less roughly six for holidays, vacation, and admin days, the same figure the guide uses.`,
-  `Per-visit amounts are what a practice COLLECTS, not what it bills. The guide's planning inputs are $${GUIDE_MODEL.insuranceCollectedPerVisit} on an insurance panel and $${GUIDE_MODEL.cashCollectedPerVisit} cash-pay, and both are planning inputs rather than contracted rates; replace them with the rates you are actually offered.`,
-  `Two inputs are yours alone and start at zero: the no-show and late-cancellation rate, and fixed annual costs such as a lease or a specific software or billing contract. We publish no figure for either, because vendor pricing changes and inventing one would put an expiring number on the page.`,
+  `Per-visit amounts are what a practice COLLECTS, not what it bills. The guide's planning inputs are $${GUIDE_MODEL.insuranceCollectedPerVisit} on an insurance panel and $${GUIDE_MODEL.cashCollectedPerVisit} cash-pay, and both are planning inputs rather than contracted rates. Replace them with the rates you are actually offered.`,
+  `Two inputs start at zero for you to fill in: the no-show and late-cancellation rate, and fixed annual costs such as a lease or a specific software or billing contract.`,
   `The sensitivity table moves one input at a time by up to ±${WIDEST_STEP_PCT}% and holds the rest, so the "swing" column reads as what that single assumption is worth to your net. Those percentages are relative moves on the value you entered, not percentage points: +${WIDEST_STEP_PCT}% on an overhead share of ${EXAMPLE_OVERHEAD_PCT}% of collections is ${EXAMPLE_OVERHEAD_STEPPED}%, not ${EXAMPLE_OVERHEAD_WRONG}%. Every cell prints the input value it used, so there is nothing to infer.`,
   `Net is before self-employment tax and income tax. A practice owner is a contractor for tax purposes, so a substantial further deduction applies to the figure shown.`,
 ];
 
 const EXCLUSIONS: readonly string[] = [
-  'Tax of any kind. Net here is pre-tax; self-employment tax alone takes a large bite, and the 1099 vs W-2 calculator models it properly.',
-  'Startup costs. Formation fees, credentialing, equipment, and a website are one-off costs this annual model does not carry; the guide covers them without printing figures that expire.',
-  'The ramp. A new practice does not open at full volume: payer credentialing has to complete before you can bill an insurer, and a panel fills gradually after that. We do not put a number of days on either here, because we have no defensible figure for how long your payers take, and it varies by payer and state. Ask each payer for its current processing time, then model your first year at a fraction of the steady-state volume you enter above.',
-  'Vendor pricing. No software, billing, or insurance prices are published here or in the guide. Get current quotes.',
-  'Any per-category overhead breakdown. Overhead is a single share of collections, because a per-line dollar default would be an invented figure; put your own line items into the fixed-costs field.',
+  'Tax of any kind. Net here is pre-tax. Self-employment tax alone takes a large bite, and the 1099 vs W-2 calculator models it.',
+  'Startup costs. Formation fees, credentialing, equipment, and a website are one-off costs this annual model does not carry. The guide covers them.',
+  'The ramp. A new practice does not open at full volume. Payer credentialing has to complete before you can bill an insurer, and a panel fills gradually after that. How long that takes varies by payer and state, so ask each payer for its current processing time, then model your first year at a fraction of the steady-state volume you enter above.',
+  'Vendor pricing. No software, billing, or insurance prices are listed here or in the guide. Get current quotes.',
+  'Any per-category overhead breakdown. Overhead is a single share of collections. Put your own line items into the fixed-costs field.',
   'What a practice will actually earn. This computes your inputs. It has no knowledge of your payer mix, your market, or your referral base.',
 ];
 
 const FAQS = [
   {
     q: `How much can an ${brand.niche.short} private practice make?`,
-    a: `It is a volume-times-collections calculation, which is exactly why a headline number is the wrong thing to look for. Enter your own visits per week, what you actually collect per visit, and your overhead share, and the tool works it through. Then read the sensitivity table: at typical inputs, being 10% out on either volume or reimbursement moves the answer by tens of thousands of dollars a year, which tells you the honest answer is a range whose width depends on how well you know your own numbers. For comparison, the national median annual wage for employed ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer.`,
+    a: `It is a volume-times-collections calculation, which is exactly why a headline number is the wrong thing to look for. Enter your own visits per week, what you actually collect per visit, and your overhead share, and the tool works it through. Then read the sensitivity table: at typical inputs, being 10% out on either volume or reimbursement moves the answer by tens of thousands of dollars a year, so the real answer is a range whose width depends on how well you know your own numbers. For comparison, the national median annual wage for employed ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer.`,
   },
   {
     q: 'Why does this ask for collections instead of what I charge?',
@@ -106,11 +106,11 @@ const FAQS = [
   },
   {
     q: 'What counts as overhead in this model?',
-    a: `Everything that scales with running the practice, expressed as one share of collections: billing, software, supplies, rent if you have it, staff, and the administrative cost of the panel. It is a single percentage rather than a list of line items on purpose; putting default dollar amounts against individual categories would mean publishing vendor prices we cannot stand behind. If you have real quotes for specific fixed costs, put them in the fixed annual costs field instead so they are subtracted as dollars rather than as a percentage.`,
+    a: `Everything that scales with running the practice, expressed as one share of collections: billing, software, supplies, rent if you have it, staff, and the administrative cost of the panel. It is a single percentage rather than a list of line items. If you have real quotes for specific fixed costs, put them in the fixed annual costs field instead so they are subtracted as dollars rather than as a percentage.`,
   },
   {
     q: 'Is this a financial projection I can show a lender?',
-    a: `No, and it should not be presented as one. It is an illustration of arithmetic that runs on assumptions you supply, and it deliberately excludes tax, startup costs, and the ramp period. A lender or an accountant will want a projection built on your actual contracted rates, a month-by-month ramp, and a full cost schedule. Use this to sanity-check whether the shape of the plan works before paying anyone to build that.`,
+    a: `No. It is an illustration of arithmetic that runs on assumptions you supply, and it excludes tax, startup costs, and the ramp period. A lender or an accountant will want a projection built on your actual contracted rates, a month-by-month ramp, and a full cost schedule. Use this to sanity-check whether the shape of the plan works before paying anyone to build that.`,
   },
   {
     q: 'Should I model insurance or cash-pay?',
@@ -178,8 +178,8 @@ export default function PrivatePracticeRevenueCalculatorPage() {
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               Visits a week, what you collect per visit, weeks you work, overhead as a share of collections: the
               same four inputs our private practice guide builds its table from, except here you set them. Every
-              preset loads the guide&rsquo;s published figures, and anything the guide has no figure for starts at
-              zero and says so.
+              preset loads the guide&rsquo;s published figures, and anything else starts at zero for you to fill
+              in.
             </p>
             <p style={{ fontSize: '13.5px', color: '#7A6A62', margin: '16px 0 0', lineHeight: 1.6 }}>
               <strong>An illustration, not a financial projection.</strong> It computes the assumptions you enter,
@@ -199,7 +199,6 @@ export default function PrivatePracticeRevenueCalculatorPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="How this model is built"
-            intro="Every default on this page is either a figure our private practice guide already publishes, or a zero you replace yourself. There is no third kind."
             assumptions={ASSUMPTIONS}
             exclusions={EXCLUSIONS}
             sources={[

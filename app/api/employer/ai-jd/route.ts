@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
       logger.warn('AI JD failed guardrails', { mode: parsed.mode, errors: guardrail.errors });
       return NextResponse.json(
         {
-          error: 'AI draft failed quality checks — please try again or adjust your inputs.',
+          error: 'We could not generate a usable draft. Please try again or adjust your inputs.',
           details: guardrail.errors,
         },
         { status: 422 },

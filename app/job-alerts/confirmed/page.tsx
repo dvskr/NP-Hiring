@@ -29,7 +29,7 @@ export default async function JobAlertConfirmedPage({
         : status === 'invalid'
             ? 'This confirmation link is no longer valid. It may have already been used. If your alert is not arriving, sign up again from the Job Alerts page and we will send you a new link.'
             : status === 'missing'
-                ? 'The link is missing the confirmation token. Please use the original link from the confirmation email.'
+                ? 'This link is incomplete. Please use the original link from your confirmation email.'
                 : 'We encountered an unexpected error. Please try the link in your confirmation email again, or sign up again.';
 
     return (

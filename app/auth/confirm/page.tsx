@@ -134,7 +134,7 @@ export default function AuthConfirmPage() {
             const loginUrl = `/login?redirectTo=${encodeURIComponent(nextPath)}`
             setStatus('error')
             if (classifyCodeExchangeFailure(code, error) === 'other_browser') {
-              setMessage('We could not finish signing you in on this browser. If the link was opened in a different browser than the one you signed up with, please log in to continue.')
+              setMessage('We could not finish signing you in on this browser. If you opened the link in a different browser from the one you signed up on, log in to continue.')
               setTimeout(() => router.push(loginUrl), 4000)
             } else {
               setMessage('This link is invalid or has expired. Redirecting to login...')

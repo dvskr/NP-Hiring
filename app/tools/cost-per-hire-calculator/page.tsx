@@ -63,7 +63,7 @@ export const revalidate = 3600;
 const PAGE_PATH = '/tools/cost-per-hire-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
 const PAGE_TITLE = `Cost Per Hire Calculator | Flat-Fee Posting vs Sponsored Ads vs Agency`;
-const PAGE_DESCRIPTION = `Work out your real cost per hire for a ${brand.niche.short} role: a flat-fee posting priced from our published rates against sponsored-ad spend and an agency contingency fee, using your own applicant volume and time-to-fill. No industry benchmarks: every alternative figure is one you enter.`;
+const PAGE_DESCRIPTION = `Work out your real cost per hire for a ${brand.niche.short} role: a flat-fee posting priced from our published rates against sponsored-ad spend and an agency contingency fee, using your own applicant volume and time-to-fill. You enter every figure for the other channels.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Cost Per Hire Calculator')}&type=page`;
 
 export const metadata: Metadata = {
@@ -91,7 +91,7 @@ export const metadata: Metadata = {
 const EXCLUSIONS: readonly string[] = [
   'Candidate quality and retention. A cheaper hire that leaves in four months is not cheaper, and this calculator cannot see that.',
   'Your own team\u2019s time. Screening, scheduling, and interviewing all cost money, and they differ sharply between channels: an agency fee buys screening work that a posting does not.',
-  'Any benchmark for what other employers pay per click, per applicant, or in agency fees. We do not have defensible figures for those and will not print indefensible ones.',
+  'Benchmarks for what other employers pay per click, per applicant, or in agency fees.',
   'Sourcing tools, ATS subscriptions, careers-site costs, and referral bonuses. Add them as part of a channel\u2019s spend if you want them counted.',
   'Offer declines and backfills. Both raise real cost per hire, and both are specific to your process.',
 ];
@@ -160,9 +160,8 @@ export default function CostPerHireCalculatorPage() {
               per hire, with an optional overlay for what the empty seat costs while you wait.
             </p>
             <p style={{ fontSize: '13.5px', color: '#7A6A62', margin: '16px 0 0', lineHeight: 1.6 }}>
-              <strong>We sell postings, so we publish no benchmarks.</strong> Our prices are filled in because we can
-              prove them; every figure for the other two channels comes from your invoices, and a channel you leave
-              empty says &ldquo;not comparable&rdquo; instead of showing a zero.
+              <strong>We sell postings, so only our prices are filled in.</strong> Enter the other two channels from
+              your own invoices. A channel you leave empty shows &ldquo;not comparable&rdquo; instead of a zero.
             </p>
           </div>
         </section>
@@ -178,7 +177,6 @@ export default function CostPerHireCalculatorPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="How this comparison is built"
-            intro="One channel here is ours. That is exactly why the method is spelled out: you should be able to check every number we assert and replace every number we do not."
             assumptions={ASSUMPTIONS}
             exclusions={EXCLUSIONS}
             sources={[

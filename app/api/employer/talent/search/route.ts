@@ -330,7 +330,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         rerankError = process.env.NODE_ENV === 'production'
             ? 'rerank unavailable'
             : msg;
-        ranked = ordered.slice(0, k).map((_, i) => ({ candidateIndex: i + 1, reason: 'Vector match (rerank unavailable).' }));
+        ranked = ordered.slice(0, k).map((_, i) => ({ candidateIndex: i + 1, reason: 'Matched on profile similarity.' }));
     }
 
     // ── 5. Build response with the SAME privacy transform as /api/employer/candidates ──

@@ -629,7 +629,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     key: 'median',
                     label: 'Median posted pay',
                     value: 'Not published',
-                    sub: `One employer posts ${salaryData.topEmployerPostings} of ${salaryData.postings}; published when none exceeds ${MAX_EMPLOYER_SHARE_PERCENT}%`,
+                    sub: `One employer posts ${salaryData.topEmployerPostings} of ${salaryData.postings}. A median is published when none exceeds ${MAX_EMPLOYER_SHARE_PERCENT}%`,
                 }
                 : {
                     key: 'median',
@@ -993,7 +993,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         index={2}
                         icon={BarChart3}
                         title="Pay across every state"
-                        desc="The board-wide medians, the states that publish one, and how the publishing gate works."
+                        desc="The board-wide medians, every state with a median of its own, and the sample each one needs."
                         action="Open the salary guide"
                         headingLevel={3}
                     />

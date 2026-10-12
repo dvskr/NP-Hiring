@@ -43,7 +43,7 @@ const POST_RUN_NOTE = `Every post runs ${FLAT_FEE_PRICING.durationDays} days and
 
 /** The method note on our own prices: the promo and the dated ladder, or the ladder. */
 function ourPricesAssumption(phase: PricingPhase): string {
-  const lead = 'Our own prices are read from the pricing config the checkout charges against.';
+  const lead = 'Our prices are the ones you pay at checkout.';
   if (phase === 'promo') {
     return `${lead} During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. ${POST_RUN_NOTE}`;
   }
@@ -63,10 +63,10 @@ export function costPerHireAssumptions(phase: PricingPhase): readonly string[] {
     // Once it has ended the promo is named in full: nothing above introduces it any more.
     `The intro price is scoped to the employer's email domain rather than to a login: ${INTRO_PRICE_SCOPE_NOTE}. A five-recruiter health system therefore gets one intro-priced post between all five, not one each, so a multi-role plan modeled per post shows at most one intro post and prices every other post at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}. Posts made free during the ${promo ? 'promo' : 'launch promo'} do not use the intro price up.`,
     `The Employer plan is modeled as enough concurrent plans to hold every role at once (${FLAT_FEE_PRICING.planSlots} active slots each) for the months you enter, which start at ${DEFAULT_PLAN_MONTHS}: our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months, not an estimate of how long anyone subscribes. Nothing is added for renewals, because ${PLAN_NO_RENEWALS_NOTE}.`,
-    `Every figure for the sponsored-ad and agency channels is yours. We publish no typical cost per click, no typical contingency rate, no typical time-to-fill, and no typical applicant-to-hire ratio. We sell one side of this comparison, and a benchmark from us would not be evidence.`,
+    `Every figure for the sponsored-ad and agency channels is yours. The calculator supplies no typical cost per click, contingency rate, time-to-fill, or applicant-to-hire ratio.`,
     `A channel with nothing entered is reported as not comparable, never as zero. A zero in a cost column would read as free.`,
     `The applicant-volume default of ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} is the number of candidate unlocks a posting includes. It is a plan feature, not an expected response rate. Replace it with what your own postings draw.`,
-    `Time-to-fill defaults to ${DEFAULT_TIME_TO_FILL_DAYS} days, which is the posting's run length rather than a market average, and it is applied identically to all three channels so the default cannot tilt the result. The vacancy overlay only affects anything once you enter a cost per day unfilled, which starts at zero.`,
+    `Time-to-fill defaults to ${DEFAULT_TIME_TO_FILL_DAYS} days, the posting's run length rather than a market average, and the same default applies to all three channels. The vacancy overlay only affects the result once you enter a cost per day unfilled, which starts at zero.`,
     `First-year base, the figure an agency contingency rate is applied to, starts at the cited national median of ${STAT_SOURCES.averageSalary.formatted} (${FIRST_YEAR_BASE_SOURCE}). Replace it with your budgeted base.`,
   ];
 }
@@ -81,27 +81,27 @@ export function costPerHireFaqs(phase: PricingPhase): readonly CostPerHireFaq[] 
   return [
     {
       q: 'How is cost per hire calculated?',
-      a: `Total spend on a channel divided by the hires that channel produced. This calculator does that for three channels side by side and adds an optional overlay for the cost of the seat sitting empty: time-to-fill multiplied by what a day of vacancy costs you. It deliberately stops there. Formulas that fold in recruiter salaries, ATS licenses, and overhead produce a bigger number that is harder to check and impossible to compare between employers. If you want those included, add them to a channel's spend yourself.`,
+      a: `Total spend on a channel divided by the hires that channel produced. This calculator does that for three channels side by side and adds an optional overlay for the cost of the seat sitting empty: time-to-fill multiplied by what a day of vacancy costs you. It leaves out recruiter salaries, ATS licenses, and overhead, which make the number harder to check and to compare between employers. To include them, add them to a channel's spend.`,
     },
     {
       q: 'Why does this not tell me the typical cost per hire in healthcare?',
-      a: `Because we sell one of the channels being compared, and a benchmark published by an interested party is not evidence. Every industry cost-per-hire figure you will find comes from a survey with its own definition of which costs count, and quoting one here would let us pick the definition that flatters us. The comparison is built entirely from prices we can prove (ours) plus numbers you read off your own invoices and ATS.`,
+      a: `We sell one of the channels being compared, and industry cost-per-hire figures come from surveys that each define which costs count in their own way. This comparison uses our published prices plus the numbers on your own invoices and in your ATS.`,
     },
     {
       q: 'Is a flat-fee posting really cheaper than an agency?',
-      a: `Not in the abstract. We sell one side of that comparison and we have not measured the other, so any margin we quoted would be marketing rather than a finding. What we can hand you instead is the arithmetic. A contingency fee is a percentage of a first-year salary, so it scales with the salary; a posting is a fixed price that does not: ${promo ? `free during the launch promo, then ${ladder}` : ladder}. The calculator totals our side from our published rates on whichever of those you pick (posts, renewals, and the intro price if your domain still has it) and prints that as the cost per hire your other channels have to beat, then applies your own contingency rate to your own base. The verdict is yours and it is about your roles. Spend is also not the whole comparison. A contingency agency does the sourcing and first-pass screening, carries the risk of not placing anyone, and is paid only on a hire; a posting puts the role in front of candidates and leaves the screening with you. The right question is not which is cheaper but whether the fee difference is worth more to you than the work it buys, which is why the calculator prints the number and then tells you what the number leaves out.`,
+      a: `It depends on your roles. A contingency fee is a percentage of a first-year salary, so it scales with the salary. A posting is a fixed price that does not: ${promo ? `free during the launch promo, then ${ladder}` : ladder}. The calculator totals our side from our published rates on whichever of those you pick (posts, renewals, and the intro price if your domain still has it) and prints that as the cost per hire your other channels have to beat. It then applies your own contingency rate to your own base. Spend is not the whole comparison. A contingency agency does the sourcing and first-pass screening, carries the risk of not placing anyone, and is paid only on a hire. A posting puts the role in front of candidates and leaves the screening with you. The real question is whether the fee difference is worth more to you than the work it buys.`,
     },
     {
       q: 'What should I use for time-to-fill?',
-      a: `Your own history, from the day a role opened to the day an offer was accepted. The field starts at ${DEFAULT_TIME_TO_FILL_DAYS} days only because that is how long a posting runs. It is a product fact standing in for a number we do not have, and it is applied to all three channels equally so it cannot favor one. Time-to-fill has no effect on the result until you enter what a day of vacancy costs you.`,
+      a: `Your own history, from the day a role opened to the day an offer was accepted. The field starts at ${DEFAULT_TIME_TO_FILL_DAYS} days because that is how long a posting runs, and the same default applies to all three channels. Time-to-fill has no effect on the result until you enter what a day of vacancy costs you.`,
     },
     {
       q: 'How do I work out what a day of vacancy costs?',
-      a: `Start with what you are actually spending to cover the gap: locum or agency coverage day rates, overtime for the staff absorbing the work, or the visit revenue the empty schedule is not generating. Whatever you use, it is your figure and only yours. The default is zero, and while it stays at zero the vacancy columns remain switched off rather than showing an invented cost.`,
+      a: `Start with what you are actually spending to cover the gap: locum or agency coverage day rates, overtime for the staff absorbing the work, or the visit revenue the empty schedule is not generating. The default is zero, and the vacancy columns stay off until you enter a figure.`,
     },
     {
       q: `What does a posting include, and what does it cost?`,
-      a: `Every post (${promo ? 'promo, intro, featured, or plan' : 'intro, featured, or plan'}) runs ${FLAT_FEE_PRICING.durationDays} days, is featured, and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate profile unlocks and ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages. ${whatItCosts} Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}. Those are the prices in the calculator, read from the same config the checkout uses, so they cannot drift from what you would actually be charged.`,
+      a: `Every post (${promo ? 'promo, intro, featured, or plan' : 'intro, featured, or plan'}) runs ${FLAT_FEE_PRICING.durationDays} days, is featured, and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate profile unlocks and ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages. ${whatItCosts} Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}. The calculator uses the same prices you pay at checkout.`,
     },
     {
       q: `Who exactly gets the intro price?`,

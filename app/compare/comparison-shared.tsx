@@ -102,11 +102,8 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                             <Scale className="w-8 h-8" aria-hidden="true" />
                         </div>
                         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">{profile.title}</h1>
-                        <p className="text-sm text-pink-200 mb-4">
+                        <p className="text-sm text-pink-200">
                             Claims checked against {profile.competitorName}&apos;s own public pages on {COMPARE_REVIEW_DATE_LABEL}
-                        </p>
-                        <p className="text-lg text-pink-100">
-                            An honest comparison, including what {profile.competitorName} does better than we do.
                         </p>
                     </div>
                 </div>
@@ -132,12 +129,9 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                     {/* What the competitor does well */}
                     <div className="mb-8 md:mb-12">
                         <div className="rounded-xl p-6 md:p-8" style={cardStyle}>
-                            <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+                            <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
                                 What {profile.competitorName} does well
                             </h2>
-                            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-                                A comparison you can trust has to start here. Each point links to the page it was verified on.
-                            </p>
                             <ul className="space-y-4">
                                 {profile.strengths.map((claim, idx) => (
                                     <li key={idx} className="flex gap-3">
@@ -168,8 +162,8 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                             </h2>
                             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
                                 {profile.competitorName} figures are snapshots from {COMPARE_REVIEW_DATE_LABEL}.
-                                &ldquo;Not found on the pages we reviewed&rdquo; means exactly that (see the method note below);
-                                it is not a claim that the capability does not exist anywhere.
+                                &ldquo;Not found on the pages we reviewed&rdquo; refers only to the pages listed in the
+                                method note below.
                             </p>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
@@ -293,9 +287,8 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                             <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                                 Every factual claim about {profile.competitorName} on this page was checked directly against
                                 the public pages listed below on {COMPARE_REVIEW_DATE_LABEL}. Counts and prices are snapshots
-                                from that date and will change. Claims we could not confirm that day were left out. Where a
-                                table cell says a capability was not found, that statement is scoped to these pages on that
-                                date and nothing more.
+                                from that date and will change. Claims we could not confirm that day were left out. A
+                                &ldquo;not found&rdquo; cell covers only these pages on that date.
                             </p>
                             <ul className="space-y-1 mb-4">
                                 {profile.pagesReviewed.map((page) => (
@@ -314,8 +307,8 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                             </ul>
                             <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                                 {profile.competitorName} and any related marks are trademarks of their respective owners.{' '}
-                                {brand.name} is not affiliated with, sponsored by, or endorsed by {profile.competitorName};
-                                the name is used only to identify the service being compared.
+                                {brand.name} is not affiliated with, sponsored by, or endorsed by {profile.competitorName}.
+                                The name is used only to identify the service being compared.
                             </p>
                             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                                 If you spot something outdated or incorrect, email{' '}
@@ -333,12 +326,9 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
 
                     {/* Cross-links + CTA */}
                     <div className="text-center py-8">
-                        <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+                        <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
                             See the product for yourself
                         </h2>
-                        <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-                            The fastest way to judge a job board is to use it. No account is needed to browse.
-                        </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link
                                 href="/jobs"

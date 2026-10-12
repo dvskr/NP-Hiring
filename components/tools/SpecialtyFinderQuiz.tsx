@@ -14,8 +14,9 @@
  *  - The result region is always mounted and announces politely, so nothing
  *    above it moves as answers arrive.
  *  - The scoring is shown, not asserted: each card lists the dimensions it
- *    matched and the ones it did not, and the header states the count the
- *    percentage is over.
+ *    matched and the ones it did not, and its "n/m matched" count shows what
+ *    the percentage is over. No explanatory copy under the questions or the
+ *    results heading (owner call, 2026-10-12).
  *
  * All arithmetic and every specialty affinity live in ./specialty-quiz-model.ts.
  */
@@ -190,10 +191,7 @@ export default function SpecialtyFinderQuiz() {
                         <legend style={{ padding: '0 6px', fontSize: '15.5px', fontWeight: 800, color: '#1A2E35' }}>
                             {questionIndex + 1}. {question.prompt}
                         </legend>
-                        <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: '4px 0 14px', lineHeight: 1.55 }}>
-                            {question.help}
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
                             {question.options.map((option) => {
                                 const optionId = `q-${question.id}-${option.value}`;
                                 const isSelected = answers[question.id] === option.value;
@@ -233,23 +231,16 @@ export default function SpecialtyFinderQuiz() {
             <section aria-labelledby="quiz-results-heading" style={{ marginTop: '26px' }}>
                 <h2
                     id="quiz-results-heading"
-                    style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}
+                    style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 16px' }}
                 >
                     Specialties that match your preferences
                 </h2>
-                <p style={{ fontSize: '13.5px', color: '#5A4A42', margin: '0 0 16px', lineHeight: 1.6 }}>
-                    Ranked by how many of your answers each specialty matches, not by aptitude, demand, or pay.
-                    Percentages are over the questions you answered, so they move as you answer more.
-                </p>
 
                 <div aria-live="polite">
                     {answeredCount === 0 ? (
                         <div style={{ ...clayCard, padding: '30px 24px', textAlign: 'center' }}>
-                            <p style={{ fontSize: '14.5px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
+                            <p style={{ fontSize: '14.5px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>
                                 Answer a question to see matches
-                            </p>
-                            <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                One answer is enough to start. The more you answer, the more the ranking separates.
                             </p>
                         </div>
                     ) : (

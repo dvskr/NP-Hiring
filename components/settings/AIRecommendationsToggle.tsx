@@ -76,12 +76,10 @@ export default function AIRecommendationsToggle(): React.JSX.Element {
         }}>
             <Sparkles size={18} style={{ color: '#7C3AED', flexShrink: 0, marginTop: '2px' }} />
             <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, color: '#4C1D95', marginBottom: '4px' }}>
+                {/* Title plus checkbox only; the checkbox label already
+                    states the subscription (owner call, 2026-10-12). */}
+                <div style={{ fontWeight: 600, color: '#4C1D95', marginBottom: '10px' }}>
                     Weekly AI job match digest
-                </div>
-                <div style={{ fontSize: '13px', color: '#6B21A8', marginBottom: '10px', lineHeight: 1.4 }}>
-                    Receive a weekly email with the top jobs selected for your profile by our AI matcher.
-                    It is sent every Monday morning. {loaded && (optIn ? 'You are subscribed.' : 'You are not subscribed.')}
                 </div>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: saving ? 'not-allowed' : 'pointer' }}>
                     <input

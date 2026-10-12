@@ -233,7 +233,7 @@ describe('expiry warning: plan posts', () => {
         for (const now of [DURING_PROMO, AFTER_PROMO]) {
             const sent = await sendWarning({ paymentStatus: 'plan', renewalPurchasable: true, now });
             expect(sent.text).not.toContain(RENEWAL);
-            expect(sent.text).toContain(`Each plan post runs ${config.durationDays} days. When this one ends, its slot is free again: post a job into it at no extra charge while you're subscribed`);
+            expect(sent.text).toContain(`Each plan post runs ${config.durationDays} days. When this one ends, post a new job into its slot at no extra charge while you're subscribed`);
             expect(sent.text).not.toMatch(/stays? live while/i);
             expect(loggedMetadata()).toMatchObject({ offer: 'plan', paymentStatus: 'plan' });
         }
@@ -279,7 +279,9 @@ describe('plan copy elsewhere in the email service matches what plan posts do', 
         const { sendPlanActivatedEmail } = await import('@/lib/email-service');
         await sendPlanActivatedEmail('owner@clinic.example', { slots: config.planSlots, currentPeriodEnd: AFTER_PROMO });
         const sent = resendSendMock.mock.calls.at(-1)![0] as Sent;
-        expect(sent.text).toContain(`${config.planSlots} active job slots while you're subscribed. Each plan post runs ${config.durationDays} days; when one ends, post again into the free slot at no extra charge.`);
+        expect(sent.text).toContain(`${config.planSlots} active job slots while you're subscribed. Each plan post runs ${config.durationDays} days. When one ends, post again into the free slot at no extra charge.`);
+        // House style: no semicolon-chained plan terms.
+        expect(sent.text).not.toMatch(/days; when one ends/);
         expect(sent.html).not.toMatch(/live while you're subscribed|stays live for up to/);
         expect(sent.subject).not.toMatch(DASHES);
     });
@@ -303,7 +305,7 @@ describe('plan copy elsewhere in the email service matches what plan posts do', 
         const { sendRenewalConfirmationEmail } = await import('@/lib/email-service');
         await sendRenewalConfirmationEmail('owner@clinic.example', TITLE, AFTER_PROMO, 'dash', 'tok-abc-123');
         const sent = resendSendMock.mock.calls.at(-1)![0] as Sent;
-        expect(sent.text).toContain('A renewal adds days only: this posting keeps its applicants, stats and remaining unlocks and InMails, and does not get new ones.');
+        expect(sent.text).toContain('A renewal adds days only. This posting keeps its applicants, stats, and remaining unlocks and InMails, but gets no new ones.');
         expect(sent.text).not.toMatch(/fresh \d+ candidate unlocks|renewal cycle/);
         expect(sent.text).toContain(`Renewal: $${config.renewalPrice}.00`);
         expect(sent.subject).not.toMatch(DASHES);

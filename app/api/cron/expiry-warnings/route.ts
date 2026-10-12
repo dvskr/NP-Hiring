@@ -120,7 +120,7 @@ function postExpiryOffer(
     // apply-renewal.ts only moves the end date (from the renewal date for an
     // expired post, capped at config.renewalCapDays after creation).
     return {
-      line: `Renew for $${offer.price}${saving} to relist it for another ${config.durationDays} days. Your stats, applicants and unlocked candidates carry over; a renewal does not add unlocks or InMails. Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.${promoAlternative}`,
+      line: `Renew for $${offer.price}${saving} to relist it for another ${config.durationDays} days. Your stats, applicants and unlocked candidates carry over. A renewal does not add unlocks or InMails. Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.${promoAlternative}`,
       ctaLabel: 'Renew Your Listing',
       ctaUrl: dashboardUrl,
     }

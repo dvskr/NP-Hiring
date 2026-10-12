@@ -77,8 +77,6 @@ interface CategoryHeroProps {
    * URLs the JSON-LD declares. A bare string renders as unlinked text.
    */
   breadcrumbs: CategoryHeroCrumb[];
-  /** Category index label, e.g. "№ 04 / 26" */
-  indexLabel?: string;
   /** Line 1 of the oversized heading */
   headlineLine1: string;
   /** Line 2 of the oversized heading */
@@ -160,7 +158,6 @@ export default function CategoryHero({
   heroAlt,
   badgeText,
   breadcrumbs,
-  indexLabel,
   headlineLine1,
   headlineLine2,
   headlineSub,
@@ -191,8 +188,8 @@ export default function CategoryHero({
       <div className="cath5-swatch" />
 
       <div style={{ position: 'relative' }}>
-        {/* ── Row 1: live-inventory pill · breadcrumb trail · index label ──
-            `badgeText` (required) and `indexLabel` were destructured but never
+        {/* ── Row 1: live-inventory pill · breadcrumb trail ──
+            `badgeText` (required) was destructured but never
             rendered, so all ~30 call sites built a badge string and the
             component silently discarded it. The .cath5-row1 row, the
             .cath5-badge pill and the .cath5-dot indicator below were authored
@@ -208,7 +205,7 @@ export default function CategoryHero({
             the current page, carries aria-current="page" and is not a link.
             Callers that render their own linked breadcrumb band pass [] and
             only the pill shows. */}
-        {(badge || indexLabel || crumbs.length > 0) && (
+        {(badge || crumbs.length > 0) && (
           <div className="cath5-row1">
             {badge && (
               <span className="cath5-badge">
@@ -241,7 +238,6 @@ export default function CategoryHero({
                 </ol>
               </nav>
             )}
-            {indexLabel && <span className="cath5-index">{indexLabel}</span>}
           </div>
         )}
         {/* ── STAGE: Oversized type + photo ── */}
@@ -367,10 +363,9 @@ export default function CategoryHero({
         }
 
         /* ── Row 1 ──
-           Flex rather than a 3-column grid: the three slots are all
-           conditional (pSEO templates pass breadcrumbs={[]} and no
-           indexLabel), and with a fixed \`auto 1fr auto\` template an omitted
-           slot silently shifted the next one into the wrong column. */
+           Flex rather than a grid: both slots are conditional (pSEO
+           templates pass breadcrumbs={[]}), and with a fixed column template
+           an omitted slot silently shifted the next one into the wrong column. */
         .cath5-row1 {
           display: flex;
           align-items: center;
@@ -447,11 +442,6 @@ export default function CategoryHero({
           outline: 2px solid var(--teal);
           outline-offset: 3px;
           border-radius: 2px;
-        }
-        .cath5-index {
-          font: 500 12px/1 'Inter', var(--font-inter), monospace;
-          letter-spacing: .1em;
-          color: var(--ink-soft);
         }
 
         /* ── Stage ── */
@@ -588,7 +578,6 @@ export default function CategoryHero({
           .cath5 { padding: 32px 24px 0 !important; }
           .cath5-row1 { gap: 10px 12px; }
           .cath5-crumbs-slot { flex-basis: 100%; justify-content: flex-start; }
-          .cath5-index { display: none; }
           .cath5-stage { grid-template-columns: 1fr; gap: 16px; }
           .cath5-h1 { font-size: clamp(56px, 15vw, 96px); }
           .cath5-h1-sub { font-size: clamp(28px, 7vw, 44px); }

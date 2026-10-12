@@ -71,7 +71,7 @@ const FAQS = [
   },
   {
     q: 'Why is my state missing from the dropdown?',
-    a: `Because it has not cleared the disclosure threshold yet. A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them; otherwise the "benchmark" would lean on one organization's pay scale. Use the national figure in the meantime.`,
+    a: `Because it has not cleared the disclosure threshold yet. A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them. Otherwise the figure would lean on one organization's pay scale. Use the national figure in the meantime.`,
   },
   {
     q: 'Is this posted pay or accepted pay?',
@@ -156,7 +156,6 @@ export default function SalaryBenchmarkPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="How this benchmark is built"
-            intro="A pay benchmark is only useful if you know what went into it. This one is deliberately narrow, and it withholds figures rather than publishing thin ones."
             assumptions={[
               'Each posting contributes the midpoint of its disclosed salary range. We report the median plus the 25th and 75th percentiles of those midpoints.',
               `A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`,
@@ -168,7 +167,7 @@ export default function SalaryBenchmarkPage() {
               'Accepted offers and negotiated outcomes. This is advertised pay, not signed pay.',
               'Bonuses, sign-on payments, shift and weekend differentials, productivity incentives, relocation, retirement match, and the cash value of benefits.',
               'Any employer-identifying detail. The tool never exposes which employers sit behind a figure, and per-employer analytics stay behind the employer dashboard login.',
-              'Specialty, setting, and experience segmentation. State-level medians pool an entire market; use them as a starting anchor, not a final number.',
+              'Specialty, setting, and experience segmentation. State-level medians pool an entire market. Use them as a starting anchor, not a final number.',
             ]}
             sources={[
               { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },

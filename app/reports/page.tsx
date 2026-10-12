@@ -44,7 +44,7 @@ const PAGE_TITLE = `${brand.niche.short} Hiring Data Reports`;
 const PAGE_DESCRIPTION =
     `Data reports built from ${brand.name}'s own ${brand.niche.descriptor} job postings: ` +
     ALL_REPORTS.map((r) => r.title.toLowerCase()).join('; ') +
-    `. Every figure is sample-gated and sourced.`;
+    `. Every figure has a minimum sample and a source.`;
 
 export const metadata: Metadata = {
     // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
@@ -154,9 +154,9 @@ export default async function ReportsHubPage() {
                         What our own listings <span style={{ color: '#BE185D' }}>show</span>
                     </h1>
                     <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.7, margin: 0, maxWidth: '640px' }}>
-                        Reports built from {brand.name}&apos;s own {brand.niche.descriptor} postings: live
-                        aggregates with the sample limits stated, national context cited to primary sources,
-                        and nothing padded to look bigger than it is. Free to quote with attribution via our{' '}
+                        Reports built from {brand.name}&apos;s own {brand.niche.descriptor} postings, with live
+                        figures, sample limits stated, and national context cited to primary sources. Free to
+                        quote with attribution via our{' '}
                         <Link href="/press" style={{ color: '#BE185D', textDecoration: 'underline' }}>
                             press &amp; data room
                         </Link>
@@ -238,18 +238,18 @@ export default async function ReportsHubPage() {
                     </h2>
                     <p style={{ fontSize: '13.5px', color: MUTED_TEXT, lineHeight: 1.75, margin: '0 0 10px 0' }}>
                         Every figure is computed from {brand.name}&apos;s own active postings, and each kind
-                        of figure has a publishing floor written into the query rather than into the prose.
-                        A rate is published as a percentage only when its denominator reaches{' '}
-                        {REPORT_MIN_SHARE_SAMPLE} postings; below that the report shows the counts
-                        themselves. A row in a breakdown is named only at {REPORT_MIN_GROUP_COUNT} or more
-                        postings, and the smaller rows fold into a single remainder line. A month joins the
+                        of figure needs a minimum sample before it is published. A rate is published as a
+                        percentage only when its denominator reaches {REPORT_MIN_SHARE_SAMPLE} postings.
+                        Below that the report shows the counts themselves. A row in a breakdown is named
+                        only at {REPORT_MIN_GROUP_COUNT} or more postings, and the smaller rows fold into a
+                        single remainder line. A month joins the
                         pay disclosure trend only at {TREND_MIN_MONTH_SAMPLE} or more postings added that
                         month, and a trend is drawn only once{' '}
                         {formatCount(TREND_MIN_MONTHS, 'such month')} exist. A pay figure is published only
                         from {BENCHMARK_MIN_POSTINGS} or more postings with employer stated pay across{' '}
                         {BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer contributing
-                        more than {MAX_EMPLOYER_SHARE_PERCENT}% of them, and pay that our own enrichment
-                        pipeline inferred is excluded from that sample entirely.
+                        more than {MAX_EMPLOYER_SHARE_PERCENT}% of them, and pay we estimated rather than the
+                        employer stated is excluded from that sample.
                     </p>
                     <p style={{ fontSize: '13.5px', color: MUTED_TEXT, lineHeight: 1.75, margin: '0 0 10px 0' }}>
                         Where a sample is below its floor, the report says so in place of the number. The

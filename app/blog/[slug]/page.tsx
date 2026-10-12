@@ -699,7 +699,9 @@ export default async function BlogPostPage({ params }: Props) {
                         <div>
                             <div className="ed-author-role">Published by</div>
                             <h4 className="ed-author-name">{brand.name}</h4>
-                            <p className="ed-author-bio">{brand.name} is a job board for {brand.niche.descriptor}s, operated by {brand.legal.entityName}. This article is editorial commentary aggregated from public sources and is not medical advice.</p>
+                            {/* The not-medical-advice line lives once, in the
+                                editorial note below (owner call, 2026-10-12). */}
+                            <p className="ed-author-bio">{brand.name} is a job board for {brand.niche.descriptor}s, operated by {brand.legal.entityName}.</p>
                             <EditorialByline generated={Boolean(licenseSlugMatch)} />
                             {/* B54: the always-current "Updated {currentYear}" badge
                                 fabricated freshness on every render. Show the real

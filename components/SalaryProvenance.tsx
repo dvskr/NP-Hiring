@@ -110,7 +110,7 @@ export function buildProvenanceSentences(
     if (live && live.count > 0 && live.count >= live.minimum) {
         const noun = live.noun ?? 'active postings with disclosed salary';
         sentences.push(
-            `Based on ${live.count.toLocaleString('en-US')} ${noun} on ${brand.name}, recomputed as postings are ingested daily.`,
+            `Based on ${live.count.toLocaleString('en-US')} ${noun} on ${brand.name}, updated daily.`,
         );
     }
 

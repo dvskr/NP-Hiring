@@ -88,7 +88,7 @@ export function getApplicationTips(input: ApplicationTipsInput): ApplicationTip[
     tips.push({ icon: '📋', text: 'State your malpractice coverage and how quickly you can credential with new payers.' });
   }
   if (type === 'perdiem' || type === 'prn') {
-    tips.push({ icon: '⏱️', text: 'List the shifts and days you can cover; per diem roles are filled around availability.' });
+    tips.push({ icon: '⏱️', text: 'List the shifts and days you can cover. Per diem roles are filled around availability.' });
   }
   if (type === 'parttime') {
     tips.push({ icon: '⏱️', text: 'Say which days and hours you can commit to each week.' });
@@ -98,9 +98,9 @@ export function getApplicationTips(input: ApplicationTipsInput): ApplicationTip[
   }
   if (typeof input.minYearsExperience === 'number' && input.minYearsExperience > 0) {
     const years = input.minYearsExperience;
-    tips.push({ icon: '📄', text: `The posting asks for ${years}+ year${years === 1 ? '' : 's'} of experience; lead your resume with your most relevant clinical roles.` });
+    tips.push({ icon: '📄', text: `The posting asks for ${years}+ year${years === 1 ? '' : 's'} of experience. Lead your resume with your most relevant clinical roles.` });
   } else if (input.newGradFriendly) {
-    tips.push({ icon: '🎓', text: 'New graduates are welcome here; lead with your clinical rotation hours and the settings you trained in.' });
+    tips.push({ icon: '🎓', text: 'New graduates are welcome here. Lead with your clinical rotation hours and the settings you trained in.' });
   }
 
   return tips.slice(0, MAX_TIPS);
@@ -128,13 +128,10 @@ export function ApplicationTipsCard(props: ApplicationTipsInput) {
           fontWeight: 700,
           fontFamily: 'var(--font-lora), Georgia, serif',
           color: '#1F2937',
-          margin: '0 0 4px',
+          margin: '0 0 14px',
         }}>
           Tips for This Role
         </h3>
-        <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 14px', lineHeight: 1.4 }}>
-          Based on the details of this posting
-        </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {tips.map((tip) => (

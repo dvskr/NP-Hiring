@@ -611,7 +611,6 @@ export default async function ForProgramsPage() {
             }}
           >
             No fees, no student data shared with us, and no contract.
-            Designed for accredited {brand.niche.short} programs.
           </p>
 
           <div
@@ -987,24 +986,11 @@ export default async function ForProgramsPage() {
               fontWeight: 700,
               color: '#1A2E35',
               textAlign: 'center',
-              marginBottom: '8px',
+              marginBottom: '36px',
             }}
           >
             See The Widget On A Real Page
           </h2>
-          <p
-            style={{
-              fontSize: '15px',
-              color: '#5A4A42',
-              textAlign: 'center',
-              maxWidth: '560px',
-              margin: '0 auto 36px',
-              lineHeight: 1.6,
-            }}
-          >
-            Select your state and enter your program name. The live preview and
-            embed snippet update as you type.
-          </p>
 
           <div style={{ maxWidth: '820px', margin: '0 auto' }}>
             <ProgramEmbedBuilder baseUrl={brand.baseUrl} />
@@ -1074,7 +1060,6 @@ export default async function ForProgramsPage() {
                 bg: '#EFF6FF',
                 title: 'WordPress',
                 body: 'Edit the career services page → add a "Custom HTML" block → paste the snippet → publish.',
-                note: 'Most common at universities. Works on WordPress.com and self-hosted installations.',
               },
               {
                 icon: Globe,
@@ -1082,7 +1067,6 @@ export default async function ForProgramsPage() {
                 bg: '#FDF2F8',
                 title: 'Drupal / Cascade CMS',
                 body: 'Edit the page → insert an "Embed code" or HTML block → switch to source/HTML view → paste.',
-                note: 'Used by most state schools and large university systems.',
               },
               {
                 icon: Code2,
@@ -1090,9 +1074,8 @@ export default async function ForProgramsPage() {
                 bg: '#FFF7ED',
                 title: 'Any other site',
                 body: 'Squarespace, Wix, Webflow, Canvas, Blackboard, and plain HTML all support an "Embed" or "Custom Code" block. Paste the snippet in.',
-                note: 'If you can paste HTML anywhere on the page, you can install the widget.',
               },
-            ].map(({ icon: Icon, accent, bg, title, body, note }) => (
+            ].map(({ icon: Icon, accent, bg, title, body }) => (
               <div
                 key={title}
                 className="emp-bento-card"
@@ -1134,22 +1117,11 @@ export default async function ForProgramsPage() {
                   style={{
                     fontSize: '13.5px',
                     color: '#5A4A42',
-                    margin: '0 0 12px',
+                    margin: 0,
                     lineHeight: 1.6,
                   }}
                 >
                   {body}
-                </p>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    color: '#7A6A62',
-                    margin: 0,
-                    lineHeight: 1.55,
-                    fontStyle: 'italic',
-                  }}
-                >
-                  {note}
                 </p>
               </div>
             ))}
@@ -1456,7 +1428,7 @@ export default async function ForProgramsPage() {
               >
                 A vendor-neutral guide to verifying accreditation, checking
                 certification eligibility, and asking the right clinical-placement
-                questions. It names no schools and ranks no programs.
+                questions.
               </p>
               <span
                 style={{
@@ -1529,26 +1501,6 @@ export default async function ForProgramsPage() {
           >
             <Mail size={16} /> {CONTACT_EMAIL}
           </a>
-          <p
-            style={{
-              color: '#5A4A3A',
-              fontSize: '13px',
-              margin: '20px 0 0',
-            }}
-          >
-            Or follow us on{' '}
-            <Link
-              href="/"
-              style={{
-                color: '#BE185D',
-                textDecoration: 'underline',
-                fontWeight: 600,
-              }}
-            >
-              {brand.domain}
-            </Link>
-            .
-          </p>
         </div>
       </section>
     </>

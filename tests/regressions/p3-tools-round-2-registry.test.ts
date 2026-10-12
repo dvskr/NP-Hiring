@@ -769,14 +769,14 @@ describe('cost per hire — the promo is offered only while it runs (backlog 2.1
     const assumptions = costPerHireAssumptions('promo');
     expect(assumptions).toHaveLength(10);
     expect(assumptions[1]).toBe(
-      `Our own prices are read from the pricing config the checkout charges against. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Every post runs ${config.durationDays} days and includes ${config.limits.candidateUnlocksPerPosting} candidate unlocks plus ${config.limits.inmailsPerPosting} direct messages. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}.`,
+      `Our prices are the ones you pay at checkout. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Every post runs ${config.durationDays} days and includes ${config.limits.candidateUnlocksPerPosting} candidate unlocks plus ${config.limits.inmailsPerPosting} direct messages. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}.`,
     );
     expect(assumptions[2]).toMatch(/^The promo result is a real price for a dated window/);
     const faqs = costPerHireFaqs('promo');
     expect(faqs).toHaveLength(7);
-    expect(faqs[2].a).toContain(`a posting is a fixed price that does not: free during the launch promo, then $${config.introPrice} for your first post and $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs.`);
+    expect(faqs[2].a).toContain(`A posting is a fixed price that does not: free during the launch promo, then $${config.introPrice} for your first post and $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs.`);
     expect(faqs[5].a).toBe(
-      `Every post (promo, intro, featured, or plan) runs ${config.durationDays} days, is featured, and includes ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks and ${config.limits.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}. Those are the prices in the calculator, read from the same config the checkout uses, so they cannot drift from what you would actually be charged.`,
+      `Every post (promo, intro, featured, or plan) runs ${config.durationDays} days, is featured, and includes ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks and ${config.limits.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}. The calculator uses the same prices you pay at checkout.`,
     );
     expect(postRoleBlurb('promo')).toBe(`Free through ${config.promoEndsLabel}, every feature included.`);
   });
@@ -791,7 +791,7 @@ describe('cost per hire — the promo is offered only while it runs (backlog 2.1
     expect(assumptions[1]).toContain(LADDER_PRICES);
     expect(faqs[5].a).toContain(LADDER_PRICES);
     expect(faqs[5].a).toContain('Every post (intro, featured, or plan)');
-    expect(faqs[2].a).toContain(`a posting is a fixed price that does not: $${config.introPrice} for your first post and $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs.`);
+    expect(faqs[2].a).toContain(`A posting is a fixed price that does not: $${config.introPrice} for your first post and $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs.`);
     expect(postRoleBlurb(phase)).toBe(LADDER_PRICES);
     // The only promo mention left is the history that keeps the intro price unspent.
     const copy = [...assumptions, ...faqs.flatMap(({ q, a }) => [q, a]), postRoleBlurb(phase)]

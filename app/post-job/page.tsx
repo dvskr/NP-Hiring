@@ -954,25 +954,6 @@ function PostJobContent() {
   const ErrorMsg = ({ message }: { message?: string }) =>
     message ? <p style={{ marginTop: '6px', fontSize: '12px', fontWeight: 500, color: '#EF4444' }}>{message}</p> : null;
 
-  const InfoBox = ({ emoji, children, color = 'blue' }: { emoji: string; children: React.ReactNode; color?: string }) => {
-    const colors = {
-      blue: { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF' },
-      amber: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },
-      teal: { bg: '#FDF2F8', border: '#FBCFE8', text: '#831843' },
-    };
-    const c = colors[color as keyof typeof colors] || colors.blue;
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '12px',
-        padding: '12px 14px', borderRadius: '14px',
-        background: c.bg, border: `1px solid ${c.border}`,
-      }}>
-        <span style={{ fontSize: '16px', lineHeight: 1, marginTop: '1px' }}>{emoji}</span>
-        <p style={{ fontSize: '13px', color: c.text, margin: 0, lineHeight: 1.5 }}>{children}</p>
-      </div>
-    );
-  };
-
   // The promo or the ladder, decided on this render (never at module load),
   // so the wizard stops saying "free" at config.promoEndsAt with no deploy.
   const pricingCopy = postJobPricingCopy();
@@ -1031,10 +1012,9 @@ function PostJobContent() {
           {/* ═══ STEP 1: Company Info ═══ */}
           {currentStep === 1 && (
             <div style={{ ...cardBase, padding: '28px 24px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 24px' }}>
                 Company Information
               </h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Tell us about your organization and the role</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* Job Title */}
@@ -1106,10 +1086,9 @@ function PostJobContent() {
           {/* ═══ STEP 2: Role Details ═══ */}
           {currentStep === 2 && (
             <div style={{ ...cardBase, padding: '28px 24px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 24px' }}>
                 Role Details
               </h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Where and how will this person work?</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {/* Location */}
@@ -1225,8 +1204,8 @@ function PostJobContent() {
                     canonical taxonomy slug, so the classifier can trust it
                     directly instead of substring-guessing from the title.
 
-                    ⚠️ PENDING API WIRING — do not add a placement promise to
-                    the helper copy until this is closed. Neither job-create
+                    ⚠️ PENDING API WIRING — do not add helper copy that
+                    promises placement until this is closed. Neither job-create
                     route forwards this field, and neither writes
                     Job.categoryTags for employer posts, so the value is
                     captured on the draft and then dropped:
@@ -1252,9 +1231,6 @@ function PostJobContent() {
                     by the two routes above. */}
                 <div>
                   <Label htmlFor="specialty">NP Specialty <span style={{ fontWeight: 400, color: '#B0BEC5' }}>(optional)</span></Label>
-                  <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '-4px 0 8px' }}>
-                    Choose the closest match from the NP specialty taxonomy
-                  </p>
                   <select id="specialty" {...register('specialty')} style={clayInput} defaultValue="">
                     <option value="">Select a specialty...</option>
                     {SPECIALTY_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -1288,10 +1264,9 @@ function PostJobContent() {
           {/* ═══ STEP 3: Job Description ═══ */}
           {currentStep === 3 && (
             <div style={{ ...cardBase, padding: '28px 24px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 24px' }}>
                 Job Description
               </h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Describe the role, responsibilities, and requirements</p>
 
               <div>
                 <Label required>Description</Label>
@@ -1340,14 +1315,11 @@ function PostJobContent() {
                 </div>
                 <ErrorMsg message={errors.description?.message} />
                 <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontSize: '11px', color: '#B0BEC5', margin: 0 }}>Minimum 200 characters. Use the toolbar to format.</p>
+                  <p style={{ fontSize: '11px', color: '#B0BEC5', margin: 0 }}>Minimum 200 characters.</p>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: (watch('description') || '').replace(/<[^>]*>/g, '').length > 25000 ? '#EF4444' : '#94A3B8' }}>
                     {(watch('description') || '').replace(/<[^>]*>/g, '').length.toLocaleString()} / 25,000
                   </span>
                 </div>
-                <InfoBox emoji="💡" color="blue">
-                  <strong>Writing tip:</strong> Include sections for <em>About the Role</em>, <em>Responsibilities</em>, <em>Requirements</em>, and <em>Why Join Us</em> to attract top {brand.niche.short} talent.
-                </InfoBox>
               </div>
             </div>
           )}
@@ -1355,10 +1327,9 @@ function PostJobContent() {
           {/* ═══ STEP 4: Compensation & Apply ═══ */}
           {currentStep === 4 && (
             <div style={{ ...cardBase, padding: '28px 24px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 24px' }}>
                 Compensation & Application
               </h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Set salary, benefits, and how candidates should apply</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
@@ -1404,18 +1375,6 @@ function PostJobContent() {
                     />
                     <span style={{ fontSize: '13px', color: '#6B7F8A' }}>Competitive salary (do not display a range)</span>
                   </label>
-
-                  {salaryCompetitive && (
-                    <InfoBox emoji="💡" color="amber">
-                      {/* The old "3x more views, 2x more applications" had no source
-                          (claim rule). What is true and checkable: salaryClause() in
-                          lib/filters.ts matches only posts that carry a salary, and
-                          ticking Competitive clears salaryMin and salaryMax. Worded
-                          as "pay information" rather than "never shown" because the
-                          enrich-jobs cron can still estimate pay from the description. */}
-                      <strong>Pro tip:</strong> Candidates who filter by minimum salary <strong>only see posts with pay information</strong>, so a visible range lets your post appear in those searches.
-                    </InfoBox>
-                  )}
                 </div>
 
                 {/* Benefits */}
@@ -1455,7 +1414,6 @@ function PostJobContent() {
                         />
                         <div>
                           <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>External Application URL</span>
-                          <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates are redirected to your website or ATS</p>
                         </div>
                       </div>
                     </label>
@@ -1473,7 +1431,6 @@ function PostJobContent() {
                         />
                         <div>
                           <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
-                          <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly. No website needed.</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                             {['Resume', 'Cover letter', 'Email alerts'].map(f => (
                               <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
@@ -1493,22 +1450,14 @@ function PostJobContent() {
                         style={errors.applyUrl ? clayInputError : clayInput}
                       />
                       <ErrorMsg message={errors.applyUrl?.message} />
-                      <InfoBox emoji="💡" color="amber">
-                        This should be a direct link to your application page, <strong>not your company homepage</strong>.
-                      </InfoBox>
                     </div>
                   )}
 
-                  {/* Platform info */}
+                  {/* Platform apply: screening questions */}
                   {watch('applyOnPlatform') && (
-                    <>
-                      <InfoBox emoji="✅" color="teal">
-                        <strong>Great choice!</strong> You will receive email notifications for each new application and manage all applicants from your dashboard.
-                      </InfoBox>
-                      <div style={{ marginTop: '16px' }}>
-                        <ScreeningQuestionsBuilder />
-                      </div>
-                    </>
+                    <div style={{ marginTop: '16px' }}>
+                      <ScreeningQuestionsBuilder />
+                    </div>
                   )}
                 </div>
               </div>

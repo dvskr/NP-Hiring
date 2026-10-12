@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Mail, Clock, HelpCircle, ArrowRight } from 'lucide-react';
+import { Mail, Clock, ArrowRight } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { brand } from '@/config/brand';
 import ContactForm from './ContactForm';
@@ -17,7 +17,7 @@ import ContactFAQ from './ContactFAQ';
 // can back, and names no cadence, price or turnaround that a config change
 // could silently falsify:
 //   - ingest cadence: config/cron-schedule.ts schedules ingestion waves every
-//     day, so the answer says "every day" and agrees with the "ingested daily"
+//     day, so the answer says "every day" and agrees with the "updated daily"
 //     wording on the salary surfaces. The old answer said "twice daily", which
 //     reads as a contradiction of that wording and pins a wave count a cron
 //     edit can silently falsify. No source count either: the source list is a
@@ -30,7 +30,7 @@ import ContactFAQ from './ContactFAQ';
 //   - alerts: lib/job-alerts-service.ts sends a daily OR weekly digest and the
 //     form at /job-alerts offers both, so the answer cannot promise "daily".
 //   - deletion: app/api/auth/delete-account/route.ts closes the account on the
-//     spot and purges after PURGE_GRACE_DAYS. The answer says "a grace window"
+//     spot and purges after PURGE_GRACE_DAYS. The answer says "a grace period"
 //     rather than the number, because that constant is private to the route
 //     and copy may not restate a figure it cannot import. The old "within 24
 //     hours" was a turnaround nothing in the repo enforces.
@@ -42,10 +42,10 @@ const FAQ_ITEMS = [
     // P0 #5 still applies here: no hardcoded company or posting count
     // (config/niche/copy.ts RULE: evergreen claims only; live counters come
     // from lib/site-stats.ts).
-    { q: 'How often are jobs updated?', a: 'Our ingest runs on a schedule every day, pulling new listings from employer career pages and from the applicant tracking systems those employers publish through. Every listing carries the date it was posted, so you can see for yourself how fresh one is.' },
+    { q: 'How often are jobs updated?', a: 'New listings are added every day from employer career pages and the applicant tracking systems those employers use. Every listing shows the date it was posted.' },
     { q: 'How do I post a job as an employer?', a: 'Create an employer account, then post from the Post a Job page. Our pricing page lists what a posting costs and everything it includes, and you can renew or archive it later from the employer dashboard.' },
     { q: 'Can I get job alerts by email?', a: 'Yes. Sign up for free, set your filters for location, job type and salary range, then choose a daily or a weekly digest. We email the matching jobs on whichever schedule you pick, and every message can unsubscribe you.' },
-    { q: 'How do I delete my account?', a: `Go to Settings, open Account and choose Delete Account. Your account closes immediately, and your records are erased after a grace window that exists so a deletion made by mistake can still be reversed. You can also email ${brand.email.support} and we will do it for you.` },
+    { q: 'How do I delete my account?', a: `Go to Settings, open Account and choose Delete Account. Your account closes immediately, and your records are erased after a grace period, so you can still reverse a deletion made by mistake. You can also email ${brand.email.support} and we will do it for you.` },
     { q: 'Why did a job listing disappear?', a: 'A listing comes down when it expires, when the employer\'s own apply link has been dead on several consecutive checks, or when enough separate readers report it as invalid. Check the employer\'s site for its latest openings.' },
 ];
 
@@ -136,12 +136,9 @@ export default function ContactPage() {
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: '#E6F4F1', color: '#BE185D', borderRadius: '20px', fontSize: '13px', fontWeight: 700, marginBottom: '24px' }}>
                             <Mail size={14} /> Contact Us
                         </div>
-                        <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 3.5rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', marginBottom: '16px', lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                        <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 3.5rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
                             We&apos;d love to <span style={{ color: '#BE185D' }}>hear from you</span>
                         </h1>
-                        <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
-                            Whether you represent a clinic seeking your next top-tier {brand.niche.short} or you are a candidate looking for the perfect match, our team is ready to help.
-                        </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <Image src="/images/contact/hero.webp" alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
@@ -187,15 +184,6 @@ export default function ContactPage() {
                                         <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>We respond within 24 to 48 hours</p>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                    <div style={{ ...clayIconWrap('linear-gradient(145deg, #8B5CF6, #A855F7)'), width: '36px', height: '36px', borderRadius: '10px' }}>
-                                        <HelpCircle size={16} color="#fff" />
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E35', margin: '0 0 2px' }}>Quick Answers</p>
-                                        <Link href="/faq" style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>Visit FAQ <ArrowRight size={12} /></Link>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -235,7 +223,6 @@ export default function ContactPage() {
                     }
                     .contact-hero-grid { grid-template-columns: 1fr !important; text-align: center; }
                     .contact-hero-grid > div:last-child { order: -1; }
-                    .contact-hero-grid > div:first-child p { margin-left: auto; margin-right: auto; }
                 }
             `}</style>
         </div>

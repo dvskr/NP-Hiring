@@ -116,7 +116,7 @@ export function nlcSentence(stateName: string): string | null {
   const status = LICENSE_STATE_BY_NAME.get(stateName)?.nlcStatus;
   if (!status) return null;
   if (status === 'member') {
-    return `${stateName} is a Nurse Licensure Compact member. The compact covers the RN license beneath your APRN credential; the APRN license itself is still issued by ${stateName}.`;
+    return `${stateName} is a Nurse Licensure Compact member. The compact covers the RN license beneath your APRN credential. The APRN license itself is still issued by ${stateName}.`;
   }
   if (status === 'pending') {
     return `${stateName} has enacted the Nurse Licensure Compact but has not implemented it, so plan on a ${stateName} RN license by endorsement.`;

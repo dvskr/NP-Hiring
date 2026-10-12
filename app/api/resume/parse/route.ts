@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       const rawResumeUrl = body?.resumeUrl;
 
       if (!rawResumeUrl || typeof rawResumeUrl !== 'string') {
-        return NextResponse.json({ error: 'resumeUrl is required' }, { status: 400 });
+        return NextResponse.json({ error: 'Upload a resume first.' }, { status: 400 });
       }
 
       // IDOR guard (audit V7): never trust the client-supplied storage
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       const requestedPath = toBareResumePath(rawResumeUrl);
       if (!requestedPath) {
         return NextResponse.json(
-          { error: 'resumeUrl is not a valid storage path' },
+          { error: 'We could not find this resume. Try uploading it again.' },
           { status: 400 },
         );
       }

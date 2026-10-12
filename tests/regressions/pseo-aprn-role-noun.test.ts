@@ -79,7 +79,8 @@ describe('lib/pseo/setting-state-template.tsx names the role through labelNoun',
         // Both JSON-LD nodes (ItemList and WebPage) carry the same name.
         expect(code.match(/name: `\$\{noun\} Jobs in \$\{stateName\}`,/g)?.length).toBe(2);
         expect(code).toContain('heroAlt={`${noun} jobs in ${stateName}`}');
-        expect(code).toContain('description={`${noun} positions in ${stateName}. ${config.heroSubtitle}.`}');
+        // The hero description no longer repeats the H1 (owner call, 2026-10-12).
+        expect(code).toContain('description={`${config.heroSubtitle}.`}');
         expect(code).toContain('heading={`${noun} Jobs in ${stateName} FAQ`}');
         expect(code).toContain('buildSettingStateTitle({ titleLabel: config.label, slug: config.slug, stateName, total: facts.total })');
     });

@@ -463,7 +463,7 @@ describe('/for-employers: the rendered page and its metadata follow the clock', 
             // The evergreen entries follow, the screening commitment included.
             expect(faqs.map((f) => f.name)).toContain('Who sees my job posting?');
             expect(faqs.find((f) => f.name === 'Who sees my job posting?')?.text).toContain(
-                'listings are screened at ingest and removed when flagged out of scope',
+                'Listings are screened and removed when flagged out of scope',
             );
         }
     });

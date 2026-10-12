@@ -116,7 +116,7 @@ async function getJobs(skip = 0, take = 10) {
  */
 const faqs = [
   { q: `What does a geriatric ${brand.niche.short} do?`, a: `Geriatric ${brand.niche.short}s specialize in caring for older adults: chronic disease management, polypharmacy review, cognitive and functional assessment, fall prevention, and care coordination with families and facility teams across nursing homes, assisted living, home-based care, and outpatient clinics.` },
-  { q: `How is pay set for geriatric ${brand.niche.short} roles?`, a: `Each listing states its own salary or range, and this page publishes a median only once enough listings disclose annual pay. Facility circuit roles that cover several sites usually describe the travel and call expectations that go with them, so compare those terms alongside the figure.` },
+  { q: `How is pay set for geriatric ${brand.niche.short} roles?`, a: `Each listing states its own salary or range, and a median appears on this page once enough listings disclose annual pay. Facility circuit roles that cover several sites usually describe the travel and call expectations that go with them, so compare those terms alongside the figure.` },
   { q: 'What qualifications are needed?', a: 'Requirements include an active APRN license, national NP certification, DEA registration, and experience with geriatric populations. Knowledge of Medicare billing, capacity evaluations, and age-specific pharmacokinetics is highly valued.' },
   { q: `What settings hire geriatric ${brand.niche.short}s?`, a: 'Settings include skilled nursing facilities (SNFs), memory care units, assisted living communities, geriatric outpatient clinics, home-based primary care programs, home health agencies, and hospital medicine teams.' },
   { q: `What does a geriatric ${brand.niche.short} panel look like?`, a: `Older adults commonly carry several chronic conditions and long medication lists at once, so a geriatric panel leans on medication review, functional and cognitive assessment, goals-of-care conversations, and coordination with families and facility staff.` },
@@ -297,7 +297,6 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
         heroAlt={`Geriatric ${brand.niche.short} with elderly patient`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('geriatric') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Geriatric"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, care for older adults."

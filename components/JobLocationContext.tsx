@@ -112,7 +112,7 @@ export function buildProfessionNote(
 ): string | null {
     const label = professionClass ? APRN_PROFESSION_LABELS[professionClass] : undefined;
     if (!label) return null;
-    return `This listing is a ${label} role, an APRN profession in its own right rather than a nurse practitioner position. The state practice rules below describe the NP practice environment.`;
+    return `This is a ${label} role. The state practice rules below apply to nurse practitioners.`;
 }
 
 export interface AdjustedSalaryContext {

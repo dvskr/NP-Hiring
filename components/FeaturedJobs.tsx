@@ -112,14 +112,6 @@ const css = `
         box-shadow: 6px 6px 0 #7A1C2B;
         padding: 26px 26px 30px;
     }
-    .fjs-steps-panel .fjs-eyebrow {
-        font-size: 11px;
-        font-weight: 800;
-        color: #BE185D;
-        text-transform: uppercase;
-        letter-spacing: 0.18em;
-        margin: 0 0 8px;
-    }
     .fjs-steps-panel .fjs-h2 {
         font-size: 30px;
         font-weight: 700;
@@ -350,9 +342,6 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                     variants={stagger}
                 >
                     <div className="fjs-steps-panel">
-                        <m.p variants={fadeLeft} className="fjs-eyebrow">
-                            A seamless path to your next role
-                        </m.p>
                         <m.h2 variants={fadeLeft} className="fjs-h2 font-heading">
                             How it works
                         </m.h2>

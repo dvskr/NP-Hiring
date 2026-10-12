@@ -167,12 +167,9 @@ export default function EmployerResourcesHubPage() {
               the frozen JD_TEMPLATES registry so this list can never drift
               from what the post-job wizard offers. */}
           <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
               Browse the Template Library
             </h2>
-            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-              {JD_TEMPLATES.length} skeleton starters organized by practice setting. Each opens as a full page you can review before posting.
-            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {categories.map(({ cat, label, templates }) => (
                 <div

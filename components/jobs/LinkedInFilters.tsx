@@ -159,16 +159,11 @@ export default function LinkedInFilters() {
     setSearchInput(filters.search || '');
     setLocationInput(filters.location || '');
   }
-  // Honest facet arithmetic for the employer-type filter. `unclassifiedCount`
-  // is how many jobs (under the CURRENT other filters) come from employers no
-  // human has classified yet — surfaced in the facet so selecting "Direct
-  // employers" never SILENTLY hides that inventory or implies it is agency
-  // work. `recruitmentTotal` is the true total while an employer-type filter
-  // is active: the filter-counts API normalizes its POST body to the fixed
+  // `recruitmentTotal` is the true total while an employer-type filter is
+  // active: the filter-counts API normalizes its POST body to the fixed
   // FilterState shape and drops recruitmentType, so counts.total would
   // overstate results whenever this filter is on. null = unknown (fetch
   // failed/pending) and renders as NOTHING — never a fabricated zero.
-  const [unclassifiedCount, setUnclassifiedCount] = useState<number | null>(null);
   const [recruitmentTotal, setRecruitmentTotal] = useState<number | null>(null);
 
   // Fetch filter counts (includes category param for accurate counts).
@@ -220,11 +215,11 @@ export default function LinkedInFilters() {
     };
   }, [fetchCounts]);
 
-  // Employer-type facet arithmetic (see the state declarations above).
-  // Deferred off the critical path exactly like fetchCounts. One probe when
-  // no employer-type filter is active, two when one is; /api/jobs re-parses
-  // its own URL through parseFiltersFromParams, so the totals honor
-  // recruitmentType even though the filter-counts POST route does not.
+  // Employer-type total (see the state declaration above). Deferred off the
+  // critical path exactly like fetchCounts, and only fetched while an
+  // employer-type filter is active; /api/jobs re-parses its own URL through
+  // parseFiltersFromParams, so the total honors recruitmentType even though
+  // the filter-counts POST route does not.
   useEffect(() => {
     let cancelled = false;
     const probeTotal = async (state: RecruitmentFilterState): Promise<number | null> => {
@@ -241,13 +236,9 @@ export default function LinkedInFilters() {
     };
     const run = async () => {
       const parsed = parseFiltersFromParams(new URLSearchParams(searchParams.toString()));
-      const [unclassified, activeTotal] = await Promise.all([
-        probeTotal({ ...parsed, recruitmentType: 'unclassified' }),
-        parsed.recruitmentType ? probeTotal(parsed) : Promise.resolve<number | null>(null),
-      ]);
+      const activeTotal = parsed.recruitmentType ? await probeTotal(parsed) : null;
       if (cancelled) return;
-      setUnclassifiedCount(unclassified);
-      setRecruitmentTotal(parsed.recruitmentType ? activeTotal : null);
+      setRecruitmentTotal(activeTotal);
     };
     type IdleHandle = number;
     const idleApi = (typeof window !== 'undefined' && 'requestIdleCallback' in window)
@@ -459,14 +450,13 @@ export default function LinkedInFilters() {
     if (filters.recruitmentType) {
       pills.push({
         key: 'recruitmentType',
-        // 'unclassified' is reachable via deep link only (the count line in
-        // the facet is informational) but the pill must still name it
-        // honestly rather than showing a raw slug.
+        // 'unclassified' is reachable via deep link only, but the pill must
+        // still name it honestly rather than showing a raw slug.
         label: filters.recruitmentType === 'direct_hire'
           ? 'Direct employers'
           : filters.recruitmentType === 'staffing_agency'
             ? 'Staffing agencies'
-            : 'Employers not yet classified',
+            : 'No employer type',
         onRemove: () => setSingleFilter('recruitmentType', null),
       });
     }
@@ -710,12 +700,10 @@ export default function LinkedInFilters() {
             {/* Employer Type (teardown A6) — company-level, HUMAN-set
                 classification (Company.recruitmentType, written only from
                 /admin/companies). Three states: Any (both unchecked), Direct,
-                Staffing. The facet also names the UNCLASSIFIED bucket with a
-                live count so selecting a type never silently hides that
-                inventory — and never implies an unclassified employer is an
-                agency. No count badges on the two options: the filter-counts
-                API doesn't report this facet yet, and we never fabricate a
-                zero (see CheckboxFilter's count contract above). */}
+                Staffing. The option labels carry no explanatory copy (owner
+                call, 2026-10-12). No count badges on the two options: the
+                filter-counts API doesn't report this facet yet, and we never
+                fabricate a zero (see CheckboxFilter's count contract above). */}
             <FilterSection title="Employer Type">
               <CheckboxFilter
                 label="Direct employers"
@@ -731,19 +719,6 @@ export default function LinkedInFilters() {
                   setSingleFilter('recruitmentType', filters.recruitmentType === 'staffing_agency' ? null : 'staffing_agency')
                 }
               />
-              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '2px 6px 0', lineHeight: 1.4 }}>
-                Our team labels employers one by one: direct employers hire onto
-                their own staff; staffing agencies recruit for client
-                organizations. Neither label ranks a job higher.
-              </p>
-              {unclassifiedCount !== null && unclassifiedCount > 0 && (
-                <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '6px 6px 0', lineHeight: 1.4 }}>
-                  {unclassifiedCount.toLocaleString()}{' '}
-                  {unclassifiedCount === 1 ? 'job is' : 'jobs are'} from employers
-                  we have not classified yet. Selecting a type hides them;
-                  not classified does not mean staffing agency.
-                </p>
-              )}
             </FilterSection>
 
             {/* Specialty — the taxonomy registry's clinical specialty axis
@@ -781,13 +756,13 @@ export default function LinkedInFilters() {
               />
             </FilterSection>
 
-            {/* Experience — two DISTINCT questions, kept visually separate so
-                their counts don't read as contradictory:
+            {/* Experience — two DISTINCT questions, kept visually separate (a
+                divider, no explanatory copy) so their counts don't read as
+                contradictory:
                   • "Open to new grads" is an EMPLOYER signal (does this employer
                     welcome new grads?) — deliberately a small, specific set.
-                  • "Your experience" is CANDIDATE-side: pick your years and we
-                    show the roles you qualify for, so counts legitimately GROW
-                    with experience.
+                  • "I have N+ years" is CANDIDATE-side: the roles you qualify
+                    for, so counts legitimately GROW with experience.
                 The old flat list made the 12 → 1,369 jump look broken. The dead
                 7+/10+ buckets (identical to 5+; no job requires >5 yrs) are
                 removed — see EXPERIENCE_FILTER_BUCKETS in lib/filters.ts. */}
@@ -800,18 +775,9 @@ export default function LinkedInFilters() {
                   setSingleFilter('newGradFriendly', filters.newGradFriendly === true ? null : true)
                 }
               />
-              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '2px 6px 0', lineHeight: 1.4 }}>
-                Employers open to candidates with little or no experience.
-              </p>
 
               <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', margin: '12px 0 8px' }} />
 
-              <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', margin: '0 6px 2px', letterSpacing: '0.01em' }}>
-                Your experience
-              </p>
-              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 6px 8px', lineHeight: 1.4 }}>
-                Select your years of experience and we will show the roles you qualify for.
-              </p>
               <CheckboxFilter
                 label="I have 1+ years"
                 count={counts?.minYears?.[1] || 0}

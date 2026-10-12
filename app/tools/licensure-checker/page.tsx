@@ -197,7 +197,7 @@ const FAQS = [
   },
   {
     q: 'What decides whether I can hold a multistate RN license?',
-    a: `Your primary state of residence. Only a compact member state can issue a multistate license, so if you live in a non-member state you have no multistate privilege to carry anywhere, regardless of where you want to work. Check your home state against NCSBN's current member list before you plan around it. Jurisdictions join and switch on their own timelines, and this page deliberately does not keep its own copy of that list.`,
+    a: `Your primary state of residence. Only a compact member state can issue a multistate license, so if you live in a non-member state you have no multistate privilege to carry anywhere, regardless of where you want to work. Jurisdictions join on their own timelines, so check your home state against NCSBN's current member list before you plan around it.`,
   },
   {
     q: `How many states grant ${brand.niche.short}s full practice authority?`,
@@ -205,7 +205,7 @@ const FAQS = [
   },
   {
     q: 'How long does licensure take, and what does it cost?',
-    a: `That varies by state and by your own file, and we do not publish figures we cannot keep current for 51 jurisdictions. The checker shows a broad timeline band tied to practice-authority tier as a planning aid only. For fees, processing times, CE hours, and renewal cycles, go to the state board of nursing, which is the authoritative source.`,
+    a: `It varies by state and by your own file. The state board of nursing sets processing times, fees, CE hours, and renewal cycles, so check the board for current figures. The checker names who sets each one.`,
   },
   {
     q: 'Which states should I add first if I want telehealth or travel work?',
@@ -270,7 +270,7 @@ export default async function LicensureCheckerToolPage() {
               {brand.niche.short} licensure checker
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
-              Pick a state for its practice authority, licensure steps, timeline band, and live pay data.
+              Pick a state for its practice authority, licensure steps, and live pay data.
               Then line up every state you are considering in the planner below: all {plannerStates.length}{' '}
               jurisdictions, sorted by what actually differs between them, starting with practice authority.
             </p>
@@ -281,13 +281,9 @@ export default async function LicensureCheckerToolPage() {
       {/* ─── Single-state checker ─── */}
       <section style={{ background: TOOL_PANEL_BG, padding: '48px 20px 56px' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', margin: '0 0 8px' }}>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', margin: '0 0 34px' }}>
             Check one state
           </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '560px', margin: '0 auto 34px', lineHeight: 1.6 }}>
-            Requirements, practice authority, timeline band, and what {brand.niche.short}s in that state are
-            currently being paid.
-          </p>
           <LicensureChecker
             stateGuides={stateGuides}
             stateSalaries={stateSalaries}
@@ -299,13 +295,9 @@ export default async function LicensureCheckerToolPage() {
       {/* ─── Multi-state planner ─── */}
       <section style={{ background: '#FFF', padding: '56px 20px' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', margin: '0 0 8px' }}>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', margin: '0 0 34px' }}>
             Plan several states
           </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '600px', margin: '0 auto 34px', lineHeight: 1.6 }}>
-            Telehealth panels, travel assignments, and border-state practices all run into the same question:
-            how different are these states, really? Line them up and see the answer in one pass.
-          </p>
           <MultiStatePlanner states={plannerStates} />
         </div>
       </section>
@@ -315,17 +307,16 @@ export default async function LicensureCheckerToolPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="What these tools do and do not tell you"
-            intro="Licensure is a YMYL topic, so this page is deliberately narrow: it states what our sourced data supports and hands you the board link for everything else."
             assumptions={[
-              `Practice-authority tiers (full, reduced, restricted) come from the AANP state practice environment; ${STAT_SOURCES.fullPracticeStates.formatted} grant full practice authority as of ${STAT_SOURCES.fullPracticeStates.asOf}.`,
+              `Practice-authority tiers (full, reduced, restricted) come from the AANP state practice environment. ${STAT_SOURCES.fullPracticeStates.formatted} grant full practice authority as of ${STAT_SOURCES.fullPracticeStates.asOf}.`,
               'The planner states the Nurse Licensure Compact rules, which are stable: a multistate RN license is issued only by a compact member state acting as your primary state of residence, and it covers the RN layer only.',
               'APRN licensure is treated as state-by-state in every case. The compact covers the RN layer only.',
               `Salary figures in the checker are true medians over live ${brand.niche.short}-eligible postings with disclosed, non-estimated salary, shown only for states with at least 5 postings from 3+ employers, refreshed daily.`,
-              'The timeline band is a broad planning aid keyed to practice-authority tier, not a state-specific processing estimate.',
+              'For processing time, fees, and renewal terms, the checker names who sets each one rather than estimating it.',
             ]}
             exclusions={[
-              'Which specific states are Nurse Licensure Compact members. Membership changes: jurisdictions enact the compact and implement it on separate timelines, and some are only partially implemented, so a per-state member or non-member verdict is exactly the kind of claim that goes stale without anyone noticing. The planner links you to NCSBN, which maintains the current list, rather than publishing a copy of it.',
-              'Application fees, renewal cycles, CE hour requirements, and processing times. These change per state and per applicant; the state board of nursing is the only authoritative source, and every state row links out to its guide rather than guessing.',
+              'Which specific states are Nurse Licensure Compact members. Jurisdictions enact the compact and implement it on separate timelines, and some are only partly implemented. The planner links to NCSBN, which keeps the current list.',
+              'Application fees, renewal cycles, CE hour requirements, and processing times. These vary by state and by applicant. Check them with the state board of nursing. Each state row links to its licensure guide.',
               'The APRN Compact. It is not treated as an operating multistate APRN privilege anywhere in this planner.',
               'Endorsement eligibility specifics such as background-check status, prior discipline, or education equivalency reviews.',
               'Prescriptive-authority detail and controlled-substance schedules, which vary within practice-authority tiers.',

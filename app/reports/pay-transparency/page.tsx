@@ -243,18 +243,10 @@ export default async function PayTransparencyReportPage() {
                     </h1>
                     <p style={{ fontSize: '15px', color: MUTED_TEXT, margin: 0, lineHeight: 1.6 }}>
                         First published {formatDay(PAY_TRANSPARENCY_REPORT.datePublished)}
-                        {snapshot && <> · Live figures as of {formatDay(snapshot.asOf)}</>} · Computed
-                        from our own database on every refresh
+                        {snapshot && <> · Live figures as of {formatDay(snapshot.asOf)}</>} · Recomputed
+                        from current listings on every refresh
                     </p>
                 </header>
-
-                <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '28px' }}>
-                    Most job boards talk about pay transparency; few publish their own number. This
-                    page is ours: the share of active postings on {brand.name} that state a real,
-                    employer-advertised pay range, counted strictly, refreshed from the database,
-                    and shown even when it is unflattering. A rate we typed in once and forgot would
-                    be marketing; a rate the database recomputes is accountability.
-                </p>
 
                 <Section icon={<Eye size={20} />} title="Our disclosed-pay rate, live" id="rate">
                     {liveRate ? (
@@ -270,17 +262,16 @@ export default async function PayTransparencyReportPage() {
                                 </span>
                             </div>
                             <p style={{ fontSize: '13px', color: MUTED_TEXT, marginTop: '10px' }}>
-                                Strict definition: the range came from the posting itself. Where our
-                                enrichment pipeline has <em>estimated</em> a figure for a posting that
-                                did not state one, that posting counts as NOT disclosing here, and
-                                estimated figures are excluded from every pay aggregate we publish.
+                                Strict definition: the range came from the posting itself. A posting
+                                where we <em>estimated</em> pay because it stated none counts as not
+                                disclosing, and estimated pay is left out of every pay figure we publish.
                             </p>
                         </>
                     ) : (
                         <p style={{ ...clayCard, padding: '14px 18px', marginTop: '4px', fontSize: '13.5px', color: MUTED_TEXT }}>
                             {snapshot
-                                ? `Sample too small to publish. We do not print a disclosure rate over fewer than ${REPORT_MIN_SHARE_SAMPLE} active postings.`
-                                : 'The live figure is unavailable right now, so it is omitted rather than rendered from a stored constant. Reload later.'}
+                                ? `Sample too small to publish. A disclosure rate appears once there are at least ${REPORT_MIN_SHARE_SAMPLE} active postings.`
+                                : 'The live figure is unavailable right now. Please reload later.'}
                         </p>
                     )}
                 </Section>
@@ -291,7 +282,7 @@ export default async function PayTransparencyReportPage() {
                             <p>
                                 Disclosure rate among postings <em>added to the board</em> in each of the
                                 last months with a publishable sample (at least {TREND_MIN_MONTH_SAMPLE}{' '}
-                                new postings; the current partial month is excluded):
+                                new postings, excluding the current partial month):
                             </p>
                             <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0 }}>
                                 {trend.map((point) => (
@@ -318,16 +309,15 @@ export default async function PayTransparencyReportPage() {
                             </ul>
                             <p style={{ fontSize: '13px', color: MUTED_TEXT, marginTop: '10px' }}>
                                 These are monthly cohorts, not the live inventory, so this line and the
-                                headline rate above can legitimately differ. Months under the sample floor
-                                are omitted, not smoothed over.
+                                headline rate above can differ. Months below the sample minimum are left
+                                out.
                             </p>
                         </>
                     ) : (
                         <p style={{ ...clayCard, padding: '14px 18px', marginTop: '4px', fontSize: '13.5px', color: MUTED_TEXT }}>
-                            Not enough history to publish a trend yet: we require at least{' '}
-                            {TREND_MIN_MONTHS} months with {TREND_MIN_MONTH_SAMPLE}+ new postings each
-                            before drawing a line. A trend fitted to less would be decoration, not
-                            data. The live rate above is the honest current number.
+                            Not enough history to publish a trend yet. A trend needs at least{' '}
+                            {TREND_MIN_MONTHS} months with {TREND_MIN_MONTH_SAMPLE}+ new postings each.
+                            The live rate above is the current number.
                         </p>
                     )}
                 </Section>
@@ -349,9 +339,8 @@ export default async function PayTransparencyReportPage() {
                         can only be as good as the share of postings that state real numbers.
                     </p>
                     <p style={{ marginTop: '10px' }}>
-                        Whether a posting is <em>legally required</em> to carry a pay range can depend on
-                        state law. We do not track those requirements and assert none of them here;
-                        your state labor department is the authority (
+                        Whether a posting is <em>legally required</em> to carry a pay range depends on
+                        state law. Check with your state labor department (
                         <a
                             href="https://www.dol.gov/agencies/whd/state/contacts"
                             target="_blank"
@@ -364,22 +353,17 @@ export default async function PayTransparencyReportPage() {
                     </p>
                 </Section>
 
-                <Section icon={<ShieldCheck size={20} />} title="How we hold ourselves to it" id="ours">
+                <Section icon={<ShieldCheck size={20} />} title="How we apply it" id="ours">
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>
                         <li>
-                            <strong>The rate on this page is recomputed from the database</strong> on
-                            every refresh, with the strict definition above. We publish it even when it
-                            makes us look ordinary.
+                            <strong>Estimated pay never enters a published figure.</strong> The benchmark
+                            tool, company pay summaries, and our data reports count only
+                            employer-advertised ranges.
                         </li>
                         <li>
-                            <strong>Estimated figures never enter a published aggregate.</strong> The
-                            benchmark tool, company pay summaries, and our data reports all exclude
-                            pipeline-estimated pay; only employer-advertised ranges count.
-                        </li>
-                        <li>
-                            <strong>Aggregates are sample-gated.</strong> A state pay figure publishes
-                            only over the benchmark tool&apos;s minimum-postings and distinct-employer
-                            floors, here and everywhere else on the site.
+                            <strong>Pay figures need a minimum sample.</strong> A state pay figure appears
+                            only once it meets the benchmark tool&apos;s minimum postings and distinct
+                            employers, here and across the site.
                         </li>
                         <li>
                             <strong>Candidates can filter by pay.</strong> Postings with advertised
@@ -394,11 +378,9 @@ export default async function PayTransparencyReportPage() {
 
                 <Section icon={<ExternalLink size={20} />} title="Market observations, dated" id="market">
                     <p>
-                        Pay transparency is bigger than one board, and some peers make real commitments
-                        to it. The quotes below are what each cited page said when we fetched it on the
-                        date shown: quotes, not endorsements or rankings. Sites change; follow the
-                        links for the current wording. Boards whose pages we could not re-verify on
-                        that date are not named at all.
+                        Other boards make commitments to pay transparency too. The quotes below are what
+                        each cited page said on the date shown. Sites change, so follow the links for the
+                        current wording.
                     </p>
                     <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
                         {MARKET_OBSERVATIONS.map((obs) => (
@@ -416,20 +398,14 @@ export default async function PayTransparencyReportPage() {
                             </figure>
                         ))}
                     </div>
-                    <p style={{ fontSize: '13px', color: MUTED_TEXT, marginTop: '10px' }}>
-                        We publish no statistics about other boards&apos; listings here: a percentage we
-                        cannot recompute on demand from data we hold would be exactly the kind of
-                        number this page exists to refuse.
-                    </p>
                 </Section>
 
                 <Section icon={<FlaskConical size={20} />} title="Methodology" id="methodology">
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>
                         <li>
                             <strong>Disclosed</strong> = an active posting whose normalized pay range came
-                            from the posting itself (pipeline-estimated figures count as not disclosed).
-                            Active = published, unexpired, and not repeatedly dead-linked, the same
-                            filter our sitemaps use.
+                            from the posting itself (estimated pay counts as not disclosed). Active =
+                            published, unexpired, and not flagged for a repeatedly broken link.
                         </li>
                         <li>
                             <strong>Trend cohorts</strong> are postings first added to the board in each
@@ -437,20 +413,20 @@ export default async function PayTransparencyReportPage() {
                             month is excluded because a half-month reads as a drop that is not there.
                         </li>
                         <li>
-                            <strong>Gates:</strong> no rate over fewer than {REPORT_MIN_SHARE_SAMPLE}{' '}
-                            postings; no trend month under {TREND_MIN_MONTH_SAMPLE} new postings; no
-                            trend at all under {TREND_MIN_MONTHS} qualifying months.
+                            <strong>Minimums:</strong> a rate needs at least {REPORT_MIN_SHARE_SAMPLE}{' '}
+                            postings. A trend month needs at least {TREND_MIN_MONTH_SAMPLE} new postings.
+                            A trend needs at least {TREND_MIN_MONTHS} qualifying months.
                         </li>
                         <li>
                             <strong>Scope:</strong> this describes {brand.name}&apos;s inventory, not the{' '}
                             {brand.niche.short} job market. Aggregated postings originate from employer
                             sites and partner feeds, so the disclosure rate partly reflects what sources
-                            publish, which is precisely why we measure it instead of assuming it.
+                            publish.
                         </li>
                         <li>
-                            <strong>Market observations</strong> are dated verbatim quotes, re-verified
-                            live on the stated date, with sources linked. Nothing about another board is
-                            asserted beyond what its own cited page said that day.
+                            <strong>Market observations</strong> are verbatim quotes, checked live on the
+                            stated date, with sources linked. They say nothing about another board beyond
+                            what its own cited page said that day.
                         </li>
                     </ul>
                     <p style={{ marginTop: '12px' }}>

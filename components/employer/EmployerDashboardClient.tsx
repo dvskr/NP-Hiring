@@ -546,9 +546,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
 
                 {/* ═══ Quick Access Row ═══
                     Stack the two CTA cards on phones — at 1fr 1fr the icon +
-                    two-line copy + chevron clipped both cards (Talent Pool
-                    truncated to "Search qualified PMHNP", Messages to
-                    "Messa..."). Single column on ≤640px, 2-col on tablet+. */}
+                    title + chevron clipped both cards. Single column on
+                    ≤640px, 2-col on tablet+. Titles carry no subtitle line
+                    (owner call, 2026-10-12). */}
                 {!isTokenAccess && (
                     <div className="emp-quick-access" style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
                         {/* Talent Pool */}
@@ -565,10 +565,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 }}>
                                     <Users size={18} />
                                 </div>
-                                <div>
-                                    <p style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>Browse Talent Pool</p>
-                                    <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>Search qualified {brand.niche.short} candidates</p>
-                                </div>
+                                <p style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>Browse Talent Pool</p>
                             </div>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>Browse →</span>
                         </Link>
@@ -587,10 +584,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 }}>
                                     <Mail size={18} />
                                 </div>
-                                <div>
-                                    <p style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>Messages</p>
-                                    <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>View & reply to candidate conversations</p>
-                                </div>
+                                <p style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>Messages</p>
                             </div>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#6366F1' }}>Open →</span>
                         </Link>
@@ -676,17 +670,14 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 <h3 style={{
                                     fontSize: '20px', fontWeight: 700,
                                     fontFamily: 'var(--font-lora), Georgia, serif',
-                                    color: '#1A2E35', marginBottom: '6px',
+                                    color: '#1A2E35', marginBottom: '24px',
                                 }}>Welcome! Let&apos;s get started</h3>
-                                <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '24px' }}>
-                                    Follow these steps to start hiring qualified {brand.niche.short}s.
-                                </p>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', maxWidth: '560px', marginInline: 'auto', marginBottom: '24px' }}>
                                     {[
-                                        { step: 1, title: 'Company Profile', desc: 'Add logo & company details', href: '/employer/settings', active: true },
-                                        { step: 2, title: 'Post a Job', desc: 'Create your first listing', href: '/post-job', active: true },
-                                        { step: 3, title: 'Track Results', desc: 'Views, clicks & applicants', href: '#', active: false },
+                                        { step: 1, title: 'Company Profile', href: '/employer/settings', active: true },
+                                        { step: 2, title: 'Post a Job', href: '/post-job', active: true },
+                                        { step: 3, title: 'Track Results', href: '#', active: false },
                                     ].map(s => {
                                         const content = (
                                             <div style={{
@@ -702,10 +693,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                     background: s.active ? '#BE185D' : '#B0C4BC',
                                                     color: '#fff', fontSize: '12px', fontWeight: 700, flexShrink: 0,
                                                 }}>{s.step}</span>
-                                                <div>
-                                                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E35', margin: '0 0 2px' }}>{s.title}</p>
-                                                    <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>{s.desc}</p>
-                                                </div>
+                                                <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E35', margin: '4px 0 0' }}>{s.title}</p>
                                             </div>
                                         );
                                         return s.active
@@ -1178,13 +1166,13 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
 
                 {/* ═══ Unpublish-Reason Modal — captures why an employer paused a live job ═══ */}
                 {unpublishTarget && (() => {
-                    const REASONS: { value: string; label: string; sub: string }[] = [
-                        { value: 'filled', label: 'Filled the role', sub: 'You hired someone for this position' },
-                        { value: 'enough_applicants', label: 'Got enough applicants', sub: 'You have enough candidates to review' },
-                        { value: 'too_many_applicants', label: 'Too many applicants', sub: 'Your inbox is overwhelmed, so you are pausing to catch up' },
-                        { value: 'low_quality', label: 'Applicants weren’t a fit', sub: 'The quality of candidates didn’t match what you need' },
-                        { value: 'reposting_later', label: 'Reposting later', sub: 'You are pausing temporarily and will republish soon' },
-                        { value: 'other', label: 'Other', sub: 'Tell us in the box below' },
+                    const REASONS: { value: string; label: string }[] = [
+                        { value: 'filled', label: 'Filled the role' },
+                        { value: 'enough_applicants', label: 'Got enough applicants' },
+                        { value: 'too_many_applicants', label: 'Too many applicants' },
+                        { value: 'low_quality', label: 'Applicants weren’t a fit' },
+                        { value: 'reposting_later', label: 'Reposting later' },
+                        { value: 'other', label: 'Other' },
                     ];
                     const submitting = togglingJobId === unpublishTarget.id;
                     return (
@@ -1214,7 +1202,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 </div>
                                 <p style={{ fontSize: '13px', color: '#6B7F8A', margin: '0 0 18px', lineHeight: 1.5 }}>
                                     Why are you pausing <strong style={{ color: '#1A2E35' }}>{unpublishTarget.title}</strong>?
-                                    This helps us understand what&apos;s working and what isn&apos;t. This is optional, and you can skip it.
+                                    This is optional, and you can skip it.
                                 </p>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
@@ -1244,10 +1232,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                     background: selected ? '#BE185D' : 'transparent',
                                                     boxShadow: selected ? 'inset 0 0 0 3px #fff' : 'none',
                                                 }} />
-                                                <div>
-                                                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', margin: 0 }}>{opt.label}</p>
-                                                    <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0', lineHeight: 1.4 }}>{opt.sub}</p>
-                                                </div>
+                                                <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', margin: 0 }}>{opt.label}</p>
                                             </button>
                                         );
                                     })}
@@ -1516,27 +1501,8 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                     </div>
                 </div>
 
-                {/* ── Talent Pool ── */}
-                <div style={{ ...cardBase, padding: '0', overflow: 'hidden' }}>
-                    <div style={{ padding: '16px 18px' }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 6px' }}>
-                            Talent Pool
-                        </h3>
-                        <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 10px', lineHeight: 1.5 }}>
-                            Browse qualified {brand.niche.short} candidates. Save, tag, and manage your pipeline.
-                        </p>
-                        <Link href="/employer/candidates" className="emp-cta-card" style={{
-                            fontSize: '12px', fontWeight: 600, color: '#BE185D',
-                            background: '#FCE7F3',
-                            padding: '7px 14px', borderRadius: '10px',
-                            textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            border: '1px solid #FBCFE8',
-                            boxShadow: '3px 3px 8px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.6)',
-                        }}>
-                            <Users size={13} /> Browse Candidates
-                        </Link>
-                    </div>
-                </div>
+                {/* No sidebar Talent Pool card: it repeated the Browse Talent
+                    Pool card in the Quick Access row (owner call, 2026-10-12). */}
 
                 {/* ── Rate + Share Your Story (combined) ── */}
                 <div style={{ ...cardBase, padding: '0', overflow: 'hidden' }}>
@@ -1548,7 +1514,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                     <div style={{ padding: '16px 18px' }}>
                         <EmployerFeedbackCard />
                         <div style={{ borderTop: '1px solid #E0EDE6', margin: '14px 0' }} />
-                        <EmployerTestimonialCard employerName={employerName} />
+                        <EmployerTestimonialCard />
                     </div>
                 </div>
 
@@ -1617,8 +1583,8 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                 /* The default min-width: auto on flex/grid children means
                    the card's intrinsic minimum width equals the longest
                    unbreakable run of content inside it — which for
-                   .emp-cta-card was the full subtitle string ("Search
-                   qualified PMHNP candidates"), pinning these cards to
+                   .emp-cta-card was a subtitle string (since removed),
+                   pinning these cards to
                    ~576px and forcing the entire dashboard grid wider than
                    the iPhone XR viewport. min-width: 0 breaks that trap so
                    the cards actually shrink with their parent. Diagnosed
@@ -1707,12 +1673,9 @@ function EmployerFeedbackCard() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 14px' }}>
                 Rate Your Experience
             </h3>
-            <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 14px', lineHeight: 1.4 }}>
-                How would you rate {brand.name} so far?
-            </p>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
                 {[1, 2, 3, 4, 5].map((n) => (
                     <button
@@ -1786,7 +1749,7 @@ function EmployerFeedbackCard() {
 const TESTIMONIAL_MIN_CHARS = 10;
 const TESTIMONIAL_MAX_CHARS = 500; // matches the textarea maxLength
 
-function EmployerTestimonialCard({ employerName }: { employerName: string }) {
+function EmployerTestimonialCard() {
     const [review, setReview] = useState('');
     const [consent, setConsent] = useState(false);
     const [displayAs, setDisplayAs] = useState<'full' | 'initial' | 'anonymous'>('initial');
@@ -1836,12 +1799,9 @@ function EmployerTestimonialCard({ employerName }: { employerName: string }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px' }}>
                 Share Your Story
             </h3>
-            <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                {employerName}, your hiring experience matters! Help others discover {brand.name}.
-            </p>
             <textarea
                 value={review}
                 onChange={(e) => { setReview(e.target.value); if (error) setError(null); }}

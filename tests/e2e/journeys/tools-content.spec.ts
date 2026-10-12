@@ -716,7 +716,7 @@ test.describe('/tools/licensure-checker', () => {
 
         // The compact rules point at the live NCSBN roster instead of asserting membership.
         await expect(page.locator('a[href="https://www.nursecompact.com/"]').first()).toBeVisible();
-        await expect(page.getByText('We do not publish a per-state member list here.')).toBeVisible();
+        await expect(page.getByText('Check membership with NCSBN.')).toBeVisible();
 
         await clear.click();
         await expect(page.getByText('0 selected')).toBeVisible();
@@ -1400,7 +1400,7 @@ test.describe('/salary-guide', () => {
         await expect(page.getByText(/National Median/).first()).toBeVisible();
         // Provenance line (components/SalaryProvenance.tsx): the live basis, never a fabricated date.
         await expect(page.getByText(/Based on [\d,]+ active postings with disclosed salary on /).first()).toBeVisible();
-        await expect(page.getByText(/recomputed as postings are ingested daily/).first()).toBeVisible();
+        await expect(page.getByText(/active postings with disclosed salary on .+, updated daily\./).first()).toBeVisible();
     });
 
     test('specialty page renders with provenance', async ({ page }) => {

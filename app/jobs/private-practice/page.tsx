@@ -337,7 +337,6 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
         heroAlt={`Private practice ${brand.niche.short} office`}
         badgeText={facts.total > 0 ? buildLiveRolesBadge(facts.total) : `${brand.niche.long} Careers`}
         breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Private Practice", url: `${brand.baseUrl}/jobs/private-practice` }])}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('private-practice') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Private Practice"
         headlineLine2={brand.niche.short}
         headlineSub="jobs to own your practice."

@@ -767,12 +767,6 @@ export default async function CityJobsPage({ params }: CityPageProps) {
         snapshotSentences.length > 0,
     ].filter(Boolean).length;
 
-    const ledeParts = [
-        formatCount(facts.total, 'open position'),
-        facts.distinctEmployers >= 2 ? formatCount(facts.distinctEmployers, 'employer') : null,
-        facts.benchmark ? `${formatK(facts.benchmark.median)} median posted pay` : null,
-    ].filter((part): part is string => part !== null);
-
     return (
         <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
             <ClayStyles />
@@ -858,7 +852,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             <div className="text-center py-12 rounded-xl" style={{ background: '#FFF', borderRadius: '18px', padding: '48px 24px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                                 <MapPin className="h-12 w-12 mx-auto mb-4" style={{ color: '#A09080' }} />
                                 <h3 className="text-lg font-semibold mb-2" style={{ color: '#1A2E35' }}>No positions at this time</h3>
-                                <p className="mb-6" style={{ color: '#5A4A42' }}>Counts on this page refresh hourly from active postings. Browse the statewide feed in the meantime.</p>
+                                <p className="mb-6" style={{ color: '#5A4A42' }}>Try the statewide listings instead.</p>
                                 <Link href={`/jobs/state/${stateSlug}`} style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-block' }}>Browse {stateName} Jobs</Link>
                             </div>
                         ) : (
@@ -909,10 +903,9 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
                 <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
                     <p style={eyebrowStyle('#E86C2C')}>Local Market</p>
-                    <h2 className="font-lora" style={bandHeadingStyle}>{displayName} {NP} Jobs at a Glance</h2>
-                    <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-                        {ledeParts.join(' · ')}
-                    </p>
+                    {/* No figure lede under the heading: positions, employers and
+                        the median already sit in the hero stats (owner call, 2026-10-12). */}
+                    <h2 className="font-lora" style={{ ...bandHeadingStyle, marginBottom: '48px' }}>{displayName} {NP} Jobs at a Glance</h2>
 
                     {marketCardCount > 0 && (
                         <div

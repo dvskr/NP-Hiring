@@ -346,7 +346,7 @@ export default function CertificationsSection({ showMsg }: Props) {
 
                     {certs.length === 0 && !showForm && (
                         <p style={{ color: clayPalette.textMuted, fontSize: '13px', marginBottom: '16px' }}>
-                            No certifications added yet. Add your professional certifications to autofill applications.
+                            No certifications added yet.
                         </p>
                     )}
 

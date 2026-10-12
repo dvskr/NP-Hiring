@@ -66,8 +66,8 @@ export const PAY_TRANSPARENCY_REPORT: ReportEdition = {
     path: '/reports/pay-transparency',
     title: `${brand.niche.short} Job Pay Transparency: Our Numbers, Live`,
     description:
-        `The share of active postings on ${brand.name} that disclose a real pay range, ` +
-        `computed live from the database, plus how we label estimates and dated ` +
+        `The share of active postings on ${brand.name} that disclose a pay range, ` +
+        `computed live, plus how we label estimates and dated ` +
         `observations on how other boards handle pay disclosure.`,
     datePublished: '2026-08-06',
 };

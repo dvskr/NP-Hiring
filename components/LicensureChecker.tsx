@@ -272,9 +272,6 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
             {selectedState ? `${selectedState} Licensure` : `${brand.niche.short} Licensure Checker`}
           </h2>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>
-            {selectedState ? 'Requirements, practice authority, and salary data' : 'Select your state to see requirements, practice authority, and salary data'}
-          </p>
         </div>
       </div>
 
@@ -313,8 +310,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
           <div style={{ ...iconTile, width: '72px', height: '72px', borderRadius: '20px', background: '#F1F5F9', color: '#94A3B8', margin: '0 auto 16px' }} aria-hidden="true">
             <Map size={34} />
           </div>
-          <p style={{ fontSize: '16px', fontWeight: 600, color: '#94A3B8', margin: '0 0 4px' }}>Select a state above</p>
-          <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>to see licensure requirements, practice authority, and salary data.</p>
+          <p style={{ fontSize: '16px', fontWeight: 600, color: '#94A3B8', margin: 0 }}>Select a state above</p>
         </div>
       ) : (
         <div className="lic-results-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
@@ -511,8 +507,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
         padding: '24px 32px', borderTop: '1px solid rgba(0,0,0,0.06)',
         background: 'rgba(0,0,0,0.015)',
       }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
-        <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this licensure tool:</p>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 14px' }}>📋 Cite This Page</h3>
         <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} State Licensure Checker: Practice Authority & Requirements by State." ${brand.name}, April 2026, ${brand.domain}/resources.`} />
         <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}.</p>
       </div>

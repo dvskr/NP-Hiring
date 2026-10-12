@@ -320,7 +320,6 @@ export default async function VeteransPage({ searchParams }: PageProps) {
         heroAlt={`${brand.niche.short} serving veteran patients`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('veterans') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Veterans"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, serve veterans."

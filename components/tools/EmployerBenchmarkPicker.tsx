@@ -84,10 +84,9 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
           Not enough posted pay data to publish a benchmark yet
         </p>
         <p style={{ fontSize: '13.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-          We only publish a figure once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
+          A figure appears once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
           {BENCHMARK_MIN_EMPLOYERS} or more employers disclose ranges, with no single employer contributing more
-          than {MAX_EMPLOYER_SHARE_PERCENT}% of them. Until then we would rather show nothing than a number built
-          from a handful of listings.
+          than {MAX_EMPLOYER_SHARE_PERCENT}% of them.
         </p>
       </div>
     );
@@ -132,13 +131,9 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
               placeholder="e.g. 130000"
               value={offer}
               onChange={(e) => setOffer(e.target.value)}
-              aria-describedby="benchmark-offer-hint"
               style={{ ...controlStyle, paddingLeft: '28px' }}
             />
           </div>
-          <p id="benchmark-offer-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0' }}>
-            Annual base. We will place it against the posted range.
-          </p>
         </div>
       </div>
 
@@ -192,11 +187,10 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
       <div style={{ display: 'flex', gap: '9px', alignItems: 'flex-start', padding: '14px 16px', borderRadius: '13px', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.05)' }}>
         <Info size={15} color="#64748B" aria-hidden="true" style={{ flexShrink: 0, marginTop: '1px' }} />
         <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-          Aggregates only. A state appears here only once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
+          Aggregates only. A state appears once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
           {BENCHMARK_MIN_EMPLOYERS} or more employers disclose ranges, with no single employer contributing more
-          than {MAX_EMPLOYER_SHARE_PERCENT}% of them, so no figure restates one employer&apos;s pay band. Listings
-          whose pay was inferred rather than posted are excluded entirely. This is posted pay, not accepted offers
-          or total compensation.
+          than {MAX_EMPLOYER_SHARE_PERCENT}% of them. Listings whose pay was inferred rather than posted are left
+          out. This is posted pay, not accepted offers or total compensation.
         </p>
       </div>
 

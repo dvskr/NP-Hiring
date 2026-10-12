@@ -750,11 +750,8 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             <h2 style={{
               fontSize: '17px', fontWeight: 700,
               fontFamily: 'var(--font-lora), Georgia, serif',
-              color: '#1A2E35', margin: '0 0 4px',
+              color: '#1A2E35', margin: '0 0 20px',
             }}>Job Basics</h2>
-            <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '0 0 20px' }}>
-              The core details candidates see at the top of your listing.
-            </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
@@ -866,7 +863,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               color: '#1A2E35', margin: '0 0 4px',
             }}>Job Description</h2>
             <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '0 0 20px' }}>
-              Cover the role, responsibilities, requirements, and what makes this opportunity special. Minimum 200 characters.
+              Minimum 200 characters.
             </p>
             <style>{`
               .clay-quill-wrap .ql-toolbar { border-radius: 14px 14px 0 0; border: 1px solid rgba(0,0,0,0.08); border-bottom: none; background: #fff; }
@@ -904,11 +901,8 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             <h2 style={{
               fontSize: '17px', fontWeight: 700,
               fontFamily: 'var(--font-lora), Georgia, serif',
-              color: '#1A2E35', margin: '0 0 4px',
+              color: '#1A2E35', margin: '0 0 20px',
             }}>Compensation, Benefits &amp; Apply</h2>
-            <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '0 0 20px' }}>
-              Posts with a salary range get 2× more apply clicks than those without.
-            </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Salary Range with pay period pills */}
@@ -1004,7 +998,6 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>External Application URL</span>
-                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates are redirected to your website or ATS.</p>
                       </div>
                     </div>
                   </label>
@@ -1024,7 +1017,6 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
-                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly, and applications arrive in your dashboard.</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                           {['Resume', 'Cover letter', 'Email alerts'].map(f => (
                             <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
@@ -1048,13 +1040,6 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       style={errors.applyUrl ? clayInputError : clayInput}
                     />
                     {errors.applyUrl && <p style={errorText}>{errors.applyUrl.message}</p>}
-                    <div style={{
-                      background: '#FEF3C7', border: '1px solid #FDE68A',
-                      borderRadius: '10px', padding: '8px 12px', marginTop: '8px',
-                      fontSize: '11px', color: '#92400E',
-                    }}>
-                      💡 Use a direct application link, not your homepage.
-                    </div>
                   </div>
                 )}
 
@@ -1075,11 +1060,8 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             <h2 style={{
               fontSize: '17px', fontWeight: 700,
               fontFamily: 'var(--font-lora), Georgia, serif',
-              color: '#1A2E35', margin: '0 0 4px',
+              color: '#1A2E35', margin: '0 0 20px',
             }}>Contact</h2>
-            <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '0 0 20px' }}>
-              The address where applicant notifications are sent, plus an optional public link to your careers page.
-            </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
@@ -1111,7 +1093,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 fontSize: '11px', color: '#6B7F8A', lineHeight: 1.5,
               }}>
                 <strong style={{ color: '#1A2E35' }}>Not editable here:</strong> company name &amp; logo (Settings → Company Profile),
-                pricing tier, expiry date, paused/featured/archived state. Those have their own dedicated controls.
+                pricing tier, expiry date, paused/featured/archived state.
               </div>
             </div>
           </div>

@@ -99,10 +99,9 @@ function UnsubscribeContent() {
                         <div className="flex justify-center mb-4">
                             <Loader2 className="w-16 h-16 text-pink-700 animate-spin" />
                         </div>
-                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                        <h2 className="text-xl font-semibold text-gray-900">
                             Processing your request...
                         </h2>
-                        <p className="text-gray-600">Please wait a moment.</p>
                     </div>
                 )}
 
@@ -136,11 +135,8 @@ function UnsubscribeContent() {
                         <h2 className="text-2xl font-bold text-gray-900 mb-3">
                             You&apos;ve been unsubscribed
                         </h2>
-                        <p className="text-gray-700 mb-2">
+                        <p className="text-gray-700 mb-6">
                             You will no longer receive emails from {brand.name}.
-                        </p>
-                        <p className="text-gray-600 mb-6">
-                            We&apos;re sorry to see you go.
                         </p>
 
                         <Link href="/">

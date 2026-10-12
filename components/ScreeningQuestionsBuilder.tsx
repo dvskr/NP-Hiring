@@ -112,14 +112,9 @@ export default function ScreeningQuestionsBuilder() {
   return (
     <div className="mt-5 rounded-xl p-5" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Screening Questions <span className="font-normal text-xs" style={{ color: 'var(--text-tertiary)' }}>(optional, max 5)</span>
-          </h3>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-            Add questions to pre-screen candidates before they apply.
-          </p>
-        </div>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+          Screening Questions <span className="font-normal text-xs" style={{ color: 'var(--text-tertiary)' }}>(optional, max 5)</span>
+        </h3>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(244,114,182,0.12)', color: '#F472B6' }}>
           {questions.length}/5
         </span>

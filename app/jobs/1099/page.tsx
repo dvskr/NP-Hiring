@@ -45,7 +45,6 @@ import {
   postedPaySentence,
   type LocationSpreadPlace,
 } from '@/components/seo/pseo';
-import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { getListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
 import {
   NATIONAL_MEDIAN_SENTENCE,
@@ -331,7 +330,6 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
         heroAlt={`${brand.niche.short} independent contractor workspace`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('1099') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="1099"
         headlineLine2={brand.niche.short}
         headlineSub="jobs on your terms."
@@ -453,8 +451,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
       <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose 1099</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Independence</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Independent contracting trades employer benefits for schedule control and a gross rate you manage yourself.</p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Independence</h2>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Gross rate (8) + Tax treatment (4) */}

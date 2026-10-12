@@ -58,8 +58,10 @@ describe('evaluateEmailChange', () => {
         expect(result.allowed).toBe(false);
         // Wording covers every locking status (promo / paid / plan too), so
         // it names the domain and the per-domain rule rather than "free posts".
-        expect(result.reason).toMatch(/once jobs have been posted from acme\.com/i);
+        expect(result.reason).toMatch(/after posting jobs from acme\.com/i);
         expect(result.reason).toMatch(/per company domain/i);
+        // House style: no dashes in user-facing copy.
+        expect(result.reason).not.toMatch(/[–—]/);
         expect(result.lockedDomain).toBe('acme.com');
     });
 

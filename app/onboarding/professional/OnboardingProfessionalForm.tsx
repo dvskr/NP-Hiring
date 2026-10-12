@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Sparkles, ArrowRight, Loader2, FileText } from 'lucide-react';
 import ResumeUpload from '@/components/auth/ResumeUpload';
 // The same chip set employers use to filter the talent pool, so the
@@ -114,15 +113,11 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                         </span>
                     </div>
                     <h1 style={{
-                        fontSize: '26px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px',
+                        fontSize: '26px', fontWeight: 700, color: '#1A2E35', margin: '0 0 24px',
                         fontFamily: 'var(--font-lora), Georgia, serif',
                     }}>
                         Make yourself findable to employers
                     </h1>
-                    <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 24px', lineHeight: 1.5 }}>
-                        Upload a resume and we&apos;ll fill in everything below for you, or type the
-                        details in by hand. Either way, it takes about 30 seconds.
-                    </p>
 
                     {/* ─── Fast path: resume upload + AI autofill ───
                         Drops the user into the existing ResumeUpload flow
@@ -187,7 +182,6 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                                 maxLength={120}
                                 style={inputStyle}
                             />
-                            <p style={hintStyle}>One line that introduces you. It appears in search results and on your profile card.</p>
                         </div>
 
                         <div>
@@ -239,7 +233,7 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
 
                         <div>
                             <label htmlFor="bio" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1A2E35', marginBottom: '6px' }}>
-                                Brief summary <span style={{ color: '#8A9BA6', fontWeight: 400 }}>(optional but high-impact)</span>
+                                Brief summary <span style={{ color: '#8A9BA6', fontWeight: 400 }}>(optional)</span>
                             </label>
                             <textarea
                                 id="bio"
@@ -295,12 +289,8 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                         </p>
                     )}
                 </div>
-
-                <p style={{ textAlign: 'center', marginTop: '20px' }}>
-                    <Link href="/dashboard" style={{ fontSize: '12px', color: '#6B7F8A', textDecoration: 'underline' }}>
-                        Take me to my dashboard instead
-                    </Link>
-                </p>
+                {/* No second "go to dashboard" link: Skip for now already
+                    goes there (owner call, 2026-10-12). */}
             </div>
         </main>
     );

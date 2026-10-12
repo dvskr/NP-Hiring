@@ -97,15 +97,12 @@ export default async function EmployerApplicantsPage() {
                                 fontWeight: 800,
                                 fontFamily: 'var(--font-lora), Georgia, serif',
                                 color: '#1A2E35',
-                                margin: '0 0 4px',
+                                margin: 0,
                                 letterSpacing: '-0.5px',
                             }}
                         >
                             Applicants
                         </h1>
-                        <p style={{ fontSize: '14px', color: '#8A9BA6', margin: 0 }}>
-                            Candidates who have applied to your job postings.
-                        </p>
                     </div>
                 </div>
 

@@ -309,7 +309,7 @@ export default function CandidateCard({
                     }
                     return (
                         <span
-                            title={`Cosine similarity ${aiMatchPercent}%. Ranking is determined by the AI rerank, not this score.`}
+                            title={`${aiMatchPercent}% profile match. Results are sorted by overall relevance.`}
                             style={{
                                 ...recessedPill,
                                 background: tier.bg,

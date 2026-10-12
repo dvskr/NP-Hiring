@@ -58,12 +58,12 @@ export async function GET(request: NextRequest) {
 
     const stripe = getStripe();
     if (!stripe) {
-      return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
+      return NextResponse.json({ error: 'We could not confirm your payment right now. Please check your dashboard.' }, { status: 503 });
     }
 
     const sessionId = request.nextUrl.searchParams.get('session_id');
     if (!sessionId) {
-      return NextResponse.json({ error: 'Missing session_id' }, { status: 400 });
+      return NextResponse.json({ error: 'This link is missing its checkout details. Please check your dashboard.' }, { status: 400 });
     }
 
     // B114: callers must prove they own this checkout before we reveal
@@ -88,14 +88,14 @@ export async function GET(request: NextRequest) {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      return NextResponse.json({ error: 'We could not find this checkout.' }, { status: 404 });
     }
 
     // This route is for NEW job-post checkouts only. Renewal flow has a
     // different verify endpoint and writes type='renewal' on its sessions.
     if (session.metadata?.type === 'renewal' || session.metadata?.type === 'upgrade') {
       return NextResponse.json(
-        { error: 'Wrong verify endpoint for this session type' },
+        { error: 'This link is not for a new job post checkout.' },
         { status: 400 }
       );
     }
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     const jobId = session.metadata?.jobId;
     if (!jobId) {
       logger.error('Verify checkout session: paid session has no jobId metadata', null, { sessionId });
-      return NextResponse.json({ error: 'Session metadata missing jobId' }, { status: 400 });
+      return NextResponse.json({ error: 'We could not match this payment to a job post. Please contact support.' }, { status: 400 });
     }
 
     let employerJob = await prisma.employerJob.findFirst({
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         {
           paid: true,
           processing: true,
-          error: 'Payment recorded by Stripe but job not yet activated. Please refresh in a few seconds.',
+          error: 'Payment received. Your job will go live in a few seconds. Please refresh.',
         },
         { status: 202 }
       );
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
           userId: authedUser.id,
         });
         return NextResponse.json(
-          { error: 'This checkout session belongs to a different account' },
+          { error: 'This checkout belongs to a different account.' },
           { status: 403 }
         );
       }
@@ -224,7 +224,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error('Error verifying checkout session', error);
     return NextResponse.json(
-      { error: 'Failed to verify checkout session' },
+      { error: 'We could not verify your payment.' },
       { status: 500 }
     );
   }

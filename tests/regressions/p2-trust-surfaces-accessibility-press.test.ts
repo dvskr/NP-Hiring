@@ -270,8 +270,16 @@ describe('P2 #9 — /press derives its numbers instead of stating them', () => {
 
     it('labels board aggregates as board-specific, not as market data', () => {
         // JSX prose wraps across lines, so match on collapsed whitespace.
-        expect(pressPage).toMatch(/not\s+a\s+market\s+estimate/);
-        expect(pressPage).toMatch(/not\s+a\s+wage\s+survey/);
+        // The live inventory block scopes its counts to this board.
+        expect(pressPage).toMatch(/describe\s+this\s+board\s+only,\s+not\s+the\s+national\s+job\s+market/);
+        // Posting-derived pay is scoped to this board and labeled as such.
+        expect(pressPage).toMatch(/Listing\s+aggregates\s+describe\s+this\s+board,\s+not\s+the\s+labor\s+market/);
+        expect(pressPage).toMatch(/labeled\s+as\s+posting-derived\s+wherever\s+they\s+appear/);
+        // Unavailable figures are omitted, never estimated.
+        expect(pressPage).toMatch(/Figures\s+we\s+cannot\s+compute\s+are\s+left\s+out,\s+not\s+estimated/);
+        // The defensive restatements the plain-copy sweep removed stay gone.
+        expect(pressPage).not.toMatch(/nothing\s+beyond/);
+        expect(pressPage).not.toMatch(/survey,\s+model,\s+or\s+adjust/);
     });
 
     it('escapes its JSON-LD with the repo pattern', () => {

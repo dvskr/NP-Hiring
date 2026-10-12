@@ -181,10 +181,7 @@ export default function EditorialPolicyPage() {
 
                 <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '32px' }}>
                     {brand.name} (operated by <strong>{brand.legal.entityName}</strong>) is a job board
-                    for {brand.niche.descriptor}s. Because our pages discuss careers, pay, and licensure
-                    (topics people make real decisions with), this page explains exactly how our content is
-                    produced, where every number comes from, what has and has not been clinically
-                    reviewed, and how to get an error corrected.
+                    for {brand.niche.descriptor}s.
                 </p>
 
                 <Section icon={<Database size={20} />} title="How our pages are produced">
@@ -193,18 +190,16 @@ export default function EditorialPolicyPage() {
                         free-written prose. Job counts, salary aggregates, and employer lists on our jobs
                         and location pages are computed from the live listings in our own database and
                         refresh as inventory changes. Salary figures, growth projections, and
-                        practice-authority classifications render from a single audited source file so the
-                        same cited value appears everywhere it is quoted; a number is never retyped page
-                        by page.
+                        practice-authority classifications render from one source file, so the same cited
+                        value appears everywhere it is quoted.
                     </p>
                     <p>
                         Blog articles are editorial content written and maintained by the {brand.name}{' '}
                         team from the cited sources below. Our <strong>state license guide series</strong>{' '}
-                        is different, and its pages say so: one guide per state is generated
-                        programmatically from the structured practice-authority, compact-membership,
-                        board-directory, and sourced licensing facts data in this repository. That is why
-                        those guides state only what the dataset actually holds and link out for
-                        everything else. They carry a generated-content byline, not a review byline.
+                        is generated programmatically, one guide per state, from structured
+                        practice-authority, compact-membership, board-directory, and sourced licensing facts
+                        data. Each guide states only what that data holds and links out for everything
+                        else. The guides carry a generated-content byline.
                     </p>
                     <p>
                         Structured data (schema.org markup) is generated from the same underlying values
@@ -215,9 +210,8 @@ export default function EditorialPolicyPage() {
                 <Section icon={<FileSearch size={20} />} title="Where our numbers come from">
                     <p>
                         The headline statistics we publish (pay, employment growth, shortage
-                        population, and practice-authority counts) all render from a single audited
-                        source file, and each one traces to a named, verifiable source with an
-                        &quot;as of&quot; date:
+                        population, and practice-authority counts) each trace to a named, verifiable
+                        source with an &quot;as of&quot; date:
                     </p>
                     <div style={{ ...clayCard, padding: '16px 20px', marginTop: '12px', overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -260,11 +254,11 @@ export default function EditorialPolicyPage() {
                             agency&apos;s own publications, or the text of the statute or rule that sets it.
                             The section prints each figure beside a link to that source and the date we
                             checked it. A guide shows a processing time only where the board or its licensing
-                            agency publishes one, on its own pages or in its rules; otherwise the guide leaves
+                            agency publishes one, on its own pages or in its rules. Otherwise the guide leaves
                             that row out rather than estimate it. A guide can appear in search results only
                             once it lists the application fee, renewal cycle and continuing education
                             requirement and a second reviewer has re-read every figure in its licensing facts
-                            section at its source; until then it stays readable but asks search engines not
+                            section at its source. Until then it stays readable but asks search engines not
                             to index it. Today,{' '}
                             {indexableGuides} of our {allGuides} guides meet that bar. Anything a guide does
                             not list is answered with a link to that state&apos;s board of nursing, because
@@ -302,18 +296,18 @@ export default function EditorialPolicyPage() {
                         facilities. What they say about multistate nursing licenses follows the Nurse
                         Licensure Compact roster that our license guides check against NCSBN, and the
                         compact&apos;s own scope: it covers RN and LPN licenses, never APRN licenses. The
-                        figures a metro page does show come from three places: live job
+                        figures a metro page does show come from three places. First, live job
                         counts and other listing tallies and, when enough listings from enough
                         employers state pay, a posted-pay median and how it compares with the statewide
-                        one, all computed from listings on this board; the cited national median from
+                        one, all computed from listings on this board. Second, the cited national median from
                         the table above, shown as a reference point when some local listings state pay
-                        but too few for a local median; and the practice-authority entries, meaning the
+                        but too few for a local median. Third, the practice-authority entries, meaning the
                         AANP classification described above and the licensing thresholds in each
                         state&apos;s entry.
                     </p>
                 </Section>
 
-                <Section icon={<Stethoscope size={20} />} title="Review status: the honest version">
+                <Section icon={<Stethoscope size={20} />} title="Review status">
                     {author ? (
                         <p style={{ marginBottom: '10px' }}>
                             Our hand-written articles and guides are written by{' '}
@@ -355,15 +349,13 @@ export default function EditorialPolicyPage() {
                             Our content is <strong>data-sourced and editorially maintained</strong> by the{' '}
                             {brand.name} team. It has <strong>not yet been clinically reviewed</strong> by a
                             named, credentialed {brand.niche.long}. We are recruiting a credentialed
-                            reviewer for exactly that role; when the program launches, the reviewer&apos;s
-                            name and credentials will be published here and on every reviewed article. We
-                            will not attach a reviewer&apos;s name to content they have not actually
-                            reviewed, and we do not invent reviewer identities.
+                            reviewer. Their name and credentials will appear here and on each article they
+                            review.
                         </p>
                     )}
                     <p style={{ marginTop: '10px' }}>
                         Our generated state license guides never carry a named author or clinical
-                        reviewer, in their byline or their structured data; the byline says the guide is
+                        reviewer, in their byline or their structured data. The byline says the guide is
                         generated from data.
                     </p>
                     <p style={{ marginTop: '10px' }}>
@@ -373,21 +365,21 @@ export default function EditorialPolicyPage() {
                     </p>
                 </Section>
 
-                <Section icon={<Ban size={20} />} title="What we never publish">
+                <Section icon={<Ban size={20} />} title="Content standards">
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>
                         <li>
-                            Invented statistics. Every headline figure in the table above carries a
-                            named source and an &quot;as of&quot; date; descriptive market context is
-                            labelled as the estimate it is rather than dressed up as a cited statistic.
+                            Every headline figure in the table above carries a
+                            named source and an &quot;as of&quot; date. Descriptive market context that is
+                            an estimate is labelled as the estimate it is.
                         </li>
-                        <li>Fabricated people: fake authors, reviewers, testimonials, or reviews.</li>
+                        <li>Every author, reviewer, testimonial, and review comes from a real person.</li>
                         <li>
-                            Medical, legal, or financial advice. Our content is career information, and
-                            individual decisions belong with a licensed clinician or qualified professional.
+                            Our content is career information, not medical, legal, or financial advice.
+                            Individual decisions belong with a licensed clinician or qualified professional.
                         </li>
                         <li>
-                            Freshness theater: &quot;updated&quot; dates on our articles reflect real
-                            editorial review timestamps, not the current date.
+                            The &quot;updated&quot; date on an article is the date of its last editorial
+                            review.
                         </li>
                     </ul>
                 </Section>

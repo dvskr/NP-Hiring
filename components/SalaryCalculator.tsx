@@ -131,7 +131,6 @@ export default function SalaryCalculator({ stateSalaries, national }: Props) {
         </div>
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>{brand.niche.short} Salary Calculator</h2>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: '2px 0 0' }}>Get a personalized estimate based on your profile</p>
         </div>
       </div>
 

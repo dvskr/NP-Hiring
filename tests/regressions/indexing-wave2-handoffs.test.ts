@@ -52,7 +52,9 @@ describe('CQ-15: the shared pay copy names the employer-share cap', () => {
     it('a withheld city figure states the whole rule instead of claiming too few listings', () => {
         const text = buildCityPayParagraph({ city: 'Richmond', benchmark: null });
         expect(text).toContain(CAP);
-        expect(text).toContain('does not publish a local figure');
+        // States the rule a local median needs, positively, with no narration.
+        expect(text).toContain('A local median appears once');
+        expect(text).not.toContain('does not publish');
         expect(text).not.toMatch(/^Fewer than/);
     });
 

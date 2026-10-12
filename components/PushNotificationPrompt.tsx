@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Bell, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useOverlaySlot } from '@/components/OverlayCoordinator';
-import { brand } from '@/config/brand';
 
 const DISMISS_KEY = 'pmhnp_push_prompt_dismissed';
 const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -145,14 +144,9 @@ export default function PushNotificationPrompt() {
                             }}>
                                 <Bell size={16} style={{ color: '#F472B6' }} />
                             </div>
-                            <div>
-                                <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
-                                    Get notified about new jobs
-                                </p>
-                                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                                    We&apos;ll only notify you about relevant {brand.niche.short} positions
-                                </p>
-                            </div>
+                            <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
+                                Get notified about new jobs
+                            </p>
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button

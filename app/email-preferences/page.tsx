@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { brand } from '@/config/brand';
 
 interface PreferencesData {
   email: string;
@@ -241,10 +240,7 @@ function EmailPreferencesContent() {
           {/* Job Alerts */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">Weekly Job Alerts</p>
-                <p className="text-xs text-gray-500 mt-1">New {brand.niche.short} job listings delivered weekly</p>
-              </div>
+              <p className="font-semibold text-gray-900 text-sm">Weekly Job Alerts</p>
               <div className="flex items-center gap-2">
                 {preferences?.isSubscribed ? (
                   <CheckCircle className="text-green-500" size={18} />
@@ -268,10 +264,7 @@ function EmailPreferencesContent() {
           {/* Newsletter */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">Monthly Newsletter</p>
-                <p className="text-xs text-gray-500 mt-1">{brand.niche.short} industry news, salary trends, and career tips</p>
-              </div>
+              <p className="font-semibold text-gray-900 text-sm">Monthly Newsletter</p>
               <div className="flex items-center gap-2">
                 {preferences?.newsletterOptIn ? (
                   <CheckCircle className="text-green-500" size={18} />
@@ -295,10 +288,7 @@ function EmailPreferencesContent() {
           {/* Profile Nudge */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">Profile Completion Nudges</p>
-                <p className="text-xs text-gray-500 mt-1">Reminders to complete your profile for greater visibility</p>
-              </div>
+              <p className="font-semibold text-gray-900 text-sm">Profile Completion Nudges</p>
               <div className="flex items-center gap-2">
                 {(preferences?.preferences?.profileNudge ?? true) ? (
                   <CheckCircle className="text-green-500" size={18} />
@@ -322,10 +312,7 @@ function EmailPreferencesContent() {
           {/* Saved Job Reminders */}
           <div className="bg-gray-50 rounded-lg p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">Saved Job Reminders</p>
-                <p className="text-xs text-gray-500 mt-1">Reminders about jobs you saved but have not yet applied to</p>
-              </div>
+              <p className="font-semibold text-gray-900 text-sm">Saved Job Reminders</p>
               <div className="flex items-center gap-2">
                 {(preferences?.preferences?.savedJobReminder ?? true) ? (
                   <CheckCircle className="text-green-500" size={18} />

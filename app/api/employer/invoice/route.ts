@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized — provide a token or log in' }, { status: 401 });
+        return NextResponse.json({ error: 'Please log in to view this invoice.' }, { status: 401 });
       }
 
       employerJob = await prisma.employerJob.findFirst({
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Invoices are not available for Employer plan postings.',
-          message: 'This job was posted under your Employer plan. No per-post payment was made; your plan invoices are sent by Stripe each billing period.'
+          message: 'This job was posted under your Employer plan. No per-post payment was made. Stripe sends your plan invoices each billing period.'
         },
         { status: 400 }
       );
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     if (employerJob.paymentStatus !== 'paid') {
       return NextResponse.json(
-        { error: 'Invoice not available - payment not completed' },
+        { error: 'No invoice is available because payment for this posting was not completed.' },
         { status: 400 }
       );
     }

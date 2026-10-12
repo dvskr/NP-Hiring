@@ -184,7 +184,7 @@ export default function PrivatePracticeGuidePage() {
         'LLC/PLLC: the usual choice for solo practitioners. Formation fees are set per state, so check your Secretary of State fee schedule rather than budgeting a national average',
         'S-Corp election: worth modelling with a CPA once net profit is high enough that the payroll-tax saving clearly exceeds the added payroll and compliance cost. That threshold is specific to your numbers, not a fixed income figure',
         'Professional liability: a PLLC shields personal assets from business debts, but it does not shield you from your own clinical liability, so you still need malpractice coverage',
-        'Consult a healthcare attorney for state-specific requirements; several states restrict who may own a professional entity',
+        'Consult a healthcare attorney for state-specific requirements. Several states restrict who may own a professional entity',
       ],
     },
     {
@@ -210,7 +210,7 @@ export default function PrivatePracticeGuidePage() {
         'DrChrono: full-featured and better suited to larger practices',
         'Tebra (formerly Kareo): built for independent medical practices',
         'Outsourced billing is usually priced either as a monthly retainer or as a percentage of collections. Get both quoted and compare them against your modelled volume',
-        'Vendor pricing changes often and is not reproduced here; get a current quote directly, and confirm the plan tier includes the billing and telehealth modules you need',
+        'Vendor pricing changes often. Get a current quote directly, and confirm the plan tier includes the billing and telehealth modules you need',
       ],
     },
     {
@@ -220,8 +220,8 @@ export default function PrivatePracticeGuidePage() {
       content: `Individual malpractice (professional liability) insurance is essential. Most private practice ${brand.niche.short}s need:`,
       details: [
         'Prefer an occurrence-based policy over claims-made: it covers incidents that happened during the policy period even after you cancel, so you do not need to buy tail coverage later',
-        'A commonly requested limit structure is $1M per occurrence / $3M aggregate; confirm what your payers and any collaborating physician require',
-        'Get quotes from several carriers (NSO, HPSO, CM&F, and Berxi all write individual APRN policies); premiums vary by state, specialty, and limits, so a quote is the only reliable number',
+        'A commonly requested limit structure is $1M per occurrence / $3M aggregate. Confirm what your payers and any collaborating physician require',
+        'Get quotes from several carriers (NSO, HPSO, CM&F, and Berxi all write individual APRN policies). Premiums vary by state, specialty, and limits, so a quote is the only reliable number',
         'Add cyber liability if you deliver telehealth or store records electronically',
         'Add general liability separately if you lease office space, since it covers premises claims that malpractice does not',
       ],
@@ -244,7 +244,7 @@ export default function PrivatePracticeGuidePage() {
   const ppFaqs = [
     {
       question: `How much does it cost to start an ${brand.niche.short} private practice?`,
-      answer: `Build the number from your own quotes rather than a headline range. The line items are consistent: state filing fees for a PLLC, an EHR subscription, individual malpractice coverage, credentialing and application fees, a website and scheduling, and initial marketing. A telehealth-first practice skips the largest cost, a lease and its fit-out, which is why most ${brand.niche.short}s start virtually and add space later if demand justifies it. Filing fees vary by state and vendor pricing changes, so this guide points you to live quotes instead of printing figures that expire.`
+      answer: `Build the number from your own quotes rather than a headline range. The line items are consistent: state filing fees for a PLLC, an EHR subscription, individual malpractice coverage, credentialing and application fees, a website and scheduling, and initial marketing. A telehealth-first practice skips the largest cost, a lease and its fit-out, which is why most ${brand.niche.short}s start virtually and add space later if demand justifies it. Filing fees vary by state and vendor pricing changes, so get current quotes for each line.`
     },
     {
       question: `How much can an ${brand.niche.short} private practice owner earn?`,
@@ -340,7 +340,7 @@ export default function PrivatePracticeGuidePage() {
               {/* Audit P0 #23: render the real review date (same constant the
                   Article schema emits) — never render time, which fabricated
                   freshness and contradicted dateModified. */}
-              Last Updated: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })} | Step-by-step startup guide
+              Last Updated: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
             </p>
             <p className="text-lg md:text-xl text-pink-100 mb-6">
               From LLC formation to a full caseload: everything you need to launch your {brand.niche.short} practice
@@ -427,7 +427,7 @@ export default function PrivatePracticeGuidePage() {
                   <li><strong>Gross collections = visits per week × {PRACTICE_MODEL.workingWeeksPerYear} working weeks × amount collected per visit.</strong> {PRACTICE_MODEL.workingWeeksPerYear} weeks leaves roughly six for holidays, vacation, and admin days.</li>
                   <li>Collections of <strong>${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit</strong> on an insurance panel and <strong>${PRACTICE_MODEL.cashCollectedPerVisit} per visit</strong> cash-pay are planning inputs, not contracted rates. Replace them with your own payer contracts.</li>
                   <li>Net is collections less overhead. Each net band pairs the <em>lowest</em> volume with the <em>highest</em> overhead and vice versa, so it brackets outcomes rather than stacking best cases.</li>
-                  <li>Net is <strong>before</strong> self-employment tax and income tax. A practice owner is a contractor for tax purposes; see the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> for what comes off next.</li>
+                  <li>Net is <strong>before</strong> self-employment tax and income tax. A practice owner is a contractor for tax purposes. See the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> for what comes off next.</li>
                   <li>This is a model you can re-run with your own inputs, not a survey of what practices earn.</li>
                 </ul>
               </div>

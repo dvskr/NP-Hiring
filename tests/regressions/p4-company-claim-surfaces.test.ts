@@ -288,7 +288,11 @@ describe('profile page — two badges that can never be read as one', () => {
     });
 
     it('states what the claim does and does not entitle the employer to', () => {
-        expect(profilePage).toContain('does not let an');
+        // The listings and pay stay sourced from live postings, not the claimant.
+        expect(profilePage).toContain('Listings and pay figures');
+        expect(profilePage).toContain('still come from its live job postings.');
+        // Plain copy: no narration of the internal review step.
+        expect(profilePage).not.toContain('our team approved');
     });
 
     it('hides the claim CTA once the profile is claimed', () => {
@@ -307,7 +311,10 @@ describe('profile page — two badges that can never be read as one', () => {
     });
 
     it('promises only review, never instant control', () => {
-        expect(cta).toContain('nothing on this page changes');
+        expect(cta).toContain('Your claim is pending review.');
+        expect(cta).toContain('Once it is approved');
+        expect(cta).toContain('Listings and pay figures still');
+        expect(cta).not.toContain('by hand');
     });
 });
 
@@ -440,7 +447,7 @@ describe('the review queue is reachable — the claim loop closes', () => {
     /**
      * /admin/company-claims is the ONLY writer of Company.claimVerifiedAt. With
      * no link to it, every submitted claim sits pending forever and the CTA's
-     * "our team reviews claims by hand" promise is false in practice. The page
+     * "Your claim is pending review" promise is false in practice. The page
      * being correctly auth-gated is not the same as it being reachable.
      */
     const sidebar = read('app/admin/_components/AdminSidebar.tsx');

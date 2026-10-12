@@ -381,7 +381,6 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
         heroAlt={`New grad ${brand.niche.short} career launch`}
         badgeText={facts.total > 0 ? buildLiveRolesBadge(facts.total) : `${brand.niche.long} Careers`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('new-grad') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="New Grad"
         headlineLine2={brand.niche.short}
         headlineSub="jobs to launch your career."

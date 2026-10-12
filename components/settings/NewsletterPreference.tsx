@@ -75,14 +75,9 @@ export default function NewsletterPreference({ email }: NewsletterPreferenceProp
                 }}>
                     <Send size={18} style={{ color: '#BE185D' }} />
                 </div>
-                <div>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        Email Newsletter
-                    </p>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                        Receive the latest jobs and career tips.
-                    </p>
-                </div>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Email Newsletter
+                </p>
             </div>
 
             <button

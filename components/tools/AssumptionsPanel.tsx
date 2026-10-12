@@ -19,10 +19,8 @@ export interface AssumptionSource {
 }
 
 interface Props {
-  /** e.g. "How this estimate is built". */
+  /** e.g. "How this estimate is built". No framing sentence under it (owner call, 2026-10-12). */
   title: string;
-  /** One-line framing sentence rendered above the lists. */
-  intro?: string;
   /** What the tool assumes / how it computes. */
   assumptions: readonly string[];
   /** What the tool deliberately does not compute. Rendered as its own list. */
@@ -44,7 +42,6 @@ function formatReviewed(iso: string): string {
 
 export default function AssumptionsPanel({
   title,
-  intro,
   assumptions,
   exclusions,
   sources,
@@ -71,10 +68,6 @@ export default function AssumptionsPanel({
           {title}
         </h2>
       </div>
-
-      {intro && (
-        <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.65, margin: '0 0 16px' }}>{intro}</p>
-      )}
 
       <h3 style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 8px' }}>
         What it assumes

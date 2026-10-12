@@ -227,7 +227,10 @@ describe('P5 reports — competitor material obeys the claims rules', () => {
 
     it('links the legal dimension to an authority instead of asserting it', () => {
         expect(payPage).toContain('https://www.dol.gov/agencies/whd/state/contacts');
-        expect(payPage).toContain('assert none');
+        // The legal question is routed to the authority, and the page states no
+        // requirement of its own.
+        expect(payPage).toMatch(/depends on\s+state law\.\s+Check with your state labor department/);
+        expect(code(payPage)).not.toMatch(/\b(?:is|are) (?:legally )?required to (?:carry|include|post|list) (?:a )?pay/i);
     });
 });
 

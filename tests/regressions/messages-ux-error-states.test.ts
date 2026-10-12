@@ -59,14 +59,18 @@ describe('F15 — opening a thread on failure shows feedback', () => {
 
 describe('F15 — failed send keeps composer text and offers inline retry', () => {
   it('send failures set sendError instead of alert()', () => {
-    expect(SRC).toContain("setSendError(data?.error || 'Failed to send')");
-    expect(SRC).toContain("setSendError('Failed to send')");
+    expect(SRC).toContain("setSendError(data?.error || 'Please try again.')");
+    expect(SRC).toContain("setSendError('Please try again.')");
     expect(SRC).not.toContain("alert(data.error || 'Failed to send')");
+    expect(SRC).not.toMatch(/alert\(data\.error/);
   });
 
   it('renders an inline banner with a Retry button wired to handleSendReply', () => {
     expect(SRC).toMatch(/sendError && \(/);
-    expect(SRC).toContain('your message was not delivered');
+    // The banner leads with the outcome in its own sentence, never
+    // "<error>: your message was not delivered."
+    expect(SRC).toContain('Your message was not delivered. {sendError}');
+    expect(SRC).not.toContain('{sendError}: your message was not delivered');
     // The banner's retry re-invokes the send with the preserved composer text.
     expect(SRC).toMatch(/sendError && \([\s\S]{0,1200}?onClick=\{handleSendReply\}/);
   });
@@ -79,6 +83,6 @@ describe('F15 — failed send keeps composer text and offers inline retry', () =
     );
     expect(catchBlock).not.toBeNull();
     expect(catchBlock![0]).not.toContain("setReplyText('')");
-    expect(catchBlock![0]).toContain("setSendError('Failed to send')");
+    expect(catchBlock![0]).toContain("setSendError('Please try again.')");
   });
 });

@@ -57,7 +57,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts, 
                 scope" (absolute inventory guarantee falsified by review items
                 1a–1d) were softened to the screening commitment. The absolutes
                 may return only when the WP-1 inventory-invariant test is green. */}
-            <p className="ab-hero-sub" style={{ textAlign: 'center' }}>A job platform built exclusively for {brand.niche.long}s and APRNs. Listings are screened at ingest and removed when flagged out of scope, so your search starts with relevant roles rather than generic noise.</p>
+            <p className="ab-hero-sub" style={{ textAlign: 'center' }}>A job platform built exclusively for {brand.niche.long}s and APRNs. Listings are screened and removed when flagged out of scope, so your search starts with relevant roles.</p>
             <div className="ab-hero-cta">
               <Link href="/jobs" className="ab-btn ab-btn-primary">Browse open roles <ArrowRight size={16} /></Link>
               <Link href="/resources" className="ab-btn ab-btn-ghost">All Resources</Link>
@@ -110,7 +110,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts, 
             <h2 style={{ marginTop: 20 }}>Stop scrolling past generic <em>RN postings.</em></h2>
             {/* Live review item 8a variant (WP-5): "only lists" was the same
                 absolute inventory guarantee — restated as the screen. */}
-            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General nursing boards bury {brand.niche.short} roles under thousands of RN postings. This site is built for {brand.niche.short} jobs: listings are screened at ingest and filtered by setting, salary, license, and the actual scope of practice you train in.</p>
+            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General nursing boards bury {brand.niche.short} roles under thousands of RN postings. This site is built for {brand.niche.short} jobs. Listings are screened for relevance, and you can filter them by setting, salary, license, and the scope of practice you train in.</p>
             <div className="ab-feat-list">
               {/* Live review WP-5 sweep: "100%" and "Unmatched" superlatives
                   dropped; "thousands of real-time listings" was an invented
@@ -177,19 +177,19 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts, 
         <div className="ab-method-head">
           <span className="ab-kicker lav"><Layers size={12} /> Our methodology</span>
           <h2 style={{ marginTop: 20 }}>Hard data. <em>No assumptions.</em></h2>
-          <p>Accuracy is not optional. Listings are ingested from employer ATS feeds and direct posts, screened against published relevance rules, and swept for expiry on a daily cycle.</p>
+          <p>Listings come from employer ATS feeds and direct posts. Each one is screened against published relevance rules, and expired listings are removed daily.</p>
         </div>
         <div className="ab-method-grid">
-          <div className="ab-method-card featured"><span className="num-tag">01</span><div className="mi"><Layers size={28} /></div><h3>Multi-Vector Aggregation</h3><p>We synthesize endpoints from the Bureau of Labor Statistics, native ATS feeds, and direct employer postings into a single streamlined view.</p></div>
+          <div className="ab-method-card featured"><span className="num-tag">01</span><div className="mi"><Layers size={28} /></div><h3>Multi-Vector Aggregation</h3><p>We combine Bureau of Labor Statistics data, employer ATS feeds, and direct employer postings in one view.</p></div>
           {/* Live review item 8b (WP-5): the card claimed listings are
               "fact-checked against state nursing boards" (no such mechanism
               exists) and "we never inflate salaries" (falsified by review
               item 2 — published annualization errors). Both sentences
-              REMOVED. A salary-integrity claim ("ranges validated against
-              BLS-anchored bounds at ingest") may be added ONLY after the
-              WP-2 salary rebuild lands and makes it true. */}
-          <div className="ab-method-card"><span className="num-tag">02</span><div className="mi" style={{ color: 'var(--coral)' }}><Shield size={28} /></div><h3>Editorial Integrity</h3><p>Every listing traces to an employer ATS feed or a direct employer post. Each one is screened against our published relevance rules at ingest and removed when flagged out of scope.</p></div>
-          <div className="ab-method-card"><span className="num-tag">03</span><div className="mi" style={{ color: '#6F63C0' }}><RefreshCw size={28} /></div><h3>Continuous Sync</h3><p>Stale listings are useless. Our system automatically purges expired opportunities and fetches exact market data on a strict 24-hour cycle.</p></div>
+              REMOVED. A salary-integrity claim (ranges validated against
+              BLS-anchored bounds when a listing is imported) may be added
+              ONLY after the WP-2 salary rebuild lands and makes it true. */}
+          <div className="ab-method-card"><span className="num-tag">02</span><div className="mi" style={{ color: 'var(--coral)' }}><Shield size={28} /></div><h3>Editorial Integrity</h3><p>Every listing traces to an employer ATS feed or a direct employer post. Each one is screened against our published relevance rules and removed when flagged out of scope.</p></div>
+          <div className="ab-method-card"><span className="num-tag">03</span><div className="mi" style={{ color: '#6F63C0' }}><RefreshCw size={28} /></div><h3>Continuous Sync</h3><p>Expired listings are removed automatically, and market data refreshes every 24 hours.</p></div>
         </div>
       </div></section>
 
@@ -235,7 +235,6 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts, 
           <div>
             <span className="ab-kicker coral" style={{ background: 'rgba(255,255,255,0.28)', color: '#fff', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(170,80,55,0.2)' }}><CheckCircle size={12} /> Ready when you are</span>
             <h2 style={{ marginTop: 20 }}>Initialize <em>your search.</em></h2>
-            <p>Browse open {brand.niche.short} roles by state, scope, and care setting, or reach out to our team to talk through a role you have had your eye on.</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
               <Link href="/jobs" className="ab-btn ab-btn-dark">Browse all jobs</Link>
             </div>

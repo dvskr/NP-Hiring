@@ -161,11 +161,8 @@ export default function ReportJobButton({ jobId, jobTitle }: ReportJobButtonProp
                             /* Sign In Prompt */
                             <div style={{ textAlign: 'center', padding: '20px 0' }}>
                                 <LogIn size={32} style={{ margin: '0 auto 8px', color: 'var(--color-primary)' }} />
-                                <p style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                                <p style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', margin: '0 0 12px' }}>
                                     Sign in to report
-                                </p>
-                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 12px' }}>
-                                    Please sign in to submit a report.
                                 </p>
                                 <Link
                                     href="/login"

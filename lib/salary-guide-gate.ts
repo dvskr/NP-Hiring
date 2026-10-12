@@ -223,6 +223,5 @@ export function buildEmployerShareHoldSentence(input: {
     const { scopeName, concentration } = input;
     return `${concentration.postings} postings in ${scopeName} disclose annual pay across ${concentration.employers} employers, `
         + `but one employer accounts for ${concentration.topEmployerPostings} of them. `
-        + `This site publishes a median only when no single employer contributes more than ${MAX_EMPLOYER_SHARE_PERCENT}% of the postings behind it, `
-        + 'so no figure is shown until the mix broadens.';
+        + `A median appears once no single employer contributes more than ${MAX_EMPLOYER_SHARE_PERCENT}% of the postings behind it.`;
 }

@@ -292,7 +292,7 @@ describe('P2 #16 — the comparison table is honest', () => {
         // Live review item 8a: even "-Only Job Inventory" was an absolute the
         // inventory falsified — the row is now a screening commitment.
         expect(comparison).toContain('${brand.niche.medium}-Focused Job Inventory');
-        expect(comparison).toContain('screened at ingest and removed when flagged out of scope');
+        expect(comparison).toContain('Listings are screened and removed when flagged out of scope');
     });
 
     it('stops asserting that competitors have no free posting option', () => {
@@ -431,7 +431,7 @@ describe('P2 #16 — the comparison table renders as English', () => {
         // only when the WP-1 inventory-invariant test gates it.
         expect(employersCode).not.toMatch(/Every job on this board is/);
         expect(employers).toContain('This board is built exclusively for');
-        expect(employers).toContain('screened at ingest');
+        expect(employers).toContain('Listings are screened and removed when');
     });
 
     it('states the board scope the config declares, not a narrower one', () => {

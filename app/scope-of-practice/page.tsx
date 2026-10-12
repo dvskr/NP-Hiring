@@ -175,12 +175,6 @@ export default function ScopeOfPracticePage() {
                         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
                             {brand.niche.short} Scope of Practice by State
                         </h1>
-                        <p className="text-lg md:text-xl text-pink-100 mb-4">
-                            Every state&apos;s practice-authority classification in one
-                            sortable, filterable view, with each state&apos;s board of
-                            nursing, licensure guide, live salary data, and open jobs one
-                            click away.
-                        </p>
                         {/* Real editorial literal (audit B54 pattern): the same
                             constant feeds Article.dateModified — freshness is
                             never fabricated at render time. */}
@@ -226,11 +220,10 @@ export default function ScopeOfPracticePage() {
                             <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                                 The AANP classifies each state&apos;s regulatory environment
                                 for {brand.niche.descriptor}s into one of three tiers. The
-                                tier tells you the legal structure around practice. It is
-                                not a pay scale, and it is not the fine print: prescribing
-                                schedules, agreement contents, fees, and renewal rules are
-                                set by each state board of nursing, which is why every
-                                state below links its board directly.
+                                tier tells you the legal structure around practice. Each state
+                                board of nursing sets prescribing schedules, agreement
+                                contents, fees, and renewal rules, so every state below links
+                                its board directly.
                             </p>
                             <div className="grid md:grid-cols-3 gap-4 mt-6">
                                 {TIER_LEGEND.map((tierInfo) => (
@@ -249,15 +242,9 @@ export default function ScopeOfPracticePage() {
                     {/* Interactive explorer */}
                     <div className="mb-8 md:mb-12">
                         <div className="rounded-xl p-6 md:p-8" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                            <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+                            <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
                                 Explore all 50 states + DC
                             </h2>
-                            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-                                Sort by state or by authority tier, filter, or search.
-                                State names jump to the detail section below; the links on
-                                each row go straight to that state&apos;s licensure guide,
-                                live salary page, and open jobs.
-                            </p>
                             <ScopeOfPracticeExplorer rows={[...SOP_STATE_ROWS]} />
                         </div>
                     </div>
@@ -273,7 +260,7 @@ export default function ScopeOfPracticePage() {
                             </h2>
                             <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                                 The compact covers the <strong>RN license</strong> that
-                                underpins your APRN credential; a multistate RN license is
+                                underpins your APRN credential. A multistate RN license is
                                 recognized across member states. It does not change your
                                 scope of practice: APRN licensure is issued state by state,
                                 and the practice environment above is what governs how you
@@ -309,12 +296,11 @@ export default function ScopeOfPracticePage() {
                                 State-by-state details
                             </h2>
                             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-                                What we track here: the AANP classification and the
-                                state&apos;s own practice rule, which can differ from
-                                other states in the same tier. What we deliberately leave to the
-                                authorities: prescribing schedules, agreement contents,
-                                fees, and renewal rules. Those change too often to restate,
-                                so each state links its board of nursing, and the{' '}
+                                Each state shows its AANP classification and its own
+                                practice rule, which can differ from other states in the
+                                same tier. For prescribing schedules, agreement contents,
+                                fees, and renewal rules, use the state&apos;s board of
+                                nursing link. The{' '}
                                 <a href={AANP_STATE_PRACTICE_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
                                     AANP State Practice Environment page
                                     <ExternalLink className="inline h-3.5 w-3.5 ml-1" aria-hidden="true" />
@@ -400,13 +386,9 @@ export default function ScopeOfPracticePage() {
 
                     {/* CTA */}
                     <div className="text-center py-8">
-                        <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+                        <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
                             Find {brand.niche.short} jobs where you want to practice
                         </h2>
-                        <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-                            Browse {brand.niche.descriptor} positions updated daily, in
-                            every practice environment.
-                        </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link href="/jobs" className="inline-block bg-pink-700 text-white px-8 py-3 rounded-lg font-medium hover:bg-pink-800 transition-colors">Browse All Jobs</Link>
                             <Link href="/salary-guide" className="inline-block bg-white px-8 py-3 rounded-lg font-medium border border-pink-200 hover:bg-pink-50 transition-colors" style={{ color: 'var(--color-primary)' }}>View Salary Guide</Link>

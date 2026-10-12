@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     select: { role: true },
   });
   if (!viewerProfile || (viewerProfile.role !== 'employer' && viewerProfile.role !== 'admin')) {
-    return NextResponse.json({ error: 'Forbidden — employer or admin only' }, { status: 403 });
+    return NextResponse.json({ error: 'Only employer accounts can unlock candidates.' }, { status: 403 });
   }
 
   let parsed: z.infer<typeof requestSchema>;
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
       unlocked.push({ candidateId });
     } catch (err) {
       logger.warn('Bulk-unlock per-candidate error', { candidateId, error: err });
-      failed.push({ candidateId, reason: 'error', message: 'Unexpected error — try again.' });
+      failed.push({ candidateId, reason: 'error', message: 'Something went wrong. Please try again.' });
     }
   }
 

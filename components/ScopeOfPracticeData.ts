@@ -204,7 +204,7 @@ export function buildSopFaqs(): SopFaq[] {
         },
         {
             question: `Where do I find my state's prescribing rules and agreement paperwork?`,
-            answer: `From your state board of nursing. That is deliberate, not an omission. Controlled-substance schedules, collaboration-agreement contents, filing steps, fees, and renewal rules are set by each board and change often enough that restating them here would go stale. Every state section on this page links the board's NCSBN member-board directory entry, and the AANP State Practice Environment page tracks classification changes as legislatures act.`,
+            answer: `From your state board of nursing. Each board sets its own controlled-substance schedules, collaboration-agreement contents, filing steps, fees, and renewal rules, and they change often. Every state section on this page links the board's NCSBN member-board directory entry, and the AANP State Practice Environment page tracks classification changes as legislatures act.`,
         },
         {
             question: `Does the Nurse Licensure Compact change an ${NP}'s scope of practice?`,

@@ -237,8 +237,8 @@ describe('3. narratives name the tier and state no rule', () => {
         const washington = CITIES.find((c) => c.stateCode === 'DC');
         expect(washington).toBeDefined();
         const city = buildCityNarrative(buildCityFacts(washington!), 3);
-        expect(city).toContain(`AANP places ${DC} in its full practice category; jurisdictions in the same category still set different requirements`);
-        expect(city).not.toContain('states in the same category');
+        expect(city).toContain(`AANP places ${DC} in its full practice category. Jurisdictions in the same category still set different requirements`);
+        expect(city).not.toMatch(/states in the same category/i);
     });
 
     it('city narratives name the tier and state no rule, in every city', () => {
@@ -251,7 +251,7 @@ describe('3. narratives name the tier and state no rule', () => {
         const richmond = CITIES.find((c) => c.name === 'Richmond' && c.stateCode === 'VA');
         expect(richmond).toBeDefined();
         expect(buildCityNarrative(buildCityFacts(richmond!), 3))
-            .toContain('AANP places Virginia in its restricted practice category;');
+            .toContain('AANP places Virginia in its restricted practice category. States in the same category');
     });
 });
 

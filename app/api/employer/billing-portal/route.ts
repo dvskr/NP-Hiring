@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   try {
     const plan = await getPlanForUser(auth.user.id);
     if (!plan?.stripeCustomerId) {
-      return NextResponse.json({ error: 'No Stripe billing account is linked to your Employer plan.', code: 'NO_BILLING_ACCOUNT' }, { status: 400 });
+      return NextResponse.json({ error: 'No billing account is linked to your plan. Please contact support.', code: 'NO_BILLING_ACCOUNT' }, { status: 400 });
     }
     const session = await stripe.billingPortal.sessions.create({
       customer: plan.stripeCustomerId,

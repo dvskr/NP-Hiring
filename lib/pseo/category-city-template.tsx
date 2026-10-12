@@ -198,7 +198,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Maximum Flexibility', description: 'Set your own schedule and work as many or as few shifts as you want, when you want.', iconName: 'Activity' },
-      { title: 'Hourly Pay', description: 'Per diem roles are paid by the shift or hour; compare the rate against the hourly value of a salaried offer with benefits.', iconName: 'DollarSign' },
+      { title: 'Hourly Pay', description: 'Per diem roles are paid by the shift or hour. Compare the rate against the hourly value of a salaried offer with benefits.', iconName: 'DollarSign' },
       { title: 'Income Supplement', description: 'Per diem work can supplement a full-time position or private practice while maintaining clinical variety.', iconName: 'TrendingUp' },
     ],
     tips: [
@@ -227,9 +227,9 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('full-time'),
     }),
     benefits: [
-      { title: 'Comprehensive Benefits', description: 'Health, dental and vision coverage, retirement plans and paid time off are usually part of the offer; confirm each in the listing.', iconName: 'Heart' },
+      { title: 'Comprehensive Benefits', description: 'Health, dental and vision coverage, retirement plans and paid time off are usually part of the offer. Confirm each in the listing.', iconName: 'Heart' },
       { title: 'Job Security', description: 'Stable employment with consistent income, malpractice coverage, and professional development support.', iconName: 'Shield' },
-      { title: 'Career Growth', description: 'Access to leadership tracks, CME funding and promotion paths; ask how each is structured.', iconName: 'TrendingUp' },
+      { title: 'Career Growth', description: 'Access to leadership tracks, CME funding and promotion paths. Ask how each is structured.', iconName: 'TrendingUp' },
     ],
     tips: [
       'Ask whether a sign-on bonus is offered and how it vests',
@@ -373,7 +373,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       'Negotiate equity or partnership opportunities',
       'Consider building your own private practice or telehealth group',
       'Pursue board certification in subspecialties for premium positioning',
-      'Mentor the next generation; it builds your network and reputation',
+      'Mentor the next generation to build your network and reputation',
     ],
   },
 };
@@ -399,7 +399,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       { title: 'Career Advancement', description: `Clear promotion tracks from staff ${brand.niche.short} to clinical lead, program director, or department head.`, iconName: 'TrendingUp' },
     ],
     tips: [
-      'Large health systems often carry the broadest benefits; compare the details',
+      'Large health systems often carry the broadest benefits, so compare the details',
       'Academic medical centers often include teaching opportunities',
       'Ask about call schedules, since hospital roles may require weekend coverage',
       'Negotiate CME days and funding',
@@ -425,7 +425,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       { title: 'Clinical Autonomy', description: 'Full control over treatment plans, visit cadence, and care model without corporate protocols.', iconName: 'Shield' },
     ],
     tips: [
-      'Check your state\'s own practice rules first: several full practice states require a transition period before independent practice',
+      'Check your state\'s own practice rules first, since several full practice states require a transition period before independent practice',
       'Start by joining an established group before going solo',
       'Build a sustainable patient panel sized to your specialty and visit model',
       'Invest in an EHR and billing platform suited to your specialty',
@@ -446,7 +446,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('community-health'),
     }),
     benefits: [
-      { title: 'Loan Repayment', description: "NHSC loan repayment may be available at approved sites; eligibility depends on the site's current NHSC status and your discipline.", iconName: 'DollarSign' },
+      { title: 'Loan Repayment', description: "NHSC loan repayment may be available at approved sites. Eligibility depends on the site's current NHSC status and your discipline.", iconName: 'DollarSign' },
       { title: 'Mission-Driven Work', description: `Serve underserved populations and make a direct impact on community health outcomes.`, iconName: 'Heart' },
       { title: 'Diverse Experience', description: 'Treat a wide range of conditions across all ages, building broad clinical expertise quickly.', iconName: 'Activity' },
     ],
@@ -473,14 +473,14 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Federal Benefits', description: 'Federal pension (FERS), TSP retirement matching and FEHB health insurance, with leave set by federal rules.', iconName: 'Shield' },
-      { title: 'Defined Scope', description: "The VA sets its own practice standards for its clinicians; ask how the role's scope is defined.", iconName: 'Heart' },
-      { title: 'Student Loan Repayment', description: "The VA's Education Debt Reduction Program may apply to qualifying positions; confirm eligibility with the hiring facility.", iconName: 'DollarSign' },
+      { title: 'Defined Scope', description: "The VA sets its own practice standards for its clinicians. Ask how the role's scope is defined.", iconName: 'Heart' },
+      { title: 'Student Loan Repayment', description: "The VA's Education Debt Reduction Program may apply to qualifying positions. Confirm eligibility with the hiring facility.", iconName: 'DollarSign' },
     ],
     tips: [
       'VA applications go through USAJobs.gov, so create your profile early',
       'Apply under Direct Hire Authority for faster processing',
       'PTSD and TBI experience is valued at VA facilities',
-      'Federal pay is based on GS/GP scales; negotiate within the grade',
+      'Federal pay is based on GS/GP scales, so negotiate within the grade',
       'Ask how the schedule and leave structure compare with private employers',
     ],
   },
@@ -530,7 +530,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     benefits: [
       { title: 'Critical Mission', description: `Veterans carry distinct health burdens, including polytrauma, TBI, toxic exposures, and chronic pain, and veteran-focused ${brand.niche.short}s close real care gaps.`, iconName: 'Heart' },
       { title: 'Specialized Training', description: 'VA-funded continuing education and fellowship pathways span primary care, rehabilitation, and specialty medicine.', iconName: 'Shield' },
-      { title: 'Federal Benefits', description: 'VA positions include the federal pension, TSP matching and federal leave; loan repayment programs depend on the position.', iconName: 'DollarSign' },
+      { title: 'Federal Benefits', description: 'VA positions include the federal pension, TSP matching and federal leave. Loan repayment programs depend on the position.', iconName: 'DollarSign' },
     ],
     tips: [
       'TBI, polytrauma, and toxic-exposure (PACT Act) expertise is valued',
@@ -617,7 +617,7 @@ function buildNpCategoryConfig(input: NpCategoryConfigInput): CategoryConfig {
       ...withTagFallback(input.slug),
     }),
     benefits: [
-      { title: 'Role Focus', description: `${input.fullLabel} roles center on a defined patient population or setting; each listing states the certification it expects.`, iconName: 'TrendingUp' },
+      { title: 'Role Focus', description: `${input.fullLabel} roles center on a defined patient population or setting. Each listing states the certification it expects.`, iconName: 'TrendingUp' },
       { title: 'Practice Variety', description: 'Openings span health systems, private groups, and community settings.', iconName: 'Building2' },
       { title: 'Career Mobility', description: 'State licensure plus national certification keeps your options open across employers and settings.', iconName: 'Users' },
     ],
@@ -849,7 +849,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Public-Sector Terms', description: 'Many correctional roles come from state, county or contracted health services and describe public-employee benefits.', iconName: 'DollarSign' },
-      { title: 'Loan Repayment', description: "Correctional facilities are among HRSA's eligible NHSC site types; repayment depends on the specific facility holding an active NHSC approval.", iconName: 'DollarSign' },
+      { title: 'Loan Repayment', description: "Correctional facilities are among HRSA's eligible NHSC site types. Repayment depends on the specific facility holding an active NHSC approval.", iconName: 'DollarSign' },
       { title: 'Unique Clinical Skills', description: 'Develop expertise in correctional medicine, emergency response, and managing complex comorbidities in underserved populations.', iconName: 'Shield' },
     ],
     tips: [
@@ -875,7 +875,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Agency-Handled Logistics', description: 'Assignments are usually arranged through an agency that covers malpractice and handles credentialing paperwork.', iconName: 'DollarSign' },
-      { title: 'Defined Assignments', description: 'Assignments run for a stated period; take breaks between them and keep your options open.', iconName: 'Calendar' },
+      { title: 'Defined Assignments', description: 'Assignments run for a stated period. Take breaks between them and keep your options open.', iconName: 'Calendar' },
       { title: 'Nationwide Opportunities', description: 'Work across multiple states, experience different healthcare systems, and build a diverse clinical portfolio.', iconName: 'MapPin' },
     ],
     tips: [
@@ -1138,7 +1138,7 @@ const CATEGORY_CREDENTIALS: Record<string, CategoryCredentialFacts> = {
     role: 'CRNA',
     article: 'a',
     standaloneLabel: true,
-    degree: 'a graduate degree from a nurse anesthesia program accredited by the Council on Accreditation (COA); admission requires critical-care RN experience, and entry-level programs now award a doctorate',
+    degree: 'a graduate degree from a nurse anesthesia program accredited by the Council on Accreditation (COA), which requires critical-care RN experience for admission (entry-level programs now award a doctorate)',
     certification: 'national certification through the NBCRNA (National Board of Certification and Recertification of Nurse Anesthetists), maintained through its Continued Professional Certification program',
     dea: 'DEA registration where the role includes ordering or prescribing controlled substances',
   },
@@ -1965,15 +1965,15 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             )}
 
             <div className="pseo-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px', marginTop: freshness ? 0 : '40px' }}>
-              {/* ROW 1: how this page is built (8col, CC-K7) + practice slot (4col, CC-K6) */}
+              {/* ROW 1: how to use this page (8col, CC-K7) + practice slot (4col, CC-K6) */}
               {axisGuide && (
                 <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <IconWell icon={Info} size="sm" />
-                      <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7A6A62' }}>About this page</span>
+                      <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7A6A62' }}>Using this page</span>
                     </div>
-                    <h3 style={cellTitle}>How this page is built</h3>
+                    <h3 style={cellTitle}>How to use this page</h3>
                     <p style={cellBody}>{axisGuide}</p>
                   </div>
                   <ImmersiveImage src={assets.bentoImages[0]} alt={`${noun} at work`} minHeight={240} />
@@ -2111,25 +2111,23 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
 
             {/* Resource Links */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginTop: exploreCardLinks.length > 0 || cityHubCard ? '32px' : 0 }}>
+              {/* Card titles only: no restating sub-lines (owner call, 2026-10-12). */}
               <Link href={`/salary-guide/${stateSlug}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-                <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
+                <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', margin: 0 }}>
                   <DollarSign size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {city!.state} Salary Guide
                 </h3>
-                <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Posted pay and practice rules for {NP}s in {city!.state}.</p>
               </Link>
               {showStateLink && (
                 <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-                  <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
+                  <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', margin: 0 }}>
                     <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {config.label} Jobs in {city!.state}
                   </h3>
-                  <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Browse all {sentenceLabel} positions statewide.</p>
                 </Link>
               )}
               <Link href={`/jobs/${config.slug}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-                <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
+                <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', margin: 0 }}>
                   <Building2 size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> All {config.label} Jobs
                 </h3>
-                <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Nationwide {sentenceLabel} positions.</p>
               </Link>
             </div>
           </section>

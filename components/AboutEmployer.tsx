@@ -133,7 +133,7 @@ export function buildEmployerFactSentences(name: string, facts: EmployerFacts | 
 function ClaimedByEmployerBadge({ gapLeft = false }: { gapLeft?: boolean }) {
     return (
         <span
-            title="An employer asked to be recognized as the owner of this profile, and our team approved the request."
+            title="The employer's claim to this profile was approved."
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                 padding: '2px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
@@ -268,7 +268,7 @@ export default function AboutEmployer({
                         </h2>
                         {company.isVerified && (
                             <span
-                                title="Directory signal: this employer's name matched our known-employer list when the listing was imported. It is not an employer-confirmed claim."
+                                title="This name matches a known employer. Profiles the employer has claimed also show a Claimed badge."
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '4px',
                                     padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,

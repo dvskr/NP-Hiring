@@ -45,7 +45,6 @@ import {
   postedPaySentence,
   type LocationSpreadPlace,
 } from '@/components/seo/pseo';
-import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { getListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
 import {
   NATIONAL_MEDIAN_SENTENCE,
@@ -275,7 +274,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
     },
     {
       question: `Do locum tenens ${brand.niche.short}s get benefits?`,
-      answer: 'Agencies differ. Some offer health insurance, a retirement plan, malpractice coverage, continuing education reimbursement, housing stipends and travel allowances; others cover far less. What is included also depends on the assignment length, so ask the agency to set it out in writing.',
+      answer: 'Agencies differ. Some offer health insurance, a retirement plan, malpractice coverage, continuing education reimbursement, housing stipends and travel allowances. Others cover far less. What is included also depends on the assignment length, so ask the agency to set it out in writing.',
     },
     {
       question: `What are the licensing requirements for locum tenens ${brand.niche.short} work?`,
@@ -328,7 +327,6 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
         heroAlt={`Locum tenens travel ${brand.niche.short} assignment`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('locum-tenens') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Locum Tenens"
         headlineLine2={brand.niche.short}
         headlineSub="jobs with travel and flexibility."
@@ -450,8 +448,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Locum Tenens</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Travel and Flexibility</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Agency assignments let you choose where you work and for how long, one contract at a time.</p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Travel and Flexibility</h2>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Travel assignments (8) + What is included (4) */}
@@ -459,7 +456,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Travel Assignments</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Take an assignment where the work is, then choose the next one. Many agencies arrange housing, travel and per diem; the listing or the recruiter states what a specific assignment includes.
+                  Take an assignment where the work is, then choose the next one. Many agencies arrange housing, travel and per diem, and the listing or the recruiter states what a specific assignment includes.
                 </p>
               </div>
               <ImmersiveImage src="/images/categories/bento/locum-travel.webp" alt="Locum tenens travel assignment" minHeight={240} />

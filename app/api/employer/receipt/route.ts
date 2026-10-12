@@ -48,7 +48,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const supabase = await createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized — provide a token or log in' }, { status: 401 });
+        return NextResponse.json({ error: 'Please log in to view this receipt.' }, { status: 401 });
       }
       employerJob = await prisma.employerJob.findFirst({
         // P5.A (2026-06-01): contactEmail fallback restricted to legacy
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // the legacy free-quota statuses never produced a per-post payment.
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
-        { error: 'Receipts are not available for Employer plan postings — your plan receipts are sent by Stripe each billing period.' },
+        { error: 'Receipts are not available for Employer plan postings. Stripe sends your plan receipts each billing period.' },
         { status: 400 },
       );
     }
@@ -77,12 +77,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       employerJob.paymentStatus === 'free_upgraded'
     ) {
       return NextResponse.json(
-        { error: 'Receipts are not available for free job postings — no payment was made.' },
+        { error: 'Receipts are not available for free job postings because no payment was made.' },
         { status: 400 },
       );
     }
     if (employerJob.paymentStatus !== 'paid') {
-      return NextResponse.json({ error: 'Receipt not available — payment not completed' }, { status: 400 });
+      return NextResponse.json({ error: 'No receipt is available because payment for this posting was not completed.' }, { status: 400 });
     }
 
     const charge = chargeId
@@ -93,12 +93,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         });
 
     if (!charge) {
-      return NextResponse.json({ error: 'No charge on file — cannot resolve receipt' }, { status: 404 });
+      return NextResponse.json({ error: 'We could not find a payment for this posting.' }, { status: 404 });
     }
 
     const stripe = getStripe();
     if (!stripe) {
-      return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
+      return NextResponse.json({ error: 'Receipts are unavailable right now. Please try again later.' }, { status: 503 });
     }
 
     // 2026-05-15: redirect to `hosted_invoice_url` instead of
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (!hostedUrl) {
       return NextResponse.json(
-        { error: 'No Stripe-hosted invoice/receipt page for this charge.' },
+        { error: 'A receipt page is not available for this payment. Please contact support.' },
         { status: 404 },
       );
     }
@@ -133,6 +133,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(hostedUrl, { status: 302 });
   } catch (error) {
     logger.error('Error resolving receipt URL', error);
-    return NextResponse.json({ error: 'Failed to resolve receipt URL' }, { status: 500 });
+    return NextResponse.json({ error: 'We could not open your receipt. Please try again.' }, { status: 500 });
   }
 }

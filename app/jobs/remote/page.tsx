@@ -325,7 +325,6 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
         heroAlt={`${brand.niche.short} working remotely from home via telehealth`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
-        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('remote') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Remote"
         headlineLine2={brand.niche.short}
         headlineSub="jobs from anywhere."
@@ -478,12 +477,9 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Why Go Remote
           </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>
             Built for Modern Practice
           </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-            Remote roles trade the commute for a home office, and each listing names the states it needs you licensed in.
-          </p>
 
           <div className="remote-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Work From Anywhere (8) + Multi-State (4) */}
@@ -502,7 +498,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Multi-State Licensure</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Care for patients in more than one state. Some employers sponsor and pay for additional state licenses; the listing usually says so.
+                  Care for patients in more than one state. Some employers sponsor and pay for additional state licenses, and the listing usually says so.
                 </p>
               </div>
             </div>

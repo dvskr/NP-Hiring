@@ -339,10 +339,7 @@ export default function CheckoutPage() {
     <div className="max-w-2xl mx-auto px-4 pt-4 pb-8">
       {/* Page Header */}
       <div className="mb-6 text-center">
-        <h1 className="text-3xl font-bold mb-1">Confirm Your Job Posting</h1>
-        <p className="text-gray-600">
-          {nextPostIsFree ? 'Review your listing, then post it from the preview' : 'Review your listing before payment'}
-        </p>
+        <h1 className="text-3xl font-bold">Confirm Your Job Posting</h1>
       </div>
 
       {/* Job Summary Card */}
@@ -478,10 +475,8 @@ export default function CheckoutPage() {
             <span className="text-pink-600">✓</span> Email candidate alerts
           </li>
         </ul>
-        <p className="text-xs text-gray-500 mt-4">
-          Hiring for several roles? The Employer plan is ${config.planPrice}/month for {config.planSlots} active jobs.{' '}
-          <Link href="/pricing" className="text-pink-700 hover:text-pink-800 underline">See pricing</Link>.
-        </p>
+        {/* The Employer plan line lives once, in the "Before you pay" rail
+            (checkout/layout.tsx); no repeat here (owner call, 2026-10-12). */}
       </div>
 
       {/* Error Message */}

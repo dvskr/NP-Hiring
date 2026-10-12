@@ -306,18 +306,19 @@ export default function SignUpForm() {
       <h1 style={{
         fontSize: '28px', fontWeight: 800, color: '#1A2E35',
         fontFamily: 'var(--font-lora), Georgia, serif',
-        lineHeight: 1.25, letterSpacing: '-0.5px', margin: '0 0 4px',
+        lineHeight: 1.25, letterSpacing: '-0.5px',
+        margin: role !== 'employer' && applyingToJob ? '0 0 4px' : '0 0 14px',
         textAlign: 'center',
       }}>
         Create your account
       </h1>
-      <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
-        {role === 'employer'
-          ? `Start posting jobs and hiring qualified ${brand.niche.short}s.`
-          : applyingToJob
-            ? 'Applying takes a free account. We will bring you back to the job when you are done.'
-            : `Join thousands of ${brand.niche.short}s finding their perfect role.`}
-      </p>
+      {/* Only the apply return gets a line under the heading; the generic
+          role taglines were removed (owner call, 2026-10-12). */}
+      {role !== 'employer' && applyingToJob && (
+        <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
+          Applying takes a free account. We will bring you back to the job when you are done.
+        </p>
+      )}
 
       {/* ═══ ROLE TOGGLE ═══ */}
       <div style={{
@@ -458,8 +459,10 @@ export default function SignUpForm() {
                 onChange={(e) => setEmail(e.target.value)} required autoComplete="email"
                 style={inputStyle} placeholder="you@example.com" />
             )}
+            {/* Kept through the 2026-10-12 cleanup: a requirement the form
+                enforces on submit, which the label alone does not state. */}
             {role === 'employer' && (
-              <p style={helperStyle}>Please use your professional or company email.</p>
+              <p style={helperStyle}>Gmail, Yahoo and other free email addresses are not accepted.</p>
             )}
           </div>
 

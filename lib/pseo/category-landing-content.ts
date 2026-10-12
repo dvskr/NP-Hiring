@@ -93,7 +93,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         ],
         requirements: [
             'Graduate NP degree (MSN or DNP), typically on the family track for all-ages scope',
-            'National certification as FNP-C (AANP) or FNP-BC (ANCC); the ENP specialty credential strengthens candidacy for higher-acuity sites',
+            'National certification as FNP-C (AANP) or FNP-BC (ANCC), with the ENP specialty credential strengthening candidacy for higher-acuity sites',
             'Active state APRN licensure and DEA registration for prescribing',
             'Procedural skills employers screen for: laceration repair, splinting, incision and drainage, and plain-film interpretation',
         ],
@@ -115,7 +115,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Comfort practicing independently, since home visits mean assessing and deciding without an on-site team',
             'A valid driver’s license and willingness to cover a defined visit territory',
         ],
-        salaryNarrative: `${MEDIAN_SENTENCE} Home-based roles are paid either as salary or per completed visit; per-visit models can outrun clinic pay at higher volumes, and most employers add mileage or vehicle allowances. ${COMPARE_LISTINGS}`,
+        salaryNarrative: `${MEDIAN_SENTENCE} Home-based roles are paid either as salary or per completed visit. Per-visit models can outrun clinic pay at higher volumes, and most employers add mileage or vehicle allowances. ${COMPARE_LISTINGS}`,
     },
     'family-practice': {
         intro: [
@@ -131,7 +131,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Graduate FNP program (MSN or DNP) with supervised clinical hours across the lifespan',
             'National certification as FNP-C through AANP or FNP-BC through ANCC',
             'Active state APRN licensure and DEA registration for prescribing',
-            'Employers commonly screen for panel-management and EHR fluency; new-grad-friendly roles add structured supervision',
+            'Employers commonly screen for panel-management and EHR fluency, and new-grad-friendly roles add structured supervision',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Family practice offers are usually a clinic base plus productivity (RVU) and quality bonuses, so the same credential prices differently between a fee-for-service practice and a value-based group. ${COMPARE_LISTINGS}`,
     },
@@ -149,14 +149,14 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Graduate AGNP program (MSN or DNP) on the primary care or acute care track',
             'Primary care: AGPCNP-BC through ANCC or A-GNP through AANP',
             'Acute care: AGACNP-BC through ANCC or ACNPC-AG through AACN',
-            'Active state APRN licensure and DEA registration; acute-care roles add hospital credentialing and privileging',
+            'Active state APRN licensure and DEA registration, with hospital credentialing and privileging added for acute-care roles',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} The two tracks are paid differently: outpatient AGPCNP roles are typically salary plus productivity, while acute-care-track hospital roles add night, weekend, and holiday differentials on top of base. ${COMPARE_LISTINGS}`,
     },
     pediatric: {
         intro: [
             'Pediatric nurse practitioners (PNPs) care for infants, children, adolescents, and young adults: well-child visits, immunizations, developmental screening, and management of acute and chronic childhood conditions.',
-            'Primary care PNPs practice in pediatric clinics, school-based health centers, and community programs; acute care PNPs work in children’s hospitals, PICUs, and inpatient specialty teams.',
+            'Primary care PNPs practice in pediatric clinics, school-based health centers, and community programs. Acute care PNPs work in children’s hospitals, PICUs, and inpatient specialty teams.',
         ],
         highlights: [
             { title: 'Kid-First Practice', description: 'Every visit is built around growth, development, and family-centered care.', icon: 'Baby' },
@@ -165,7 +165,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         ],
         requirements: [
             'Graduate pediatric NP program (MSN or DNP) on the primary care or acute care track',
-            'National certification as CPNP-PC (primary care) or CPNP-AC (acute care) through PNCB; the ANCC pediatric primary care exam (PPCNP-BC) was retired, so it is no longer an entry route for new candidates',
+            'National certification as CPNP-PC (primary care) or CPNP-AC (acute care) through PNCB. The ANCC pediatric primary care exam (PPCNP-BC) was retired, so it is no longer an entry route for new candidates',
             'Active state APRN licensure and DEA registration',
             'Pediatric acute-care roles typically expect PALS and children’s-hospital experience',
         ],
@@ -182,9 +182,9 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Differential-Heavy Pay', description: 'Nights, weekends, and call coverage add meaningful premiums to hospital base pay.', icon: 'Moon' },
         ],
         requirements: [
-            'Graduate NNP program (MSN or DNP); admission commonly requires Level III/IV NICU RN experience',
+            'Graduate NNP program (MSN or DNP), where admission commonly requires Level III/IV NICU RN experience',
             'National certification as NNP-BC through the National Certification Corporation (NCC)',
-            'Active state APRN licensure; NRP (Neonatal Resuscitation Program) is standard',
+            'Active state APRN licensure, with NRP (Neonatal Resuscitation Program) as standard',
             'Hospital credentialing and privileging define the procedure scope for each role',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} NNP pay is hospital-scale and shift-structured: round-the-clock NICU coverage makes night, weekend, and call premiums a routine component of total pay rather than an occasional add-on. ${COMPARE_LISTINGS}`,
@@ -192,7 +192,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
     'women-health': {
         intro: [
             "Women's health nurse practitioners (WHNPs) provide gynecologic, reproductive, prenatal, and postpartum care, plus menopause management and well-person primary care across the lifespan.",
-            'WHNPs practice in OB/GYN groups, family planning and reproductive health clinics, fertility centers, and public health programs. Some roles are gynecology-only; others carry prenatal and postpartum panels, so scope varies by listing.',
+            'WHNPs practice in OB/GYN groups, family planning and reproductive health clinics, fertility centers, and public health programs. Some roles are gynecology-only, while others carry prenatal and postpartum panels, so scope varies by listing.',
         ],
         highlights: [
             { title: 'Reproductive-Health Depth', description: 'Contraception, fertility, prenatal, and menopause care in one focused scope.', icon: 'Heart' },
@@ -205,7 +205,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Active state APRN licensure and DEA registration',
             'Employers commonly screen for colposcopy and LARC (IUD/implant) procedure skills',
         ],
-        salaryNarrative: `${MEDIAN_SENTENCE} WHNP offers are usually a clinic salary; procedure-heavy practices and any obstetric call coverage add premiums, so scope details on the listing move the number more than geography alone. ${COMPARE_LISTINGS}`,
+        salaryNarrative: `${MEDIAN_SENTENCE} WHNP offers are usually a clinic salary. Procedure-heavy practices and any obstetric call coverage add premiums, so scope details on the listing move the number more than geography alone. ${COMPARE_LISTINGS}`,
     },
     'acute-care': {
         intro: [
@@ -221,7 +221,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Graduate adult-gerontology acute care NP program (MSN or DNP)',
             'National certification as AGACNP-BC through ANCC or ACNPC-AG through AACN',
             'Acute-care RN background (ICU, ED, or step-down) preferred by most hospitals',
-            'Active state APRN licensure; hospital credentialing and privileging define the procedure scope',
+            'Active state APRN licensure, with hospital credentialing and privileging defining the procedure scope',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Hospital-based acute care pay is built as a base plus shift differentials, with nights, weekends, and holidays stacking on top, so a posted base rate understates what a full shift rotation actually pays. ${COMPARE_LISTINGS}`,
     },
@@ -237,9 +237,9 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         ],
         requirements: [
             'Most ENPs certify first as FNPs (FNP-C via AANP or FNP-BC via ANCC) for all-ages scope',
-            'The ENP-C specialty credential (AANP certification board) is earned by certified FNPs with emergency preparation; some roles accept acute-care certification instead',
+            'The ENP-C specialty credential (AANP certification board) is earned by certified FNPs with emergency preparation, and some roles accept acute-care certification instead',
             'Active state APRN licensure and DEA registration',
-            'ACLS and PALS are standard; trauma course completion strengthens candidacy',
+            'ACLS and PALS are standard, and a completed trauma course strengthens candidacy',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Emergency compensation is shift-structured rather than salaried in most departments, and night, weekend, and holiday differentials are a standing part of the package instead of an exception. ${COMPARE_LISTINGS}`,
     },
@@ -254,7 +254,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Survivorship Care', description: 'Dedicated survivorship clinics are an established NP-led service line in many cancer programs.', icon: 'TrendingUp' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC, on the track matching the practice population (family or adult-gerontology; pediatric via PNCB in children’s centers)',
+            'Graduate NP degree with national certification through AANP or ANCC, on the track matching the practice population (family or adult-gerontology, or pediatric via PNCB in children’s centers)',
             'The optional AOCNP credential through ONCC (Oncology Nursing Certification Corporation) recognizes oncology NP practice hours',
             'Active state APRN licensure and DEA registration',
             'Employers screen for chemotherapy/immunotherapy competencies and oncologic emergency recognition',
@@ -274,7 +274,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         requirements: [
             'Graduate NP degree with national certification through AANP or ANCC (adult-gerontology or family track per the practice population)',
             'Inpatient and ICU cardiology roles typically require the acute care track: AGACNP-BC (ANCC) or ACNPC-AG (AACN)',
-            'Active state APRN licensure and DEA registration; ACLS is standard',
+            'Active state APRN licensure and DEA registration, with ACLS as standard',
             'Employers screen for ECG interpretation and guideline-directed heart-failure therapy fluency',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Cardiology packages frequently layer call stipends and procedural-clinic premiums onto base, so an inpatient or call-carrying role and a clinic-only role rarely price the same even in one system. ${COMPARE_LISTINGS}`,
@@ -308,9 +308,9 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Inpatient Breadth', description: 'General medicine acuity without a procedure-suite subspecialty focus.', icon: 'Building2' },
         ],
         requirements: [
-            'Graduate NP degree; adult inpatient medicine teams prefer the acute care track',
-            'National certification as AGACNP-BC through ANCC or ACNPC-AG through AACN (some services consider FNPs with inpatient experience; check each listing)',
-            'Active state APRN licensure; hospital credentialing and privileging define scope',
+            'Graduate NP degree, with adult inpatient medicine teams preferring the acute care track',
+            'National certification as AGACNP-BC through ANCC or ACNPC-AG through AACN (some services consider FNPs with inpatient experience, so check each listing)',
+            'Active state APRN licensure, with hospital credentialing and privileging defining scope',
             'Employers screen for admission/discharge workflow fluency and cross-cover judgment',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Hospitalist pay is priced against a block schedule rather than an office week, with night-block and holiday differentials layered onto base, so compare the shift commitment, not just the headline number. ${COMPARE_LISTINGS}`,
@@ -347,7 +347,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track per the practice population)',
             'The optional ONP-C credential through the Orthopaedic Nurses Certification Board (ONCB) recognizes orthopedic NP practice',
             'Surgical roles require RNFA or first-assist credentialing per hospital policy',
-            'Active state APRN licensure; casting, splinting, and joint-injection skills are standard screens',
+            'Active state APRN licensure, with casting, splinting, and joint-injection skills as standard screens',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Orthopedic packages separate on OR involvement: surgical practices add call stipends and first-assist premiums that clinic-only roles do not carry. ${COMPARE_LISTINGS}`,
     },
@@ -362,10 +362,10 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Case Variety', description: 'From outpatient endoscopy to major surgery and obstetrics, no two case lists match.', icon: 'Activity' },
         ],
         requirements: [
-            'Graduate nurse anesthesia program accredited by the Council on Accreditation (COA); admission requires critical-care RN experience',
+            'Graduate nurse anesthesia program accredited by the Council on Accreditation (COA), which requires critical-care RN experience for admission',
             'Pass the National Certification Examination administered by NBCRNA',
             'Maintain certification through NBCRNA’s Continued Professional Certification (CPC) program',
-            'Active state APRN/CRNA licensure; supervision rules are set by state law and facility policy',
+            'Active state APRN/CRNA licensure, with supervision rules set by state law and facility policy',
         ],
         salaryNarrative: `CRNA compensation sits at the top of the APRN pay scale and is not benchmarked by the all-NP median of ${NP_MEDIAN_CITED}, which covers nurse practitioners rather than nurse anesthetists. Call burden, case mix, and supervision model drive most of the spread between offers. ${COMPARE_LISTINGS}`,
     },
@@ -385,7 +385,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Maintain certification through AMCB’s recertification program, alongside state APRN licensure',
             'Call expectations and birth-volume commitments vary by model, so clarify both before accepting',
         ],
-        salaryNarrative: `${MEDIAN_SENTENCE} CNM pay varies more with call structure and birth volume than with geography alone; hospital-employed, birth-center, and private-practice models each price differently. ${COMPARE_LISTINGS}`,
+        salaryNarrative: `${MEDIAN_SENTENCE} CNM pay varies more with call structure and birth volume than with geography alone. Hospital-employed, birth-center, and private-practice models each price differently. ${COMPARE_LISTINGS}`,
     },
     // ── 2026-07 P1 #15 verticals (new taxonomy slugs) ────────────────────────
     // The three specialty folders added by the taxonomy expansion wrap the same
@@ -405,7 +405,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track per the practice population)',
             'Aesthetics is learned in practice: employers screen for injectable training (neuromodulators and dermal fillers) and device experience, often via manufacturer-led programs',
             'The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours',
-            'Active state APRN licensure; medical-director, delegation, and supervision rules for cosmetic procedures are set by state law, so check your state board of nursing',
+            'Active state APRN licensure. Medical-director, delegation, and supervision rules for cosmetic procedures are set by state law, so check your state board of nursing',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Aesthetic roles frequently pair a base rate with commission on procedures and retail products, so total compensation depends heavily on patient volume and the practice's service mix. ${COMPARE_LISTINGS}`,
     },
@@ -422,7 +422,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         requirements: [
             'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track per the practice population)',
             'Active state APRN licensure and DEA registration, since controlled-substance prescribing is central to the role',
-            'Controlled-substance rules, opioid-prescribing limits, and prescription drug monitoring program (PDMP) requirements are set state by state; confirm them with your state board before you start',
+            'Controlled-substance rules, opioid-prescribing limits, and prescription drug monitoring program (PDMP) requirements are set state by state, so confirm them with your state board before you start',
             'Employers screen for opioid stewardship, risk assessment, and interventional-procedure workflow experience',
         ],
         salaryNarrative: `${MEDIAN_SENTENCE} Pain management pay varies with procedure mix: interventional, block-heavy practices carry productivity upside that medication-management-only roles do not. ${COMPARE_LISTINGS}`,
@@ -430,7 +430,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
     'palliative-hospice': {
         intro: [
             'Palliative and hospice nurse practitioners manage symptoms and goals of care for patients with serious, advanced, or life-limiting illness: pain and dyspnea control, advance care planning, and family support alongside interdisciplinary teams.',
-            'Palliative roles run alongside active treatment in hospital consult services, clinics, and home-based programs; hospice roles focus on comfort-directed care at home, in facilities, and in inpatient hospice units. Both lean heavily on communication skills; goals-of-care conversations are the core clinical procedure.',
+            'Palliative roles run alongside active treatment in hospital consult services, clinics, and home-based programs. Hospice roles focus on comfort-directed care at home, in facilities, and in inpatient hospice units. Both lean heavily on communication skills, and goals-of-care conversations are the core clinical procedure.',
         ],
         highlights: [
             { title: 'Interdisciplinary by Design', description: 'Physicians, nurses, social workers, and chaplains share every plan of care.', icon: 'Users' },
@@ -458,7 +458,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         requirements: [
             'Graduate CNS program (MSN or DNP) in a defined specialty population',
             'National certification such as AGCNS-BC through ANCC or the ACCNS credentials through AACN',
-            'Active state APRN licensure; CNS title recognition and prescriptive authority vary by state',
+            'Active state APRN licensure (CNS title recognition and prescriptive authority vary by state)',
             'Employers screen for quality-improvement, evidence-based-practice, and staff-education experience',
         ],
         salaryNarrative: `CNS compensation varies with the health system's model for the role: clinical ladder placement, specialty line, and quality-program scope all move the number. ${COMPARE_LISTINGS}`,

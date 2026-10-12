@@ -225,7 +225,7 @@ const FREE_TOOLS: readonly FreeTool[] = [
   {
     href: '/job-alerts',
     label: 'Job Alerts',
-    blurb: `New ${brand.niche.short} roles emailed as they are indexed.`,
+    blurb: `New ${brand.niche.short} roles that match your search, by email.`,
     icon: Bell,
     chip: 'Alerts',
   },
@@ -288,13 +288,6 @@ const FREE_TOOLS_CSS = `
     text-transform: uppercase;
     letter-spacing: -0.01em;
     line-height: 1.1;
-  }
-  .ftools-lede {
-    font-size: 15px;
-    color: #5A4A42;
-    margin: 10px 0 0;
-    line-height: 1.6;
-    max-width: 560px;
   }
   .ftools-more {
     display: inline-flex;
@@ -430,10 +423,6 @@ function FreeToolsBand() {
             <h2 id="free-tools-heading" className="ftools-h2 font-heading">
               Free {brand.niche.short} career tools
             </h2>
-            <p className="ftools-lede">
-              No account and no paywall. Work out what a role should pay, what your state requires, and
-              what contract work actually nets before you apply.
-            </p>
           </div>
           {/* The tools hub carries the calculators that did not fit above
               (salary benchmark, cost-of-living comparison). Linking the hub

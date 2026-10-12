@@ -48,10 +48,9 @@ function colorBefore(src: string, text: string): string {
 }
 
 describe('P10 a11y-contrast: /jobs and tool hint text clears WCAG AA 4.5:1', () => {
-  it('/jobs header subtitle on --bg-primary', () => {
+  it('/jobs header: the subtitle is gone (owner call, 2026-10-12) and #6B7F8A stays out', () => {
     const src = read('app/jobs/JobsPageClient.tsx');
-    const fg = colorBefore(src, 'Browse fresh {brand.niche.short} roles');
-    expect(contrast(fg, token('--bg-primary'))).toBeGreaterThanOrEqual(4.5);
+    expect(src).not.toContain('Browse fresh {brand.niche.short} roles');
     expect(src).not.toMatch(/#6B7F8A/i);
   });
 

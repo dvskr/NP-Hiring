@@ -239,7 +239,7 @@ interface SalaryRow {
  *      warns this "silently FABRICATES wrong salaries").
  * Aggregating those rows would publish an invented pay spread attributed to
  * a named real employer, and would falsify BOTH visible claims below: the
- * "disclose a pay range" count and "employer-posted, not {brand} estimates".
+ * "disclose a pay range" count and "Figures are employer-posted".
  * If the attribution copy is ever dropped, this filter can be revisited —
  * not before. (Contrast lib/pseo/category-landing-template.tsx:499, which
  * aggregates the same columns but labels them neutrally, "Average salary",
@@ -662,11 +662,6 @@ export default async function CompanyPage({ params }: Props) {
         }
     }
 
-    const similarityParts = [
-        ...(dominantCategory ? [categorySlugLabel(dominantCategory)] : []),
-        ...(dominantState ? [dominantState] : []),
-    ];
-
     // FAQPage rich results need more than one question; a single question is
     // a paragraph with a heading, not a FAQ page.
     const faqSchema = faqs.length >= MIN_FAQ_ENTRIES_FOR_SCHEMA
@@ -722,7 +717,7 @@ export default async function CompanyPage({ params }: Props) {
                                     {company.isVerified && (
                                         <span
                                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700"
-                                            title="Directory signal: this employer's name matched our known-employer list when the listing was imported. It is not an employer-confirmed claim."
+                                            title="This name matches a known employer. Profiles the employer has claimed also show a Claimed badge."
                                         >
                                             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -753,9 +748,9 @@ export default async function CompanyPage({ params }: Props) {
                                     claimed the profile, `recruitmentType` = a
                                     human on our team classified WHAT KIND of
                                     hiring organization this is. Renders nothing
-                                    for the unclassified majority (null), and the
-                                    copy stays deliberately neutral — a staffing
-                                    agency is a fact, not a warning. */}
+                                    for the unclassified majority (null). The label
+                                    stands alone, with no explanatory sentence
+                                    (owner call, 2026-10-12). */}
                                 {company.recruitmentType && (
                                     <div className="mb-3">
                                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-200 text-slate-700">
@@ -764,11 +759,6 @@ export default async function CompanyPage({ params }: Props) {
                                             </svg>
                                             {RECRUITMENT_TYPE_LABELS[company.recruitmentType]}
                                         </span>
-                                        <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                                            {company.recruitmentType === 'direct_hire'
-                                                ? `Our team classified ${companyName} as a direct employer: it hires clinicians onto its own staff rather than recruiting for client organizations.`
-                                                : `Our team classified ${companyName} as a staffing agency: it recruits and places clinicians with client organizations. That is a fact about how it hires, not a quality judgment; agencies and direct employers both post legitimate roles.`}
-                                        </p>
                                     </div>
                                 )}
 
@@ -783,11 +773,9 @@ export default async function CompanyPage({ params }: Props) {
                                             Claimed by employer
                                         </span>
                                         <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                                            Someone at {companyName} asked to be recognized as this profile&apos;s
-                                            owner, and our team approved the request on{' '}
-                                            {formatApprovalDate(company.claimVerifiedAt)}. Claiming does not let an
-                                            employer edit the listings or pay figures below; those remain
-                                            derived from its live postings.
+                                            {companyName}&apos;s claim to this profile was approved on{' '}
+                                            {formatApprovalDate(company.claimVerifiedAt)}. Listings and pay figures
+                                            below still come from its live job postings.
                                         </p>
                                     </div>
                                 )}
@@ -867,7 +855,7 @@ export default async function CompanyPage({ params }: Props) {
                                     Annualized from the {salarySnapshot.sampleSize === activeJobCount
                                         ? `${activeJobCount} active postings`
                                         : `${salarySnapshot.sampleSize} of ${activeJobCount} active postings`} that
-                                    disclose a pay range. Figures are employer-posted, not {brand.name} estimates.
+                                    disclose a pay range. Figures are employer-posted.
                                 </p>
                                 {/* 3-up collapses to a single column under 640px —
                                     three "$132k" tiles + their labels wrap to 3-4
@@ -899,7 +887,7 @@ export default async function CompanyPage({ params }: Props) {
                             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                                 {payCountSentence}{' '}
                                 {facts.disclosedPay >= 1
-                                    ? `Each posted range is on its own listing below. ${brand.name} publishes a median for one employer only at ${SALARY_SNAPSHOT_MIN_SAMPLE} or more postings with disclosed pay.`
+                                    ? `Each posted range is on its own listing below. A median appears once ${SALARY_SNAPSHOT_MIN_SAMPLE} or more postings list pay.`
                                     : (
                                         <>
                                             How often employers state pay is tracked in our{' '}
@@ -957,8 +945,7 @@ export default async function CompanyPage({ params }: Props) {
                                 legitimately differ. Say what the number counts
                                 instead of letting adjacency imply otherwise. */}
                             <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                                Counts are {companyName}&apos;s active postings in each area. Follow a link
-                                to browse every employer hiring for it.
+                                Counts are {companyName}&apos;s active postings in each area.
                             </p>
                             {categoryTally.length > 0 && (
                                 <div className="mb-4">
@@ -1023,13 +1010,9 @@ export default async function CompanyPage({ params }: Props) {
                             className="rounded-2xl p-6 mb-8"
                             style={sectionCard}
                         >
-                            <h2 id="hiring-cities-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                            <h2 id="hiring-cities-heading" className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
                                 Cities With Open Roles
                             </h2>
-                            <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                                A city links to its own job page once that page carries enough roles to
-                                render. Smaller markets are named here and their roles are in the list below.
-                            </p>
                             <div className="flex flex-wrap gap-2">
                                 {facts.cities.map((city) => {
                                     const label = city.stateCode ? `${city.name}, ${city.stateCode}` : city.name;
@@ -1088,7 +1071,7 @@ export default async function CompanyPage({ params }: Props) {
                                 Practice Rules Where {companyName} Hires
                             </h2>
                             <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                                Practice authority is the AANP classification for each state; compact status is
+                                Practice authority is the AANP classification for each state. Compact status is
                                 verified against the NCSBN roster.
                             </p>
                             <div className="space-y-3">
@@ -1161,12 +1144,9 @@ export default async function CompanyPage({ params }: Props) {
                         dominant category/state. Hidden when no match exists. */}
                     {similarEmployers.length > 0 && (
                         <section aria-labelledby="similar-employers-heading" className="mt-10">
-                            <h2 id="similar-employers-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                            <h2 id="similar-employers-heading" className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
                                 Similar Employers
                             </h2>
-                            <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                                Other employers with active {brand.niche.short} openings in {similarityParts.join(' or ')}.
-                            </p>
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 {similarEmployers.map((employer) => (
                                     <Link

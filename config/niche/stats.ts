@@ -104,17 +104,6 @@ export const FALLBACK_EMPLOYERS: ReadonlyArray<{ name: string; count: number }> 
  * ══════════════════════════════════════════════════════════════════════ */
 
 /**
- * Sentence under the "Your profile needs attention" heading on the
- * profile-completeness card.
- *
- * NP HIRING: the donor kept an unsourced '5x more likely' multiplier.
- * Neutralized here — no fabricated statistic. Re-introduce a number only
- * once this board's own analytics substantiate one.
- */
-export const DASHBOARD_PROFILE_NUDGE_CLAIM =
-    'A complete profile makes it easier for employers to find you and reach out.';
-
-/**
  * "Job Market Pulse" sidebar card body. Rendered as
  * {lead}<highlighted metric>{tail} — the component styles `metric` in
  * the berry accent color.
