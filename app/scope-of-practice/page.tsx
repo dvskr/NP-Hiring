@@ -18,6 +18,7 @@ import {
     buildSopFaqs,
 } from '@/components/ScopeOfPracticeData';
 import { getAanpTierDefinition, getAuthorityColor, getAuthorityLabel } from '@/lib/state-practice-authority';
+import { buildFullPracticeAnswer, buildFullPracticeFaq } from '@/lib/full-practice-states';
 // Audit CQ-12: visible byline and Article schema authorship both derive from
 // brand.editorial.author and .reviewer (config/brand.ts), the same wiring as
 // app/blog/[slug]/page.tsx and the /resources guides.
@@ -51,10 +52,27 @@ const ldJson = (obj: unknown): string =>
 // because it also feeds Article JSON-LD `image`.
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Scope of Practice by State`)}&type=page`;
 
+/**
+ * The quick answer and its FAQ twin. Both derive from
+ * lib/state-practice-authority.ts through lib/full-practice-states.ts, so the
+ * count, the state list and the AANP vintage are never hand-typed here.
+ */
+const FULL_PRACTICE_ANSWER = buildFullPracticeAnswer();
+const PAGE_URL = `${brand.baseUrl}/scope-of-practice`;
+
+/*
+ * Absolute title: the root layout template appends " | NP Hiring", which
+ * would push the title past 60 characters. It leads with the query sites
+ * disagree on ("full practice authority states").
+ */
+const PAGE_TITLE = `Full Practice Authority States 2026: ${brand.niche.short} Scope by State`;
+
 export const metadata: Metadata = {
-    title: `${brand.niche.short} Scope of Practice by State 2026: All 50 States + DC`,
-    description: `Interactive ${brand.niche.short} scope-of-practice explorer: sort and filter all 50 states + DC by full, reduced, or restricted practice authority, with per-state details, board of nursing links, licensure guides, salary data, and open jobs.`,
+    title: { absolute: PAGE_TITLE },
+    description: `AANP lists ${FULL_PRACTICE_ANSWER.count} full practice states${FULL_PRACTICE_ANSWER.includesDc ? ' plus DC' : ''} for ${brand.niche.short}s. See every state's practice rule, transition hours and board of nursing link.`,
     keywords: [
+        `full practice authority states`,
+        `${brand.niche.short} full practice authority states`,
         `${brand.niche.short} scope of practice by state`,
         `${brand.niche.descriptor} practice authority`,
         `${brand.niche.short} independent practice states`,
@@ -63,17 +81,18 @@ export const metadata: Metadata = {
         `${brand.niche.short} collaborative agreement states`,
     ],
     openGraph: {
-        title: `${brand.niche.short} Scope of Practice by State: 2026 Interactive Explorer`,
-        description: `Sortable, filterable practice-authority classifications for all 50 states + DC, with board links and live per-state pay and job data.`,
+        title: PAGE_TITLE,
+        description: `Sortable, filterable practice authority classifications for all 50 states and DC, with board links and live pay and job data for each state.`,
+        url: PAGE_URL,
         type: 'article',
         images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} scope of practice by state` }],
     },
     twitter: {
         card: 'summary_large_image',
-        title: `${brand.niche.short} Scope of Practice by State 2026`,
+        title: PAGE_TITLE,
         images: [HERO_IMAGE],
     },
-    alternates: { canonical: `${brand.baseUrl}/scope-of-practice` },
+    alternates: { canonical: PAGE_URL },
 };
 
 /**
@@ -119,7 +138,9 @@ const TIER_LEGEND = [
 ];
 
 export default function ScopeOfPracticePage() {
-    const sopFaqs = buildSopFaqs();
+    // One array for the visible FAQ and the FAQPage JSON-LD. The full practice
+    // states entry leads, built from the same answer as the quick answer box.
+    const sopFaqs = [buildFullPracticeFaq(), ...buildSopFaqs()];
 
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -210,6 +231,31 @@ export default function ScopeOfPracticePage() {
                     <div className="mb-8">
                         <EditorialByline variant="hero" />
                     </div>
+
+                    {/* Quick answer: the count and every full practice
+                        jurisdiction by name, derived from the dataset and
+                        attributed to AANP with the map's vintage. The FAQ
+                        entry below (and so FAQPage) carries the same text. */}
+                    <section aria-labelledby="full-practice-states-heading" className="mb-8 md:mb-12">
+                        <div className="rounded-xl p-6 md:p-8 bg-green-50 border border-green-200">
+                            <h2 id="full-practice-states-heading" className="text-2xl font-bold mb-4 text-green-900">
+                                Which states have full practice authority?
+                            </h2>
+                            <p className="mb-4 text-green-900">
+                                {FULL_PRACTICE_ANSWER.summary}
+                            </p>
+                            <p className="mb-4 text-sm text-green-800">
+                                {FULL_PRACTICE_ANSWER.attribution}{' '}
+                                <a href={FULL_PRACTICE_ANSWER.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                                    Open the AANP map
+                                    <ExternalLink className="inline h-3.5 w-3.5 ml-1" aria-hidden="true" />
+                                </a>
+                            </p>
+                            <p className="text-sm text-green-800">
+                                {FULL_PRACTICE_ANSWER.caveat}
+                            </p>
+                        </div>
+                    </section>
 
                     {/* Tier legend */}
                     <div className="mb-8 md:mb-12">

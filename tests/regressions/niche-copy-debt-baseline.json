@@ -119,14 +119,14 @@
   "lib/shortlinks/campaigns.ts": 10,
   "lib/shortlinks/tracker.ts": 1,
   "lib/state-practice-authority.ts": 1,
-  "lib/stats-sources.ts": 2,
+  "lib/stats-sources.ts": 3,
   "lib/utils.ts": 2,
   "lib/utils/job-filter.ts": 4,
   "middleware.ts": 5,
   "next.config.ts": 3,
   "public/.well-known/ai-plugin.json": 1,
   "public/humans.txt": 1,
-  "public/llms-full.txt": 4,
-  "public/llms.txt": 2,
+  "public/llms-full.txt": 12,
+  "public/llms.txt": 8,
   "public/site.webmanifest": 2
 }

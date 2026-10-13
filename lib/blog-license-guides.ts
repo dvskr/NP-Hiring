@@ -1007,7 +1007,7 @@ ${renewalParagraph(s, factRows.length > 0)}
 
 ## What ${NP}s earn in ${s.name}
 
-The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
+The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2035.formatted} (${STAT_SOURCES.blsGrowth2035.source}). ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
 
 ## Frequently asked questions
 

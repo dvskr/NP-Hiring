@@ -166,7 +166,7 @@ export default function FAQPage() {
     },
     {
       question: `What educational background is required for an ${brand.niche.short} role?`,
-      answer: `You need a Bachelor of Science in Nursing (BSN), then a Master's (MSN) or Doctoral (DNP) degree from a CCNE or ACEN accredited ${brand.niche.short} program. You must also pass a national ${brand.niche.short} board certification exam through ANCC or AANP.`
+      answer: `You need a Bachelor of Science in Nursing (BSN), then a Master's (MSN) or Doctoral (DNP) degree from a CCNE or ACEN accredited ${brand.niche.short} program. You must also pass a national ${brand.niche.short} board certification exam through ANCC or AANPCB (the American Academy of Nurse Practitioners Certification Board, operating as NPCB).`
     },
     {
       question: `What is the difference between an ${brand.niche.short} and a physician?`,
@@ -231,7 +231,7 @@ export default function FAQPage() {
     },
     {
       question: `What are the certification requirements for ${brand.niche.short} graduates?`,
-      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass a national board certification exam for your population focus (ANCC or AANP), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority, and create a CAQH ProView profile for insurance credentialing. Board certification must be renewed on your certifying body's cycle, with continuing-education requirements, so check ANCC or AANP for the current terms.`
+      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass a national board certification exam for your population focus (ANCC or AANPCB), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority, and create a CAQH ProView profile for insurance credentialing. Board certification must be renewed on your certifying body's cycle, with continuing-education requirements, so check ANCC or AANPCB for the current terms.`
     },
     {
       question: `What extra certifications can an ${brand.niche.short} get?`,

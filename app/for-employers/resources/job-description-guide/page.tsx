@@ -14,7 +14,7 @@
  *
  * TRUTH RULES: no statistics on this page. Advice is framed as
  * recommendation, never as invented data ("X% more applicants").
- * Certification bodies named correctly (AANP/ANCC for NPs). Article
+ * Certification bodies named correctly (AANPCB/ANCC for NPs). Article
  * dateModified renders the LAST_REVIEWED constant — never new Date(). The
  * only clock read is the launch-promo check for the post-a-job button,
  * which picks a label and dates nothing.
@@ -91,7 +91,7 @@ const JD_ANATOMY = [
   },
   {
     section: 'Required qualifications',
-    advice: `Keep this list short and legally accurate: graduate degree (MSN/DNP) from an accredited program, active national board certification (AANP or ANCC for ${brand.niche.short}s, in the population focus the role serves), active RN and APRN licensure in your state, and DEA registration if the role prescribes. State your real experience requirement explicitly, including "new grads welcome" if that is true.`,
+    advice: `Keep this list short and legally accurate: graduate degree (MSN/DNP) from an accredited program, active national board certification (AANPCB or ANCC for ${brand.niche.short}s, in the population focus the role serves), active RN and APRN licensure in your state, and DEA registration if the role prescribes. State your real experience requirement explicitly, including "new grads welcome" if that is true.`,
   },
   {
     section: 'Preferred qualifications',
@@ -142,7 +142,7 @@ const COMMON_MISTAKES = [
   },
   {
     title: 'Requiring the wrong certification',
-    body: `Certification follows population focus: an acute-care inpatient role and a primary-care clinic role call for different certifications, and both come from AANP or ANCC for ${brand.niche.short}s. Name the population focus you need and let the certification requirement follow from it.`,
+    body: `Certification follows population focus: an acute-care inpatient role and a primary-care clinic role call for different certifications, and the certifying body follows the track: for example, AANPCB or ANCC for family and adult-gerontology primary care, ANCC or AACN for adult-gerontology acute care, and PNCB for pediatric tracks. Name the population focus you need and let the certification requirement follow from it.`,
   },
   {
     title: 'Burying the practice model',
@@ -158,7 +158,7 @@ const COMMON_MISTAKES = [
 const FAQS = [
   {
     q: `What should a ${brand.niche.short} job description include?`,
-    a: `Nine sections: about your organization, a position summary (setting, population focus, EHR, team), key responsibilities as scannable bullets, required qualifications (MSN/DNP, AANP or ANCC board certification in the population focus, state RN/APRN licensure, DEA if prescribing), preferred qualifications kept separate, the real schedule including call, compensation with a posted salary range and clinician-relevant benefits, a short why-join-us section naming what makes the role different, and how to apply with your response window.`,
+    a: `Nine sections: about your organization, a position summary (setting, population focus, EHR, team), key responsibilities as scannable bullets, required qualifications (MSN/DNP, AANPCB or ANCC board certification in the population focus, state RN/APRN licensure, DEA if prescribing), preferred qualifications kept separate, the real schedule including call, compensation with a posted salary range and clinician-relevant benefits, a short why-join-us section naming what makes the role different, and how to apply with your response window.`,
   },
   {
     q: `Should I include a salary range in my ${brand.niche.short} job posting?`,

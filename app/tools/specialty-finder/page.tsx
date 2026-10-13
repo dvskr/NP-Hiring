@@ -27,6 +27,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Compass, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import SpecialtyFinderQuiz from '@/components/tools/SpecialtyFinderQuiz';
 import {
@@ -40,9 +41,12 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 
 const PAGE_PATH = '/tools/specialty-finder';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
-const PAGE_TITLE = `${brand.niche.short} Specialty Finder: Match Your Preferences to a Specialty`;
-const PAGE_DESCRIPTION = `Answer ${QUIZ_QUESTION_COUNT} questions about patient population, acuity, setting, autonomy, procedures, and schedule, and see which of ${SPECIALTY_PROFILES.length} ${brand.niche.short} and advanced practice specialties match what you said you want. A preference sort, not an aptitude test.`;
-const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Specialty Finder`)}&type=page`;
+// Search demand is phrased as a quiz ("np specialty quiz", "which np specialty
+// is right for me quiz"; research/seo-tools.md, 2026-10-06), so the title and
+// H1 say quiz. The "preference sort, not an aptitude test" line stays.
+const PAGE_TITLE = `Which ${brand.niche.short} Specialty Is Right for Me? ${QUIZ_QUESTION_COUNT}-Question Quiz`;
+const PAGE_DESCRIPTION = `Free ${QUIZ_QUESTION_COUNT}-question ${brand.niche.short} specialty quiz on patient population, acuity, setting, autonomy, procedures, and schedule. See which of ${SPECIALTY_PROFILES.length} ${brand.niche.short} and advanced practice specialties match what you want. A preference sort, not an aptitude test.`;
+const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Specialty Quiz`)}&type=page`;
 
 const DIMENSION_LIST = QUIZ_QUESTIONS.map((question) => question.dimension.toLowerCase()).join(', ');
 
@@ -123,7 +127,7 @@ export default function SpecialtyFinderPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            applicationCategory: 'EducationalApplication',
+            applicationCategory: toolApplicationCategory(PAGE_PATH),
             operatingSystem: 'Any',
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,
@@ -159,7 +163,7 @@ export default function SpecialtyFinderPage() {
               Free Tool
             </p>
             <h1 className="font-lora" style={{ fontSize: 'clamp(2rem, 4.4vw, 2.9rem)', fontWeight: 800, lineHeight: 1.12, color: '#1A2E35', margin: '0 0 16px' }}>
-              Which specialty fits what you actually want?
+              Which {brand.niche.short} specialty is right for me? Take the {QUIZ_QUESTION_COUNT}-question quiz
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               {QUIZ_QUESTION_COUNT} questions about the things that genuinely differ between specialties: who your

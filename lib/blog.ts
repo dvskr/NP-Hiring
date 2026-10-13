@@ -190,6 +190,22 @@ export function mergeListingWithFallbackPosts(
 }
 
 /**
+ * The /blog grid order: authored posts (DB rows and .mdx files) first, then
+ * the license-guide series, each part keeping its incoming newest-first order.
+ *
+ * WHY (SEO release 2026-10): sorted together by date, the 51 guides share
+ * 2026-07-29 with authored posts and sat ahead of them, pushing the core
+ * application guides to ?page=5 and ?page=6, which answer noindex, follow.
+ * The licensure band on /blog links every live guide on every page, so the
+ * guides lose nothing by following the authored posts. A stable partition of
+ * the same rows, so the index, the count and the sitemap still agree.
+ */
+export function authoredPostsBeforeLicenseGuides<T extends Pick<BlogPost, 'slug'>>(rows: readonly T[]): T[] {
+    const isGuide = (row: T) => LICENSE_GUIDE_SLUG_REGEX.test(row.slug);
+    return [...rows.filter((row) => !isGuide(row)), ...rows.filter(isGuide)];
+}
+
+/**
  * Authored content/blog/*.mdx posts that are live WITHOUT a blog_posts row,
  * restricted to a blog index category filter.
  *
@@ -277,7 +293,7 @@ export async function getPublishedPosts(
     const licenseSlugs = includeGuides ? licenseGuideFallbackSlugs(licenseDbSlugs) : [];
     const withGuides = mergeListingWithLicenseGuides(rows, licenseSlugs);
     const merged = mergeListingWithFallbackPosts(withGuides, mdxFallbackPosts(mdxDbSlugs, category));
-    return merged.slice(offset, offset + limit);
+    return authoredPostsBeforeLicenseGuides(merged).slice(offset, offset + limit);
 }
 
 export async function getPostCount(category?: string): Promise<number> {

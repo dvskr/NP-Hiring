@@ -228,7 +228,7 @@ describe('P2 #9 — /press derives its numbers instead of stating them', () => {
         expect(pressPage).not.toContain("'use client'");
         expect(pressPage).toContain("from '@/lib/stats-sources'");
         expect(pressPage).toContain('STAT_SOURCES.averageSalary');
-        expect(pressPage).toContain('STAT_SOURCES.blsGrowth2034');
+        expect(pressPage).toContain('STAT_SOURCES.blsGrowth2035');
         expect(pressPage).toContain('STAT_SOURCES.hrsaShortagePopulation');
         expect(pressPage).toContain('STAT_SOURCES.fullPracticeStates');
         expect(pressPage).toContain('STATS_LAST_REVIEWED');

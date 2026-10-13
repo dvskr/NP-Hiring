@@ -131,7 +131,7 @@ export default function EditorialPolicyPage() {
     // in that file; this table follows automatically.
     const dataSourceRows = [
         { label: `Median ${brand.niche.short} salary`, stat: STAT_SOURCES.averageSalary },
-        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2034 },
+        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2035 },
         { label: 'Primary-care shortage population', stat: STAT_SOURCES.hrsaShortagePopulation },
         { label: 'Full Practice Authority states', stat: STAT_SOURCES.fullPracticeStates },
     ];
@@ -360,7 +360,7 @@ export default function EditorialPolicyPage() {
                     </p>
                     <p style={{ marginTop: '10px' }}>
                         Where certification is discussed, we attribute it to the correct certifying body
-                        per specialty: AANP or ANCC for {brand.niche.short} certification, NBCRNA for
+                        per specialty: AANPCB (operating as NPCB) or ANCC for {brand.niche.short} certification, NBCRNA for
                         nurse anesthetists, and AMCB for certified nurse-midwives.
                     </p>
                 </Section>

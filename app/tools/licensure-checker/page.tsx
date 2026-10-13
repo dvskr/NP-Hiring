@@ -34,6 +34,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, ClipboardCheck, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import LicensureChecker from '@/components/LicensureChecker';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import MultiStatePlanner, { type PlannerState } from '@/components/tools/MultiStatePlanner';
@@ -231,7 +232,7 @@ export default async function LicensureCheckerToolPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            applicationCategory: 'BusinessApplication',
+            applicationCategory: toolApplicationCategory(PAGE_PATH),
             operatingSystem: 'Any',
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,

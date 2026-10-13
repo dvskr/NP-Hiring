@@ -147,7 +147,17 @@ const AI_CRAWLERS = [
   // treating the entire site as off-limits (no explicit Allow: / line to
   // disambiguate). 'anthropic-ai' (legacy UA) and 'Claude-Web' stay here.
   'anthropic-ai',      // Anthropic crawler (legacy UA)
-  'Claude-Web',        // Claude.ai web fetcher
+  'Claude-Web',        // Claude.ai web fetcher (legacy UA)
+  // Anthropic's two current non-training agents, confirmed 2026-10-06 on
+  // Anthropic's crawler documentation (support.claude.com article 8896518,
+  // "Does Anthropic crawl data from the web, and how can site owners block
+  // the crawler?", dated 2026-04-07): Claude-SearchBot indexes pages to
+  // improve Claude's search results, and Claude-User fetches a page when a
+  // Claude user asks about it. Both honor robots.txt. They sit in this group
+  // (explicit Allow: / plus the PUBLIC_ALLOW carve-outs) rather than in the
+  // ClaudeBot block, which keeps a single-agent userAgent on purpose.
+  'Claude-SearchBot',  // Anthropic search index
+  'Claude-User',       // Claude live fetch on a user's request
   'Google-Extended',   // Google AI/Gemini training
   'Bytespider',        // ByteDance / TikTok AI
   'CCBot',             // Common Crawl
@@ -212,9 +222,15 @@ export default function robots(): MetadataRoute.Robots {
       // followed by a tight disallow list covering only the auth-private
       // surfaces. Placed FIRST in the rules array so any parser scanning
       // top-down sees it before the catch-all `*`.
+      //
+      // PUBLIC_ALLOW carve-outs (2026-10-06): the block disallowed /api/
+      // with nothing longer to out-match it, so ClaudeBot could not read
+      // the sitemap index (/api/sitemaps/index, the only Sitemap line
+      // below) or the /api/og share images. Same longest-match fix as the
+      // `*`, AI and social groups; the explicit root Allow stays first.
       {
         userAgent: 'ClaudeBot',
-        allow: '/',
+        allow: ['/', ...PUBLIC_ALLOW],
         disallow: [
           '/api/',
           '/admin',

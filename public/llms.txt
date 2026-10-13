@@ -1,10 +1,10 @@
 # NP Hiring
 
-> A specialized job board for Nurse Practitioners: every NP specialty, all 50 US states, and salary shown whenever the source provides it.
+> A specialized US job board for Nurse Practitioners of every specialty plus CRNAs, CNMs and CNSs, with salary shown whenever the employer's posting provides it and free career guides and tools.
 
 ## What We Do
 
-NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job postings from employer applicant-tracking systems into one dedicated platform. We cover every NP specialty (FNP, AGNP, PNP, NNP, WHNP, ACNP, PMHNP) plus the wider APRN cohort (CRNA, CNM, CNS), with job alerts and career resources built for NPs.
+NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job postings from employer applicant-tracking systems into one dedicated platform. We cover every NP specialty (FNP, AGNP, PNP, NNP, WHNP, ACNP, PMHNP) plus the wider APRN cohort (CRNA, CNM, CNS), with job alerts, career guides and free tools built for NPs.
 
 ## Coverage
 
@@ -14,12 +14,21 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
   https://nphiring.com/api/sitemaps/index
 - 8 ATS sources (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable), refreshed daily
 - 45 category hubs across seven taxonomy axes: setting, job type, specialty, APRN role, experience level, employer type, and population served
-- All 50 US states + DC, with per-state job hubs and per-state salary pages
-- City-level pages for every category across ~4,000 US cities
+- State, city and category pages are generated from live listings and published where their data passes the site's quality gates. A page below its gate answers noindex or is not published, so the sitemap index is the authoritative list of indexable pages
+- State salary pages show a state median only where enough postings with disclosed pay, from enough employers, support one
 - Salary is shown whenever the employer's posting provides it; we do not estimate or fabricate pay for an individual listing
 - Cited statistics on our pages carry a named source and an as-of date
 - 100% free for job seekers
 - Founded in 2026
+
+## Key Facts
+
+Canonical figures, as cited across the site (last verified 2026-10-06):
+
+- NP median annual wage: $132,300 (BLS Occupational Employment and Wage Statistics, Nurse Practitioners, SOC 29-1171, May 2025)
+- Projected NP employment growth: 41% from 2025 to 2035 (BLS Employment Projections, 2025 to 2035 cycle, released August 2026)
+- Full practice authority for NPs: 27 states + DC (AANP State Practice Environment, map updated May 2026)
+- People living in primary care shortage areas: 100 million+ (HRSA Designated HPSA Quarterly Summary, primary care HPSAs as of September 30, 2026)
 
 ## Who We Serve
 
@@ -43,10 +52,11 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 ### Core
 - /jobs: Main NP job board (supports ?q= keyword search)
 - /jobs/locations: Browse jobs by state
-- /salary-guide: NP salary guide, with a page per state
+- /salary-guide: NP salary guide: the national median, plus state medians where enough disclosed pay supports one
 - /salary-guide/specialty: NP salary by specialty
+- /for-job-seekers: Job search hub with the application guides
 - /blog: Career guides, licensure guides, and industry insights
-- /resources: Career resources and tools
+- /resources: Career resources, state licensure guides and tools
 - /job-alerts: Set up email alerts for new NP jobs
 - /companies: Employers with active listings
 - /faq: Frequently asked questions
@@ -54,11 +64,75 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 - /editorial-policy: How our content is researched, sourced, and reviewed
 - /security: Security posture and vulnerability disclosure
 
-### Guides
+### Practice and contract references
 - /resources/1099-vs-w2: 1099 vs W-2 for nurse practitioners
 - /resources/fpa-guide: What full practice authority means
 - /scope-of-practice: Practice authority rules by state
 - /resources/private-practice-guide: Starting an NP private practice
+
+### Guides
+
+#### Becoming an NP and the profession
+- /blog/how-to-become-a-nurse-practitioner: You become an NP by earning an RN license, completing an accredited graduate NP program in one population focus, passing a national certification exam and getting an APRN license from your state board.
+- /blog/what-is-an-aprn: An APRN is a graduate-prepared registered nurse licensed in one of four roles (nurse practitioner, nurse anesthetist, nurse-midwife or clinical nurse specialist), so every NP is an APRN but not every APRN is an NP.
+- /blog/nurse-practitioner-job-outlook: BLS projects NP employment to grow 41% from 2025 to 2035, while HRSA projects national NP supply above demand, so prospects depend heavily on location.
+- /blog/how-to-evaluate-np-programs: Verify an NP program's accreditation in the accreditor's own directory first, then ask who finds your clinical placements; the guide names no schools.
+- /blog/np-preceptor-guide: A preceptor supervises your clinical hours at an approved site, and the question to settle before enrolling is whether the program or the student must find one.
+- /blog/np-student-loan-limits-professional-degree: As of October 6, 2026, NP MSN and DNP programs count as professional degrees for federal loan limits only because of a June 24, 2026 court stay.
+
+#### Specialties and certification
+- /blog/fnp-vs-pmhnp-vs-agacnp: Choose FNP for breadth across primary care, PMHNP for psychiatric prescribing and telehealth flexibility, and AGACNP for hospital-based acute care.
+- /blog/agacnp-vs-agpcnp: The two adult-gerontology tracks serve the same adults and split on acuity: AGACNP for acute and critical illness, AGPCNP for primary and chronic care.
+- /blog/np-certification-overview: Your population focus decides your certification exam; the guide maps each major NP and APRN track to its credential and certifying body.
+- /blog/fnp-certification-aanp-vs-ancc: FNP-C comes from AANPCB (now operating as NPCB) and FNP-BC from ANCC; both certify the same population focus, so check which your state board accepts.
+- /blog/pmhnp-certification-guide: PMHNP-BC comes from ANCC and, since 2024, PMHNP-C from AANPCB (now operating as NPCB); both certify the same population focus.
+- /blog/np-ceu-requirements-by-state: NP continuing education runs on two separate clocks, state license renewal and national certification, and the guide links all 51 boards for the current rules.
+
+#### Job search
+- /blog/new-grad-np-first-job: Most new grad NP jobs come from employers that train beginners: fellowships and residencies, community health centers, VA medical centers and large group practices.
+- /blog/np-fellowship-residency-programs: NP fellowship and residency programs are optional postgraduate programs that move a new NP into practice with mentoring and protected learning time.
+- /blog/np-resume-guide: An NP resume should use one column, standard headings and a credentials block above experience that names license type, state, certification and certifying body.
+- /blog/np-cover-letter-guide: An NP cover letter should run four short paragraphs that explain why this employer, why now and how your background fits its patients.
+- /blog/np-interview-questions: NP interviews test clinical judgment, behavior under pressure, scope of practice and logistics; the guide gives 40 questions with sample answers.
+- /blog/non-clinical-nurse-practitioner-jobs: Non-clinical NP jobs include utilization review, chart review, case management, pharma, research, informatics and teaching, each with its own requirements.
+- /blog/remote-telehealth-np-jobs-guide: Telehealth NPs need an APRN license in each state where patients are located, and the guide gives the Medicare and DEA telehealth rules as of October 2026.
+
+#### Pay and contracts
+- /blog/np-salary-guide: NP pay moves with five factors (state, practice setting, specialty, employment structure and practice authority), and the guide shows how to spot each in a posting.
+- /blog/highest-paying-np-specialties: CRNAs top APRN pay, and inpatient, emergency and acute care NP roles generally pay more than outpatient primary care.
+- /blog/np-salary-negotiation-guide: Negotiate the whole package: get the employer's range first, anchor on state data, and treat CME, PTO, malpractice tail and productivity terms as negotiable.
+- /blog/np-1099-vs-w2: A 1099 NP offer is a business contract, so check payment terms, guaranteed volume, malpractice tail, termination and any noncompete before signing.
+- /blog/nurse-practitioner-noncompete-laws: As of October 2026 there is no federal noncompete ban, so enforceability depends on state law, and several states now void or limit noncompetes for NPs.
+
+#### Licensure, prescribing and practice
+- /blog/aprn-compact-states: As of October 6, 2026, four states have enacted the APRN Compact and seven are needed, so no NP holds a multistate APRN license yet.
+- /blog/can-nurse-practitioners-prescribe-controlled-substances: Yes, NPs can prescribe controlled substances when their state grants that authority and they hold a DEA registration for that state, within state limits.
+- /blog/np-credentialing-checklist: Credentialing, privileging and payer enrollment are three separate processes with three owners, and the checklist lists every document to assemble.
+- /blog/np-malpractice-insurance-guide: An NP malpractice policy's value turns on its form (occurrence or claims-made) and whose interest it was bought to protect.
+
+#### For employers
+- /blog/nurse-practitioner-week-2026: National Nurse Practitioner Week 2026 runs November 8 to 14 (AANP), with recognition ideas NPs value.
+
+### Tools
+- /tools: All free NP tools and calculators
+- /tools/1099-vs-w2-calculator: Compares a contract rate with a salaried offer after self-employment tax, your federal bracket, expenses and self-funded benefits
+- /tools/cost-of-living-comparison: Compares posted pay in two cities and what each salary is worth in national-average dollars
+- /tools/licensure-checker: Practice authority, licensure steps and live pay for any state, with a multi-state planner
+- /tools/salary-benchmark: Median and 25th to 75th percentile posted pay by state, for employers checking an offer
+- /tools/specialty-finder: An eight-question quiz that matches your preferences to NP specialties
+- /tools/private-practice-revenue-calculator: Works visits, collections and overhead through to net income before tax for a private practice
+- /tools/cost-per-hire-calculator: Compares a flat-fee posting with sponsored ads and an agency fee on your own numbers
+
+### Comparisons
+- /compare: Dated, source-checked comparisons of NP Hiring with other NP job boards
+- /compare/np-hiring-vs-indeed: NP Hiring vs Indeed on focus, pricing, salary data and tools
+- /compare/np-hiring-vs-aanp-jobcenter: NP Hiring vs the AANP JobCenter on access model, pricing, salary resources and tools
+- /compare/np-hiring-vs-enp-network: NP Hiring vs ENP Network on networks, pay transparency, pricing and tools
+
+### Reports
+- /reports: Data reports built from NP Hiring's own job postings
+- /reports/state-of-np-hiring-2026: What active NP postings show about specialty demand, geography, work mode and advertised pay, with sample limits stated
+- /reports/pay-transparency: The live share of active postings that disclose a pay range
 
 ### For employers
 - /post-job: Post an NP job listing
@@ -69,7 +143,7 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 - /pricing: Listing options
 - /for-programs: For NP program directors
 
-### Category hubs (all live at /jobs/<slug>)
+### Category hubs (all live at /jobs/<slug>; each is indexable only while its listings pass the quality gates)
 - Setting: /jobs/remote, /jobs/telehealth, /jobs/inpatient, /jobs/outpatient, /jobs/travel, /jobs/urgent-care, /jobs/home-health
 - Job type: /jobs/full-time, /jobs/part-time, /jobs/contract, /jobs/per-diem, /jobs/locum-tenens, /jobs/1099
 - Specialty: /jobs/family-practice, /jobs/adult-gerontology, /jobs/pediatric, /jobs/neonatal, /jobs/women-health, /jobs/acute-care, /jobs/emergency, /jobs/psychiatric-mental-health, /jobs/oncology, /jobs/cardiology, /jobs/primary-care, /jobs/hospitalist, /jobs/dermatology, /jobs/orthopedic, /jobs/aesthetics, /jobs/pain-management, /jobs/palliative-hospice
@@ -85,4 +159,4 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 
 ## More Info
 
-For comprehensive details, see: https://nphiring.com/llms-full.txt
+For guide summaries, tool methods and fuller detail, see: https://nphiring.com/llms-full.txt

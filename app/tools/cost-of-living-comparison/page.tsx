@@ -19,6 +19,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, HelpCircle, MapPin } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import CostOfLivingComparator from '@/components/tools/CostOfLivingComparator';
 import {
@@ -188,7 +189,7 @@ export default async function CostOfLivingComparisonPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            applicationCategory: 'FinanceApplication',
+            applicationCategory: toolApplicationCategory(PAGE_PATH),
             operatingSystem: 'Any',
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,
@@ -224,7 +225,7 @@ export default async function CostOfLivingComparisonPage() {
               Free Tool
             </p>
             <h1 className="font-lora" style={{ fontSize: 'clamp(2rem, 4.4vw, 2.9rem)', fontWeight: 800, lineHeight: 1.12, color: '#1A2E35', margin: '0 0 16px' }}>
-              City vs city, in real terms
+              {brand.niche.short} cost-of-living salary comparison: city vs city
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               A $15,000 raise that comes with a 30% jump in living costs is a pay cut. Put two cities side by

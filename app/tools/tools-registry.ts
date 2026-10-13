@@ -32,6 +32,13 @@ export type ToolIconKey =
   | 'building'
   | 'briefcase';
 
+/**
+ * schema.org applicationCategory for the tool's WebApplication markup. Held
+ * here so the hub's `hasPart` and the tool's own page declare the same value
+ * (they disagreed when the hub derived it from the audience).
+ */
+export type ToolApplicationCategory = 'FinanceApplication' | 'BusinessApplication' | 'EducationalApplication';
+
 export interface ToolEntry {
   /** Route path, always rooted at /tools. */
   path: string;
@@ -43,6 +50,7 @@ export interface ToolEntry {
   badge: string;
   audience: ToolAudience;
   icon: ToolIconKey;
+  applicationCategory: ToolApplicationCategory;
 }
 
 export const TOOLS: readonly ToolEntry[] = [
@@ -54,6 +62,7 @@ export const TOOLS: readonly ToolEntry[] = [
     badge: 'Calculator',
     audience: 'seeker',
     icon: 'calculator',
+    applicationCategory: 'FinanceApplication',
   },
   {
     path: '/tools/cost-of-living-comparison',
@@ -63,6 +72,7 @@ export const TOOLS: readonly ToolEntry[] = [
     badge: 'Comparison',
     audience: 'seeker',
     icon: 'scale',
+    applicationCategory: 'FinanceApplication',
   },
   {
     path: '/tools/licensure-checker',
@@ -72,33 +82,37 @@ export const TOOLS: readonly ToolEntry[] = [
     badge: '51 jurisdictions',
     audience: 'seeker',
     icon: 'clipboard',
+    applicationCategory: 'BusinessApplication',
   },
   {
     path: '/tools/salary-benchmark',
-    title: `What should I pay a ${brand.niche.long}?`,
+    title: `What should I pay a ${brand.niche.descriptor}?`,
     blurb:
       'Median and 25th to 75th percentile posted pay by state, from live listings. Check a planned offer against the market before you post it.',
     badge: 'For employers',
     audience: 'employer',
     icon: 'chart',
+    applicationCategory: 'BusinessApplication',
   },
   {
     path: '/tools/specialty-finder',
-    title: `${brand.niche.short} specialty finder`,
+    title: `${brand.niche.short} specialty quiz`,
     blurb:
       'Eight questions on population, acuity, setting, autonomy, procedures, and schedule, followed by the specialties that match what you said you want, with live roles and pay for each.',
     badge: 'Preference sort',
     audience: 'seeker',
     icon: 'compass',
+    applicationCategory: 'EducationalApplication',
   },
   {
     path: '/tools/private-practice-revenue-calculator',
-    title: 'Private practice revenue projector',
+    title: `${brand.niche.short} private practice income calculator`,
     blurb:
       'Visits, collections per visit, and overhead worked through to net before tax, plus a sensitivity table showing what a wrong assumption costs you.',
     badge: 'Illustration',
     audience: 'seeker',
     icon: 'building',
+    applicationCategory: 'FinanceApplication',
   },
   {
     path: '/tools/cost-per-hire-calculator',
@@ -108,8 +122,21 @@ export const TOOLS: readonly ToolEntry[] = [
     badge: 'For employers',
     audience: 'employer',
     icon: 'briefcase',
+    applicationCategory: 'BusinessApplication',
   },
 ];
+
+/**
+ * The registry's applicationCategory for a tool path, so a tool page's own
+ * WebApplication markup and the hub's `hasPart` cannot disagree. Throws on an
+ * unregistered path: a page calling it with a typo should fail its build, not
+ * ship markup with no category.
+ */
+export function toolApplicationCategory(toolPath: string): ToolApplicationCategory {
+  const tool = TOOLS.find((entry) => entry.path === toolPath);
+  if (!tool) throw new Error(`No registered tool at ${toolPath}`);
+  return tool.applicationCategory;
+}
 
 /** Every tool path, for sitemap and link-integrity checks. */
 export const TOOL_PATHS: readonly string[] = TOOLS.map((tool) => tool.path);

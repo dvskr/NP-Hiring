@@ -340,7 +340,7 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
     });
 
     it('every stat whose sourceUrl is a moving "current" link documents the drift', () => {
-        // Review finding: blsGrowth2034 documented that its OOH link always
+        // Review finding: blsGrowth2035 documented that its OOH link always
         // shows the LATEST cycle, but averageSalary carried the identical
         // hazard (bls.gov/oes/CURRENT/) with no mention of it — so the
         // citation can silently start naming a vintage the link no longer
@@ -357,7 +357,7 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
     });
 
     it('the growth stat names its projection cycle wherever it renders', () => {
-        expect(STAT_SOURCES.blsGrowth2034.source).toContain('2024 to 2034');
+        expect(STAT_SOURCES.blsGrowth2035.source).toContain('2025 to 2035');
     });
 });
 
@@ -383,7 +383,7 @@ describe('P2 #10 — the isEstimate hedge is enforced in DATA, not in a helper n
             ).toBe(true);
         }
         expect(STAT_SOURCES.hrsaShortagePopulation.isEstimate).toBe(true);
-        expect(STAT_SOURCES.hrsaShortagePopulation.formatted).toBe('90 million+');
+        expect(STAT_SOURCES.hrsaShortagePopulation.formatted).toBe('100 million+');
     });
 
     it('a non-estimate is never hedged, so the flag stays meaningful', () => {

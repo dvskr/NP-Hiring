@@ -156,15 +156,15 @@ describe('truth rules', () => {
                 expect(body, `${slug}: median cited without BLS attribution`).toMatch(/BLS/);
                 expect(body, `${slug}: median cited without its vintage`).toContain('May 2025');
             }
-            if (/40%/.test(body)) {
-                expect(STAT_SOURCES.blsGrowth2034.formatted).toBe('40%');
+            if (/41%/.test(body)) {
+                expect(STAT_SOURCES.blsGrowth2035.formatted).toBe('41%');
             }
             if (body.includes('27 states + DC')) {
                 expect(STAT_SOURCES.fullPracticeStates.formatted).toBe('27 states + DC');
                 expect(body, `${slug}: FPA count cited without AANP attribution`).toMatch(/AANP/);
             }
-            if (body.includes('90 million+')) {
-                expect(STAT_SOURCES.hrsaShortagePopulation.formatted).toBe('90 million+');
+            if (body.includes('100 million+')) {
+                expect(STAT_SOURCES.hrsaShortagePopulation.formatted).toBe('100 million+');
                 expect(body, `${slug}: HPSA stat must say primary care (source is primary-care HPSA)`).toMatch(/primary.care/i);
                 expect(body, `${slug}: HPSA stat cited without HRSA attribution`).toMatch(/HRSA/);
             }

@@ -11,6 +11,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, BarChart3, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
@@ -34,9 +35,11 @@ export const revalidate = 3600;
 
 const PAGE_PATH = '/tools/salary-benchmark';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
-const PAGE_TITLE = `What Should I Pay a ${brand.niche.long}? Salary Benchmark by State`;
+// 60 characters or fewer with the layout's " | <brand>" suffix, so the title
+// is not cut in results (research/seo-tools.md, 2026-10-06).
+const PAGE_TITLE = `${brand.niche.short} Salary Benchmark by State for Employers`;
 const PAGE_DESCRIPTION = `Free salary benchmark for employers hiring ${brand.niche.descriptor}s: median and 25th to 75th percentile posted pay by state, from live listings. Check a planned offer against the market before you post.`;
-const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`What should I pay a ${brand.niche.long}?`)}&type=page`;
+const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`What should I pay a ${brand.niche.descriptor}?`)}&type=page`;
 
 export const metadata: Metadata = {
   // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
@@ -100,7 +103,7 @@ export default function SalaryBenchmarkPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            applicationCategory: 'BusinessApplication',
+            applicationCategory: toolApplicationCategory(PAGE_PATH),
             operatingSystem: 'Any',
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,
@@ -136,7 +139,7 @@ export default function SalaryBenchmarkPage() {
               Free Tool · For Employers
             </p>
             <h1 className="font-lora" style={{ fontSize: 'clamp(2rem, 4.4vw, 2.9rem)', fontWeight: 800, lineHeight: 1.12, color: '#1A2E35', margin: '0 0 16px' }}>
-              What should I pay a {brand.niche.long}?
+              What should I pay a {brand.niche.descriptor}?
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               Median and 25th to 75th percentile posted pay by state, straight from live listings. Pick a state,

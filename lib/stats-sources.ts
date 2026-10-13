@@ -11,16 +11,25 @@
 //     in config/niche/stats.ts now DERIVE from this entry (they had been
 //     retuned to an earlier OEWS vintage), so the two families cannot
 //     disagree again. app/salary-guide/page.tsx also reads this entry.
-//   - blsGrowth2034 (formerly blsGrowth2032): 40% — the BLS Employment
-//     Projections NP-specific 2024–2034 figure (40.1%, rounded), which the
-//     CAREER_PULSE_STATS pebble in config/niche/stats.ts mirrors.
+//   - blsGrowth2035 (formerly blsGrowth2034, before that blsGrowth2032):
+//     41% — the BLS Employment Projections NP-specific 2025–2035 figure
+//     (41.0%), which the CAREER_PULSE_STATS pebble in config/niche/stats.ts
+//     mirrors.
 //     REFRESHED 2026-08-21 (live-review item 5): the entry had carried the
-//     stale 2022–2032 cycle's 45%.
+//     stale 2022–2032 cycle's 45%; it moved to the 2024–2034 cycle's 40%.
+//     REFRESHED 2026-10-06: BLS released the 2025–2035 cycle on 2026-08-27
+//     (USDL-26-1422). The key was renamed blsGrowth2034 → blsGrowth2035 and
+//     every "2024 to 2034" / "through 2034" string in page copy and in the
+//     hand-typed MDX posts moved to "2025 to 2035" / "through 2035" with it.
 //   - hrsaShortagePopulation: the donor's mental-health-HPSA figure was
 //     replaced with the PRIMARY-CARE HPSA population (the NP-relevant
 //     shortage stat). Flagged `isEstimate` — see the entry. Any page copy
 //     still describing this stat as a behavioral-health designation must
 //     say "primary care".
+//     REFRESHED 2026-10-06: the floor moved from "90 million+" to
+//     "100 million+" after the FY2026 Q4 Designated HPSA Quarterly Summary
+//     (as of 2026-09-30) reported 102,257,076 people in 8,830 primary care
+//     HPSAs.
 //   - fullPracticeStates: verified against AANP (27 states + DC, 2025).
 //     RE-VERIFIED 2026-09-25: the count still reads 27 states + DC on the
 //     AANP State Practice Environment map marked "Updated: 05/2026", and it
@@ -113,7 +122,7 @@ export interface StatSource {
 }
 
 /** When the stats in this file were last verified against their sources. */
-export const STATS_LAST_REVIEWED = '2026-08-21';
+export const STATS_LAST_REVIEWED = '2026-10-06';
 
 export const STAT_SOURCES = {
     /** Median annual NP salary, US-wide (BLS OEWS, all nurse practitioners). */
@@ -134,7 +143,7 @@ export const STAT_SOURCES = {
             'annual median). The prior vintage was May 2024, $129,210. On that ' +
             'date the /oes/current/ page answered with the OEWS table directory, ' +
             'which links the May 2025 national data. LINK-DRIFT HAZARD (same one documented ' +
-            'on blsGrowth2034): sourceUrl points at /oes/current/, which BLS ' +
+            'on blsGrowth2035): sourceUrl points at /oes/current/, which BLS ' +
             'repoints to the LATEST release every year — so this entry and the ' +
             'link a reader clicks drift apart silently, and the citation starts ' +
             'naming a vintage the page no longer shows. Re-check it whenever BLS ' +
@@ -184,40 +193,52 @@ export const STAT_SOURCES = {
 
     /**
      * BLS-projected employment growth for nurse practitioners, stated for
-     * the projection cycle named in `source` (NP-specific 2024–2034
-     * projection: 40.1%, rounded to 40%).
+     * the projection cycle named in `source` (NP-specific 2025–2035
+     * projection: 41.0%).
      *
      * The cycle is spelled out in `source` deliberately: consumers render
      * it alongside the number, so a reader always sees which projection
-     * round the 40% belongs to rather than assuming it is current.
+     * round the 41% belongs to rather than assuming it is current.
      *
      * NOTE: the OOH page groups nurse anesthetists, nurse midwives, and
-     * nurse practitioners into one occupation and shows 35% (2024–2034)
+     * nurse practitioners into one occupation and shows 36% (2025–2035)
      * for the combined group. This entry deliberately carries the
      * NP-SPECIFIC (SOC 29-1171) figure from the Employment Projections
-     * program tables — 40.1% — because every consumer renders it as
-     * "growth for nurse practitioners". Do not "correct" it to 35%.
+     * program tables — 41.0% — because every consumer renders it as
+     * "growth for nurse practitioners". Do not "correct" it to 36%.
      */
-    blsGrowth2034: {
-        value: '40',
-        formatted: '40%',
-        source: 'BLS Employment Projections, Nurse Practitioners (2024 to 2034)',
-        sourceUrl: 'https://www.bls.gov/ooh/healthcare/nurse-anesthetists-nurse-midwives-and-nurse-practitioners.htm',
-        asOf: '2025-09',
+    blsGrowth2035: {
+        value: '41',
+        formatted: '41%',
+        source: 'BLS Employment Projections, Nurse Practitioners (2025 to 2035)',
+        sourceUrl: 'https://www.bls.gov/emp/tables/fastest-growing-occupations.htm',
+        asOf: '2026-08',
         vintageNote:
-            'Refreshed 2026-08-21 from the 2024–34 Employment Projections cycle ' +
-            '(released September 2025): NP-specific growth 40.1%, rounded to 40%, ' +
-            'corroborated by the BLS Monthly Labor Review projections-overview ' +
-            'article (2026) and the OOH combined-occupation page (35% for nurse ' +
-            'anesthetists + midwives + NPs together). BLS publishes a new cycle ' +
-            'roughly annually, and the OOH page at sourceUrl always shows the ' +
-            'LATEST cycle — so this entry and its link drift apart over time. To ' +
+            'Refreshed 2026-10-06 to the 2025–35 Employment Projections cycle, ' +
+            'released 2026-08-27 (news release USDL-26-1422, ' +
+            'https://www.bls.gov/news.release/ecopro.nr0.htm). Read that day: the ' +
+            'release says nurse practitioners are projected to have the fastest ' +
+            'employment growth of all detailed occupations (+41.0 percent); the ' +
+            'Employment Projections fastest-growing table at sourceUrl gives SOC ' +
+            '29-1171 employment of 336,300 in 2025 and 474,100 in 2035 (+137,800, ' +
+            '41.0%); the OOH combined page for nurse anesthetists, nurse midwives ' +
+            'and nurse practitioners (modified 2026-08-27) shows 36% for the ' +
+            'three together (399,000 to 543,000, about 32,200 openings a year). ' +
+            'HISTORY: the 2024–34 cycle (released September 2025) gave the ' +
+            'NP-specific projection as 40.1 percent, carried here rounded to 40 ' +
+            'percent from 2026-08-21 to 2026-10-06 under the previous key name ' +
+            '(see the header changelog), with the OOH combined group at 35 ' +
+            'percent; before that the entry carried the stale 2022–32 cycle. ' +
+            'LINK-DRIFT ' +
+            'HAZARD: BLS publishes a new cycle roughly annually, and both the ' +
+            'Employment Projections tables and the OOH page always show the ' +
+            'LATEST cycle, so this entry and its link drift apart over time. To ' +
             'refresh: read the current NP-specific projection, then update ' +
-            'value/formatted/source/asOf here, the key name (blsGrowth2034), the ' +
+            'value/formatted/source/asOf here, the key name (blsGrowth2035), the ' +
             'CAREER_PULSE_STATS pebble in config/niche/stats.ts, and every ' +
-            '"through 2034" / "from 2024 to 2034" string in page copy TOGETHER ' +
-            '(tests/regressions/p9-claims-promises-review5.test.ts pins the ' +
-            'vintage strings).',
+            '"through 2035" / "from 2025 to 2035" string in page copy and in ' +
+            'content/blog TOGETHER (tests/regressions/p9-claims-promises-review5.test.ts ' +
+            'pins the vintage strings and bans the retired ones).',
     },
 
     /**
@@ -227,23 +248,34 @@ export const STAT_SOURCES = {
      * must say "primary care").
      *
      * Flagged `isEstimate`: HRSA re-publishes this figure every quarter as
-     * designations are added and withdrawn, so "90 million+" is carried as
+     * designations are added and withdrawn, so "100 million+" is carried as
      * a floor rather than a point value, and `formatted` keeps the "+" so
      * the floor reads as a floor wherever it renders.
      */
     hrsaShortagePopulation: {
-        value: '90000000',
-        formatted: '90 million+',
+        value: '100000000',
+        formatted: '100 million+',
         source: 'HRSA Bureau of Health Workforce, Designated HPSA Quarterly Summary (primary care)',
-        sourceUrl: 'https://data.hrsa.gov/topics/health-workforce/shortage-areas',
-        asOf: '2025',
+        sourceUrl: 'https://data.hrsa.gov/Default/GenerateHPSAQuarterlyReport',
+        asOf: '2026-09',
         isEstimate: true,
         vintageNote:
-            'Quarterly-moving figure published on a live HRSA dashboard, not in ' +
-            'repo data. Kept as a conservative floor. To refresh: read the ' +
-            'current primary-care HPSA population from sourceUrl and set ' +
-            'value/formatted/asOf; drop isEstimate only if the exact ' +
-            'current-quarter figure is pinned rather than a floor.',
+            'Refreshed 2026-10-06 from the official HRSA Designated HPSA Quarterly ' +
+            'Summary PDF served at sourceUrl (Fourth Quarter of Fiscal Year 2026, ' +
+            '"As of September 30, 2026", data as of 10/01/2026, generated October ' +
+            '5, 2026). Table 1, Primary Medical HPSA Totals: 8,830 designations, ' +
+            '102,257,076 people in designated HPSAs. Carried as the conservative ' +
+            'floor "100 million+" because HRSA re-publishes the figure every ' +
+            'quarter. HISTORY: the previous floor was "90 million+" (asOf 2025, ' +
+            'sourceUrl https://data.hrsa.gov/topics/health-workforce/shortage-areas). ' +
+            'The same report gives 154,557,656 people in mental health HPSAs and ' +
+            '78,301,897 in dental HPSAs; neither is this stat. LINK-DRIFT HAZARD: ' +
+            'sourceUrl generates the LATEST quarter on every request, so the link ' +
+            'and this entry drift apart each quarter. To refresh: open sourceUrl, ' +
+            'read Table 1 Primary Medical HPSA Totals, and set value/formatted/' +
+            'asOf; drop isEstimate only if the exact current-quarter figure is ' +
+            'pinned rather than a floor. A floor change must also update the ' +
+            'hand-typed posts in content/blog (grep for "million+").',
     },
 
     /**

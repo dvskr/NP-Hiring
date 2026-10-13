@@ -124,7 +124,12 @@ export const RELATED_BLOG_SLUGS: {
     generalFallback: string[];
 } = {
     always: ['np-salary-guide'],
-    remoteOrTelehealth: ['remote-telehealth-np-jobs-guide'],
+    // The APRN Compact guide follows the remote guide (2026-10-06): a
+    // multi-state telehealth role turns on whether one APRN license can
+    // cover several states, and that post carries the dated compact status.
+    // With `always` taking slot one, a remote or telehealth job page shows
+    // salary, the remote guide and this guide.
+    remoteOrTelehealth: ['remote-telehealth-np-jobs-guide', 'aprn-compact-states'],
     // New grads fill all three slots deterministically (salary → first
     // job → resume): the resume guide is the highest-leverage asset for a
     // candidate whose experience section is rotations, so it is wired
@@ -259,10 +264,15 @@ export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [
         description: 'How state, setting, specialty, employment structure and practice authority move NP pay, and how to spot each one in a posting.',
         href: '/blog/np-salary-guide',
     },
+    // 2026-10-06: the post now says the Nurse Licensure Compact covers RN
+    // and LPN/VN licenses only, so a card that sold "the Nurse Licensure
+    // Compact" as a remote-NP lever misdescribed it. The card carries the
+    // post's own title and its three subjects: a license per patient state,
+    // the dated Medicare and DEA telehealth rules, and pay.
     {
         category: 'Remote Work',
-        title: 'Remote and Telehealth NP Careers',
-        description: 'Licensure across state lines, the Nurse Licensure Compact, and what virtual roles pay.',
+        title: 'Remote and Telehealth NP Jobs: Licensure, Rules and Pay',
+        description: 'Why you need an APRN license in each state where patients are, the Medicare and DEA telehealth rules as of October 2026, and how virtual roles pay.',
         href: '/blog/remote-telehealth-np-jobs-guide',
     },
     {

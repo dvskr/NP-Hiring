@@ -10,6 +10,7 @@
 import { pluralize, isAre } from '@/lib/pseo/plural';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 
 export interface FAQItem {
     question: string;
@@ -26,10 +27,17 @@ export interface FAQItem {
 // NP-specialty slugs used by setting-state pages (full-time, part-time,
 // contract, 1099, locum-tenens, family-practice, adult-gerontology,
 // pediatric, women-health, acute-care, emergency, anesthesia, midwifery).
-// The psych specialty slug remains unmapped: its FAQ copy necessarily names
-// the specialty, which the niche-copy ratchet ceiling for this file
-// (tests/regressions/niche-copy-pseo-support-files.test.ts) does not yet
-// sanction; raise that ceiling before adding it here.
+// The psych specialty slug stayed unmapped at that point because its FAQ
+// copy names the specialty, which the niche-copy ratchet ceiling for this
+// file (tests/regressions/niche-copy-pseo-support-files.test.ts) does not
+// sanction.
+//
+// SEO/AEO/GEO release (2026-10-06): the psych specialty hub is now mapped
+// the way lib/pseo/category-landing-content.ts and city-narrative.ts map
+// it: keyed via PSYCH_SPECIALTY_SLUG from the taxonomy registry, with its
+// label derived from that slug, so this source carries no reference-niche
+// literal and the ratchet ceiling is unchanged. The remote, telehealth and
+// psych hubs share one dated TELEHEALTH_RULES_FAQ entry.
 //
 // P1 #5 landing-page pass (2026-07-29): builders added for the remaining
 // category-landing slugs (urgent-care, home-health, neonatal, oncology,
@@ -97,7 +105,24 @@ export interface CategoryFaqInput {
     customFaqs?: FAQItem[];
 }
 
+/**
+ * Title-case label for a hyphenated slug ("a-b-c" to "A B C"). Used only for
+ * the psych specialty, whose label is derived from the registry slug so the
+ * reference-niche literal stays confined to taxonomy-registry.ts.
+ */
+function labelFromSlug(slug: string): string {
+    return slug
+        .split('-')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
+/** Label of the psych specialty hub, derived from its registry slug. */
+const PSYCH_SPECIALTY_LABEL = PSYCH_SPECIALTY_SLUG ? labelFromSlug(PSYCH_SPECIALTY_SLUG) : '';
+
 export const CATEGORY_LABELS: Record<CategorySlug, string> = {
+    // Spread first so a literal key below can never be shadowed by it.
+    ...(PSYCH_SPECIALTY_SLUG ? { [PSYCH_SPECIALTY_SLUG]: PSYCH_SPECIALTY_LABEL } : {}),
     remote: 'Remote',
     telehealth: 'Telehealth',
     travel: 'Travel',
@@ -153,8 +178,8 @@ const NP_MEDIAN_CITED = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES
 /** "27 states + DC": AANP Full Practice Authority count. */
 const FPA_STATES = STAT_SOURCES.fullPracticeStates.formatted;
 
-/** "40%": BLS-projected NP employment growth, cited. */
-const NP_GROWTH_CITED = `${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source})`;
+/** "41%": BLS-projected NP employment growth, cited. */
+const NP_GROWTH_CITED = `${STAT_SOURCES.blsGrowth2035.formatted} (${STAT_SOURCES.blsGrowth2035.source})`;
 
 /** The cited BLS sentence every NP pay answer carries. */
 const NP_MEDIAN_SENTENCE = `Nationally, ${brand.niche.descriptor}s earn a median annual wage of ${NP_MEDIAN_CITED}.`;
@@ -209,7 +234,65 @@ function aprnPayAnswer(roleLabel: string, variesWith: string, medianSalary?: num
 const NP_FPA_ANSWER = `Practice authority is set state by state, and the tier alone does not settle what applies to you. The ${STAT_SOURCES.fullPracticeStates.source} classifies ${FPA_STATES} as Full Practice, where state law lets ${brand.niche.descriptor}s evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatments, including prescribing medications and controlled substances, under the exclusive licensure authority of the state board of nursing. Several of those states first require a transition period of collaborative or supervised practice. Most other states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience. Check the practice-authority details for the state you are browsing on its state jobs page, or in the Full Practice Authority guide, before relying on the tier.`;
 
 /** Cited BLS outlook sentence; the projection cycle is named inside the citation. */
-const NP_OUTLOOK_SENTENCE = `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034 (${STAT_SOURCES.blsGrowth2034.source}).`;
+const NP_OUTLOOK_SENTENCE = `The BLS projects ${STAT_SOURCES.blsGrowth2035.formatted} employment growth for ${brand.niche.descriptor}s from 2025 to 2035 (${STAT_SOURCES.blsGrowth2035.source}).`;
+
+/**
+ * Dated telehealth-rules answer shared by the remote, telehealth and psych
+ * specialty hubs. Every date below was verified at its primary source on
+ * 2026-10-06; the answer opens "As of October 2026" so it stays accurate
+ * as it ages, and must be re-verified when any date passes or OIRA clears
+ * the DEA rule.
+ *   - Medicare: Consolidated Appropriations Act, 2026 (Public Law 119-75,
+ *     approved February 3, 2026), Sec. 6209 "Extension of certain
+ *     telehealth flexibilities" replaces "January 30, 2026" with
+ *     "December 31, 2027" in SSA 1834(m) for the geographic and home
+ *     originating-site waivers, eligible practitioners, FQHC/RHC
+ *     telehealth, and audio-only services. Source:
+ *     https://www.govinfo.gov/content/pkg/PLAW-119publ75/html/PLAW-119publ75.htm
+ *   - DEA: "Fourth Temporary Extension of COVID-19 Telemedicine
+ *     Flexibilities for Prescription of Controlled Medications", FR Doc.
+ *     2025-24123, 90 FR 61301, published 2025-12-31, effective 2026-01-01,
+ *     "through December 31, 2026". Source:
+ *     https://www.federalregister.gov/api/v1/documents/2025-24123.json
+ *   - OIRA: RIN 1117-AB40 "Special Registrations for Telemedicine and
+ *     Limited State Telemedicine Registrations", final rule, received
+ *     08/25/2026, still listed under EO 12866 review on 2026-10-06. Source:
+ *     https://www.reginfo.gov/public/do/eoReviewSearch
+ */
+const TELEHEALTH_RULES_FAQ: FAQItem = {
+    question: `Which telehealth rules apply to ${NP}s in 2026?`,
+    answer: `As of October 2026, three sets of rules apply. Medicare's telehealth flexibilities, including visits with patients at home and audio-only visits, are extended through December 31, 2027 by Section 6209 of the Consolidated Appropriations Act, 2026 (Public Law 119-75, signed February 3, 2026). The DEA and HHS extended the telemedicine flexibilities for prescribing controlled substances through December 31, 2026 (Federal Register document 2025-24123). The DEA's final rule creating a special registration for telemedicine has been under review at the Office of Information and Regulatory Affairs since August 25, 2026, so check the DEA's current guidance before prescribing controlled substances by telehealth after December 31, 2026. In every case, you need an active license in the state where the patient is located at the time of the visit, which is why telehealth listings name the states where they require licensure.`,
+};
+
+/**
+ * Psych specialty hub FAQ, keyed via PSYCH_SPECIALTY_SLUG below. Copy uses
+ * the registry-derived label and the shared cited answers only; the
+ * certification answer reflects the two certifying bodies verified on
+ * 2026-10-06 (aanpcert.org lists this specialty among AANPCB's four
+ * programs; ANCC offers the other).
+ */
+function buildPsychSpecialtyFaqs({ totalJobs, avgSalary }: CategoryFaqInput): FAQItem[] {
+    const role = `${PSYCH_SPECIALTY_LABEL.toLowerCase()} ${NP}`;
+    return [
+        {
+            question: `How many ${role} jobs are available?`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} ${role} ${pluralize(totalJobs, 'position', 'positions')} listed on ${brand.name}. Outpatient clinics, hospital units, integrated primary care practices, and telehealth platforms all hire for the specialty, and each listing states its setting.`,
+        },
+        {
+            question: `What certification do ${role}s need?`,
+            answer: `A graduate (MSN or DNP) degree in the specialty's ${NP} track, then national board certification for the specialty, which both ANCC and AANPCB (operating as NPCB) offer, alongside state APRN licensure. Roles that prescribe controlled substances also require DEA registration.`,
+        },
+        {
+            question: `What is the median ${role} salary?`,
+            answer: medianPayAnswer(role, avgSalary),
+        },
+        {
+            question: `Can ${role}s practice independently?`,
+            answer: NP_FPA_ANSWER,
+        },
+        TELEHEALTH_RULES_FAQ,
+    ];
+}
 
 // Partial: categories without a built-in (e.g. 'metro') always pass customFaqs.
 const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => FAQItem[]>> = {
@@ -230,6 +313,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
             question: `What platforms do remote ${NP}s use for telehealth?`,
             answer: 'Common platforms include Zoom for Healthcare, Doxy.me, and EHR-integrated video platforms such as those built into Epic and Athenahealth. Listings usually state which platform the employer uses and whether it provides equipment and training. You need a reliable internet connection, a private workspace, and a HIPAA-compliant setup.',
         },
+        TELEHEALTH_RULES_FAQ,
     ],
     telehealth: ({ totalJobs, avgSalary }) => [
         {
@@ -246,8 +330,9 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What qualifications do I need for telehealth ${NP} jobs?`,
-            answer: `You need an active ${NP} certification (ANCC or AANP), state APRN licensure, a master\'s or doctoral degree in ${brand.niche.category}, and the years of clinical experience each employer specifies. Some entry-level telehealth positions accept new graduates with supervision. Familiarity with EHR systems and telehealth platforms is preferred.`,
+            answer: `You need an active ${NP} certification (ANCC or AANPCB), state APRN licensure, a master\'s or doctoral degree in ${brand.niche.category}, and the years of clinical experience each employer specifies. Some entry-level telehealth positions accept new graduates with supervision. Familiarity with EHR systems and telehealth platforms is preferred.`,
         },
+        TELEHEALTH_RULES_FAQ,
     ],
     travel: ({ totalJobs, avgSalary }) => [
         {
@@ -274,7 +359,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Can new graduate ${NP}s find jobs easily?`,
-            answer: `Employers that welcome new graduates say so in the listing, often alongside a structured orientation, mentorship, or a collaborative practice arrangement. For context, the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034.`,
+            answer: `Employers that welcome new graduates say so in the listing, often alongside a structured orientation, mentorship, or a collaborative practice arrangement. For context, the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2025 to 2035.`,
         },
         {
             question: `What should new grad ${NP}s look for in their first job?`,
@@ -350,7 +435,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What qualifications are needed for community health ${NP} roles?`,
-            answer: `You need an active national ${NP} board certification (ANCC or AANP), state APRN licensure, DEA registration, and ideally experience working with diverse, underserved populations. Some listings ask for bilingual skills. Some positions accept new graduates with structured supervision.`,
+            answer: `You need an active national ${NP} board certification (ANCC or AANPCB), state APRN licensure, DEA registration, and ideally experience working with diverse, underserved populations. Some listings ask for bilingual skills. Some positions accept new graduates with structured supervision.`,
         },
         {
             question: `Do community health ${NP}s qualify for loan repayment?`,
@@ -470,7 +555,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do family practice ${NP}s need?`,
-            answer: `FNPs complete a graduate (MSN or DNP) family nurse practitioner program, then certify through AANP (FNP-C) or ANCC (FNP-BC), alongside state APRN licensure. Employers may also require DEA registration for prescribing.`,
+            answer: `FNPs complete a graduate (MSN or DNP) family nurse practitioner program, then certify through AANPCB (FNP-C) or ANCC (FNP-BC), alongside state APRN licensure. Employers may also require DEA registration for prescribing.`,
         },
         {
             question: `What is the median family practice ${NP} salary?`,
@@ -492,7 +577,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do adult-gerontology ${NP}s need?`,
-            answer: `Primary care AGNPs certify through ANCC (AGPCNP-BC) or AANP (A-GNP). Acute care AGNPs certify through ANCC (AGACNP-BC) or the American Association of Critical-Care Nurses (AACN, ACNPC-AG). Both tracks require graduate education and state APRN licensure.`,
+            answer: `Primary care AGNPs certify through ANCC (AGPCNP-BC) or AANPCB (A-GNP). Acute care AGNPs certify through ANCC (AGACNP-BC) or the American Association of Critical-Care Nurses (AACN, ACNPC-AG). Both tracks require graduate education and state APRN licensure.`,
         },
         {
             question: `What is the median adult-gerontology ${NP} salary?`,
@@ -580,7 +665,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `How do I become an emergency ${NP}?`,
-            answer: `Most ENPs first certify as family nurse practitioners (AANP FNP-C or ANCC FNP-BC), then add emergency-specific training or experience. The dedicated ENP-C specialty credential is offered through AANP's certification board to certified FNPs with emergency preparation. Some emergency roles are also filled by acute care-certified NPs, so check each listing's requirements.`,
+            answer: `Most ENPs first certify as family nurse practitioners (FNP-C through AANPCB or FNP-BC through ANCC), then add emergency-specific training or experience. The dedicated ENP-C specialty credential is offered through AANPCB to certified FNPs with emergency preparation. Some emergency roles are also filled by acute care-certified NPs, so check each listing's requirements.`,
         },
         {
             question: `What is the median emergency ${NP} salary?`,
@@ -648,7 +733,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do urgent care ${NP}s need?`,
-            answer: `Most urgent care roles require family-track certification (FNP-C through AANP or FNP-BC through ANCC) for all-ages scope, plus state APRN licensure and DEA registration. The ENP specialty credential strengthens candidacy for higher-acuity sites. Employers also screen for procedural skills such as laceration repair, splinting, and plain-film interpretation.`,
+            answer: `Most urgent care roles require family-track certification (FNP-C through AANPCB or FNP-BC through ANCC) for all-ages scope, plus state APRN licensure and DEA registration. The ENP specialty credential strengthens candidacy for higher-acuity sites. Employers also screen for procedural skills such as laceration repair, splinting, and plain-film interpretation.`,
         },
         {
             question: `What is the median urgent care ${NP} salary?`,
@@ -670,7 +755,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What qualifications do home health ${NP} roles require?`,
-            answer: `A graduate ${NP} degree with national certification through AANP or ANCC (family or adult-gerontology track, matched to the patient population), state APRN licensure, and DEA registration. Because visits happen without an on-site team, employers screen for independent assessment skills, and a valid driver's license is standard.`,
+            answer: `A graduate ${NP} degree with national certification through AANPCB or ANCC (family or adult-gerontology track, matched to the patient population), state APRN licensure, and DEA registration. Because visits happen without an on-site team, employers screen for independent assessment skills, and a valid driver's license is standard.`,
         },
         {
             question: `How are home health ${NP}s paid?`,
@@ -710,7 +795,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do oncology ${NP}s need?`,
-            answer: `Oncology roles are filled by ${NP}s certified through AANP or ANCC on the track matching the population (family or adult-gerontology, while pediatric oncology roles use PNCB certification). The optional AOCNP credential through ONCC (Oncology Nursing Certification Corporation) recognizes accumulated oncology NP practice hours.`,
+            answer: `Oncology roles are filled by ${NP}s certified through AANPCB or ANCC on the track matching the population (family or adult-gerontology, while pediatric oncology roles use PNCB certification). The optional AOCNP credential through ONCC (Oncology Nursing Certification Corporation) recognizes accumulated oncology NP practice hours.`,
         },
         {
             question: `What is the median oncology ${NP} salary?`,
@@ -732,7 +817,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do cardiology ${NP}s need?`,
-            answer: `Outpatient cardiology roles are filled by ${NP}s certified through AANP or ANCC (family or adult-gerontology track). Inpatient and ICU cardiology typically requires the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. ACLS is standard, and employers screen for ECG interpretation fluency.`,
+            answer: `Outpatient cardiology roles are filled by ${NP}s certified through AANPCB or ANCC (family or adult-gerontology track). Inpatient and ICU cardiology typically requires the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. ACLS is standard, and employers screen for ECG interpretation fluency.`,
         },
         {
             question: `What is the median cardiology ${NP} salary?`,
@@ -750,7 +835,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do primary care ${NP}s need?`,
-            answer: `Primary care spans three tracks: FNP (all ages, certified FNP-C through AANP or FNP-BC through ANCC), AGPCNP (adult panels, through ANCC or AANP), and pediatric primary care (CPNP-PC through PNCB). All require state APRN licensure and DEA registration.`,
+            answer: `Primary care spans three tracks: FNP (all ages, certified FNP-C through AANPCB or FNP-BC through ANCC), AGPCNP (adult panels, through ANCC or AANPCB), and pediatric primary care (CPNP-PC through PNCB). All require state APRN licensure and DEA registration.`,
         },
         {
             question: `What is the median primary care ${NP} salary?`,
@@ -790,7 +875,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do dermatology ${NP}s need?`,
-            answer: `A national ${NP} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Dermatology itself is learned in practice: employers screen for derm experience or provide structured training. The optional DCNP credential through the Dermatology Nursing Certification Board recognizes dermatology NP practice hours.`,
+            answer: `A national ${NP} certification through AANPCB or ANCC (family or adult-gerontology track) plus state APRN licensure. Dermatology itself is learned in practice: employers screen for derm experience or provide structured training. The optional DCNP credential through the Dermatology Nursing Certification Board recognizes dermatology NP practice hours.`,
         },
         {
             question: `What is the median dermatology ${NP} salary?`,
@@ -808,7 +893,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do orthopedic ${NP}s need?`,
-            answer: `A national ${NP} certification through AANP or ANCC (family or adult-gerontology track per the practice population) plus state APRN licensure. The optional ONP-C credential through the Orthopaedic Nurses Certification Board (ONCB) recognizes orthopedic NP practice, and surgical roles require RNFA or first-assist credentialing per hospital policy.`,
+            answer: `A national ${NP} certification through AANPCB or ANCC (family or adult-gerontology track per the practice population) plus state APRN licensure. The optional ONP-C credential through the Orthopaedic Nurses Certification Board (ONCB) recognizes orthopedic NP practice, and surgical roles require RNFA or first-assist credentialing per hospital policy.`,
         },
         {
             question: `What is the median orthopedic ${NP} salary?`,
@@ -845,7 +930,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do aesthetic ${NP}s need?`,
-            answer: `A national ${NP} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Aesthetics itself is learned in practice. Employers screen for injectable and device training, often through manufacturer-led programs. The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours.`,
+            answer: `A national ${NP} certification through AANPCB or ANCC (family or adult-gerontology track) plus state APRN licensure. Aesthetics itself is learned in practice. Employers screen for injectable and device training, often through manufacturer-led programs. The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours.`,
         },
         {
             question: `Can ${brand.niche.descriptor}s own an aesthetics practice?`,
@@ -863,7 +948,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do pain management ${NP}s need?`,
-            answer: `A national ${NP} certification through AANP or ANCC (family or adult-gerontology track per the patient population), state APRN licensure, and DEA registration, since controlled-substance prescribing is central to the role. Pain management itself is generally learned in practice.`,
+            answer: `A national ${NP} certification through AANPCB or ANCC (family or adult-gerontology track per the patient population), state APRN licensure, and DEA registration, since controlled-substance prescribing is central to the role. Pain management itself is generally learned in practice.`,
         },
         {
             question: `What are the prescribing rules for pain management ${NP}s?`,
@@ -885,13 +970,15 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do palliative care ${NP}s need?`,
-            answer: `A national ${NP} certification through AANP or ANCC (adult-gerontology or family track per the patient population), state APRN licensure, and DEA registration for symptom management. The optional ACHPN credential through the Hospice and Palliative Credentialing Center (HPCC) recognizes advanced hospice and palliative practice.`,
+            answer: `A national ${NP} certification through AANPCB or ANCC (adult-gerontology or family track per the patient population), state APRN licensure, and DEA registration for symptom management. The optional ACHPN credential through the Hospice and Palliative Credentialing Center (HPCC) recognizes advanced hospice and palliative practice.`,
         },
         {
             question: `What is the median palliative care ${NP} salary?`,
             answer: `${medianPayAnswer('Palliative care NP', avgSalary)} Home-based and on-call-carrying programs commonly state mileage allowances or call stipends in the listing.`,
         },
     ],
+    // Psych specialty hub, keyed from the registry (see the header note).
+    ...(PSYCH_SPECIALTY_SLUG ? { [PSYCH_SPECIALTY_SLUG]: buildPsychSpecialtyFaqs } : {}),
 };
 
 export function getCategoryFaqs(input: CategoryFaqInput): FAQItem[] {

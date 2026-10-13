@@ -25,6 +25,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Building2, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import PracticeRevenueProjector from '@/components/tools/PracticeRevenueProjector';
 import {
@@ -38,9 +39,11 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 
 const PAGE_PATH = '/tools/private-practice-revenue-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
-const PAGE_TITLE = `Private Practice Revenue Calculator for ${brand.niche.short}s`;
-const PAGE_DESCRIPTION = `Model a ${brand.niche.short} private practice line by line: visits per week × collections per visit × working weeks, less overhead and fixed costs, with a sensitivity table showing how far the answer moves when your volume or reimbursement is off. An illustration, not a financial projection.`;
-const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Private Practice Revenue Calculator')}&type=page`;
+// Leads with income: "private practice income calculator" is the phrasing
+// searchers use (research/seo-tools.md, 2026-10-06).
+const PAGE_TITLE = `${brand.niche.short} Private Practice Income Calculator`;
+const PAGE_DESCRIPTION = `Estimate the income of an ${brand.niche.short} private practice line by line: visits per week × collections per visit × working weeks, less overhead and fixed costs, with a sensitivity table showing how far the answer moves when your volume or reimbursement is off. An illustration, not a financial projection.`;
+const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Private Practice Income Calculator`)}&type=page`;
 
 const WIDEST_STEP_PCT = Math.round(Math.max(...SENSITIVITY_STEPS.map(Math.abs)) * 100);
 
@@ -59,6 +62,7 @@ export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
+    `${brand.niche.short.toLowerCase()} private practice income calculator`,
     `${brand.niche.short.toLowerCase()} private practice revenue calculator`,
     `${brand.niche.descriptor} private practice income`,
     'private practice overhead calculator',
@@ -137,7 +141,7 @@ export default function PrivatePracticeRevenueCalculatorPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            applicationCategory: 'FinanceApplication',
+            applicationCategory: toolApplicationCategory(PAGE_PATH),
             operatingSystem: 'Any',
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,
@@ -173,7 +177,7 @@ export default function PrivatePracticeRevenueCalculatorPage() {
               Free Tool
             </p>
             <h1 className="font-lora" style={{ fontSize: 'clamp(2rem, 4.4vw, 2.9rem)', fontWeight: 800, lineHeight: 1.12, color: '#1A2E35', margin: '0 0 16px' }}>
-              Model a practice, then see how wrong it can be
+              Model your {brand.niche.short} private practice income, then see how wrong it can be
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               Visits a week, what you collect per visit, weeks you work, overhead as a share of collections: the

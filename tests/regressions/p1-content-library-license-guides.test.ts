@@ -1061,7 +1061,7 @@ describe('accuracy pass on the posts that printed hand-typed salary bands (T0-9,
         return { slug, data, body: content, text: `${String(data.title)} ${String(data.description)} ${content}` };
     });
     const MEDIAN = STAT_SOURCES.averageSalary.formatted;
-    const GROWTH = STAT_SOURCES.blsGrowth2034.formatted;
+    const GROWTH = STAT_SOURCES.blsGrowth2035.formatted;
 
     it('every post serves again: no takedown flag, and neither loader carries a draft mechanism', () => {
         for (const { slug, data, body } of posts) {
@@ -1091,7 +1091,7 @@ describe('accuracy pass on the posts that printed hand-typed salary bands (T0-9,
             const percents = body.match(/\b\d+(?:\.\d+)?\s?%/g) ?? [];
             for (const figure of percents) expect(figure, `${slug}: uncited percentage`).toBe(GROWTH);
             if (percents.length > 0) {
-                expect(body, `${slug}: projection without its cycle`).toContain('from 2024 to 2034');
+                expect(body, `${slug}: projection without its cycle`).toContain('from 2025 to 2035');
                 expect(body, `${slug}: projection without BLS`).toMatch(/BLS/);
             }
             if (body.includes(STAT_SOURCES.fullPracticeStates.formatted)) {

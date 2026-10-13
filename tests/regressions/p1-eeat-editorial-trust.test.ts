@@ -149,6 +149,7 @@ describe('P1 #8 — /editorial-policy page', () => {
         expect(src).not.toMatch(/129,?210/);
         expect(src).not.toMatch(/132,?300/);
         expect(src).not.toContain('90 million');
+        expect(src).not.toContain('100 million');
         expect(src).not.toMatch(/\b45%/);
         expect(src).not.toMatch(/\b27 states/);
     });

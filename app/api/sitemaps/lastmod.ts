@@ -91,65 +91,91 @@ export async function latestJobContentDate(where: Prisma.JobWhereInput): Promise
  * when a listed code-authored page has no entry here. The one copy change
  * not recorded here is the launch promo's end, which changes pages on a date
  * fixed in config rather than in a commit: PROMO_SWITCH_PATHS carries it.
+ *
+ * 2026-10-13: two changes shipped that UTC day and between them changed what
+ * every page here says except /terms, /privacy and /sub-processors. The plain
+ * copy pass (a74a4d5) reworded UI copy and removed explanatory text site-wide;
+ * the SEO, AEO and GEO release retitled the tools, rewrote the job seeker
+ * hero and guides, added the full practice quick answer, and moved the growth
+ * figure (2025 to 2035), the HRSA floor, the stats review date and the
+ * certifying body names. Neither had moved its entries, so this change dates
+ * all 33 pages to the day they went live. The notes on single entries below
+ * record what else changed on that page, oldest first.
  */
 export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
-  '/for-employers': '2026-09-27',
-  '/for-job-seekers': '2026-09-29',
-  '/about': '2026-09-29',
-  '/editorial-policy': '2026-09-26',
-  '/faq': '2026-09-29',
-  '/contact': '2026-09-21',
+  '/for-employers': '2026-10-13',
+  '/for-job-seekers': '2026-10-13',
+  '/about': '2026-10-13',
+  '/editorial-policy': '2026-10-13',
+  '/faq': '2026-10-13',
+  '/contact': '2026-10-13',
   '/terms': '2026-09-27',
   '/privacy': '2026-09-15',
-  '/pricing': '2026-09-27',
+  '/pricing': '2026-10-13',
   // 2026-10-04 (backlog 2.2): the program guide card now resolves through
   // lib/blog.ts, which serves the guide from code, so the card renders; it
   // read the empty blog_posts table and never rendered before.
-  '/for-programs': '2026-10-04',
-  '/security': '2026-09-12',
+  // 2026-10-13 (SEO, AEO and GEO release): the card prints the guide's new
+  // title (content/blog/how-to-evaluate-np-programs.mdx).
+  '/for-programs': '2026-10-13',
+  '/security': '2026-10-13',
   '/sub-processors': '2026-09-12',
-  '/accessibility': '2026-09-15',
-  '/press': '2026-09-29',
+  '/accessibility': '2026-10-13',
+  '/press': '2026-10-13',
   // 2026-10-04 (backlog 2.2): the article count, the article grid, the
   // "Before you apply" band and the state guide grid now list the posts
   // lib/blog.ts serves from code; they read the empty blog_posts table and
   // rendered nothing before.
-  '/resources': '2026-10-04',
-  '/resources/fpa-guide': '2026-09-29',
-  '/resources/private-practice-guide': '2026-09-29',
-  '/resources/1099-vs-w2': '2026-09-29',
-  '/scope-of-practice': '2026-09-29',
-  '/tools': '2026-09-12',
-  '/tools/1099-vs-w2-calculator': '2026-09-15',
+  // 2026-10-13 (SEO, AEO and GEO release): ten new posts move the article
+  // count and the article grid, the "Before you apply" cards carry the two
+  // guides' new titles and descriptions, and three tool cards carry their
+  // new titles (app/tools/tools-registry.ts).
+  '/resources': '2026-10-13',
+  '/resources/fpa-guide': '2026-10-13',
+  '/resources/private-practice-guide': '2026-10-13',
+  '/resources/1099-vs-w2': '2026-10-13',
+  '/scope-of-practice': '2026-10-13',
+  '/tools': '2026-10-13',
+  '/tools/1099-vs-w2-calculator': '2026-10-13',
   // 2026-09-29: a curated metro's jobs link now opens its metro guide (L-05).
-  '/tools/cost-of-living-comparison': '2026-09-29',
-  '/tools/licensure-checker': '2026-09-29',
-  '/tools/salary-benchmark': '2026-09-21',
-  '/tools/specialty-finder': '2026-09-15',
-  '/tools/private-practice-revenue-calculator': '2026-09-29',
-  '/tools/cost-per-hire-calculator': '2026-09-27',
-  '/for-employers/resources': '2026-09-29',
-  '/for-employers/resources/how-to-hire': '2026-09-29',
-  '/for-employers/resources/job-description-guide': '2026-09-29',
-  '/for-employers/resources/job-description-templates': '2026-09-29',
+  // 2026-10-13 (SEO, AEO and GEO release): the H1 names the tool.
+  '/tools/cost-of-living-comparison': '2026-10-13',
+  '/tools/licensure-checker': '2026-10-13',
+  '/tools/salary-benchmark': '2026-10-13',
+  '/tools/specialty-finder': '2026-10-13',
+  '/tools/private-practice-revenue-calculator': '2026-10-13',
+  '/tools/cost-per-hire-calculator': '2026-10-13',
+  '/for-employers/resources': '2026-10-13',
+  '/for-employers/resources/how-to-hire': '2026-10-13',
+  '/for-employers/resources/job-description-guide': '2026-10-13',
+  '/for-employers/resources/job-description-templates': '2026-10-13',
   // Every template page renders from one template file and lib/jd-templates.ts.
-  '/for-employers/resources/job-description-templates/[id]': '2026-09-29',
+  '/for-employers/resources/job-description-templates/[id]': '2026-10-13',
   // CQ-13: the licensure row and advantage now link the scope of practice
   // explorer (lib/compare-data.ts). COMPARE_REVIEW_DATE stays: nobody
   // re-checked the claims.
-  '/compare/np-hiring-vs-indeed': '2026-09-29',
+  // 2026-10-13: the salary row and the salary card print the stats review
+  // date (STATS_LAST_REVIEWED, lib/stats-sources.ts), which the SEO, AEO and
+  // GEO release moved, and the plain copy pass trimmed the shared template
+  // (app/compare/comparison-shared.tsx). COMPARE_REVIEW_DATE still stays.
+  '/compare/np-hiring-vs-indeed': '2026-10-13',
   // 2026-10-04 (backlog 2.1): the "comparing published prices" line dates
   // only the AANP price to the review (it read "both public, as of" the
   // review, five weeks before our promo and ladder went public), and the
   // salary guide line reads "an NP". No claim was re-checked.
-  '/compare/np-hiring-vs-aanp-jobcenter': '2026-10-04',
+  // 2026-10-13: the salary row prints the moved stats review date and the
+  // shared template was trimmed, as on the Indeed page above.
+  '/compare/np-hiring-vs-aanp-jobcenter': '2026-10-13',
   // 2026-10-04 (backlog 2.1): "hiring an NP" (it read "a NP"). CQ-13 had
   // relinked its licensure row on 2026-09-29, like the Indeed page's.
-  '/compare/np-hiring-vs-enp-network': '2026-10-04',
+  // 2026-10-13: the salary row prints the moved stats review date and the
+  // shared template was trimmed, as on the Indeed page above.
+  '/compare/np-hiring-vs-enp-network': '2026-10-13',
   // Every specialty salary page renders from one template: the specialty
-  // config and content were rewritten in this release (specialty-config.ts,
-  // specialty-content.ts).
-  '/salary-guide/specialty/[specialty]': '2026-09-29',
+  // config and content were rewritten on 2026-09-29 (specialty-config.ts,
+  // specialty-content.ts), and the plain copy pass removed the related
+  // guides lede on 2026-10-13.
+  '/salary-guide/specialty/[specialty]': '2026-10-13',
 };
 
 /**

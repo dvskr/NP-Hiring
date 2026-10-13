@@ -341,11 +341,18 @@ describe('P4 (c) — setting×state Speakable declares the FAQ answers', () => {
 
         // While ANY state-eligible category is unmapped, an unconditional
         // '.faq-answer' would be a false Speakable claim on 51 URLs per slug.
-        // 'psychiatric-mental-health' is the current one — the site's flagship
-        // niche — but the pin deliberately does not name it.
-        expect(unmapped.length).toBeGreaterThan(0);
-        expect(unmapped.length).toBeLessThan(STATE_ELIGIBLE_CATEGORY_SLUGS.length);
-        for (const slug of unmapped) {
+        //
+        // WHY THIS PIN CHANGED (2026-10-06 SEO/AEO/GEO release): the last
+        // unmapped category (the psych specialty) now has a category FAQ
+        // builder, keyed via PSYCH_SPECIALTY_SLUG, so the old
+        // `unmapped.length > 0` pin, which asserted the gap still existed,
+        // no longer holds. The pin now asserts the stronger outcome: every
+        // state-eligible category resolves FAQ data. The gate itself stays
+        // pinned by the two cases above ('declares ... only when gated' and
+        // 'the gate reads the same array the renderer is handed'), so a
+        // future unmapped key is still covered by it.
+        expect(unmapped).toEqual([]);
+        for (const slug of STATE_ELIGIBLE_CATEGORY_SLUGS) {
             expect(SETTING_CONFIGS[slug], `${slug} must still have a state config`).toBeDefined();
         }
     });

@@ -31,12 +31,13 @@
  *    (review item 8c) cannot happen again.
  *
  * 3. The BLS growth stat (review item 5): STAT_SOURCES carries the
- *    verified 2024–2034 NP-specific projection (40%, BLS Employment
- *    Projections released Sept 2025; the EP-table figure is 40.1%,
- *    rounded down, matching the entry's rounding convention). The stale
- *    2022–2032 cycle's 45% — and every hand-typed vintage string that
- *    carried it — must not resurface anywhere in production copy,
- *    including the four MDX posts that hand-type the figure.
+ *    verified 2025–2035 NP-specific projection (41%, BLS Employment
+ *    Projections released 2026-08-27, USDL-26-1422; the EP-table figure
+ *    is 41.0%). Refreshed 2026-10-06 from the 2024–2034 cycle's 40%
+ *    (40.1%, rounded). The retired cycles (2022–2032's 45% and
+ *    2024–2034's 40%) — and every hand-typed vintage string that carried
+ *    them — must not resurface anywhere in production copy, including
+ *    the four MDX posts that hand-type the figure.
  *
  * KNOWN DEBT OUTSIDE THIS PACKAGE'S OWNERSHIP (not asserted here so the
  * suite stays green while the owning packages land; their guards pin them):
@@ -164,31 +165,36 @@ describe('WP-5 — one audited comparison table, consumed by both pages', () => 
     });
 });
 
-describe('review item 5 — BLS growth stat carries the verified 2024–2034 cycle', () => {
-    it('STAT_SOURCES holds the NP-specific 2024–2034 figure exactly as published', () => {
-        expect(STAT_SOURCES.blsGrowth2034.formatted).toBe('40%');
-        expect(STAT_SOURCES.blsGrowth2034.value).toBe('40');
-        expect(STAT_SOURCES.blsGrowth2034.source).toContain('2024 to 2034');
-        expect(STAT_SOURCES.blsGrowth2034.source).toContain('Nurse Practitioners');
-        expect(STAT_SOURCES.blsGrowth2034.sourceUrl).toMatch(/^https:\/\/www\.bls\.gov\//);
+describe('review item 5 — BLS growth stat carries the verified 2025–2035 cycle', () => {
+    it('STAT_SOURCES holds the NP-specific 2025–2035 figure exactly as published', () => {
+        expect(STAT_SOURCES.blsGrowth2035.formatted).toBe('41%');
+        expect(STAT_SOURCES.blsGrowth2035.value).toBe('41');
+        expect(STAT_SOURCES.blsGrowth2035.source).toContain('2025 to 2035');
+        expect(STAT_SOURCES.blsGrowth2035.source).toContain('Nurse Practitioners');
+        expect(STAT_SOURCES.blsGrowth2035.sourceUrl).toMatch(/^https:\/\/www\.bls\.gov\//);
         // The projection cycle renders alongside the number everywhere the
         // entry is consumed, so a reader can date the figure.
-        expect(STAT_SOURCES.blsGrowth2034.asOf).toBe('2025-09');
+        expect(STAT_SOURCES.blsGrowth2035.asOf).toBe('2026-08');
     });
 
-    it('the retired key is gone — every consumer moved with the data', () => {
+    it('the retired keys are gone — every consumer moved with the data', () => {
         // Comment-stripped: the stats file's changelog header may name the
-        // old key when documenting the rename, but no CODE may reference it.
+        // old keys when documenting the renames, but no CODE may reference them.
         const codeFiles = [...productionFiles, ...walk('scripts', ['.ts'])].filter(
             (f) => !f.endsWith('.mdx'),
         );
-        const stale = codeFiles.filter((rel) => code(read(rel)).includes('blsGrowth2032'));
-        expect(stale, stale.join('\n')).toEqual([]);
+        for (const retired of ['blsGrowth2032', 'blsGrowth2034']) {
+            const stale = codeFiles.filter((rel) => code(read(rel)).includes(retired));
+            expect(stale, `${retired}:\n${stale.join('\n')}`).toEqual([]);
+        }
     });
 
-    it('no stale 2022–2032 vintage string survives anywhere in production copy', () => {
+    it('no retired 2022–2032 or 2024–2034 vintage string survives anywhere in production copy', () => {
         // Catches both token-derived labels ("Projected growth 2022-2032")
         // and hand-typed prose ("from 2022 to 2032", "through 2032").
+        // The 2024–2034 cycle (40%) was retired 2026-10-06; its "by 2034"
+        // form is scoped to growth wording so an unrelated 2034 date (a CBO
+        // coverage estimate, say) is not caught.
         const STALE_VINTAGE = [
             /2022[–-]2032/,
             /2022 to 2032/i,
@@ -196,6 +202,12 @@ describe('review item 5 — BLS growth stat carries the verified 2024–2034 cyc
             /by 2032/i,
             /(?:grow|growth|increase)[^.\n]{0,60}\b45%/i,
             /\b45%[^.\n]{0,60}(?:employment|growth|projected)/i,
+            /2024[–-]2034/,
+            /2024 to 2034/i,
+            /through 2034/i,
+            /(?:grow|growth|increase|jobs?|employment)[^.\n]{0,40}by 2034/i,
+            /(?:grow|growth|increase)[^.\n]{0,60}\b40%/i,
+            /\b40%[^.\n]{0,60}(?:employment|growth|projected)/i,
         ];
         const failures: string[] = [];
         for (const rel of productionFiles) {
@@ -218,8 +230,8 @@ describe('review item 5 — BLS growth stat carries the verified 2024–2034 cyc
         ];
         for (const rel of posts) {
             const body = read(rel);
-            expect(body, rel).toMatch(/about 40%/);
-            expect(body, rel).toContain('from 2024 to 2034');
+            expect(body, rel).toMatch(/about 41%/);
+            expect(body, rel).toContain('from 2025 to 2035');
             expect(body, rel).toMatch(/BLS/);
         }
     });

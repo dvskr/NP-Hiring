@@ -11,6 +11,9 @@ import EditorialByline, { editorialSchemaFields } from '@/components/EditorialBy
 import SalaryCalculator from '@/components/SalaryCalculator';
 import SalaryProvenance from '@/components/SalaryProvenance';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+// Report links derive from the edition config, so next year's edition and
+// any retitle reach this page without a hand-typed path or title.
+import { CURRENT_STATE_OF_HIRING_EDITION, PAY_TRANSPARENCY_REPORT } from '@/lib/reports/editions';
 import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availability';
 // P1 #7: by-specialty salary pages — the premium table below links each
 // covered specialty to its /salary-guide/specialty/<slug> deep-dive. The
@@ -41,7 +44,10 @@ import {
 // never render time — `new Date()` fabricated freshness on every request.
 // Update this literal only when the guide's figures/copy are actually
 // reviewed. (State salary pages omit dates entirely for the same reason.)
-const LAST_REVIEWED_DATE = '2026-07-28';
+// 2026-10-06: reviewed after the 2026-09-30 OEWS May 2025 refresh; the
+// median and both percentiles were re-read that day from the BLS public
+// data API (series OEUN000000000000029117113 / ...111 / ...115).
+const LAST_REVIEWED_DATE = '2026-10-06';
 
 // ── Cited figures (audit B51: single source of truth) ──────────────────
 // Every national salary / growth / shortage / FPA claim on this page
@@ -63,9 +69,20 @@ const NATIONAL_P10 = STAT_SOURCES.salaryPercentile10; // '$101,340' (BLS OEWS Ma
 const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90; // '$174,420' (BLS OEWS May 2025)
 const P10_UNDER_K = Math.ceil(Number(NATIONAL_P10.value) / 1000); // 102
 const P90_OVER_K = Math.floor(Number(NATIONAL_P90.value) / 1000); // 174
-const NP_GROWTH = STAT_SOURCES.blsGrowth2034; // '40%'
+const NP_GROWTH = STAT_SOURCES.blsGrowth2035; // '41%'
 const FPA_STATES = STAT_SOURCES.fullPracticeStates; // '27 states + DC' (AANP)
-const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation; // '90 million+' (HRSA, primary care)
+const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation; // '100 million+' (HRSA, primary care)
+
+// The review date as readers see it ("October 6, 2026"), formatted from the
+// literal above so the citation block and the schema cannot disagree. The
+// citation block used to hardcode "February 2026", a date inherited from
+// the donor template's initial commit that matched no review of this page.
+const REVIEWED_LABEL = formatStatVintage(LAST_REVIEWED_DATE);
+
+// One name for the guide: the H1, the Article headline, the WebPage name
+// and the copy-citation title. No year in it: the figures carry their own
+// vintage (NATIONAL_SALARY_VINTAGE), and a year in the name went stale.
+const GUIDE_NAME = `${brand.niche.long} Salary Guide`;
 
 // Enable ISR with daily revalidation
 export const revalidate = 86400;
@@ -75,7 +92,14 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
 // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
 // The median in the title derives from STAT_SOURCES above, never hardcoded.
-const SALARY_GUIDE_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Salary Guide 2026: ${NATIONAL_SALARY.formatted} Median`)}&type=page`;
+const SALARY_GUIDE_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.long} Salary: ${NATIONAL_SALARY.formatted} Median`)}&type=page`;
+
+// Search snippet copy (SEO/AEO release 2026-10): leads with the query
+// phrase "Nurse Practitioner Salary", names the cited figures as a median
+// and percentiles (never an average), and reads every figure and its
+// vintage from STAT_SOURCES. Title is 60 characters rendered; the
+// description 120 to 160.
+const META_DESCRIPTION = `What ${brand.niche.descriptor}s earn: the BLS ${NATIONAL_SALARY_VINTAGE} median is ${NATIONAL_SALARY.formatted}, with 10th and 90th percentiles of ${NATIONAL_P10.formatted} and ${NATIONAL_P90.formatted}, plus posted pay by state.`;
 
 // State codes mapping
 const STATE_CODES: Record<string, string> = {
@@ -215,8 +239,8 @@ export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so the brand suffix
   // doesn't get appended a second time (was rendering "... | PMHNP Hiring
   // | PMHNP Hiring" — audit 09 M-17).
-  title: { absolute: `${brand.niche.short} Salary Guide 2026: $${NATIONAL_SALARY_K}K Median by State | ${brand.name}` },
-  description: `Complete 2026 ${brand.niche.short} salary data: national median ${NATIONAL_SALARY.formatted} (BLS), all 50 states, pay by experience level and practice setting, and negotiation tips.`,
+  title: { absolute: `${brand.niche.long} Salary: $${NATIONAL_SALARY_K}K Median by State | ${brand.name}` },
+  description: META_DESCRIPTION,
   keywords: [
     `${brand.niche.descriptor} salary`,
     `${brand.niche.short.toLowerCase()} salary`,
@@ -228,11 +252,11 @@ export const metadata: Metadata = {
     `${brand.niche.short.toLowerCase()} salary guide`,
   ],
   openGraph: {
-    title: `${brand.niche.short} Salary Guide 2026 | ${NATIONAL_SALARY.formatted} Median`,
-    description: `Complete guide to ${brand.niche.short} salaries. National median ${NATIONAL_SALARY.formatted} (BLS OEWS). State-by-state breakdown and tips to maximize earnings.`,
+    title: `${brand.niche.long} Salary: ${NATIONAL_SALARY.formatted} Median (BLS ${NATIONAL_SALARY_VINTAGE})`,
+    description: META_DESCRIPTION,
     type: 'website',
     url: `${BASE_URL}/salary-guide`,
-    images: [{ url: SALARY_GUIDE_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} salary guide 2026 showing ${brand.niche.descriptor} pay by state with interactive salary comparison table` }],
+    images: [{ url: SALARY_GUIDE_OG_IMAGE, width: 1200, height: 630, alt: `${GUIDE_NAME} showing ${brand.niche.descriptor} pay by state with an interactive salary comparison table` }],
   },
   twitter: { card: 'summary_large_image', images: [SALARY_GUIDE_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/salary-guide` },
@@ -278,7 +302,11 @@ const clayCard: React.CSSProperties = {
  * The honest end state is: exactly one number on this page is a cited
  * source (STAT_SOURCES.averageSalary); every other one says so.
  * ═══════════════════════════════════════════════════════════════════════ */
-const SALARY_FIGURE_PROVENANCE = `Every salary range and percentage premium on this page other than the cited national median is ${brand.name}'s own editorial estimate, compiled from the roles posted here. Treat them as a starting point for negotiation, not as survey data.`;
+// 2026-10: the cited set grew from the median alone to the median plus the
+// 10th and 90th percentiles (same OEWS release), and the state table's
+// figures are computed posting medians, so the label names both measured
+// families before it labels everything else as an estimate.
+const SALARY_FIGURE_PROVENANCE = `The BLS median and percentiles, and the posted-pay medians in the state table, are measured figures. Every other salary range and percentage premium on this page is ${brand.name}'s own editorial estimate, compiled from the roles posted here. Treat them as a starting point for negotiation, not as survey data.`;
 
 /* ═══ Experience / Setting / Specialty data ═══ */
 const experienceData = [
@@ -339,7 +367,11 @@ const faqData = [
   // which the P1 PDF parity guard pins byte-identically) — it is attributed,
   // so the answer no longer presents it alongside a cited BLS median as
   // though both carry the same weight. See SALARY_FIGURE_PROVENANCE above.
-  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}). The experience ranges shown alongside it, roughly $95,000-$115,000 for new graduates and $150,000-$180,000+ for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
+  // 2026-10 (SEO/AEO release): the answer now leads with the cited median
+  // and both percentiles, interpolated from STAT_SOURCES; the question lost
+  // its hand-typed year (the data's own vintage is in the answer), and the
+  // estimate ranges read "to" (house style) and stay attributed.
+  { q: `How much do ${brand.niche.descriptor}s make?`, a: `${brand.niche.long}s earned a median of ${NATIONAL_SALARY.formatted} a year in ${NATIONAL_SALARY_VINTAGE}, according to federal wage data (${NATIONAL_SALARY.source}). The lowest paid 10% earned less than ${NATIONAL_P10.formatted} and the highest paid 10% earned more than ${NATIONAL_P90.formatted}. The experience ranges on this page, about $95,000 to $115,000 for new graduates and $150,000 to $180,000 or more for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
   { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets; California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
   // SECOND PASS: attributed for the same reason as the two answers above.
   // It is the fourth uncited range in this array; leaving it bare while
@@ -365,7 +397,7 @@ const faqData = [
   // comparable to a salary without pricing the benefits, malpractice, and
   // unpaid downtime the permanent job absorbs — /resources/1099-vs-w2 works
   // that arithmetic, so the answer points there instead of asserting a gap.
-  { q: `How much do travel ${brand.niche.short}s make?`, a: `Travel and locum tenens work is quoted as an hourly or weekly rate plus stipends rather than a salary, so it is not directly comparable to a permanent offer: the rate has to cover the health coverage, malpractice, retirement, and unpaid downtime a permanent job absorbs. The $150,000-$250,000 figure in the setting table on this page is ${brand.name}'s own estimate from posted travel and locum roles, not a survey figure. To see what a contract rate actually has to clear to match a salaried package, work through the 1099 vs W2 comparison, which computes the break-even instead of assuming one.` },
+  { q: `How much do travel ${brand.niche.short}s make?`, a: `Travel and locum tenens work is quoted as an hourly or weekly rate plus stipends rather than a salary, so it is not directly comparable to a permanent offer: the rate has to cover the health coverage, malpractice, retirement, and unpaid downtime a permanent job absorbs. The $150,000 to $250,000 figure in the setting table on this page is ${brand.name}'s own estimate from posted travel and locum roles, not a survey figure. To see what a contract rate actually has to clear to match a salaried package, work through the 1099 vs W2 comparison, which computes the break-even instead of assuming one.` },
 ];
 
 export default async function SalaryGuidePage() {
@@ -377,8 +409,6 @@ export default async function SalaryGuidePage() {
   const calculatorNational = national
     ? { base: national.median, basis: 'postings' as const, jobCount: national.postings }
     : { base: Number(NATIONAL_SALARY.value), basis: 'bls' as const };
-
-  const currentYear = new Date().getFullYear();
 
   // FAQ Schema — generated from visible faqData so schema + content stay in sync
   const faqSchema = {
@@ -395,8 +425,8 @@ export default async function SalaryGuidePage() {
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": `2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State`,
-    "description": `Comprehensive ${brand.niche.short} salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and practice settings. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
+    "headline": GUIDE_NAME,
+    "description": `${brand.niche.long} salary data: the BLS ${NATIONAL_SALARY_VINTAGE} median and 10th and 90th percentiles, posted pay by state, experience levels, specialty premiums, and practice settings. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
     "image": SALARY_GUIDE_OG_IMAGE,
     "datePublished": "2026-01-01T00:00:00Z",
     "dateModified": `${LAST_REVIEWED_DATE}T00:00:00Z`,
@@ -427,7 +457,7 @@ export default async function SalaryGuidePage() {
       ]} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: sanitizeJson({
         "@context": "https://schema.org", "@type": "WebPage",
-        "name": `${currentYear} ${brand.niche.short} Salary Guide`,
+        "name": GUIDE_NAME,
         "speakable": { "@type": "SpeakableSpecification", "cssSelector": [".quick-answer-box", "h1"] },
         "url": `${brand.baseUrl}/salary-guide`
       }) }} />
@@ -440,13 +470,15 @@ export default async function SalaryGuidePage() {
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
-              {currentYear} Salary Data
+              {/* The eyebrow names the data's own vintage, never the
+                  render-time year (it printed new Date().getFullYear()). */}
+              BLS {NATIONAL_SALARY_VINTAGE} Wage Data
             </p>
             <h1 className="font-lora" style={{
               fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
               color: '#1A2E35', marginBottom: '16px',
             }}>
-              {brand.niche.short} Salary Guide
+              {GUIDE_NAME}
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
               National median <strong>{NATIONAL_SALARY.formatted}</strong> per year (BLS OEWS, {NATIONAL_SALARY_VINTAGE}).
@@ -540,17 +572,40 @@ export default async function SalaryGuidePage() {
                   <DollarSign size={24} />
                 </div>
                 <div>
-                  <h2 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Quick Answer: {brand.niche.short} Salary in {currentYear}</h2>
+                  <h2 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Quick Answer: How Much Do {brand.niche.long}s Make?</h2>
+                  {/* SEO/AEO release 2026-10: the block answer engines lift
+                      now carries ONLY cited figures: the OEWS median and the
+                      10th and 90th percentiles, all read from STAT_SOURCES,
+                      named as a median and percentiles (never an average),
+                      and linked to the BLS source. The three editorial
+                      ranges it used to print ("$95,000-$115,000" and so on)
+                      live in the labelled experience and setting tables
+                      below. The PDF generator (scripts/generate-salary-pdf.ts)
+                      still prints the previous paragraph: sync it there and
+                      regenerate the PDF; no test pins that paragraph. */}
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>
-                    The median {brand.niche.short} salary is <strong>{NATIONAL_SALARY.formatted} per year</strong> ({NATIONAL_SALARY.source}).
-                    New graduates start at $95,000-$115,000, while experienced {brand.niche.short}s (7-15 years) earn $150,000-$180,000.
-                    Private practice owners can earn $180,000-$300,000+. Pay runs highest in West Coast and Northeast
-                    markets, with California, Washington, and New Jersey near the top in federal wage data.
+                    The median {brand.niche.descriptor} salary is <strong>{NATIONAL_SALARY.formatted} per year</strong>, according to
+                    the{' '}
+                    <a href={NATIONAL_SALARY.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', fontWeight: 600 }}>
+                      Bureau of Labor Statistics wage survey for {NATIONAL_SALARY_VINTAGE}
+                    </a>
+                    . Half of {brand.niche.short}s earn more and half earn less. The lowest paid 10% earn
+                    less than <strong>{NATIONAL_P10.formatted}</strong>, and the highest paid 10% earn more
+                    than <strong>{NATIONAL_P90.formatted}</strong>.
                   </p>
-                  {/* Review follow-up: the median above is cited; the three
-                      ranges beside it are not, and were reading as though
-                      they were. Mirrored in scripts/generate-salary-pdf.ts,
-                      which prints the identical paragraph. */}
+                  <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '10px 0 0' }}>
+                    For the pay employers are posting now, see the posted-pay medians by state below and{' '}
+                    <Link href={CURRENT_STATE_OF_HIRING_EDITION.path} style={{ color: '#BE185D', fontWeight: 600 }}>
+                      {CURRENT_STATE_OF_HIRING_EDITION.title}
+                    </Link>
+                    , which covers advertised pay on {brand.name}. Our{' '}
+                    <Link href={PAY_TRANSPARENCY_REPORT.path} style={{ color: '#BE185D', fontWeight: 600 }}>
+                      pay transparency report
+                    </Link>
+                    {' '}shows how many of those postings disclose a pay range.
+                  </p>
+                  {/* The label separates the measured figures above from the
+                      editorial estimates further down the page. */}
                   <p style={{ fontSize: '12px', color: '#6B5B53', lineHeight: 1.6, margin: '10px 0 0' }}>
                     {SALARY_FIGURE_PROVENANCE}
                   </p>
@@ -574,7 +629,7 @@ export default async function SalaryGuidePage() {
                 {[
                   { value: NATIONAL_SALARY.formatted, label: 'National Median (BLS)', color: '#BE185D' },
                   { value: NATIONAL_P90.formatted, label: 'Top 10% earn over (BLS)', color: '#BE185D' },
-                  { value: NP_GROWTH.formatted, label: 'Job Growth by 2034', color: '#B45309' },
+                  { value: NP_GROWTH.formatted, label: 'Job Growth by 2035', color: '#B45309' },
                   { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings Analyzed', color: '#B45309' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
@@ -924,7 +979,7 @@ export default async function SalaryGuidePage() {
           <div style={{ ...clayCard, padding: '22px 28px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: '13px', color: '#5A4A42' }}>
               <li>• <strong>{SHORTAGE_POP.formatted}</strong> Americans live in primary-care shortage areas (HRSA)</li>
-              <li>• <strong>{NP_GROWTH.formatted}</strong> projected NP job growth through 2034 (BLS)</li>
+              <li>• <strong>{NP_GROWTH.formatted}</strong> projected NP job growth through 2035 (BLS)</li>
             </ul>
           </div>
         </div>
@@ -1009,14 +1064,20 @@ export default async function SalaryGuidePage() {
           {/* Citation */}
           <div style={{ ...clayCard, padding: '24px 28px', marginBottom: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 14px' }}>📋 Cite This Page</h3>
-            <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State." ${brand.name}, February 2026, ${brand.domain}/salary-guide.`} />
+            <CopyCitation citation={`${brand.name}. "${GUIDE_NAME}." ${brand.name}, last reviewed ${REVIEWED_LABEL}, ${brand.domain}/salary-guide.`} />
             <p style={{ fontSize: '11px', color: '#64748B', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
           </div>
 
           {/* Data Sources */}
           <div style={{ ...clayCard, padding: '16px 24px', background: 'rgba(0,0,0,0.02)', marginBottom: '24px', textAlign: 'center' }}>
             <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
-              <strong>Data Sources & Methodology:</strong> Bureau of Labor Statistics (BLS OEWS, {NATIONAL_SALARY_VINTAGE}), HRSA, AANP, and analysis of {overallStats.jobsWithSalary.toLocaleString('en-US')} active {brand.niche.short} job postings with disclosed salary on this board. Job posting data updates daily.
+              {/* Each source links its STAT_SOURCES sourceUrl, so the main
+                  content cites the primary source behind every figure. */}
+              <strong>Data Sources & Methodology:</strong>{' '}
+              <a href={NATIONAL_SALARY.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>Bureau of Labor Statistics (BLS OEWS, {NATIONAL_SALARY_VINTAGE})</a>,{' '}
+              <a href={NP_GROWTH.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>BLS Employment Projections</a>,{' '}
+              <a href={SHORTAGE_POP.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>HRSA</a>,{' '}
+              <a href={FPA_STATES.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>AANP</a>, and analysis of {overallStats.jobsWithSalary.toLocaleString('en-US')} active {brand.niche.short} job postings with disclosed salary on this board. Job posting data updates daily. Page last reviewed {REVIEWED_LABEL}.
             </p>
           </div>
 

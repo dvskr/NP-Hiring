@@ -48,6 +48,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Briefcase, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import EmployerCostPerHireCalculator from '@/components/tools/EmployerCostPerHireCalculator';
 import { pricingPhase } from '@/components/tools/cost-per-hire-model';
@@ -62,15 +63,20 @@ export const revalidate = 3600;
 
 const PAGE_PATH = '/tools/cost-per-hire-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
-const PAGE_TITLE = `Cost Per Hire Calculator | Flat-Fee Posting vs Sponsored Ads vs Agency`;
-const PAGE_DESCRIPTION = `Work out your real cost per hire for a ${brand.niche.short} role: a flat-fee posting priced from our published rates against sponsored-ad spend and an agency contingency fee, using your own applicant volume and time-to-fill. You enter every figure for the other channels.`;
-const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Cost Per Hire Calculator')}&type=page`;
+// Leads with the employer's own phrasing, "how much does it cost to hire a
+// nurse practitioner" (research/seo-tools.md, 2026-10-06); the generic "cost
+// per hire calculator" head term belongs to HR vendors. The closing sentence
+// is the plain wording from the 2026-10-12 copy pass.
+const PAGE_TITLE = `Cost to Hire a ${brand.niche.long} Calculator`;
+const PAGE_DESCRIPTION = `Work out the real cost to hire an ${brand.niche.short}: a flat-fee posting priced from our published rates against sponsored-ad spend and an agency contingency fee, using your own applicant volume and time-to-fill. You enter every figure for the other channels.`;
+const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Cost to Hire a ${brand.niche.long}`)}&type=page`;
 
 export const metadata: Metadata = {
   // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
+    `cost to hire a ${brand.niche.descriptor}`,
     'cost per hire calculator',
     `${brand.niche.short.toLowerCase()} recruiting cost per hire`,
     'job posting vs recruiter cost',
@@ -117,7 +123,7 @@ export default function CostPerHireCalculatorPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            applicationCategory: 'BusinessApplication',
+            applicationCategory: toolApplicationCategory(PAGE_PATH),
             operatingSystem: 'Any',
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,
@@ -153,7 +159,7 @@ export default function CostPerHireCalculatorPage() {
               For Employers
             </p>
             <h1 className="font-lora" style={{ fontSize: 'clamp(2rem, 4.4vw, 2.9rem)', fontWeight: 800, lineHeight: 1.12, color: '#1A2E35', margin: '0 0 16px' }}>
-              What a hire actually costs you
+              What hiring a {brand.niche.descriptor} actually costs you
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               A flat-fee posting, sponsored ads, and an agency search, side by side on cost per applicant and cost

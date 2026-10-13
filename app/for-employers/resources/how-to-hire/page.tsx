@@ -81,8 +81,8 @@ const MARKET_STATS = [
     stat: STAT_SOURCES.averageSalary,
   },
   {
-    label: `Projected ${brand.niche.short} employment growth (2024 to 2034)`,
-    stat: STAT_SOURCES.blsGrowth2034,
+    label: `Projected ${brand.niche.short} employment growth (2025 to 2035)`,
+    stat: STAT_SOURCES.blsGrowth2035,
   },
   {
     label: 'Jurisdictions with Full Practice Authority',
@@ -195,7 +195,7 @@ const FAQS = [
     // faster" had no repo source, so the answer ends on the two levers an
     // employer controls instead of an outcome claim.
     q: `Why is ${brand.niche.short} hiring so competitive right now?`,
-    a: `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, which means employers will be filling newly created positions, not only replacing departures. The two levers you control are a transparent salary range in the posting and a credentialing plan that starts the week the offer is signed.`,
+    a: `The BLS projects ${STAT_SOURCES.blsGrowth2035.formatted} employment growth for ${brand.niche.descriptor}s from 2025 to 2035, which means employers will be filling newly created positions, not only replacing departures. The two levers you control are a transparent salary range in the posting and a credentialing plan that starts the week the offer is signed.`,
   },
 ] as const;
 

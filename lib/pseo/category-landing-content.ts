@@ -34,7 +34,7 @@
  *   - No unsourced superlative or universal market claims ("more than any
  *     other track", "every state", "nearly every metro"). The repo has no
  *     data behind them; the same test file enforces a banned-phrase list.
- *   - Certification bodies are correct per specialty: AANP/ANCC for NP
+ *   - Certification bodies are correct per specialty: AANPCB/ANCC for NP
  *     tracks, NBCRNA for CRNA, AMCB for CNM, NCC for NNP/WHNP, PNCB for
  *     PNP, AACN for acute-care credentials, ONCC/DNCB/ONCB for optional
  *     specialty credentials.
@@ -93,7 +93,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         ],
         requirements: [
             'Graduate NP degree (MSN or DNP), typically on the family track for all-ages scope',
-            'National certification as FNP-C (AANP) or FNP-BC (ANCC), with the ENP specialty credential strengthening candidacy for higher-acuity sites',
+            'National certification as FNP-C (AANPCB) or FNP-BC (ANCC), with the ENP specialty credential strengthening candidacy for higher-acuity sites',
             'Active state APRN licensure and DEA registration for prescribing',
             'Procedural skills employers screen for: laceration repair, splinting, incision and drainage, and plain-film interpretation',
         ],
@@ -110,7 +110,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Flexible Day Structure', description: 'Many programs let you set visit windows and documentation blocks around your own rhythm.', icon: 'Calendar' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track, matched to the patient population)',
+            'Graduate NP degree with national certification through AANPCB or ANCC (family or adult-gerontology track, matched to the patient population)',
             'Active state APRN licensure and DEA registration',
             'Comfort practicing independently, since home visits mean assessing and deciding without an on-site team',
             'A valid driver’s license and willingness to cover a defined visit territory',
@@ -129,7 +129,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         ],
         requirements: [
             'Graduate FNP program (MSN or DNP) with supervised clinical hours across the lifespan',
-            'National certification as FNP-C through AANP or FNP-BC through ANCC',
+            'National certification as FNP-C through AANPCB or FNP-BC through ANCC',
             'Active state APRN licensure and DEA registration for prescribing',
             'Employers commonly screen for panel-management and EHR fluency, and new-grad-friendly roles add structured supervision',
         ],
@@ -147,7 +147,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         ],
         requirements: [
             'Graduate AGNP program (MSN or DNP) on the primary care or acute care track',
-            'Primary care: AGPCNP-BC through ANCC or A-GNP through AANP',
+            'Primary care: AGPCNP-BC through ANCC or A-GNP through AANPCB',
             'Acute care: AGACNP-BC through ANCC or ACNPC-AG through AACN',
             'Active state APRN licensure and DEA registration, with hospital credentialing and privileging added for acute-care roles',
         ],
@@ -236,8 +236,8 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Procedure Volume', description: 'Lacerations, reductions, and point-of-care ultrasound keep hands-on skills current.', icon: 'Activity' },
         ],
         requirements: [
-            'Most ENPs certify first as FNPs (FNP-C via AANP or FNP-BC via ANCC) for all-ages scope',
-            'The ENP-C specialty credential (AANP certification board) is earned by certified FNPs with emergency preparation, and some roles accept acute-care certification instead',
+            'Most ENPs certify first as FNPs (FNP-C via AANPCB or FNP-BC via ANCC) for all-ages scope',
+            'The ENP-C specialty credential (AANPCB) is earned by certified FNPs with emergency preparation, and some roles accept acute-care certification instead',
             'Active state APRN licensure and DEA registration',
             'ACLS and PALS are standard, and a completed trauma course strengthens candidacy',
         ],
@@ -254,7 +254,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Survivorship Care', description: 'Dedicated survivorship clinics are an established NP-led service line in many cancer programs.', icon: 'TrendingUp' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC, on the track matching the practice population (family or adult-gerontology, or pediatric via PNCB in children’s centers)',
+            'Graduate NP degree with national certification through AANPCB or ANCC, on the track matching the practice population (family or adult-gerontology, or pediatric via PNCB in children’s centers)',
             'The optional AOCNP credential through ONCC (Oncology Nursing Certification Corporation) recognizes oncology NP practice hours',
             'Active state APRN licensure and DEA registration',
             'Employers screen for chemotherapy/immunotherapy competencies and oncologic emergency recognition',
@@ -272,7 +272,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'NP-Staffed Service Lines', description: 'Heart failure, device, and consult services are routinely staffed by NPs alongside cardiologists.', icon: 'TrendingUp' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC (adult-gerontology or family track per the practice population)',
+            'Graduate NP degree with national certification through AANPCB or ANCC (adult-gerontology or family track per the practice population)',
             'Inpatient and ICU cardiology roles typically require the acute care track: AGACNP-BC (ANCC) or ACNPC-AG (AACN)',
             'Active state APRN licensure and DEA registration, with ACLS as standard',
             'Employers screen for ECG interpretation and guideline-directed heart-failure therapy fluency',
@@ -291,7 +291,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
         ],
         requirements: [
             'Graduate NP degree on a primary care track: FNP (all ages), AGPCNP (adults), or PNP-PC (pediatrics)',
-            'National certification through AANP or ANCC for FNP/AGNP tracks, or PNCB for pediatric primary care',
+            'National certification through AANPCB or ANCC for FNP/AGNP tracks, or PNCB for pediatric primary care',
             'Active state APRN licensure and DEA registration',
             'Panel-management, preventive-care, and EHR workflow fluency are the common screening criteria',
         ],
@@ -326,7 +326,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Productivity Upside', description: 'Volume- and cosmetic-service bonuses reward efficient, skilled clinicians.', icon: 'DollarSign' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track)',
+            'Graduate NP degree with national certification through AANPCB or ANCC (family or adult-gerontology track)',
             'Dermatology is learned in practice: employers screen for derm experience or structured on-the-job training',
             'The optional DCNP credential through the Dermatology Nursing Certification Board recognizes dermatology NP practice hours',
             'Active state APRN licensure and DEA registration',
@@ -344,7 +344,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Hands-On Procedures', description: 'Casting, splinting, reductions, and image-guided injections fill clinic days.', icon: 'Activity' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track per the practice population)',
+            'Graduate NP degree with national certification through AANPCB or ANCC (family or adult-gerontology track per the practice population)',
             'The optional ONP-C credential through the Orthopaedic Nurses Certification Board (ONCB) recognizes orthopedic NP practice',
             'Surgical roles require RNFA or first-assist credentialing per hospital policy',
             'Active state APRN licensure, with casting, splinting, and joint-injection skills as standard screens',
@@ -402,7 +402,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Ownership Pathways', description: 'NP-owned aesthetic clinics are a well-established route out of employed practice.', icon: 'TrendingUp' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track per the practice population)',
+            'Graduate NP degree with national certification through AANPCB or ANCC (family or adult-gerontology track per the practice population)',
             'Aesthetics is learned in practice: employers screen for injectable training (neuromodulators and dermal fillers) and device experience, often via manufacturer-led programs',
             'The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours',
             'Active state APRN licensure. Medical-director, delegation, and supervision rules for cosmetic procedures are set by state law, so check your state board of nursing',
@@ -420,7 +420,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Functional Outcomes', description: 'Success is measured in what patients can do again, not just a pain score.', icon: 'Activity' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC (family or adult-gerontology track per the practice population)',
+            'Graduate NP degree with national certification through AANPCB or ANCC (family or adult-gerontology track per the practice population)',
             'Active state APRN licensure and DEA registration, since controlled-substance prescribing is central to the role',
             'Controlled-substance rules, opioid-prescribing limits, and prescription drug monitoring program (PDMP) requirements are set state by state, so confirm them with your state board before you start',
             'Employers screen for opioid stewardship, risk assessment, and interventional-procedure workflow experience',
@@ -438,7 +438,7 @@ const BASE_CONTENT: Record<string, CategoryLandingContent> = {
             { title: 'Home and Facility Reach', description: 'Hospital consults, clinics, home visits, and inpatient units all hire for this specialty.', icon: 'Home' },
         ],
         requirements: [
-            'Graduate NP degree with national certification through AANP or ANCC (adult-gerontology or family track per the patient population)',
+            'Graduate NP degree with national certification through AANPCB or ANCC (adult-gerontology or family track per the patient population)',
             'The optional ACHPN credential through the Hospice and Palliative Credentialing Center (HPCC) recognizes advanced hospice and palliative practice',
             'Active state APRN licensure and DEA registration, since symptom management relies on controlled-substance prescribing',
             'Employers screen for serious-illness communication skills and comfort with complex symptom management',
@@ -483,7 +483,7 @@ const PSYCH_LANDING_CONTENT: CategoryLandingContent = {
     ],
     requirements: [
         'Graduate degree (MSN or DNP) in the specialty’s NP track',
-        'National board certification for the specialty, administered by ANCC',
+        'National board certification for the specialty, offered by both ANCC and AANPCB (operating as NPCB)',
         'Active state APRN licensure and DEA registration, since controlled-substance prescribing is central to the role',
         'Employers screen for both medication-management depth and therapy integration skills',
     ],

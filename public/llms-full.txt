@@ -1,11 +1,20 @@
 # NP Hiring: Site Information for AI Systems
-# llms-full.txt: Extended version of llms.txt
+# llms-full.txt: Extended version of llms.txt, with guide summaries, tool methods and key facts
 
-> NP Hiring (nphiring.com) is a specialized job board for Nurse Practitioners in the United States, covering every NP specialty plus the wider APRN cohort across all 50 states.
+> NP Hiring (nphiring.com) is a specialized job board for Nurse Practitioners in the United States, covering every NP specialty plus the wider APRN cohort (CRNA, CNM, CNS), with free career guides, tools and data reports.
 
 ## Mission
 
 Help every Nurse Practitioner find the right role through a transparent, data-rich job board built specifically for NPs.
+
+## Key Facts
+
+The canonical figures every page on the site cites. Each comes from one source file, so the same number, source and date appear everywhere. Last verified 2026-10-06.
+
+- NP median annual wage: $132,300. Source: BLS Occupational Employment and Wage Statistics, Nurse Practitioners (SOC 29-1171), May 2025 data (https://www.bls.gov/oes/current/oes291171.htm). The 10th percentile is $101,340 and the 90th percentile is $174,420 in the same release. The median covers NPs at every experience level and in every setting.
+- Projected NP employment growth: 41% from 2025 to 2035. Source: BLS Employment Projections, 2025 to 2035 cycle, released August 27, 2026 (https://www.bls.gov/emp/tables/fastest-growing-occupations.htm). BLS names nurse practitioners the fastest growing detailed occupation in that cycle. The BLS Occupational Outlook Handbook page groups nurse anesthetists, nurse midwives and nurse practitioners together and shows 36% for the combined group; the 41% figure is the NP-specific projection.
+- Full practice authority for NPs: 27 states + DC. Source: AANP State Practice Environment, map updated May 2026 (https://www.aanp.org/advocacy/state/state-practice-environment). Several full practice states still require transition-to-practice hours before an NP practices independently; /scope-of-practice gives each state's rule.
+- People living in primary care shortage areas: 100 million+. Source: HRSA Bureau of Health Workforce, Designated HPSA Quarterly Summary, fourth quarter of fiscal year 2026, as of September 30, 2026 (https://data.hrsa.gov/Default/GenerateHPSAQuarterlyReport), which reports 102,257,076 people in 8,830 primary care Health Professional Shortage Areas. The site carries the figure as a floor because HRSA updates it every quarter.
 
 ## Platform Overview
 
@@ -41,19 +50,94 @@ Category hubs cover seven taxonomy axes:
 - Employer type: hospital, private-practice, community-health, va, correctional
 - Population served: geriatric, veterans, lgbtq
 
-All category pages live under https://nphiring.com/jobs/<slug>.
+All category pages live under https://nphiring.com/jobs/<slug>. A hub with no current listing is not published, and a hub with fewer listings than its gate requires answers noindex until it fills.
 
-### Geographic Coverage
-- All 50 US states + DC
-- State job pages under /jobs/state/<state-slug>
-- Per-category state pages under /jobs/<slug>/<state-slug> for the state-eligible categories
-- Per-category city pages under /jobs/<slug>/city/<city-slug> across ~4,000 US cities
+### Geographic Pages and Quality Gates
+Location pages are generated from live listings, so how many exist changes with the inventory. They are published where their data passes the site's quality gates:
+- State job pages under /jobs/state/<state-slug>, indexable where the hub passes its listing and data gates
+- Per-category state pages under /jobs/<slug>/<state-slug> for the state-eligible categories, indexable where the combination passes its gate
+- Per-category city pages under /jobs/<slug>/city/<city-slug>, which are not published at all below a minimum number of listings
+- State salary pages under /salary-guide/<state>, which show a state median only where enough postings with disclosed pay, from enough employers, support one
 - Browse index at /jobs/locations
+The sitemap index lists only pages that pass their gates, so it is the authoritative list of indexable location pages.
+
+## Career Guides
+
+Each guide below is summarized from its own opening answer. All live under https://nphiring.com/blog/<slug> and carry a reviewed date.
+
+### Becoming an NP and the profession
+- /blog/how-to-become-a-nurse-practitioner: You become a nurse practitioner by earning an RN license, completing an accredited graduate NP program (MSN, DNP or post-graduate certificate) in one population focus, passing a national certification exam and getting an APRN license from your state board of nursing. As of October 2026, both FNP certifying boards still accept a master's degree, and federal graduate loan limits changed on July 1, 2026.
+- /blog/what-is-an-aprn: APRN stands for advanced practice registered nurse: a registered nurse with an accredited graduate degree or post-graduate certificate, a national certification and a state license in one of four roles (certified nurse practitioner, certified registered nurse anesthetist, certified nurse-midwife or clinical nurse specialist). Every nurse practitioner is an APRN, but not every APRN is a nurse practitioner.
+- /blog/nurse-practitioner-job-outlook: As of October 2026, BLS projects NP employment to grow 41% from 2025 to 2035, the fastest of any detailed occupation. HRSA projects national NP supply above demand through 2038 and calls distribution the most important issue, so prospects depend heavily on location.
+- /blog/how-to-evaluate-np-programs: Check accreditation first, in the accreditor's own directory and with a date attached, because it governs certification eligibility, licensure, federal aid and credit transfer. Then ask one hard question about clinical placement and check the program's geography against where you plan to practice; the guide names no schools and ranks no programs.
+- /blog/np-preceptor-guide: A preceptor is a licensed clinician who supervises your clinical hours at a real site and evaluates you for your program. The deciding question is who must find the preceptor, the program or the student, so get that answer in writing before you enroll.
+- /blog/np-student-loan-limits-professional-degree: As of October 6, 2026, nursing MSN and DNP programs (and nurse anesthesia DNAP programs) count as professional degrees for federal loan limits, which allows up to $50,000 a year and $200,000 in total. That status rests on a June 24, 2026 court stay of part of an Education Department rule, and the case is undecided.
+
+### Specialties and certification
+- /blog/fnp-vs-pmhnp-vs-agacnp: Choose FNP for breadth and employer recognition across primary care, PMHNP for psychiatric prescribing, deep demand and telehealth flexibility, and AGACNP for hospital-based acute care and procedural work. All three share the same projected growth, so the day-to-day work should decide.
+- /blog/agacnp-vs-agpcnp: Both adult-gerontology tracks serve the same adult population and split on acuity: AGACNP prepares you for acute, complex and critical illness, and AGPCNP for primary and chronic care. Under the APRN Consensus Model, education, certification and licensure align on role and population, so the choice is a career fork.
+- /blog/np-certification-overview: Your population focus decides your certification exam. Family, adult-gerontology primary care and psychiatric-mental health candidates choose between two bodies, adult-gerontology acute care has its own pair, and pediatrics, neonatal, women's health, nurse anesthesia and nurse-midwifery each run through a single body.
+- /blog/fnp-certification-aanp-vs-ancc: FNP-C is awarded by AANPCB, which now operates as NPCB, and FNP-BC by ANCC; both certify the same population focus. Scope of practice comes from state law and your license, so decide with your state board's accepted list, each body's handbook and your program's guidance.
+- /blog/pmhnp-certification-guide: ANCC awards PMHNP-BC, the long-established credential, and since 2024 AANPCB (now NPCB) has awarded PMHNP-C. Because one credential is much newer, start with your state board's list of accepted certifications.
+- /blog/np-ceu-requirements-by-state: Continuing education for NPs runs on two independent clocks, the state APRN license and the national certification, and meeting one does not satisfy the other. Boards set and revise hour counts, cycles and fees, so the guide links all 51 boards instead of publishing numbers that go stale.
+
+### Job search
+- /blog/new-grad-np-first-job: Most new grad NP jobs come from employers built to train beginners: postgraduate fellowships and residencies, community health centers and FQHCs, VA medical centers and large group practices. Expect a first offer below the all-NP median, and put a named preceptor and a gradual caseload ramp ahead of a slightly higher base salary.
+- /blog/np-fellowship-residency-programs: As of October 2026, NP fellowship and residency programs are optional postgraduate programs, run by employers such as VA medical centers, health systems and community health centers, that move a new NP into practice with mentoring, didactics and protected learning time. CCNE standards describe programs of 9 to 18 months, and the VA examples reviewed closed applications months before the start.
+- /blog/np-resume-guide: An NP resume is read first by a parser and then by a reviewer who skims it, and both reward a single column, standard headings, Month YYYY dates and a credentials block. Put the credentials block, with license type, state, certification and certifying body, above experience.
+- /blog/np-cover-letter-guide: An NP cover letter earns its place by answering what the resume cannot: why this employer, why now and how your background fits its patients. Keep it to four short paragraphs, and if another employer's name would fit just as well, it is not tailored.
+- /blog/np-interview-questions: NP interviews test clinical judgment, behavior under pressure, understanding of your scope and logistics, in that order. Prepare one specific example for each of the 40 questions, and finish by asking about caseload, onboarding and who reviews your charts.
+- /blog/non-clinical-nurse-practitioner-jobs: Non-clinical NP jobs use clinical judgment without a patient panel: utilization review, chart review, case management, clinical documentation integrity, pharma and biotech, research, informatics, teaching, quality, legal nurse consulting and public health. Each employer decides whether a role is remote, and many of these credentials rest on the RN license.
+- /blog/remote-telehealth-np-jobs-guide: Remote and telehealth NP jobs require an active APRN license in each state where patients are located, not where the NP sits. As of October 2026, Medicare telehealth flexibilities run through December 31, 2027 and DEA telemedicine prescribing flexibilities through December 31, 2026.
+
+### Pay and contracts
+- /blog/np-salary-guide: Two NP offers for similar work can differ widely because of five factors: state, practice setting, specialty, employment structure and state practice authority. The guide shows how to spot each in a posting and sends readers to /salary-guide for the figures.
+- /blog/highest-paying-np-specialties: CRNAs top the APRN pay scale, and below them inpatient, emergency and acute care NP roles generally pay more than outpatient primary care. Every premium above the $132,300 all-NP median (BLS, May 2025) is a structure you can read in postings for your state and setting.
+- /blog/np-salary-negotiation-guide: Negotiate the package, not the number: get the employer's range before naming one and anchor on live state data rather than your last salary. CME allowance, PTO, malpractice tail, productivity thresholds and collaboration costs often move more easily than base pay.
+- /blog/np-1099-vs-w2: A 1099 offer is a business contract, so the rate is only one term worth negotiating. Pin down payment terms, guaranteed volume, malpractice and tail coverage, termination costs and any restriction on where you can work next; /resources/1099-vs-w2 answers whether contract work pays more.
+- /blog/nurse-practitioner-noncompete-laws: As of October 2026, whether an NP noncompete is enforceable depends on state law and the contract's wording, because the FTC's nationwide ban never took effect and was removed from federal regulations on February 12, 2026. Several states now void or limit noncompetes for NPs, including Virginia (from July 1, 2026), Maine, Colorado, Montana, Minnesota and California.
+
+### Licensure, prescribing and practice
+- /blog/aprn-compact-states: As of October 6, 2026, four states have enacted the APRN Compact (North Dakota, Delaware, Utah and South Dakota), and it needs seven to take even limited effect, so no NP holds a multistate APRN license. The Nurse Licensure Compact covers RN and LPN/VN licenses only, so NPs still need an APRN license in each state where their patients are.
+- /blog/can-nurse-practitioners-prescribe-controlled-substances: Yes: as of October 2026, NPs can prescribe controlled substances when their state grants that authority and they hold a DEA registration for the state where they practice. State limits differ sharply, and federal telehealth flexibilities that waive the in-person visit run through December 31, 2026.
+- /blog/np-credentialing-checklist: Credentialing is verification, privileging is permission, and payer enrollment is the right to bill: three separate tracks, usually running at once. What the NP controls is completeness, so assemble the document set once and ask the credentialing coordinator for the timeline in writing.
+- /blog/np-malpractice-insurance-guide: A malpractice policy's value depends on its form (occurrence or claims-made) and whose interest it was bought to protect. An employer-paid claims-made policy generally stops answering for that work once you leave, so read the declarations page and ask who controls settlement.
+
+### For employers
+- /blog/nurse-practitioner-week-2026: National Nurse Practitioner Week 2026 runs Sunday, November 8 to Saturday, November 14, according to AANP, which counts more than 461,000 licensed NPs in the US as of October 2026. Recognition that lasts is practical: protected CME time and funds, a career conversation and a fix for a real workload problem.
+
+### State licensure guides
+- /resources lists a licensure guide for each state and DC (practice authority, Nurse Licensure Compact status, the APRN application path and board links). Licensing facts such as fees and processing times appear only where they were checked at a named source, each with its source and the date it was checked.
+
+## Free Tools
+
+All tools are free and live under https://nphiring.com/tools.
+- /tools/1099-vs-w2-calculator: Prices a contract rate against a salaried offer with self-employment tax, your federal bracket, business expenses and the benefits a contractor self-funds. Every input is yours, so the result is an illustration of your own numbers.
+- /tools/cost-of-living-comparison: Puts two cities side by side: posted pay, the cost-of-living gap and what each salary is worth in national-average dollars. The cost-of-living index comes from the site's city dataset.
+- /tools/licensure-checker: Shows practice authority, licensure steps and live pay for any of 51 jurisdictions. A multi-state planner lines up every state you are considering side by side.
+- /tools/salary-benchmark: Gives median and 25th to 75th percentile posted pay by state, from live listings, for employers checking a planned offer. A figure is published only where enough postings from enough employers disclose pay.
+- /tools/specialty-finder: Eight questions on population, acuity, setting, autonomy, procedures and schedule. It returns the specialties that match what you said you want, with live roles and pay for each.
+- /tools/private-practice-revenue-calculator: Works visits, collections per visit and overhead through to net income before tax. A sensitivity table shows what a wrong assumption costs.
+- /tools/cost-per-hire-calculator: Compares a flat-fee posting with sponsored ads and an agency fee, on your own applicant volume and time to fill. Our prices are built in. Every other figure is yours.
+
+## Comparisons
+
+- /compare: Dated, source-checked comparisons of NP Hiring with other NP job boards, including what each competitor does better.
+- /compare/np-hiring-vs-indeed: How NP Hiring compares with Indeed for NP job searches and hiring on focus, pricing, salary data and tools, with every claim dated and checked against Indeed's own pages.
+- /compare/np-hiring-vs-aanp-jobcenter: How NP Hiring compares with the AANP JobCenter on access model, pricing, salary resources and tools, with claims checked against AANP's own pages.
+- /compare/np-hiring-vs-enp-network: How NP Hiring compares with ENP Network on association network, events, preceptors, CE, pay transparency, pricing and tools.
+
+## Data Reports
+
+- /reports: Data reports built from NP Hiring's own NP job postings. Every figure has a minimum sample and a source.
+- /reports/state-of-np-hiring-2026: What active NP postings on NP Hiring show about specialty demand, geography, work mode and advertised pay, with the sample limits stated and national context cited to its sources. Published August 6, 2026.
+- /reports/pay-transparency: The share of active postings on NP Hiring that disclose a pay range, computed live, plus how the site labels estimates and dated observations on how other boards handle pay disclosure.
 
 ## Career Resources
 
-- /salary-guide: NP salary guide, with a page per state
+- /salary-guide: NP salary guide: the national median, plus state medians where enough disclosed pay supports one
 - /salary-guide/specialty: NP salary by specialty
+- /for-job-seekers: Job search hub linking the resume, cover letter, interview, negotiation, credentialing, new grad and fellowship guides
 - /resources: Licensure and career tools, including a state licensure checker
 - /resources/1099-vs-w2: 1099 vs W-2 for nurse practitioners
 - /resources/fpa-guide: What full practice authority means
@@ -82,6 +166,7 @@ All category pages live under https://nphiring.com/jobs/<slug>.
   market context is labelled as the estimate it is rather than presented as a cited
   statistic
 - Job-level salary is reproduced from the employer's posting, never modeled
+- Guides carry a reviewed date, and regulatory topics (telehealth rules, the APRN Compact, loan limits, noncompetes) say "as of" a date because they change
 
 ## Data Access
 

@@ -73,7 +73,7 @@ function buildJobsHubFaqs(totalJobs: number, categoryGroups: readonly HubCategor
     },
     {
       question: `How fast is demand for ${brand.niche.descriptor}s growing?`,
-      answer: `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034 (${STAT_SOURCES.blsGrowth2034.source}), which places the role among the fastest-growing occupations in the United States.`,
+      answer: `The BLS projects ${STAT_SOURCES.blsGrowth2035.formatted} employment growth for ${brand.niche.descriptor}s from 2025 to 2035 (${STAT_SOURCES.blsGrowth2035.source}), which places the role among the fastest-growing occupations in the United States.`,
     },
     {
       question: `Where can ${brand.niche.descriptor}s practice independently?`,

@@ -20,6 +20,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Calculator, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import TakeHomeCalculator from '@/components/tools/TakeHomeCalculator';
 import {
@@ -33,7 +34,9 @@ import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } fro
 const PAGE_PATH = '/tools/1099-vs-w2-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
 const PAGE_TITLE = `1099 vs W2 Take-Home Calculator for ${brand.niche.short}s`;
-const PAGE_DESCRIPTION = `Free take-home calculator comparing a 1099 contract rate to a W-2 ${brand.niche.short} salary: self-employment tax, federal bracket, business expenses, and the employer-paid benefits a contractor has to self-fund. Tax year ${TAX_MODEL_YEAR}, federal only.`;
+// Under 160 characters, front-loaded with the query and every audience the
+// rate inputs serve (research/seo-tools.md, 2026-10-06).
+const PAGE_DESCRIPTION = `Free 1099 vs W-2 calculator for ${brand.niche.short}s, CRNAs and other APRNs: self-employment tax, brackets, expenses and self-funded benefits. Federal only, tax year ${TAX_MODEL_YEAR}.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`1099 vs W2 Take-Home Calculator`)}&type=page`;
 
 const TYPICAL_BAND = `$${Math.round(salaryConfig.normalizer.typical.min / 1000)}K to $${Math.round(salaryConfig.normalizer.typical.max / 1000)}K`;
@@ -132,7 +135,7 @@ export default function TakeHomeCalculatorPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            applicationCategory: 'FinanceApplication',
+            applicationCategory: toolApplicationCategory(PAGE_PATH),
             operatingSystem: 'Any',
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,

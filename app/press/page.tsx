@@ -198,7 +198,7 @@ export default async function PressPage() {
 
     const dataSourceRows = [
         { label: `Median ${brand.niche.short} salary, United States`, stat: STAT_SOURCES.averageSalary },
-        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2034 },
+        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2035 },
         { label: 'Population in primary-care shortage areas', stat: STAT_SOURCES.hrsaShortagePopulation },
         { label: 'Full Practice Authority jurisdictions', stat: STAT_SOURCES.fullPracticeStates },
     ];
@@ -488,7 +488,7 @@ export default async function PressPage() {
                             <strong>Figures we cannot compute are left out, not estimated.</strong>
                         </li>
                         <li>
-                            <strong>Certification bodies are attributed per specialty.</strong> AANP or ANCC for{' '}
+                            <strong>Certification bodies are attributed per specialty.</strong> AANPCB (operating as NPCB) or ANCC for{' '}
                             {brand.niche.short} certification, NBCRNA for nurse anesthetists, and AMCB for certified
                             nurse-midwives.
                         </li>

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
-import HomepageHero from '@/components/HomepageHero';
 import FeaturedJobsSection from '@/components/FeaturedJobsSection';
 import { prisma } from '@/lib/prisma';
 import { getSiteStats } from '@/lib/site-stats';
@@ -24,10 +23,11 @@ export const metadata: Metadata = {
   title: `For Job Seekers: Find Your Next ${brand.niche.short} Role`,
   // Removed the hardcoded "9,000+" job count (audit 09 M-21) — the actual
   // count drifts and a stale figure in metadata that doesn't match the
-  // live UI is a credibility hit. Description now describes the platform
-  // value without a numeric claim.
+  // live UI is a credibility hit. "Thousands of verified roles" went the
+  // same way (2026-10-06): it was still a count claim, just a vaguer one.
+  // The description names what a seeker can do, with no number at all.
   description:
-    `Find your next ${brand.niche.long} position. Search thousands of verified roles, compare salaries, get daily alerts, and apply with one free account, all 100% free forever.`,
+    `Find your next ${brand.niche.long} position. Search ${brand.niche.descriptor} jobs in every specialty, see pay whenever the employer posts it, get daily alerts, and read free career guides.`,
   openGraph: {
     images: [{ url: SEEKERS_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job seeker career resources` }],
   },
@@ -91,6 +91,57 @@ const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: t
   { feature: 'Zero Spam or Recruiter Noise', us: true, indeed: false, linkedin: false },
 ];
 
+/**
+ * The job search guides block (2026-10-06). Each title is the post's own
+ * frontmatter title in content/blog/<slug>.mdx, and each line restates what
+ * that post covers, so the card never promises more than the post holds.
+ * Every slug is a code-served .mdx post (see SERVING in
+ * config/niche/content-map.ts), so no link here can 404 for want of a sync.
+ */
+interface SeekerGuide {
+  slug: string;
+  title: string;
+  covers: string;
+}
+
+const APPLICATION_GUIDES: readonly SeekerGuide[] = [
+  { slug: 'np-resume-guide', title: 'The NP Resume Guide (With a Copy-Paste Template)', covers: 'Section order, a correct credentials block, strong bullets and a template that parses cleanly.' },
+  { slug: 'np-cover-letter-guide', title: 'NP Cover Letter Guide: Structure, Template and What to Skip', covers: 'Four short paragraphs, adapted to each posting.' },
+  { slug: 'np-interview-questions', title: '40 NP Interview Questions With Sample Answers', covers: 'From clinical judgment to compensation, with questions to ask back.' },
+  { slug: 'np-salary-negotiation-guide', title: 'NP Salary Negotiation: Scripts, RVU Models, and FPA Leverage', covers: 'Anchor on market data, value the whole package and decode RVU pay models.' },
+  { slug: 'np-credentialing-checklist', title: 'NP Credentialing Checklist: Documents and Who Owns the Clock', covers: 'Credentialing, privileging and payer enrollment, and every document to assemble.' },
+];
+
+const NEW_GRAD_GUIDES: readonly SeekerGuide[] = [
+  { slug: 'new-grad-np-first-job', title: 'How to Land Your First NP Job as a New Grad', covers: 'Where new grad roles come from, what a good first job looks like and how to apply.' },
+  { slug: 'np-fellowship-residency-programs', title: 'Nurse Practitioner Fellowship Programs: 2026 Residency Guide', covers: 'Who accredits programs, when applications open and how to judge one against a regular first job.' },
+];
+
+function GuideList({ guides, numbered }: { guides: readonly SeekerGuide[]; numbered: boolean }) {
+  const ListTag = numbered ? 'ol' : 'ul';
+  return (
+    <ListTag style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {guides.map((g, i) => (
+        <li key={g.slug}>
+          <Link href={`/blog/${g.slug}`} className="emp-bento-card seeker-guide-link" style={{
+            ...clayCard, borderRadius: '14px', padding: '16px 20px', textDecoration: 'none',
+            display: 'grid', gridTemplateColumns: numbered ? '32px 1fr auto' : '1fr auto', gap: '14px', alignItems: 'center',
+          }}>
+            {numbered && (
+              <span aria-hidden="true" className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#BE185D' }}>{i + 1}</span>
+            )}
+            <span>
+              <span style={{ display: 'block', fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '3px' }}>{g.title}</span>
+              <span style={{ display: 'block', fontSize: '13px', color: '#7A6A62', lineHeight: 1.5 }}>{g.covers}</span>
+            </span>
+            <ArrowRight size={16} aria-hidden="true" style={{ color: '#BE185D' }} />
+          </Link>
+        </li>
+      ))}
+    </ListTag>
+  );
+}
+
 export default async function ForJobSeekersPage() {
   const stats = await getStats();
   const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`;
@@ -104,11 +155,80 @@ export default async function ForJobSeekersPage() {
       <VideoJsonLd pathname="/for-job-seekers" />
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 1: HERO — Reuse HomepageHero (3D nurse background)
+          SECTION 1: HERO (page-local, 2026-10-06)
+          This page used to mount components/HomepageHero, so it carried the
+          homepage's own H1 word for word: two URLs competing for one
+          heading. It now has its own H1, matched to its title, on the same
+          cream graph-paper stage as the homepage and /for-employers. The
+          search is a plain GET form to /jobs (the same q and location
+          parameters HomepageHero sends), so it works before any script runs.
           ═══════════════════════════════════════════════════════════════ */}
-      <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #F5D5C4 15%, #F0C4AF 50%, #FDFBF7 100%)' }}>
-        <HomepageHero />
-      </div>
+      <section
+        style={{
+          backgroundColor: '#F5F0EB',
+          backgroundImage:
+            'linear-gradient(rgba(122,28,43,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(122,28,43,0.07) 1px, transparent 1px)',
+          backgroundSize: '44px 44px',
+          padding: '64px 0 72px',
+        }}
+      >
+        <div style={{ maxWidth: '880px', margin: '0 auto', padding: '0 20px', textAlign: 'center' }}>
+          <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#BE185D', margin: '0 0 16px' }}>
+            For job seekers
+          </p>
+          <h1 className="font-heading" style={{
+            fontSize: 'clamp(32px, 4.4vw, 52px)', fontWeight: 700, lineHeight: 1.08,
+            color: '#7A1C2B', margin: '0 0 18px', letterSpacing: '-0.01em',
+          }}>
+            Find Your Next {brand.niche.long} Role
+          </h1>
+          <p style={{ fontSize: '16px', color: '#5f4a50', lineHeight: 1.7, fontWeight: 600, margin: '0 auto 28px', maxWidth: '600px' }}>
+            Search {brand.niche.descriptor} and APRN jobs in every specialty, see pay whenever the employer posts it,
+            and use free guides for every step from resume to first day.
+          </p>
+
+          <form action="/jobs" method="get" role="search" className="seeker-hero-search" style={{
+            display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center',
+            maxWidth: '720px', margin: '0 auto 22px',
+          }}>
+            <input
+              type="search"
+              name="q"
+              aria-label="Job title, specialty or keyword"
+              placeholder="Job title, specialty or keyword"
+              style={{
+                flex: '1 1 240px', minWidth: 0, padding: '14px 16px', fontSize: '15px',
+                border: '2px solid #7A1C2B', background: '#FFFFFF', color: '#1A2E35',
+              }}
+            />
+            <input
+              type="text"
+              name="location"
+              aria-label="City or state"
+              placeholder="City or state"
+              style={{
+                flex: '1 1 180px', minWidth: 0, padding: '14px 16px', fontSize: '15px',
+                border: '2px solid #7A1C2B', background: '#FFFFFF', color: '#1A2E35',
+              }}
+            />
+            <button type="submit" className="seeker-hero-submit" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: '14px 26px', fontSize: '14px', fontWeight: 800,
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+              color: '#fff', background: '#BE185D',
+              border: '2px solid #7A1C2B', boxShadow: '5px 5px 0 #7A1C2B', cursor: 'pointer',
+            }}>
+              <Search size={16} aria-hidden="true" /> Search jobs
+            </button>
+          </form>
+
+          <p style={{ fontSize: '14px', color: '#5f4a50', margin: 0 }}>
+            <Link href="/job-alerts" style={{ color: '#7A1C2B', fontWeight: 700 }}>Set a job alert</Link>
+            {' '}or{' '}
+            <Link href="#seeker-guides" style={{ color: '#7A1C2B', fontWeight: 700 }}>read the job search guides</Link>
+          </p>
+        </div>
+      </section>
 
       {/* ═══ FEATURED JOBS ═══ */}
       <FeaturedJobsSection />
@@ -161,7 +281,10 @@ export default async function ForJobSeekersPage() {
                 </div>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Salary Transparency</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  See salary ranges on every listing. No guessing, no surprises, and no &quot;DOE.&quot;
+                  {/* Was "salary ranges on every listing": false whenever a
+                      posting states no pay. Scoped to the policy llms.txt and
+                      /editorial-policy state (2026-10-06). */}
+                  Pay is shown whenever the employer&apos;s posting includes it, reproduced as posted and never estimated.
                 </p>
               </div>
             </div>
@@ -383,6 +506,36 @@ export default async function ForJobSeekersPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
+          SECTION 6b: JOB SEARCH GUIDES (cream). The application funnel in
+          order, then the two guides for new graduates.
+          ═══════════════════════════════════════════════════════════════ */}
+      <section id="seeker-guides" aria-labelledby="seeker-guides-heading" style={{ background: '#FDFBF7', padding: '80px 20px', scrollMarginTop: '96px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+            Job Search Guides
+          </p>
+          <h2 id="seeker-guides-heading" className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
+            From Application to First Day
+          </h2>
+
+          <div className="seeker-guides-grid" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '28px', alignItems: 'start' }}>
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#7A1C2B', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>
+                Apply, interview and start
+              </h3>
+              <GuideList guides={APPLICATION_GUIDES} numbered />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#7A1C2B', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>
+                If you are a new graduate
+              </h3>
+              <GuideList guides={NEW_GRAD_GUIDES} numbered={false} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
           SECTION 7: CAREER RESOURCES (clay cards on warm bg)
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
@@ -407,7 +560,10 @@ export default async function ForJobSeekersPage() {
               },
               {
                 title: '50-State Licensure Guides',
-                desc: 'Step-by-step requirements, board links, practice authority status, and processing times for every state.',
+                // 2026-10-06: "processing times for every state" overclaimed;
+                // the series quotes a processing time only where a dated,
+                // cited licensing fact exists (lib/blog-license-guides.ts).
+                desc: 'Practice authority, the APRN licensure path and board links for every state, with dated licensing facts where we have verified them.',
                 href: '/resources',
                 IconComponent: BookOpen,
                 iconColor: '#EA580C',
@@ -416,7 +572,10 @@ export default async function ForJobSeekersPage() {
               },
               {
                 title: `${brand.niche.short} Career Blog`,
-                desc: `Interview tips, resume advice, CE requirements, and industry trends, written by ${brand.niche.short}s for ${brand.niche.short}s.`,
+                // 2026-10-06: "written by NPs for NPs" named an authorship the
+                // site cannot show (brand.editorial.author is unset; see
+                // config/brand.ts). The claim now matches /editorial-policy.
+                desc: 'Interview tips, resume advice, CE requirements, and industry trends, with cited figures that carry a source and a date.',
                 href: '/blog',
                 IconComponent: FileText,
                 iconColor: '#4F46E5',
@@ -488,6 +647,33 @@ export default async function ForJobSeekersPage() {
           transform: translateY(-2px) scale(1.02);
           box-shadow: 6px 6px 20px rgba(0,0,0,0.1), -3px -3px 10px rgba(255,255,255,0.9) !important;
         }
+        .seeker-hero-submit {
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .seeker-hero-submit:hover {
+          transform: translate(-2px, -2px);
+          box-shadow: 7px 7px 0 #7A1C2B !important;
+        }
+        .seeker-hero-submit:active {
+          transform: translate(3px, 3px);
+          box-shadow: 2px 2px 0 #7A1C2B !important;
+        }
+        .seeker-hero-search input:focus-visible,
+        .seeker-hero-submit:focus-visible,
+        .seeker-guide-link:focus-visible {
+          outline: 3px solid #BE185D;
+          outline-offset: 2px;
+        }
+        .seeker-guide-link {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .seeker-guide-link:hover {
+          transform: translateX(3px);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .seeker-hero-submit, .seeker-guide-link { transition: none; }
+          .seeker-hero-submit:hover, .seeker-hero-submit:active, .seeker-guide-link:hover { transform: none; }
+        }
         .seeker-compare-table tr {
           transition: background 0.2s ease;
         }
@@ -497,6 +683,8 @@ export default async function ForJobSeekersPage() {
 
         @media (max-width: 768px) {
           .seeker-compare-grid { grid-template-columns: 1fr !important; }
+          .seeker-guides-grid { grid-template-columns: 1fr !important; }
+          .seeker-hero-submit { flex: 1 1 100%; }
           .seeker-types-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .seeker-resource-grid { grid-template-columns: 1fr !important; }
           .seeker-bento { grid-template-columns: 1fr !important; }

@@ -20,7 +20,7 @@ interface ScreeningQuestion {
 }
 
 const PRESET_QUESTIONS: { text: string; type: ScreeningQuestion['type']; knockout?: boolean; knockoutAnswer?: string }[] = [
-  { text: `Do you have an active national ${brand.niche.short} board certification (ANCC or AANP)?`, type: 'boolean', knockout: true, knockoutAnswer: 'no' },
+  { text: `Do you have an active national ${brand.niche.short} board certification (ANCC or AANPCB)?`, type: 'boolean', knockout: true, knockoutAnswer: 'no' },
   { text: 'Do you hold an active DEA license?', type: 'boolean' },
   { text: `How many years of ${brand.niche.short} experience do you have?`, type: 'number' },
   { text: 'Are you licensed to practice in the state where this position is located?', type: 'boolean', knockout: true, knockoutAnswer: 'no' },

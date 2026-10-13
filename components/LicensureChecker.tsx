@@ -52,7 +52,7 @@ export interface LicensureStep {
    bucket onto lucide icons (local-asset pattern, b371b37). */
 const COMMON_REQUIREMENTS: readonly Omit<LicensureStep, 'step'>[] = [
   { text: 'MSN or DNP from an accredited program', icon: GraduationCap },
-  { text: `National ${brand.niche.short} board certification (ANCC or AANP)`, icon: Award },
+  { text: `National ${brand.niche.short} board certification (ANCC or AANPCB)`, icon: Award },
   { text: 'State APRN license application', icon: FileText },
   { text: 'NPI number registration', icon: Hash },
   { text: 'DEA registration for prescribing', icon: Pill },

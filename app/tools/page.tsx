@@ -3,9 +3,10 @@
  *
  * Cards render from TOOLS in ./tools-registry.ts, the same array the
  * /resources tools band reads, so the hub can never advertise a tool that
- * does not exist. Counts and the tool list in the metadata description derive
- * from that array too — a hand-typed "four tools" went stale the moment the
- * fifth shipped.
+ * does not exist. The visible count derives from that array too — a
+ * hand-typed "four tools" went stale the moment the fifth shipped. The meta
+ * description is hand-written for length (see PAGE_DESCRIPTION): when a tool
+ * is added or retired, update it alongside the registry.
  */
 import { brand } from '@/config/brand';
 import type { Metadata } from 'next';
@@ -26,11 +27,13 @@ import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, clayCard, iconTile } from '@/
 import { TOOLS, TOOLS_HUB_PATH, type ToolAudience, type ToolIconKey } from './tools-registry';
 
 const PAGE_URL = `${brand.baseUrl}${TOOLS_HUB_PATH}`;
-const PAGE_TITLE = `Free ${brand.niche.short} Career Tools: Calculators, Comparisons & Benchmarks`;
-/** Enumerated from the registry so the description cannot omit a live tool. */
-const TOOL_TITLE_LIST = TOOLS.map((tool) => tool.title.toLowerCase()).join('; ');
-const PAGE_DESCRIPTION = `${TOOLS.length} free interactive tools for ${brand.niche.descriptor}s and the teams hiring them: ${TOOL_TITLE_LIST}.`;
-const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Free ${brand.niche.short} Career Tools`)}&type=page`;
+// The title and description spell out the full role name, which is how
+// searchers phrase it (research/seo-tools.md, 2026-10-06). The description is
+// hand-written and kept under 160 characters so it is not cut in results; the
+// full tool list renders from the registry in the body, not here.
+const PAGE_TITLE = `Free ${brand.niche.long} Tools and Calculators`;
+const PAGE_DESCRIPTION = `Free ${brand.niche.descriptor} tools and calculators: 1099 vs W-2 pay, cost of living, licensure, a specialty quiz, practice income, pay benchmarks and cost to hire.`;
+const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Free ${brand.niche.long} Tools`)}&type=page`;
 
 export const metadata: Metadata = {
   // P7 runtime fix D7: no manual brand suffix — the root layout's title
@@ -39,13 +42,14 @@ export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
+    `${brand.niche.descriptor} tools and calculators`,
     `free ${brand.niche.short.toLowerCase()} tools`,
     `${brand.niche.descriptor} salary calculator`,
     `${brand.niche.short.toLowerCase()} licensure checker`,
     `${brand.niche.short.toLowerCase()} cost of living comparison`,
     `${brand.niche.short.toLowerCase()} salary benchmark`,
-    `${brand.niche.short.toLowerCase()} specialty finder`,
-    'private practice revenue calculator',
+    `${brand.niche.short.toLowerCase()} specialty quiz`,
+    `${brand.niche.short.toLowerCase()} private practice income calculator`,
     'cost per hire calculator',
   ],
   openGraph: {
@@ -95,7 +99,7 @@ export default function ToolsHubPage() {
               name: tool.title,
               description: tool.blurb,
               url: `${brand.baseUrl}${tool.path}`,
-              applicationCategory: tool.audience === 'employer' ? 'BusinessApplication' : 'FinanceApplication',
+              applicationCategory: tool.applicationCategory,
               operatingSystem: 'Any',
               isAccessibleForFree: true,
               offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },

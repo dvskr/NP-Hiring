@@ -52,19 +52,22 @@ describe('P1 #5: FAQ builders for the landing slugs', () => {
         expect(joinedAnswers(key)).toContain(String(SENTINEL_TOTAL));
     });
 
-    it('every landing slug except the psych specialty resolves FAQ data', () => {
+    it('every landing slug, the psych specialty included, resolves FAQ data', () => {
+        // WHY THIS PIN CHANGED (2026-10-06 SEO/AEO/GEO release): the psych
+        // specialty used to be a documented gap, pinned as
+        // isCategoryFaqSlug(...) === false until category-faq-data.ts could
+        // carry it. It is now keyed via PSYCH_SPECIALTY_SLUG (no reference-
+        // niche literal, ratchet ceiling unchanged), so the gap closes and
+        // the slug joins the covered list instead of being exempted.
         const uncovered = [
             'acute-care', 'adult-gerontology', 'anesthesia', 'cardiology',
             'clinical-nurse-specialist', 'dermatology', 'emergency',
             'family-practice', 'home-health', 'hospitalist', 'midwifery',
             'neonatal', 'oncology', 'orthopedic', 'pediatric', 'primary-care',
-            'urgent-care', 'women-health',
+            'psychiatric-mental-health', 'urgent-care', 'women-health',
         ].filter((slug) => !isCategoryFaqSlug(slug)
             || getCategoryFaqs({ category: slug as CategorySlug, totalJobs: SENTINEL_TOTAL }).length === 0);
         expect(uncovered).toEqual([]);
-        // Documented gap: the psych specialty slug stays unmapped until the
-        // niche-copy ceiling for category-faq-data.ts is raised.
-        expect(isCategoryFaqSlug('psychiatric-mental-health')).toBe(false);
     });
 
     it('labels exist for every new key', () => {
@@ -288,7 +291,7 @@ describe('P1 #17: /jobs hub editorial + citable FAQ', () => {
 
     it('every figure derives from stats-sources or the live DB count', () => {
         expect(src).toContain('STAT_SOURCES.averageSalary.formatted');
-        expect(src).toContain('STAT_SOURCES.blsGrowth2034');
+        expect(src).toContain('STAT_SOURCES.blsGrowth2035');
         expect(src).toContain('STAT_SOURCES.fullPracticeStates');
         expect(src).toContain('totalJobs.toLocaleString()');
         // Fabricated-inventory claims stay dead (P0 #5 regression surface).

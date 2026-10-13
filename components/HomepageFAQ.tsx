@@ -25,6 +25,7 @@ import { ChevronDown } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { formatStatVintage } from '@/components/SalaryProvenance';
 import type { FAQItem } from '@/lib/pseo/category-faq-data';
 
 export interface StateJobCount {
@@ -125,11 +126,11 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `What is the ${brand.niche.short} job outlook?`,
-            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034, which is much faster than average. ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated primary care Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), a designation that marks a shortage of primary care providers.`,
+            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2035.source} projects ${STAT_SOURCES.blsGrowth2035.formatted} employment growth for nurse practitioners through 2035, which is much faster than average. ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated primary care Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${formatStatVintage(STAT_SOURCES.hrsaShortagePopulation.asOf)}), a designation that marks a shortage of primary care providers.`,
         },
         {
             question: `How long does it take to become an ${brand.niche.short}?`,
-            answer: `Becoming an ${brand.niche.short} takes a BSN and an active RN license, then an accredited MSN or DNP program with ${brand.niche.short} specialization, then a national ${brand.niche.short} certification exam (ANCC or AANP). Some programs ask for RN experience before admission, and BSN-to-DNP programs combine the graduate steps into one program. Total time depends on the degree you choose and on full-time or part-time study, so compare each program's published length.`,
+            answer: `Becoming an ${brand.niche.short} takes a BSN and an active RN license, then an accredited MSN or DNP program with ${brand.niche.short} specialization, then a national ${brand.niche.short} certification exam (ANCC or AANPCB). Some programs ask for RN experience before admission, and BSN-to-DNP programs combine the graduate steps into one program. Total time depends on the degree you choose and on full-time or part-time study, so compare each program's published length.`,
         },
         {
             question: `Can ${brand.niche.short}s prescribe medication?`,

@@ -98,13 +98,23 @@ const LAST_PROMO_MS = new Date(SWITCH.getTime() - 1);
 const AFTER_SWITCH = new Date(SWITCH.getTime() + 60 * 60 * 1000);
 
 /**
- * The UTC day the engineering backlog release dates the pages whose copy it
- * changed (PAGE_CONTENT_DATES). A page is dated by the change that SHIPS it:
- * if the release ships on a later UTC day, move this and every entry that
+ * The UTC day the plain copy pass (a74a4d5) and the SEO, AEO and GEO content
+ * release both shipped. PAGE_CONTENT_DATES dates every page whose rendered
+ * copy either one changed to it, which is every entry but three. (No entry
+ * carries the engineering backlog release's 2026-10-04 any more: all four of
+ * its pages changed again.) A page is dated by the change that SHIPS it: if a
+ * release ships on a later UTC day, move its constant and every entry that
  * carries it in app/api/sitemaps/lastmod.ts to the ship day in that commit.
- * Each such entry is pinned to this constant below, so a partial move fails.
+ * Every entry is pinned below, so a partial move fails.
  */
-const BACKLOG_RELEASE_DAY = '2026-10-04';
+const CONTENT_RELEASE_DAY = '2026-10-13';
+
+/** The dated pages neither change touched, with the copy dates they keep. */
+const UNTOUCHED_PAGE_DATES: Readonly<Record<string, string>> = {
+    '/terms': '2026-09-27',
+    '/privacy': '2026-09-15',
+    '/sub-processors': '2026-09-12',
+};
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1). */
 const PROMO_SWITCH_PAGES = [
@@ -282,57 +292,46 @@ describe('lastmod helpers', () => {
         expect(withPromoSwitch(new Date('nope'), AFTER_SWITCH)).toBeUndefined();
     });
 
-    it('pages whose rendered copy or links this release changed carry its date, so Google recrawls them', () => {
-        // /press and /tools/licensure-checker now link the scope of practice
-        // explorer, /tools/licensure-checker dropped the "All 50 states
-        // classified" claim (so did /resources, which changed again since; see
-        // the next test), the revenue calculator card points at
-        // /scope-of-practice, and the cost of living comparator links a
-        // curated metro's guide (CQ-13, L-05). The Indeed comparison's
-        // licensure row and advantage now link the scope of practice explorer
-        // (CQ-13; so do the ENP Network page's, which changed again since:
-        // see the comparison test below), and the specialty salary template's
-        // config and content were rewritten.
-        for (const pagePath of [
-            '/press',
-            '/tools/licensure-checker',
-            '/tools/private-practice-revenue-calculator',
-            '/tools/cost-of-living-comparison',
-            '/compare/np-hiring-vs-indeed',
-            '/salary-guide/specialty/[specialty]',
-        ]) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe('2026-09-29');
+    it('2026-10-13: every page the plain copy pass or the content release changed carries the ship day, and no other page moved', () => {
+        // Between them the two changes edited what every dated page says
+        // except three (see the note above PAGE_CONTENT_DATES): reworded UI
+        // copy and removed explanatory text; new tool titles, H1s and
+        // descriptions; the job seeker hero and guides; the full practice
+        // quick answer; the 2025 to 2035 growth figure, the HRSA floor, the
+        // stats review date and the certifying body names. Pinning every
+        // entry makes a partial move fail, and a blanket move too.
+        expect(Object.keys(UNTOUCHED_PAGE_DATES).filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
+        for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
+            expect(day, pagePath).toBe(UNTOUCHED_PAGE_DATES[pagePath] ?? CONTENT_RELEASE_DAY);
         }
     });
 
-    it('backlog 2.2: /resources and /for-programs carry the day they began rendering the posts served from code', () => {
-        // Both read blog_posts directly, which holds no rows in production, so
-        // the article grids and the program guide card rendered nothing. They
-        // now read through lib/blog.ts, which serves those posts from code.
+    it('content release: /resources and /for-programs carry its ship day, on both sides of the promo end', () => {
+        // Both print post titles served from code (lib/blog.ts). The content
+        // release added ten posts and retitled the two education guides, so
+        // the article grids and the program guide card changed that day.
         for (const pagePath of ['/resources', '/for-programs']) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(BACKLOG_RELEASE_DAY);
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(CONTENT_RELEASE_DAY);
             // Neither page's copy follows the promo clock, so the switch never
             // dates it: the copy date stands on both sides of the promo end.
             expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(false);
             for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
-                expect(pageContentDate(pagePath, at), pagePath).toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
+                expect(pageContentDate(pagePath, at), pagePath).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
             }
         }
     });
 
-    it('backlog 2.1: the AANP and ENP Network comparisons carry the day their price sentences were put right', () => {
-        // Both pages changed what they print WHILE the promo runs: the AANP
-        // page dated our own price to the competitor review ("both public, as
-        // of <review date>", five weeks before the promo and the ladder went
-        // public) and said "a NP salary guide"; the ENP Network page said
-        // "hiring a NP". The Indeed page's copy did not change.
-        for (const pagePath of ['/compare/np-hiring-vs-aanp-jobcenter', '/compare/np-hiring-vs-enp-network']) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(BACKLOG_RELEASE_DAY);
-            expect(pageContentDate(pagePath, PROMO_RUNNING), pagePath).toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
+    it('content release: all three comparison pages carry its ship day, and the promo switch still dates them afterwards', () => {
+        // All three print the stats review date in their salary row
+        // (STATS_LAST_REVIEWED), which the content release moved, and the
+        // plain copy pass trimmed their shared template the same day.
+        // COMPARE_REVIEW_DATE did not move: nobody re-checked the claims.
+        for (const pagePath of COMPARE_PAGE_PATHS) {
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(CONTENT_RELEASE_DAY);
+            expect(pageContentDate(pagePath, PROMO_RUNNING), pagePath).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
             // Its price statements still switch at the promo end, which dates it afterwards.
             expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
         }
-        expect(PAGE_CONTENT_DATES['/compare/np-hiring-vs-indeed']).toBe('2026-09-29');
     });
 
     it('lastmodTag emits a W3C datetime, or nothing for a missing date', () => {
@@ -486,7 +485,7 @@ describe('/api/sitemaps/index dates each child by the newest lastmod inside it',
         // newer than every other source the primary child reads (the jobs'
         // CONTENT stamp and the page copy dates, which move to the ship day
         // each release). A hard-coded day silently stops testing anything
-        // once BACKLOG_RELEASE_DAY passes it.
+        // once a release day passes it.
         const newest = latestOf(CONTENT, newestPageContentDate(PROMO_RUNNING))!;
         const newer = new Date(newest.getTime() + 24 * 60 * 60 * 1000).toISOString();
         vi.mocked(getAllPublishedSlugs).mockResolvedValue([{ slug: 'post-new', updated_at: newer }]);
@@ -607,12 +606,12 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         expect(undated, 'a listed page has no content date (add it to PAGE_CONTENT_DATES)').toEqual([]);
     });
 
-    it('backlog 2.2: /resources and /for-programs are listed with the day they began rendering posts from code, before and after the promo end', async () => {
+    it('content release: /resources and /for-programs are listed with its ship day, before and after the promo end', async () => {
         for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
             vi.setSystemTime(at);
             const entries = await byUrl();
             for (const pagePath of ['/resources', '/for-programs']) {
-                expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
+                expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
             }
         }
     });
@@ -621,16 +620,19 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         const entries = await byUrl();
         const reviewed = new Date(COMPARE_REVIEW_DATE);
         // Each page's copy changed after the review: CQ-13 relinked the Indeed
-        // and ENP Network pages, and the AANP and ENP Network price sentences
-        // were corrected since. The review date is not moved for a copy edit
-        // that re-checked no claim, so the copy date is what the sitemap emits.
+        // and ENP Network pages, the AANP and ENP Network price sentences were
+        // corrected, and on 2026-10-13 all three got the moved stats review
+        // date and a trimmed template. The review date is not moved for a copy
+        // edit that re-checked no claim, so the copy date is what the sitemap emits.
         for (const pagePath of COMPARE_PAGE_PATHS) {
             expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(pageContentDate(pagePath));
             expect(pageContentDate(pagePath)!.getTime(), pagePath).toBeGreaterThan(reviewed.getTime());
         }
         expect(entries.get(`${BASE}/compare/np-hiring-vs-aanp-jobcenter`)?.lastModified)
-            .toEqual(new Date(`${BACKLOG_RELEASE_DAY}T00:00:00.000Z`));
-        // The hub prints no price and no corrected sentence: the review date stands.
+            .toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
+        // The hub is dated by the claims review alone. (Its hero line and
+        // method bullets were trimmed on 2026-10-13; giving it a copy date
+        // of its own is docs/PENDING_WORK.md 2.22.)
         expect(entries.get(`${BASE}${COMPARE_HUB_PATH}`)?.lastModified).toEqual(reviewed);
     });
 
@@ -682,9 +684,12 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
     });
 
     it('a specialty salary page is dated by its own specialty bucket, not by the site-wide newest job', async () => {
-        // Both after the template's copy date, so only the bucket read can decide.
-        const siteWide = new Date('2026-09-29T20:00:00.000Z');
-        const ownBucket = new Date('2026-09-29T10:00:00.000Z');
+        // Both after the template's copy date, so only the bucket read can
+        // decide. Derived, not literal: the template date moves to the ship
+        // day whenever a release edits the template.
+        const templateDate = pageContentDate('/salary-guide/specialty/[specialty]')!;
+        const siteWide = new Date(templateDate.getTime() + 20 * 60 * 60 * 1000);
+        const ownBucket = new Date(templateDate.getTime() + 10 * 60 * 60 * 1000);
         const familyBucket = specialtyTagWhere('family-practice');
         vi.mocked(prisma.job.aggregate).mockImplementation((async (args: { where?: { AND?: unknown[] } }) => ({
             _max: {
