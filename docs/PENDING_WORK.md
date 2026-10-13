@@ -1,7 +1,8 @@
 # Pending Work
 
-> The single list of everything still open, checked against the code on 2026-10-02 (this release, on top of
-> main at `96f035e`; everything earlier is live). Shipped work is at the end.
+> The single list of everything still open, checked against the code on 2026-10-13 (after the sister board
+> links `71236b5`, the plain copy pass `a74a4d5` and the SEO, AEO and GEO content release `6263323`; all three
+> are live, and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -12,11 +13,17 @@
 |---|---|---|
 | Now | The Google indexing service account key was pasted into a chat | OWNER rotates it, 1.4 |
 | 2026-10-01 to about 2026-10-29 | Google and Bing make their first passes over the submitted sitemap | OWNER watches Search Console weekly (1.4); submit nothing else |
+| 2026-10-16 | First court deadline named in the student loan post (a government cross motion in the Massachusetts case); more follow on 2026-10-30, 2026-11-06, 2026-11-13, 2026-11-20 and 2026-12-04 | CLAUDE re-checks the dockets, and the Oregon preliminary injunction ruling, then updates the post (2.24) |
+| About 2026-10-21 | The Department of Education's decision on the NP residency consortium's recognition is due (90 days after the July advisory committee meeting) | CLAUDE updates the fellowship post (2.24) |
 | About 2026-10-29 | Four weeks after the sitemap submission | DECISION D12: re-admit the specialty and setting by state pages if indexing looks healthy |
+| 2026-10-30 | ANCC's new FNP test content outline takes effect | CLAUDE rewords the three posts that say it is about to change (2.24) |
+| Early 2026-11 | The next monthly jobs report | CLAUDE refreshes the job outlook post (2.24) |
 | About 2026-11-06 | Quarterly re-check of the /compare claims is due (dated 2026-08-06) | CLAUDE, section 6 |
 | About 2026-11-11 | Quarterly NLC roster and scope-of-practice review is due (last 2026-08-11) | CLAUDE, section 6 |
+| After 2026-11-14 | NP Week 2026 is over | CLAUDE refreshes or redirects the NP Week post (2.24) |
 | About 2026-11-21 | First expiry warning emails for promo posts (sent 5 days before a 60-day post ends) | Only if the $179 renewal should be on sale by then: Stripe live and paid posting on (1.1, 1.2). Otherwise the email offers a free repost, which is fine |
 | Before 2027-01-01 10:00 UTC | The promo ends (midnight Hawaii time, `config.promoEndsAt`) and the paid ladder starts on its own. With no deploy, the pricing copy switches: emails at send time, the employer app on its next render, and each page when its cached render is replaced. A page re-renders at most once an hour (the homepage once a minute), and the first request after that window is still answered with the old render while it triggers the new one, so a page shows the promo once more to its first visitor after the switch, however late that visit comes. /terms does not switch (2.15) | Stripe live (1.1), paid posting on (1.2), pricing decisions made (3.1) |
+| 2026-12-31 | The DEA telemedicine flexibilities for prescribing controlled substances expire unless the special registration rule is published first | CLAUDE re-checks the prescribing post, the remote guide and the telehealth FAQ on the remote, telehealth and psychiatric hubs (2.24) |
 | About 2027-03-01 | Promo posts made on 2026-12-31 reach their 60 days | CLAUDE may retire the promo code paths (`docs/pricing-system.md` section 11) |
 | 2030-07-01 | New York's NP Modernization Act sunset date | Re-check New York before then (section 6) |
 
@@ -108,6 +115,12 @@ dry run first and then with `--apply` in one transaction:
 - Why: the code fixes stop new bad rows; these repair the rows already stored.
 - Where: a terminal on a trusted machine. The repo `.env` is the production database.
 
+**1.13 Regenerate the salary guide PDF.** The download at /downloads/np-salary-guide-2026.pdf was built before
+the 2026-10-13 content release. It still prints the old growth figure (40%, 2024 to 2034) and "90 million+",
+while the site and the generator now say 41% (2025 to 2035) and "100 million+".
+- Why: the lead magnet contradicts the page that offers it until it is rebuilt.
+- Where: `scripts/generate-salary-pdf.ts` reads live medians from the database, so run it on a trusted machine (the repo `.env` is the production database), then commit the new file.
+
 ## 2. Engineering (CLAUDE)
 
 **2.3 Repair garbled city slugs.** `PseoStats` and the snippet tables still hold slugs such as
@@ -115,19 +128,13 @@ dry run first and then with `--apply` in one transaction:
 (run `--check` first) writes to production, so it needs your OK.
 
 **2.8 Stripe SDK upgrade and the restricted key list.** Upgrade `stripe` from ^20 to ^22 and rerun the webhook
-suites. It needs `npm install` in the main checkout, whose `node_modules` every worktree shares, so it waits for
-2.9. The other half of the old item is open too: the permission list for a restricted live key is not written yet
+suites. It needs `npm install` in the main checkout, which is safe now that no other worktree shares its
+`node_modules` (2.9 closed on 2026-10-13). The other half of the old item is open too: the permission list for a restricted live key is not written yet
 (`docs/pricing-system.md` has no such section). It belongs there as section 9b, beside the production Stripe
 checklist, and has to cover every Stripe call in the code:
 Checkout Sessions create, retrieve (with `payment_intent` expanded), list and expire; Subscriptions retrieve
 and list; Invoices retrieve; Customer Portal sessions create. `webhooks.constructEvent` needs no permission, as
 it verifies the signature locally. Until the list is written, the live key in 1.2 has to be the standard secret key.
-
-**2.9 Worktree housekeeping.** `.worktrees/copy` (merged) belongs to a peer session; remove it when that
-session ends. `.worktrees/soften` is merged. `.worktrees/indexing` holds this release (branch
-`fix/engineering-backlog`) and is merged once the release lands. `.worktrees/main` is behind `origin/main`. The
-main checkout (`C:\Users\sathish.kumar\np-hiring`) is on `design/sticker-cards` with one uncommitted change
-nobody has claimed: find its owner before switching it to `main`. Use the safe junction removal steps.
 
 **2.11 Guest Easy Apply: closed.** Closed (owner decision 2026-09): applying requires an NP Hiring account
 for external and Easy Apply jobs alike; guest Easy Apply will not be built; JobPosting directApply stays false.
@@ -175,6 +182,61 @@ post can read the daily apply-click series of any other job. `days` is also unbo
 **2.21 Coverage claims on navigation cards.** Found in the 2026-10-12 cleanup: metro pages print "All 50 states"
 and the landing pages "Browse every state" on cards that may not reach every state, and the /jobs/locations
 "Travel / Locum tenens" tile merges two categories the site keeps separate. Check against live data and reword.
+
+**2.22 A copy date for the /compare hub.** The hub's sitemap date is the claims review alone
+(`COMPARE_REVIEW_DATE`, 2026-08-06), but the plain copy pass changed its title, hero and method bullets on
+2026-10-13 (`app/compare/page.tsx`). Give it an entry in `PAGE_CONTENT_DATES` and date it by the later of the two
+in `app/sitemap.ts`, as the three comparison pages already are. It is not a one-line change:
+`tests/regressions/promo-clock-pages-rerender.test.ts` walks every dated page, and the hub imports a module that
+reads the promo clock without printing a price, so it needs an exemption there.
+
+**2.23 Finish naming the certifying body.** The content release changed "AANP" to "AANPCB" (the certification
+board, which is a separate body from the association) on the listing pages, /faq, /press, /editorial-policy and
+the job description guide. "AANP or ANCC" is still printed by `app/for-employers/resources/how-to-hire/page.tsx`,
+`lib/blog-license-guides.ts` (all 51 license guides), `lib/blog-ceu-guide.ts` and
+`lib/pseo/category-city-template.tsx`, and three suites pin the old wording
+(`tests/regressions/p1-employer-content-hub.test.ts`, `tests/regressions/p1-content-library-license-guides.test.ts`,
+`tests/regressions/p2-pseo-parity-templates.test.ts`). Change the copy and the pins together. Never write
+"formerly AANPCB": its own site says "AANPCB, operating as NPCB". See D24 before touching the credential letters.
+
+**2.24 Dated posts to re-check.** The ten posts published on 2026-10-13 carry claims that expire. Each was
+re-checked against its sources that day; the dates table at the top lists the next ones.
+- `np-student-loan-limits-professional-degree`: five or more federal cases are open. Re-check each docket after
+  its deadline, and the District of Oregon ruling on the naturopathic colleges' preliminary injunction motion
+  (heard 2026-09-23): a grant there would change the sentence that says only AANP v. McMahon has changed how
+  loans are administered.
+- `np-fellowship-residency-programs`: the post says it could not confirm a final decision on the consortium's
+  federal recognition. The advisory committee's July 2026 meeting report carries only its recommendation; the
+  senior Department official's decision letter is due about 2026-10-21 and is posted in the Department's
+  e-Recognition system. Those pages refuse automated requests, so open them in a browser, then state the
+  outcome with its date. The same post's UC Davis line ("reaccreditation due in 2026") should be re-read against
+  the consortium's August 2026 notice of accreditation actions.
+- `how-to-become-a-nurse-practitioner`, `fnp-certification-aanp-vs-ancc` and `fnp-vs-pmhnp-vs-agacnp`: reword
+  "about to change" once the ANCC outline is in force.
+- `nurse-practitioner-job-outlook`: refresh after each monthly jobs report it cites.
+- `nurse-practitioner-week-2026`: refresh or redirect after the week ends.
+- `can-nurse-practitioners-prescribe-controlled-substances`, `remote-telehealth-np-jobs-guide` and
+  `TELEHEALTH_RULES_FAQ` in `lib/pseo/category-faq-data.ts`: the DEA flexibilities and the special registration
+  rule, which has been under White House review since 2026-08-25.
+- `nurse-practitioner-noncompete-laws`: one reviewer read the Colorado row ("with a limited exception for some
+  minority owners") as looser than the session law, which keeps sale of business covenants and caps their length
+  for some minority owners. Confirm against the statute, then tighten the cell. The Maine statute page also
+  flags a second version of subsection 5 that takes effect on 2027-01-01.
+
+**2.25 Smaller follow-ups from the content release.**
+- A blog post has no "content changed" stamp apart from `reviewed` (`lib/blog-mdx-posts.ts`), so the 18
+  refreshed posts keep their earlier review dates as sitemap dates although their copy changed on 2026-10-13.
+  Under-claiming is the safe side; a separate stamp would fix it.
+- The cert guides link /jobs/anesthesia and /jobs/adult-gerontology
+  (`tests/regressions/p5-cert-guides-series.test.ts` pins both links), and the content release session reported
+  that an empty hub answers 404. Not re-checked on 2026-10-13: confirm, then either keep the hubs rendering or
+  drop the links.
+- Six priority posts sit outside the 700 to 1,200 word band the content plan set.
+- Three tool breadcrumbs keep the old tool names ("Specialty Finder", "Private Practice Revenue", "Cost Per
+  Hire") under the new page titles.
+- /resources/1099-vs-w2, /resources/fpa-guide and /resources/private-practice-guide print "Last Updated" from
+  review dates older than the copy the plain copy pass changed. They are review dates, so they stay until the
+  guides are reviewed again (section 6).
 
 ## 3. Decisions (DECISION)
 
@@ -227,6 +289,8 @@ Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
 | D21 | Repeated benefit cards on 15 landing pages | The bento grids repeat themselves (hospital "Acute Inpatient Care" and "Acute Care", part-time "Work-Life Balance" twice). Removing them means re-laying out each grid | `app/jobs/<category>/page.tsx` |
 | D22 | Newsletter cadence | The blog sidebar says "delivered weekly", the exit popup checkbox says "monthly". Which is true? | `components/blog/**`, `components/ExitIntentPopup.tsx` |
 | D23 | Marketing blocks kept for your call | Employer dashboard "Hiring Tips" card, the /job-alerts "Why Set Up Alerts?" card, and the /for-programs "How It Works" steps (they describe emailing us although the page has a self-serve builder) | `components/employer/EmployerDashboardClient.tsx`, `app/job-alerts/page.tsx`, `app/for-programs/page.tsx` |
+| D24 | The family NP credential letters | The content release session reported that AANPCB's handbook writes the credential as NP-C, while the posts and the tests write FNP-C. Not re-checked on 2026-10-13. Which form should the site print? | the certification posts in `content/blog`, `lib/pseo/category-faq-data.ts` |
+| D25 | "Salary Transparency on Every Listing" (accuracy) | The comparison table on /for-job-seekers claims this for us and marks Indeed and LinkedIn "Others hide salary". A card on the same page now says pay is shown whenever the employer's posting includes it, because many aggregated listings state no pay. The row is false as written and the competitor half is unverified. Recommended: remove the row, or audit the whole table as the employer comparison was (`lib/employer-comparison.ts`) | `app/for-job-seekers/page.tsx` |
 
 ### 3.5 Audit-era items (enterprise audit)
 
@@ -307,6 +371,9 @@ tests fail until every side agrees:
 - 2.12 Job rows that stored a state but no town: the planner shipped as `planStateOnlyTownBackfill` in `scripts/indexing-fixes/lib/planners.ts`, `scripts/indexing-fixes/backfill-job-locations.ts` runs it in every pass, and the 2026-10-01 pass found no such row left.
 - 2.17 Dashes in email subjects and previews: every subject, preview and preheader in `lib/email-service.ts` now uses a colon, a comma or two sentences (plain UI copy sweep, 2026-10-12).
 - Explanatory text sweep (2026-10-12, same branch): field hints, page narration, label restatements, duplicated lines and filler removed across the public site at the owner's request; legal, billing, consent, provenance and accuracy text kept. Follow-ups: 2.18, 2.21, D20 to D23.
+- 2.9 Worktree housekeeping: done on 2026-10-13. Every merged worktree and branch is gone, here and on GitHub, and the main checkout is on `main`. Each worktree's `.next` held links into the shared `node_modules`; they were removed first, link by link, and the shared folder was checked before and after. Two old stashes were left alone (a July work in progress and the Clay 2.0 redesign you asked to keep), and so was an untracked file named `text` in the main checkout (a saved state board rule page from license research).
+- The content release's open item "sitemap lastmod for changed tools": `PAGE_CONTENT_DATES` now dates all 33 pages the plain copy pass or the content release changed to 2026-10-13, the UTC day both went live; /terms, /privacy and /sub-processors kept their dates. The /compare hub is 2.22.
+- Ship-day review of the content release (2026-10-13): 195 time-bound claims in the ten new posts and the refreshed surfaces were re-checked at their sources. 189 held. Four were corrected: the student loan post counted three open federal cases where the dockets show at least five (in the body and in one FAQ answer), the fellowship post said every VA site names a program director, and the noncompete post described Maine's statute page as the text before the 2026 amendment. Two, on the residency consortium's federal recognition, could not be confirmed because the Department's pages refuse automated requests, so that sentence now says so. Follow-ups: 2.23 to 2.25, D24, D25, 1.13.
 - Prisma migrations: applied, most recently `20260928000000_job_content_changed_at` on 2026-09-30.
 
 ## Shipped since 2026-08-16
@@ -319,4 +386,7 @@ tests fail until every side agrees:
 - `8c023e4` Unsourced generalizations softened; this register rebuilt.
 - `b393f53`, `f984ba2` Indexing readiness release: honest sitemap lastmod (`jobs.content_changed_at`), cited license guide facts for 51 jurisdictions (50 indexable), apply requires an account, the blush header, and every readiness audit finding.
 - `96f035e` IndexNow key file.
-- This release: pricing copy that switches itself when the promo ends (2.1), /resources and /for-programs served from code (2.2), Stripe subscription events applied from the live subscription (2.4), one payable renewal session per post (2.5), one client-safe renewal-offer rule (2.6), archive route tests (2.7), small leftovers (2.10).
+- `ff6aa1c` Pricing copy that switches itself when the promo ends (2.1), /resources and /for-programs served from code (2.2), Stripe subscription events applied from the live subscription (2.4), one payable renewal session per post (2.5), one client-safe renewal-offer rule (2.6), archive route tests (2.7), small leftovers (2.10).
+- `71236b5` Psychiatric job seekers and employers are pointed to the sister board from the homepage, the psychiatric landing page and the post-job form.
+- `a74a4d5` Plain UI copy, email subjects without dashes, and explanatory text removed site-wide.
+- `6263323` The SEO, AEO and GEO content release (2026-10-13): ten new posts, 18 refreshed, the 2025 to 2035 growth figure and the HRSA floor, the full practice quick answer on /scope-of-practice, retitled tools, the ClaudeBot sitemap carve-out and rebuilt llms files.

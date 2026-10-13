@@ -7,7 +7,8 @@
  *   - D13 proposed an email telling a paying employer that restoring an
  *     archived post puts it live, when a restore leaves it unpublished;
  *   - 2.8 pointed at a permission list docs/pricing-system.md does not carry;
- *   - 2.9 called the worktree that holds this release merged;
+ *   - 2.9 called the worktree that holds this release merged (2.9 itself
+ *     closed on 2026-10-13, when every merged worktree was removed);
  *   - the promo-end row promised pages switch "within an hour", which the
  *     first visitor after that hour does not see;
  *   - owner questions the implementers raised were in no decision table.
@@ -83,14 +84,19 @@ describe('section 2: what is listed as open engineering is open', () => {
         expect(closed).toContain('planStateOnlyTownBackfill');
     });
 
-    it('2.9 does not call the worktree that holds this release merged', () => {
-        const item = between(pending, '**2.9 Worktree housekeeping.**', '**2.11 ');
-        expect(item).not.toContain('`.worktrees/soften` and `.worktrees/indexing` are merged');
-        expect(item).toMatch(/`\.worktrees\/indexing` holds this release/);
+    it('2.9 is closed: worktree housekeeping was done on 2026-10-13 and is recorded, not listed as open', () => {
+        // Every merged worktree and branch was removed that day, so the item
+        // moved from the open list to the closed one. (It used to be pinned
+        // open here, because an earlier draft called the worktree that held
+        // an unshipped release "merged".)
+        expect(engineering).not.toContain('**2.9 ');
+        expect(closed).toMatch(/2\.9 Worktree housekeeping: done on 2026-10-13/);
+        // 2.8 waited on it for `npm install` in the shared checkout.
+        expect(between(pending, '**2.8 ', '**2.11 ')).not.toMatch(/so it waits for\s+2\.9/);
     });
 
     it('2.8 points at the restricted key list only once docs/pricing-system.md carries one', () => {
-        const item = between(pending, '**2.8 ', '**2.9 ');
+        const item = between(pending, '**2.8 ', '**2.11 ');
         const listWritten = /restricted/i.test(pricingDoc);
         if (listWritten) {
             expect(item, 'docs/pricing-system.md now carries the restricted key list: point 2.8 at it').not.toMatch(/not written yet/);
