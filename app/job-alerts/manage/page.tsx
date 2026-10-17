@@ -284,8 +284,8 @@ function ManageAlertsContent() {
       const data = await response.json();
       if (response.ok && data.success) {
         setCreateMsg({ type: 'success', text: 'Alert created!' });
-        // Re-read the list from the API rather than trusting the create
-        // response, which only carries { id, token }.
+        // Re-read the list from the API: the create response carries only
+        // { success, isNew }, never the alert or its token.
         await loadAlerts({ silent: true });
         // Reset form
         setNewKeyword('');

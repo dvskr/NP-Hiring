@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { syncToBeehiiv } from '@/lib/beehiiv'
 import { sendSignupWelcomeEmail } from '@/lib/email-service'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
+import { readSignupMetadata } from '@/lib/auth/ensure-profile'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -55,6 +56,14 @@ export async function GET(request: Request) {
 
       if (!existingProfile && data.user.email) {
         const metadata = data.user.user_metadata || {}
+        // SECURITY: user_metadata is written by the account holder (the
+        // public auth API stores any `options.data` sent at sign-up), so the
+        // role is never read from it raw. readSignupMetadata holds it to
+        // employer or job_seeker, as the other two creation paths do; admin
+        // is granted by a direct database action only. This branch wrote
+        // `metadata.role` as it came, which made any sign-up carrying
+        // role 'admin' an admin (tests/regressions/auth-callback-role-allowlist.test.ts).
+        const signupRole = readSignupMetadata(data.user).role
 
         // Handle both email signup metadata and Google OAuth metadata
         let firstName = metadata.first_name || null
@@ -74,7 +83,7 @@ export async function GET(request: Request) {
             email: data.user.email,
             firstName: firstName,
             lastName: lastName,
-            role: metadata.role || 'job_seeker',
+            role: signupRole,
             company: metadata.company || null,
             avatarUrl: avatarUrl,
           }
@@ -85,8 +94,7 @@ export async function GET(request: Request) {
 
         // Create lead records (mirrors /api/auth/profile POST logic)
         try {
-          const userRole = metadata.role || 'job_seeker'
-          if (userRole === 'employer') {
+          if (signupRole === 'employer') {
             const existingEmployerLead = await prisma.employerLead.findFirst({
               where: { contactEmail: data.user.email },
             })
@@ -130,7 +138,7 @@ export async function GET(request: Request) {
         }
 
         // Auto-create daily job alert for job seekers (only if none exists)
-        if ((metadata.role || 'job_seeker') === 'job_seeker') {
+        if (signupRole === 'job_seeker') {
           try {
             const existingAlert = await prisma.jobAlert.findFirst({
               where: { email: data.user.email },
@@ -163,8 +171,7 @@ export async function GET(request: Request) {
 
         // Send welcome email for first-time Google OAuth users only
         try {
-          const userRole = metadata.role || 'job_seeker'
-          await sendSignupWelcomeEmail(data.user.email, firstName || '', userRole)
+          await sendSignupWelcomeEmail(data.user.email, firstName || '', signupRole)
         } catch (emailError) {
           console.error('Failed to send welcome email', emailError)
         }
@@ -188,7 +195,7 @@ export async function GET(request: Request) {
           await sendSignupWelcomeEmail(
             data.user.email,
             profile?.firstName || data.user.user_metadata?.first_name || '',
-            profile?.role || data.user.user_metadata?.role || 'job_seeker'
+            profile?.role || readSignupMetadata(data.user).role
           )
           console.log('Welcome email sent', { userId: data.user.id })
         }

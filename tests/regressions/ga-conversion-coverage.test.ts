@@ -97,6 +97,7 @@ vi.mock('next/server', async (importOriginal) => ({
 }));
 
 import { POST as postJobAlert } from '@/app/api/job-alerts/route';
+import { sendWelcomeEmail } from '@/lib/email-service';
 import { POST as postApplyDirect } from '@/app/api/applications/apply-direct/route';
 import { readApplyOutcome } from '@/components/InPlatformApplyForm';
 import { describeSubscribeFailure } from '@/components/ExitIntentPopup';
@@ -411,11 +412,7 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
   it('a first signup answers isNew: true', async () => {
     const res = await postJobAlert(alertRequest({ email: EMAIL, frequency: 'daily' }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      success: true,
-      isNew: true,
-      alert: { id: 'alert-1', token: 'token-1' },
-    });
+    expect(await res.json()).toEqual({ success: true, isNew: true });
     expect(h.txJobAlert.create).toHaveBeenCalledTimes(1);
   });
 
@@ -430,11 +427,7 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
     });
     const res = await postJobAlert(alertRequest({ email: EMAIL, frequency: 'daily' }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      success: true,
-      isNew: false,
-      alert: { id: 'alert-1', token: 'token-1' },
-    });
+    expect(await res.json()).toEqual({ success: true, isNew: false });
     expect(h.txJobAlert.create).not.toHaveBeenCalled();
   });
 
@@ -443,7 +436,40 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
     expect(h.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
       h.txJobAlert.findFirst.mock.invocationCallOrder[0],
     );
-    expect(read(ALERT_ROUTE)).toMatch(/success: true,[\s\S]*?isNew: existing === null,[\s\S]*?alert: \{/);
+    expect(read(ALERT_ROUTE)).toMatch(/success: true,[\s\S]*?isNew: existing === null,/);
+  });
+
+  it('never answers with the alert token: the token is the key to the address\'s alerts', async () => {
+    // The route takes no session and no proof of inbox control, so its
+    // answer goes to whoever typed the address. It used to carry
+    // `alert: { id, token }`, and GET /api/job-alerts?token= lists every
+    // alert on that address with its own token, which PATCH and DELETE then
+    // accept: knowing an email was enough to read, edit and delete that
+    // person's alerts. For a repeat of existing criteria the EXISTING
+    // alert's token came back and no email went out, so the owner saw
+    // nothing. The token now reaches the inbox only (each digest's manage
+    // and unsubscribe links), and the signed-in by-email route.
+    const fresh = await postJobAlert(alertRequest({ email: EMAIL, frequency: 'daily' }));
+    const freshBody = await fresh.text();
+
+    h.txJobAlert.findFirst.mockResolvedValue({
+      id: 'alert-1',
+      token: 'token-1',
+      name: null,
+      confirmedAt: new Date('2026-09-01'),
+    });
+    const repeat = await postJobAlert(alertRequest({ email: EMAIL, frequency: 'daily' }));
+    const repeatBody = await repeat.text();
+
+    for (const body of [freshBody, repeatBody]) {
+      expect(body).not.toContain('token-1');
+      expect(body).not.toContain('alert-1');
+      expect(Object.keys(JSON.parse(body)).sort()).toEqual(['isNew', 'success']);
+    }
+    // A new alert still sends its welcome email. Which token that email's
+    // footer should carry is a separate defect (its links read the email
+    // lead's unsubscribe token), so this pins only that it went out.
+    expect(vi.mocked(sendWelcomeEmail)).toHaveBeenCalledWith(EMAIL, expect.any(String));
   });
 
   it('a rejected signup carries no isNew at all, so no surface can count it', async () => {

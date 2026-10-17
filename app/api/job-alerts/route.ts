@@ -304,10 +304,12 @@ export async function POST(request: NextRequest) {
       // conversion against one alert row. Decided inside the locked
       // transaction above, so two concurrent submits cannot both say true.
       isNew: existing === null,
-      alert: {
-        id: jobAlert.id,
-        token: jobAlert.token,
-      },
+      // SECURITY: no alert id or token here. This route takes no session and
+      // no proof that the caller controls the address, so its answer goes to
+      // whoever typed it, and the token is the key to that address's alerts
+      // (GET ?token= lists them all with their tokens; PATCH and DELETE
+      // accept those). It reaches the inbox only, in each digest's manage
+      // and unsubscribe links. A signed-in owner uses /api/job-alerts/by-email.
     });
   } catch (error) {
     logger.error('Error creating job alert', error);

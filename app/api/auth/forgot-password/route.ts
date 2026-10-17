@@ -10,6 +10,7 @@ import {
     V2, SANS, SERIF,
 } from '@/lib/email-templates-v2';
 import { sendAndLog } from '@/lib/email-service';
+import { safeResetRedirect } from '@/lib/auth/reset-redirect';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
@@ -40,34 +41,30 @@ const bodySchema = z.object({
 });
 
 /**
- * Sec2 fix (2026-06-01): only allow first-party origins for the
- * password-reset redirect. Pre-fix the body's `redirectTo` was passed
- * straight to Supabase, which embedded it in the reset email link as
- * `?next=` — any URL was accepted, so an attacker could craft a reset
- * link that, after a successful login, bounced the user to
- * `https://evil.example.com?token=…` for phishing or session theft.
+ * Sec2 fix (2026-06-01): the body's `redirectTo` is where the mailed link
+ * lands, carrying the recovery session in its URL fragment, so only hosts
+ * this site controls are accepted, and the URL is rebuilt to the recovery
+ * path rather than passed on (lib/auth/reset-redirect.ts). Anything else is
+ * dropped and the link falls back to our own /auth/confirm recovery handler.
  *
- * Allow-list: production canonical + Vercel preview deployments + local
- * dev. Anything else is silently dropped (falls back to our own
- * /auth/confirm recovery handler).
+ * SECURITY (2026-10-13): the allow-list took every *.vercel.app host as a
+ * preview deploy. Anyone can register one, so a request naming someone
+ * else's address mailed them a genuine reset link aimed at the requester's
+ * host. Only this deployment's own Vercel hosts qualify now
+ * (tests/api/forgot-password-redirect.test.ts).
  */
-const ALLOWED_REDIRECT_HOSTS: ReadonlySet<string> = new Set([
-    brand.domain,
-    `www.${brand.domain}`,
-    'localhost',
-]);
-
 function safeRedirectOrigin(raw: string | undefined): string | undefined {
-    if (!raw) return undefined;
-    try {
-        const u = new URL(raw);
-        if (u.hostname.endsWith('.vercel.app')) return raw;  // preview deploys
-        if (ALLOWED_REDIRECT_HOSTS.has(u.hostname)) return raw;
-        logger.warn('forgot-password: rejected redirectTo with unknown host', { host: u.hostname });
-        return undefined;
-    } catch {
-        return undefined;
+    const allowed = safeResetRedirect(raw);
+    if (raw && !allowed) {
+        let host = '(unparseable)';
+        try {
+            host = new URL(raw).hostname;
+        } catch {
+            // keep the placeholder
+        }
+        logger.warn('forgot-password: rejected redirectTo', { host });
     }
+    return allowed;
 }
 
 function buildResetEmailHtml(resetUrl: string): string {
