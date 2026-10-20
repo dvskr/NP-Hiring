@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 interface UpdateAlertBody {
   frequency?: string;
@@ -12,6 +13,14 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  // SECURITY: the token is the only key to an alert, and this answers the
+  // alert or a 404 for any token tried, with an empty body changing nothing.
+  // It spends the bucket GET and DELETE /api/job-alerts?token= use, so no
+  // method is an unlimited way to try tokens.
+  // tests/api/job-alerts-token-hygiene.test.ts
+  const rateLimitResult = await rateLimit(request, 'job-alerts-token', RATE_LIMITS.general);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { token } = await params;
 

@@ -4,6 +4,31 @@ import { prisma } from '@/lib/prisma'
 import { getEmployerTier, getEmployerActivePostings } from '@/lib/tier-limits'
 import { PricingTier } from '@/lib/config'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
+import { parsePagination } from '@/app/api/jobs/pagination'
+
+/**
+ * Bounds on the search inputs. Each specialty or state term becomes its own
+ * case-insensitive `contains` match against every candidate row, and q is
+ * matched against nine columns, all of it twice (the page and the count). The
+ * talent pool page sends at most its specialty presets and the 51 states (the
+ * 50 and DC), both under MAX_FILTER_TERMS, and a typed query far shorter than
+ * MAX_QUERY_LENGTH.
+ */
+const MAX_QUERY_LENGTH = 200
+const MAX_FILTER_TERMS = 60
+const MAX_FILTER_TERM_LENGTH = 100
+/** Past any real career, and inside the Int range of yearsExperience. */
+const MAX_EXPERIENCE_YEARS = 100
+
+/** A comma-separated list filter: trimmed terms, blanks dropped, each term and the count capped. */
+function filterTerms(raw: string | null): string[] {
+    if (!raw) return []
+    return raw
+        .split(',')
+        .map(s => s.trim().slice(0, MAX_FILTER_TERM_LENGTH))
+        .filter(Boolean)
+        .slice(0, MAX_FILTER_TERMS)
+}
 
 export async function GET(req: NextRequest) {
     // Rate limit + Auth check — employer or admin only
@@ -34,16 +59,21 @@ export async function GET(req: NextRequest) {
         ? true
         : (await getEmployerActivePostings(user.id)).length > 0
 
-    // Parse query params
+    // Parse query params.
+    // SECURITY (EMP-CAND-1): Math.max(1, parseInt('abc')) is NaN, so ?page=abc
+    // or ?limit=abc reached Prisma as a NaN skip or take and answered 500, and
+    // q, workMode, experience and the list filters had no bounds. page and
+    // limit go through the public job search's parser (the same defaults: page
+    // 1, 20 per page, at most 50); the other inputs are capped above.
+    // Pinned by tests/api/employer-candidates-search-inputs.test.ts.
     const { searchParams } = new URL(req.url)
-    const q = searchParams.get('q')?.trim() || ''
+    const q = searchParams.get('q')?.trim().slice(0, MAX_QUERY_LENGTH) || ''
     const experience = searchParams.get('experience') // e.g. "3" for 3+ years
-    const specialties = searchParams.get('specialties') // comma-separated
-    const states = searchParams.get('states') // comma-separated
-    const workMode = searchParams.get('workMode')
+    const specList = filterTerms(searchParams.get('specialties')) // comma-separated
+    const stateList = filterTerms(searchParams.get('states')) // comma-separated
+    const workMode = searchParams.get('workMode')?.slice(0, MAX_FILTER_TERM_LENGTH)
     const hasResume = searchParams.get('hasResume') // "true" or "false"
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
-    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')))
+    const { page, limit } = parsePagination(searchParams)
     const skip = (page - 1) * limit
 
     // Build WHERE clause
@@ -72,42 +102,34 @@ export async function GET(req: NextRequest) {
         ]
     }
 
-    // Experience filter (minimum years)
-    if (experience) {
-        const minYears = parseInt(experience)
-        if (!isNaN(minYears)) {
-            where.yearsExperience = { gte: minYears }
-        }
+    // Experience filter (minimum years): a whole number, held inside the Int
+    // range of yearsExperience (parseInt let 99999999999 through to Prisma)
+    if (experience && /^\d+$/.test(experience)) {
+        where.yearsExperience = { gte: Math.min(Number(experience), MAX_EXPERIENCE_YEARS) }
     }
 
     // Specialties filter (any match)
-    if (specialties) {
-        const specList = specialties.split(',').map(s => s.trim()).filter(Boolean)
-        if (specList.length > 0) {
-            where.AND = [
-                ...(where.AND || []),
-                {
-                    OR: specList.map(s => ({
-                        specialties: { contains: s, mode: 'insensitive' as const },
-                    })),
-                },
-            ]
-        }
+    if (specList.length > 0) {
+        where.AND = [
+            ...(where.AND || []),
+            {
+                OR: specList.map(s => ({
+                    specialties: { contains: s, mode: 'insensitive' as const },
+                })),
+            },
+        ]
     }
 
     // Licensed states filter (any match)
-    if (states) {
-        const stateList = states.split(',').map(s => s.trim()).filter(Boolean)
-        if (stateList.length > 0) {
-            where.AND = [
-                ...(where.AND || []),
-                {
-                    OR: stateList.map(s => ({
-                        licenseStates: { contains: s, mode: 'insensitive' as const },
-                    })),
-                },
-            ]
-        }
+    if (stateList.length > 0) {
+        where.AND = [
+            ...(where.AND || []),
+            {
+                OR: stateList.map(s => ({
+                    licenseStates: { contains: s, mode: 'insensitive' as const },
+                })),
+            },
+        ]
     }
 
     // Work mode filter

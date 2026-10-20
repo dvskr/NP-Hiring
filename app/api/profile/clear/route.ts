@@ -6,6 +6,8 @@
  *   - firstName (user request)
  *   - System / immutable fields: id, supabaseId, email, role, createdAt,
  *     updatedAt, companyId, lifecycle timestamps (deletedAt, purgeAt, etc.)
+ *   - On a deleted account only: openToOffers and profileVisible, which
+ *     otherwise reset to the schema defaults (see visibilityReset)
  *   - File references that have storage backing: avatarUrl, resumeUrl,
  *     resumeParseStatus, resumeParsedAt (use the dedicated delete
  *     endpoints to remove the actual files)
@@ -46,11 +48,24 @@ export async function POST(request: NextRequest) {
 
     const profile = await prisma.userProfile.findUnique({
       where: { supabaseId: user.id },
-      select: { id: true },
+      select: { id: true, deletedAt: true },
     });
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+
+    // SECURITY: a deleted account keeps both visibility flags as they are.
+    // The reset below wrote them back to true and kept deletedAt, so a
+    // seeker who deleted the account, signed in again during the grace
+    // window without restoring it (Google sign-in never restores) and
+    // cleared the profile was listed in the talent pool again: the pool
+    // reads only these flags and the role. The clear itself still runs,
+    // since the settings page has no restore step to send the person to;
+    // a restore turns both flags back on (app/api/auth/restore-account).
+    // tests/api/profile-clear-deleted-account.test.ts
+    const visibilityReset = profile.deletedAt
+      ? {}
+      : { openToOffers: true, profileVisible: true };
 
     // Interactive transaction (callback form) so the embedding delete can
     // run alongside the Prisma model deletes — candidate_embeddings is a
@@ -102,8 +117,8 @@ export async function POST(request: NextRequest) {
           availableDate: null,
 
           // ── Visibility booleans → reset to schema defaults ─
-          openToOffers: true,
-          profileVisible: true,
+          // (not on a deleted account: see visibilityReset above)
+          ...visibilityReset,
 
           // ── Address ───────────────────────────────────────
           addressLine1: null,

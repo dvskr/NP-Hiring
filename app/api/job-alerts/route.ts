@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
     // covered by a plain unique index (NULLs are distinct), so the lock is
     // what makes the dedupe atomic: the second request waits, then finds the
     // first request's row and lands as an update.
-    const { jobAlert, existing } = await prisma.$transaction(async (tx) => {
+    const { existing } = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${jobAlertLockKey(normalizedEmail)}))`;
 
       const existing = await tx.jobAlert.findFirst({
@@ -281,6 +281,14 @@ export async function POST(request: NextRequest) {
           frequency,
           isActive: true,
           confirmedAt: now,
+          // SECURITY: this token is the only key to the address's alerts (GET
+          // below lists them all, each with its token; PATCH and DELETE take
+          // those). It was left to the Prisma cuid() default, which is partly
+          // a timestamp and a counter; the other alert creators (the auth
+          // callback, POST /api/auth/profile, completeSignupOptIns) already
+          // write a random UUID. Nothing parses the format: every reader looks
+          // it up as an opaque string. tests/api/job-alerts-token-hygiene.test.ts
+          token: crypto.randomUUID(),
         },
       });
       return { jobAlert: created, existing: null };
@@ -289,9 +297,13 @@ export async function POST(request: NextRequest) {
     // Send the welcome / "alerts are active" email immediately. This is what users
     // would have received after clicking Confirm under the old double-opt-in flow.
     // Only send for newly confirmed alerts to avoid spamming on every form submit.
+    // The address alone: the email looks up the address's EmailLead
+    // unsubscribe token itself, the only token its opt-out links resolve
+    // (this call used to pass the alert token, so they all answered
+    // "Invalid token").
     const isNewlyConfirmed = !existing || !existing.confirmedAt;
     if (isNewlyConfirmed) {
-      await sendWelcomeEmail(normalizedEmail, jobAlert.token);
+      await sendWelcomeEmail(normalizedEmail);
     }
 
     return NextResponse.json({
@@ -322,6 +334,15 @@ export async function POST(request: NextRequest) {
 
 // GET - Get all alerts for an email (look up email from token)
 export async function GET(request: NextRequest) {
+  // SECURITY: a valid token lists every alert on its address, each with its
+  // own token, and nothing limited how fast tokens could be tried. The
+  // bucket is its own (DELETE below shares it), so signups through POST
+  // never spend a reader's allowance, at the budget (general) the email
+  // unsubscribe and preferences routes give their token POSTs.
+  // tests/api/job-alerts-token-hygiene.test.ts
+  const rateLimitResult = await rateLimit(request, 'job-alerts-token', RATE_LIMITS.general);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
@@ -383,6 +404,14 @@ export async function GET(request: NextRequest) {
 
 // DELETE - Delete alert by token
 export async function DELETE(request: NextRequest) {
+  // SECURITY: the same token, answered 404 or 200 the same way, with no
+  // limit, so once GET was limited this was the unlimited way to try
+  // tokens. It spends GET's bucket: switching methods gives no fresh
+  // allowance. The manage and unsubscribe pages send one per click.
+  // tests/api/job-alerts-token-hygiene.test.ts
+  const rateLimitResult = await rateLimit(request, 'job-alerts-token', RATE_LIMITS.general);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');

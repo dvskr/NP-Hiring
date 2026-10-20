@@ -1,5 +1,5 @@
 /**
- * Jobs Endpoint Tests
+ * Jobs Endpoint Tests (GET /api/jobs: the paginated listing and the ?ids= lookup)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -168,5 +168,41 @@ describe('/api/jobs', () => {
         expect(prisma.job.findMany).toHaveBeenCalledWith(
             expect.objectContaining({ orderBy: buildJobsOrderBy('salary') }),
         );
+    });
+});
+
+/**
+ * ?ids= serves the saved and applied tabs (app/saved/page.tsx). JOBS-1:
+ * the list went into the IN clause exactly as sent, repeats included.
+ */
+describe('/api/jobs?ids=', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.mocked(prisma.job.findMany).mockResolvedValue([]);
+    });
+
+    it('queries each id once, however often the list repeats it', async () => {
+        const response = await GET(createRequest({ ids: 'job-1,job-2,job-1,,job-2' }));
+
+        expect(response.status).toBe(200);
+        expect(vi.mocked(prisma.job.findMany).mock.calls[0][0]?.where).toEqual({
+            id: { in: ['job-1', 'job-2'] },
+            isPublished: true,
+        });
+    });
+
+    it('queries every distinct id the saved page sends in its single request', async () => {
+        // The page fetches the whole saved (or applied) list in one call and
+        // shows any id the answer leaves out as "Listing no longer available",
+        // so this branch must not drop ids the page sends. Capping it at the
+        // paginated MAX_LIMIT needs the page to fetch in chunks first.
+        const ids = Array.from({ length: 60 }, (_, i) => `job-${i}`);
+
+        await GET(createRequest({ ids: ids.join(',') }));
+
+        expect(vi.mocked(prisma.job.findMany).mock.calls[0][0]?.where).toEqual({
+            id: { in: ids },
+            isPublished: true,
+        });
     });
 });

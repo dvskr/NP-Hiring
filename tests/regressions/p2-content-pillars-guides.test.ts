@@ -383,14 +383,17 @@ describe('truth rules', () => {
 
     /**
      * Certification bodies must be role-correct wherever a post names
-     * them: AANP/ANCC certify NPs, NBCRNA certifies CRNAs, AMCB certifies
-     * CNMs. The failure mode this guards is the one P2 #8 fixes elsewhere
-     * — "ANCC or AANP" offered as the answer for every APRN role.
+     * them: AANPCB/ANCC certify NPs, NBCRNA certifies CRNAs, AMCB certifies
+     * CNMs. The failure mode this guards is the one P2 #8 fixes elsewhere:
+     * the NP bodies offered as the answer for every APRN role. Both NP
+     * bodies are matched by name, because /AANP/ also matches the State
+     * Practice Environment citation in the negotiation guide and the CE hub.
      */
     it('certification bodies are role-correct wherever named', () => {
         for (const { slug, body } of BODIES) {
             if (!/NBCRNA|AMCB/.test(body)) continue;
-            expect(body, `${slug}: names NBCRNA/AMCB without the NP bodies`).toMatch(/AANP/);
+            expect(body, `${slug}: names NBCRNA/AMCB without AANPCB`).toMatch(/\bAANPCB\b/);
+            expect(body, `${slug}: names NBCRNA/AMCB without ANCC`).toMatch(/\bANCC\b/);
             expect(body, `${slug}: CRNA body missing`).toMatch(/NBCRNA/);
             expect(body, `${slug}: CNM body missing`).toMatch(/AMCB/);
         }
@@ -574,7 +577,8 @@ describe('CE hub generator', () => {
     it('separates license renewal from certification renewal', () => {
         const { body } = parsePost(CEU_GUIDE_SLUG);
         expect(body).toMatch(/two/i);
-        expect(body).toContain('AANP');
+        // 'AANP' alone would pass on the practice-authority citation.
+        expect(body).toContain('AANPCB');
         expect(body).toContain('ANCC');
         expect(body).toContain('NBCRNA');
         expect(body).toContain('AMCB');

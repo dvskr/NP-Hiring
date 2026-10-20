@@ -49,9 +49,9 @@ interface DashboardJob {
 interface Application {
     id: string
     appliedAt: string
-    // Real pipeline status from JobApplication.status — the /api/dashboard
-    // payload returns full application rows (include, no select), so this
-    // is always present.
+    // Real pipeline status from JobApplication.status. /api/dashboard selects
+    // only id, appliedAt, status and the job card fields for each
+    // application, so a field read here must be added to that select too.
     status: string
     job: DashboardJob
 }

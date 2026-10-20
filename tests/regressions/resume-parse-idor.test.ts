@@ -12,6 +12,11 @@
  * by /api/upload) before any storage byte is fetched. It also adds the
  * missing 'ai.candidate.resume_parser' kill-switch gate. These tests lock
  * both in.
+ *
+ * RES-4 (2026-10-14): profile.resumeUrl was writable through PATCH
+ * /api/auth/profile, so the equality check alone passed when the column and
+ * the request both named another user's object. The path must also sit in
+ * the caller's own upload folder (isOwnStoragePath).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
@@ -151,6 +156,44 @@ describe('POST /api/resume/parse — IDOR on client-supplied storage path is clo
 
     expect(res.status).toBe(200);
     expect(downloadResumeBytes).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(downloadResumeBytes).mock.calls[0][0]).toBe(OWN_PATH);
+  });
+
+  // RES-4: the stored column was itself writable by the caller (PATCH
+  // /api/auth/profile), so "the request equals the stored value" proved
+  // nothing once both named another user's object. The path must also sit in
+  // the caller's own upload folder.
+  it("403 when the stored column was poisoned with user B's bare path and the request repeats it", async () => {
+    vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ resumeUrl: VICTIM_PATH } as never);
+    const { POST } = await import('@/app/api/resume/parse/route');
+    const res = await POST(jsonReq(VICTIM_PATH) as never);
+
+    expect(res.status).toBe(403);
+    expect(downloadResumeBytes).not.toHaveBeenCalled();
+    expect(parseResume).not.toHaveBeenCalled();
+    expect(prisma.userProfile.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("403 when the stored column holds a signed URL to user B's resume and the request repeats it", async () => {
+    const signedUrl =
+      `https://test.supabase.co/storage/v1/object/sign/resumes/${VICTIM_PATH}?token=eyJabc`;
+    vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ resumeUrl: signedUrl } as never);
+    const { POST } = await import('@/app/api/resume/parse/route');
+    const res = await POST(jsonReq(signedUrl) as never);
+
+    expect(res.status).toBe(403);
+    expect(downloadResumeBytes).not.toHaveBeenCalled();
+    expect(parseResume).not.toHaveBeenCalled();
+  });
+
+  it('200 when the stored column holds the caller own signed URL and the request sends the bare key', async () => {
+    vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({
+      resumeUrl: `https://test.supabase.co/storage/v1/object/sign/resumes/${OWN_PATH}?token=eyJabc`,
+    } as never);
+    const { POST } = await import('@/app/api/resume/parse/route');
+    const res = await POST(jsonReq(OWN_PATH) as never);
+
+    expect(res.status).toBe(200);
     expect(vi.mocked(downloadResumeBytes).mock.calls[0][0]).toBe(OWN_PATH);
   });
 

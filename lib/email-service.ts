@@ -343,8 +343,22 @@ export async function getOrCreateUnsubToken(email: string): Promise<string> {
 // 1. WELCOME EMAIL (Job Alert Subscription)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function sendWelcomeEmail(email: string, unsubscribeToken: string): Promise<EmailResult> {
+/**
+ * The "alerts are live" email for a new job alert. It takes the address
+ * only: its footer links and List-Unsubscribe header resolve
+ * EmailLead.unsubscribeToken alone (the /unsubscribe and /email-preferences
+ * pages and /api/one-click-unsubscribe look up nothing else), and
+ * POST /api/job-alerts used to hand in the JobAlert token, so every opt-out
+ * in this email answered "Invalid token". The address's own EmailLead token
+ * is looked up here, as the digest does for its one-click link, so no caller
+ * can pass the wrong kind and the JobAlert token never travels in this
+ * email. tests/lib/welcome-email-unsubscribe-token.test.ts
+ */
+export async function sendWelcomeEmail(email: string): Promise<EmailResult> {
   try {
+    // Mint the token first so the footer links and the List-Unsubscribe
+    // header carry the same real token.
+    const unsubscribeToken = await getOrCreateUnsubToken(email);
     const html = emailShellV2(`
       ${headerBlockV2('Your Alerts Are Live', '')}
       ${spacerV2(12)}
@@ -450,7 +464,15 @@ export async function sendSignupWelcomeEmail(
             ${spacerV2(48)}
             ${closeContentV2()}`,
           unsubscribeFooterV2('sample'),
-          `Welcome${firstName ? `, ${firstName}` : ''}! Find your perfect ${brand.niche.short} role.`
+          // SECURITY: the preheader is HTML (emailShellV2 writes it into a
+          // hidden div as given), and firstName is account-written: sign-up
+          // metadata or the profile, stored through sanitizeText, which is no
+          // HTML escape. A name like `</div><a href=...>Confirm account</a>`
+          // closed the div and showed the caller's link in this email, which
+          // goes to the address the account was opened under. The subject is a
+          // plain-text header and takes the name as typed.
+          // tests/lib/signup-welcome-email-escaping.test.ts
+          `Welcome${firstName ? `, ${escapeHtml(firstName)}` : ''}! Find your perfect ${brand.niche.short} role.`
       );
     }
 

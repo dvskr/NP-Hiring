@@ -23,21 +23,26 @@
  *
  * LIMITS: it reads calls, not renders. That a page's output really differs
  * across the switch is what the render suites prove (promo-switch-periphery,
- * pricing-pages-phase-switch). A page that only calls a phase-neutral
- * function of a clock module would be flagged here: list it in
- * NOT_PHASE_DEPENDENT with the reason.
+ * pricing-pages-phase-switch). A page that calls a function of a clock module
+ * and prints nothing that switches would be flagged here: list it in
+ * NOT_PHASE_DEPENDENT with the reason. The /compare hub is the one such page.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { config } from '@/lib/config';
+import { COMPARE_HUB_PATH, competitorProfiles, type CompetitorProfile } from '@/lib/compare-data';
 import { PAGE_CONTENT_DATES, PROMO_SWITCH_PATHS } from '@/app/api/sitemaps/lastmod';
 
 const ROOT = process.cwd();
 const SCANNED_DIRS = ['app', 'components', 'lib'] as const;
 const ONE_HOUR_SECONDS = 3600;
 
-/** route -> why its calls into a clock module do not change what it prints. None today. */
-const NOT_PHASE_DEPENDENT: Readonly<Record<string, string>> = {};
+/** route -> why its calls into a clock module do not change what it prints. */
+const NOT_PHASE_DEPENDENT: Readonly<Record<string, string>> = {
+    [COMPARE_HUB_PATH]:
+        'it calls competitorProfiles(now) to list the comparisons and prints only the slug, competitor name, meta title and meta description of each profile, which are the same in both phases; it prints no price',
+};
 
 function walk(dir: string): string[] {
     const out: string[] = [];
@@ -225,7 +230,9 @@ describe('2.1: every sitemap-dated page that follows the promo clock re-renders 
     });
 
     it('the pages that follow the clock are exactly PROMO_SWITCH_PATHS', () => {
-        const following = routes.filter((route) => clockReads(CODE.get(pageFile(route)) as string, pageFile(route)).length > 0);
+        // A page in NOT_PHASE_DEPENDENT calls a clock module without following the clock.
+        const following = routes.filter((route) =>
+            !(route in NOT_PHASE_DEPENDENT) && clockReads(CODE.get(pageFile(route)) as string, pageFile(route)).length > 0);
         expect(following).toEqual([...PROMO_SWITCH_PATHS].sort());
         // A page that prints no promo copy does not follow it.
         for (const route of ['/about', '/terms', '/resources', '/tools/licensure-checker']) {
@@ -235,8 +242,27 @@ describe('2.1: every sitemap-dated page that follows the promo clock re-renders 
 
     it('every exemption is still needed', () => {
         for (const route of Object.keys(NOT_PHASE_DEPENDENT)) {
+            expect(routes, `${route} is not a page the sitemap dates: drop it from NOT_PHASE_DEPENDENT`).toContain(route);
             expect(clockReads(CODE.get(pageFile(route)) as string, pageFile(route)).length, `${route} no longer calls a clock module: drop it from NOT_PHASE_DEPENDENT`).toBeGreaterThan(0);
         }
+    });
+
+    it('the /compare hub exemption holds: it reaches the clock only through the profiles, and prints no field of them that switches', () => {
+        // The exemption takes the hub out of the checks above, so what it rests on is checked here.
+        const hub = CODE.get(pageFile(COMPARE_HUB_PATH)) as string;
+        expect(clockReads(hub, pageFile(COMPARE_HUB_PATH))).toEqual(['lib/compare-data.ts']);
+        const printed = [...new Set([...hub.matchAll(/\bprofile\.(\w+)/g)].map((match) => match[1]))].sort();
+        expect(printed, 'the profile fields the hub reads').toEqual(['competitorName', 'metaDescription', 'metaTitle', 'slug']);
+        const switchAt = Date.parse(config.promoEndsAt);
+        const before = competitorProfiles(new Date(switchAt - 1));
+        const after = competitorProfiles(new Date(switchAt));
+        const valuesOf = (profiles: readonly CompetitorProfile[], field: string): unknown[] =>
+            profiles.map((profile) => profile[field as keyof CompetitorProfile]);
+        for (const field of printed) {
+            expect(valuesOf(after, field), `the hub prints profile.${field}, which changes at the promo end`).toEqual(valuesOf(before, field));
+        }
+        // The comparison can tell a field that switches: the capability table states our price.
+        expect(valuesOf(after, 'table')).not.toEqual(valuesOf(before, 'table'));
     });
 });
 

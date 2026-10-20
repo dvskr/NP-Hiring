@@ -3,15 +3,25 @@
  * ENABLE_PAID_POSTING flag with stable machine-readable 503 codes:
  *   - flag off                    → 503 { code: 'PAID_POSTING_DISABLED' }
  *   - flag on, Stripe key missing → 503 { code: 'STRIPE_NOT_CONFIGURED' }
- *   - both on                     → the gate passes (request proceeds to
+ *   - flag and key on, webhook secret missing
+ *                                 → 503 { code: 'STRIPE_NOT_CONFIGURED' }
+ *   - all three set               → the gate passes (request proceeds to
  *                                   auth/validation, NOT a 503)
  * Also pins GET /api/create-checkout/availability — the server-checked
  * signal /post-job uses to show "paid posting coming soon" BEFORE the form.
+ *
+ * The webhook secret: POST /api/webhooks/stripe answers 503 without
+ * STRIPE_WEBHOOK_SECRET, so a post or renewal paid for then is never
+ * recorded by the webhook, and its refunds and disputes never reach it. The
+ * same rule closes plan sales (lib/employer-plan-link.ts#isPlanSaleOpen);
+ * tests/regressions/paid-checkout-requires-stripe-webhook.test.ts holds the
+ * availability signal to the real webhook.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-const envMock = vi.hoisted(() => ({ paidPostingEnabled: false }));
+const envMock = vi.hoisted(() => ({ paidPostingEnabled: false, webhookSecret: undefined as string | undefined }));
 
 vi.mock('@/lib/env', () => ({
     isFeatureEnabled: vi.fn((feature: string) => feature === 'paidPosting' && envMock.paidPostingEnabled),
@@ -20,9 +30,12 @@ vi.mock('@/lib/env', () => ({
         const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
         return { enabled, stripeConfigured, available: enabled && stripeConfigured };
     }),
-    getEnv: vi.fn(() => ({})),
+    getEnv: vi.fn(() => ({ STRIPE_WEBHOOK_SECRET: envMock.webhookSecret })),
     getBaseUrl: vi.fn(() => 'http://localhost:3000'),
 }));
+
+/** The webhook secret is set unless a case says otherwise: each case varies one input. */
+const WEBHOOK_SECRET_MISSING: ReadonlyArray<[string, string | undefined]> = [['unset', undefined], ['empty', '']];
 
 vi.mock('@/lib/rate-limit', () => ({
     rateLimit: vi.fn().mockResolvedValue(null),
@@ -46,6 +59,7 @@ const COLD_IMPORT_TIMEOUT_MS = 20_000;
 
 beforeEach(() => {
     envMock.paidPostingEnabled = false;
+    envMock.webhookSecret = 'whsec_x';
     delete process.env.STRIPE_SECRET_KEY;
 });
 
@@ -85,18 +99,36 @@ describe('F3 — POST /api/create-checkout flag gate', () => {
         expect(body.code).toBe('STRIPE_NOT_CONFIGURED');
     }, COLD_IMPORT_TIMEOUT_MS);
 
-    it('passes the gate (proceeds to auth, not 503) when flag + key are both set', async () => {
+    it.each(WEBHOOK_SECRET_MISSING)('503 STRIPE_NOT_CONFIGURED when the flag and key are set but the webhook secret is %s', async (_label, secret) => {
+        envMock.paidPostingEnabled = true;
+        process.env.STRIPE_SECRET_KEY = 'sk_test_x';
+        envMock.webhookSecret = secret;
+        const { POST } = await import('@/app/api/create-checkout/route');
+        const res = await POST(makePost('https://test.local/api/create-checkout'));
+        expect(res.status).toBe(503);
+        const body = await res.json();
+        expect(body).toEqual({ error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' });
+    }, COLD_IMPORT_TIMEOUT_MS);
+
+    it('passes the gate (proceeds to auth, not 503) when the flag, the key and the webhook secret are all set', async () => {
         envMock.paidPostingEnabled = true;
         process.env.STRIPE_SECRET_KEY = 'sk_test_x';
         const { POST } = await import('@/app/api/create-checkout/route');
         const res = await POST(makePost('https://test.local/api/create-checkout'));
-        // Outside a request scope Supabase auth fails → 401. The point is:
+        // During the launch promo the route answers 409 PROMO_ACTIVE; after
+        // it, Supabase auth fails outside a request scope → 401. The point is:
         // NOT a 503 — the availability gate itself let the request through.
         expect(res.status).not.toBe(503);
     }, COLD_IMPORT_TIMEOUT_MS);
 });
 
 describe('F3 — POST /api/create-renewal-checkout flag gate', () => {
+    // Same warm-up as the create-checkout describe: the first case here used
+    // to pay the route's cold import inside its own budget.
+    beforeAll(async () => {
+        await import('@/app/api/create-renewal-checkout/route');
+    }, 60_000);
+
     it('503 PAID_POSTING_DISABLED when the flag is off', async () => {
         process.env.STRIPE_SECRET_KEY = 'sk_test_x';
         const { POST } = await import('@/app/api/create-renewal-checkout/route');
@@ -115,7 +147,19 @@ describe('F3 — POST /api/create-renewal-checkout flag gate', () => {
         expect(body.code).toBe('STRIPE_NOT_CONFIGURED');
     }, COLD_IMPORT_TIMEOUT_MS);
 
-    it('passes the gate (400 missing fields, not 503) when flag + key are both set', async () => {
+    it.each(WEBHOOK_SECRET_MISSING)('503 STRIPE_NOT_CONFIGURED when the flag and key are set but the webhook secret is %s, before the post is read', async (_label, secret) => {
+        envMock.paidPostingEnabled = true;
+        process.env.STRIPE_SECRET_KEY = 'sk_test_x';
+        envMock.webhookSecret = secret;
+        const { POST } = await import('@/app/api/create-renewal-checkout/route');
+        const res = await POST(makePost('https://test.local/api/create-renewal-checkout'));
+        expect(res.status).toBe(503);
+        const body = await res.json();
+        expect(body).toEqual({ error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' });
+        expect(prisma.employerJob.findFirst).not.toHaveBeenCalled();
+    }, COLD_IMPORT_TIMEOUT_MS);
+
+    it('passes the gate (400 missing fields, not 503) when the flag, the key and the webhook secret are all set', async () => {
         envMock.paidPostingEnabled = true;
         process.env.STRIPE_SECRET_KEY = 'sk_test_x';
         const { POST } = await import('@/app/api/create-renewal-checkout/route');
@@ -143,7 +187,26 @@ describe('F3 — GET /api/create-checkout/availability', () => {
         expect(body).toEqual({ available: false, code: 'STRIPE_NOT_CONFIGURED' });
     });
 
-    it('reports available when flag + key are both set', async () => {
+    it.each(WEBHOOK_SECRET_MISSING)('reports unavailable with STRIPE_NOT_CONFIGURED when the flag and key are set but the webhook secret is %s', async (_label, secret) => {
+        envMock.paidPostingEnabled = true;
+        process.env.STRIPE_SECRET_KEY = 'sk_test_x';
+        envMock.webhookSecret = secret;
+        const { GET } = await import('@/app/api/create-checkout/availability/route');
+        const res = await GET();
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body).toEqual({ available: false, code: 'STRIPE_NOT_CONFIGURED' });
+    });
+
+    it('reports PAID_POSTING_DISABLED, not a Stripe problem, while the flag is off whatever the secrets', async () => {
+        process.env.STRIPE_SECRET_KEY = 'sk_test_x';
+        envMock.webhookSecret = undefined;
+        const { GET } = await import('@/app/api/create-checkout/availability/route');
+        const body = await (await GET()).json();
+        expect(body).toEqual({ available: false, code: 'PAID_POSTING_DISABLED' });
+    });
+
+    it('reports available when the flag, the key and the webhook secret are all set', async () => {
         envMock.paidPostingEnabled = true;
         process.env.STRIPE_SECRET_KEY = 'sk_test_x';
         const { GET } = await import('@/app/api/create-checkout/availability/route');

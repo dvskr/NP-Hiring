@@ -5,8 +5,9 @@
  *
  * Self-fetches the current state from /api/newsletter/status so the parent
  * doesn't have to thread it through. Optimistic update on toggle; reverts
- * on failure. POSTs to /api/newsletter to persist (same endpoint the
- * dashboard previously called).
+ * on failure, including a refused save (opting out needs this session's own
+ * address, so an expired session answers 401). POSTs to /api/newsletter to
+ * persist (same endpoint the dashboard previously called).
  *
  * Moved here from components/dashboard/DashboardContent.tsx — the toggle
  * lives in the settings/account surface now where the rest of the
@@ -24,6 +25,7 @@ export default function NewsletterPreference({ email }: NewsletterPreferenceProp
     const [optIn, setOptIn] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!email) return;
@@ -43,16 +45,26 @@ export default function NewsletterPreference({ email }: NewsletterPreferenceProp
     const handleToggle = async () => {
         if (!email || saving) return;
         setSaving(true);
+        setError(null);
         const next = !optIn;
         setOptIn(next); // optimistic
         try {
-            await fetch('/api/newsletter', {
+            const res = await fetch('/api/newsletter', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, optIn: next, source: 'settings_toggle' }),
             });
+            // A refused save (401, 403, 429) must not leave the switch
+            // showing a state that was never stored.
+            if (!res.ok) {
+                setOptIn(!next); // revert
+                setError(res.status === 401
+                    ? 'Please sign in again to change this setting.'
+                    : 'Failed to save preference. Please try again.');
+            }
         } catch {
             setOptIn(!next); // revert
+            setError('Failed to save preference. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -75,9 +87,16 @@ export default function NewsletterPreference({ email }: NewsletterPreferenceProp
                 }}>
                     <Send size={18} style={{ color: '#BE185D' }} />
                 </div>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Email Newsletter
-                </p>
+                <div>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Email Newsletter
+                    </p>
+                    {error && (
+                        <p role="alert" style={{ margin: '4px 0 0', fontSize: '12px', color: '#DC2626' }}>
+                            {error}
+                        </p>
+                    )}
+                </div>
             </div>
 
             <button

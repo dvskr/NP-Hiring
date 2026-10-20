@@ -5,10 +5,12 @@
  * #9  — the dashboard's Recent Applications card FABRICATED statuses from
  *       days elapsed since application ("Submitted" → "Under Review" →
  *       "In Progress"), regardless of what the employer actually did.
- *       The real JobApplication.status is already in the /api/dashboard
- *       payload (the jobApplication.findMany uses `include`, which returns
- *       all application scalars). The dashboard must render it via a
- *       status map that mirrors app/my-applications/page.tsx.
+ *       The real JobApplication.status is in the /api/dashboard payload:
+ *       the recent applications query selects it explicitly, next to id,
+ *       appliedAt and the job card fields, and selects none of the
+ *       employer's private notes or AI assessment (an `include` returned
+ *       every column, those among them). The dashboard must render it via
+ *       a status map that mirrors app/my-applications/page.tsx.
  *
  * #14 — /companies/[slug] serialized a scraped company description into
  *       Organization JSON-LD unescaped: a description containing
@@ -21,6 +23,17 @@ import path from 'node:path';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+/** The source of the first call after `marker`, from its opening parenthesis to the matching one. */
+function callSource(src: string, marker: string): string {
+    const open = src.indexOf('(', src.indexOf(marker));
+    let depth = 0;
+    for (let i = open; i < src.length; i++) {
+        if (src[i] === '(') depth++;
+        if (src[i] === ')' && --depth === 0) return src.slice(open, i + 1);
+    }
+    throw new Error(`unbalanced call after ${marker}`);
+}
 
 const DASHBOARD = 'components/dashboard/DashboardContent.tsx';
 const MY_APPLICATIONS = 'app/my-applications/page.tsx';
@@ -63,22 +76,22 @@ describe('P0 #9 — dashboard renders real application statuses', () => {
         }
     });
 
-    it('the /api/dashboard payload keeps returning application scalars (status included)', () => {
+    it('the /api/dashboard recent applications select status, and no employer-private field', () => {
         const src = read(DASHBOARD_API);
-        const idx = src.indexOf('jobApplication.findMany');
-        expect(idx).toBeGreaterThan(-1);
-        const snippet = src.slice(idx, idx + 800);
-        // `include` (not a top-level `select`) returns every scalar on the
-        // application row — including `status`. If someone converts this
-        // call to a select that omits status, the dashboard silently loses
-        // real statuses again.
-        const includeAt = snippet.indexOf('include:');
-        const selectAt = snippet.indexOf('select:');
-        expect(includeAt).toBeGreaterThan(-1);
-        expect(
-            selectAt === -1 || includeAt < selectAt,
-            'jobApplication.findMany must use include (full scalars) — a top-level select could drop status',
-        ).toBe(true);
+        expect(src.indexOf('jobApplication.findMany')).toBeGreaterThan(-1);
+        const call = callSource(src, 'jobApplication.findMany');
+        // A top-level select, never `include`: include returns every column,
+        // the employer's private notes and AI assessment among them.
+        // tests/api/dashboard-application-fields.test.ts pins the payload.
+        expect(call, 'the recent applications query must not use include').not.toContain('include:');
+        const selectAt = call.indexOf('select:');
+        expect(selectAt, 'the recent applications query must select its fields').toBeGreaterThan(-1);
+        expect(selectAt, 'the first select must be the top-level one, before the job sub-select').toBeLessThan(call.indexOf('job:'));
+        // Dropping status from the select would lose real statuses again.
+        expect(call).toMatch(/\bstatus: true\b/);
+        for (const field of ['notes', 'aiMatchScore', 'aiMatchReasons', 'aiMissingItems']) {
+            expect(call, `the recent applications query must not select ${field}`).not.toContain(field);
+        }
     });
 });
 

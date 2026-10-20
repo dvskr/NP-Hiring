@@ -580,9 +580,11 @@ export default async function SalaryGuidePage() {
                       and linked to the BLS source. The three editorial
                       ranges it used to print ("$95,000-$115,000" and so on)
                       live in the labelled experience and setting tables
-                      below. The PDF generator (scripts/generate-salary-pdf.ts)
-                      still prints the previous paragraph: sync it there and
-                      regenerate the PDF; no test pins that paragraph. */}
+                      below. The PDF's Quick Answer card
+                      (scripts/generate-salary-pdf.ts) prints the same three
+                      figures since the 2026-10-13 regeneration, and
+                      tests/regressions/p1-salary-pdf-deliverable.test.ts
+                      pins the two together. */}
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>
                     The median {brand.niche.descriptor} salary is <strong>{NATIONAL_SALARY.formatted} per year</strong>, according to
                     the{' '}

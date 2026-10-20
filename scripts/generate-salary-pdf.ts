@@ -29,6 +29,13 @@
  *     the page is blocked by tests/regressions/p1-salary-pdf-deliverable.test.ts.
  *   - Nothing here invents a number, a person, or a quote.
  *
+ * HOUSE STYLE (owner rule, 2026-09-12): nothing printed into the document
+ * carries an em dash or an en dash, as a character or as an entity. Write a
+ * range with "to" and restructure a sentence with a comma, a full stop, a
+ * colon or parentheses. Comments and console messages are exempt. The
+ * mirrored bands below keep their hyphens until the page changes them.
+ * Enforced by tests/regressions/p1-salary-pdf-deliverable.test.ts.
+ *
  * After regenerating, re-run:
  *   npx vitest run tests/regressions/p1-salary-pdf-deliverable.test.ts
  */
@@ -79,6 +86,12 @@ const NP_GROWTH = STAT_SOURCES.blsGrowth2035;
 // enforces the hub/PDF parity.
 const FPA_STATES = STAT_SOURCES.fullPracticeStates;
 const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation;
+// The Quick Answer card prints the cited figures the hub's Quick Answer
+// prints (app/salary-guide/page.tsx): the OEWS median and the 10th and 90th
+// percentiles, never a hand-typed range. Pinned by the Quick Answer block in
+// tests/regressions/p1-salary-pdf-deliverable.test.ts.
+const NATIONAL_P10 = STAT_SOURCES.salaryPercentile10;
+const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90;
 
 // ── Copy mirrored VERBATIM from app/salary-guide/page.tsx ───────────────
 // The hub page is the sanctioned home of this copy (it survived the P0
@@ -272,13 +285,13 @@ function buildPayByLocationSection(live: LiveInventory | null): string {
     return `
     <section class="page-break">
       <p class="kicker">Salary by Location</p>
-      <h2>Where ${brand.niche.short} Pay Comes From &mdash; and Where to Look It Up</h2>
+      <h2>Where ${brand.niche.short} Pay Comes From, and Where to Look It Up</h2>
       ${inventoryLine}
 
       <div class="callout warn">
         <strong>Why this guide does not print a state-by-state wage table.</strong>
         State pay on ${brand.name} is derived from live postings that change every day, and the disclosed-salary
-        pool mixes W-2 salaries with annualized contract and locum hourly rates &mdash; so a snapshot frozen into a
+        pool mixes W-2 salaries with annualized contract and locum hourly rates, so a snapshot frozen into a
         PDF would go stale and would overstate typical pay. The <strong>state-by-state table updates daily and is
         free</strong> at <strong>${brand.domain}/salary-guide</strong>, with a dedicated page per state. For an
         authoritative national wage benchmark, use the federal figure cited throughout this guide:
@@ -290,7 +303,7 @@ function buildPayByLocationSection(live: LiveInventory | null): string {
         ${brand.niche.short} pay. Every salary an employer posts is checked against them before the listing goes live:
         numbers outside the outer bounds are rejected as data-entry errors, and numbers outside the middle band are
         flagged for a human to look at. They are set deliberately wide so that legitimate edge cases are not thrown
-        away, which means they describe what this board will <em>accept</em> &mdash; not what a typical
+        away, which means they describe what this board will <em>accept</em>, not what a typical
         ${brand.niche.short} earns. For a measured wage figure, use the federal benchmark above
         (<strong>${NATIONAL_SALARY.formatted}</strong>, ${escapeHtml(NATIONAL_SALARY.source)}); for market ranges, use
         the experience, setting and specialty tables in the next section.</p>
@@ -299,22 +312,22 @@ function buildPayByLocationSection(live: LiveInventory | null): string {
         <tbody>
           <tr>
             <td>W-2 annual salary</td>
-            <td class="num strong">${usd(n.annualMin)} &ndash; ${usd(n.annualMax)}</td>
+            <td class="num strong">${usd(n.annualMin)} to ${usd(n.annualMax)}</td>
             <td class="notes">Accept/reject bounds for a posted W-2 figure. The ceiling is set high enough to admit the
               best-paid advanced-practice listings (CRNA-level roles in high-cost markets), so it is an upper limit on
-              accepted data &mdash; not the top of the ${brand.niche.short} market</td>
+              accepted data, not the top of the ${brand.niche.short} market</td>
           </tr>
           <tr>
             <td>Outlier-review band</td>
-            <td class="num strong">${usd(n.typical.min)} &ndash; ${usd(n.typical.max)}</td>
+            <td class="num strong">${usd(n.typical.min)} to ${usd(n.typical.max)}</td>
             <td class="notes">A posted salary outside this band is flagged for manual review before publishing. It is a
-              screening threshold carried over from the board&rsquo;s configuration &mdash; not a survey, and not a
+              screening threshold carried over from the board&rsquo;s configuration, not a survey, and not a
               claim about where most offers land</td>
           </tr>
           <tr>
             <td>Contract / 1099 hourly</td>
-            <td class="num strong">$${n.contractorHourlyMin} &ndash; $${n.contractorHourlyMax} per hour</td>
-            <td class="notes">Validated as an hourly rate &mdash; do not annualize it to compare against a W-2 offer</td>
+            <td class="num strong">$${n.contractorHourlyMin} to $${n.contractorHourlyMax} per hour</td>
+            <td class="notes">Validated as an hourly rate: do not annualize it to compare against a W-2 offer</td>
           </tr>
         </tbody>
       </table>
@@ -334,13 +347,13 @@ function buildHtml(live: LiveInventory | null): string {
         ? `Live inventory counts come from ${live.postingsWithSalary.toLocaleString('en-US')} active ${brand.niche.short} postings with a
            disclosed salary on ${brand.name} (snapshot ${live.snapshotDate}); posting data updates daily. This guide
            reports those counts and the board's published salary-validation bands rather than a frozen state-by-state
-           wage table &mdash; see &ldquo;Salary by Location&rdquo;.`
+           wage table (see &ldquo;Salary by Location&rdquo;).`
         : `Live inventory counts were unavailable when this edition was generated; current counts are on
            ${brand.domain}/salary-guide.`;
 
     const methodologySources = [
         NATIONAL_SALARY, NP_GROWTH, FPA_STATES, SHORTAGE_POP,
-    ].map((s) => `<li>${escapeHtml(s.source)} &mdash; <span class="mono">${escapeHtml(s.sourceUrl)}</span> (as of ${s.asOf})</li>`).join('');
+    ].map((s) => `<li>${escapeHtml(s.source)}: <span class="mono">${escapeHtml(s.sourceUrl)}</span> (as of ${s.asOf})</li>`).join('');
 
     const factorGrid = factorCards.map((c) => `
       <div class="factor-card">
@@ -355,7 +368,7 @@ function buildHtml(live: LiveInventory | null): string {
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>${GUIDE_YEAR} ${brand.niche.short} Salary Guide — ${brand.name}</title>
+<title>${GUIDE_YEAR} ${brand.niche.short} Salary Guide | ${brand.name}</title>
 <style>
   /* Palette + type mirror the email design system (lib/email-templates-v2.ts). */
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -442,8 +455,8 @@ function buildHtml(live: LiveInventory | null): string {
     <p class="kicker">${GUIDE_YEAR} Salary Data</p>
     <h1>${brand.niche.long} Salary Guide</h1>
     <p class="lede">National median <strong>${NATIONAL_SALARY.formatted}</strong> per year
-      (${escapeHtml(NATIONAL_SALARY.source)}). Pay by experience level, practice setting, and specialty premium,
-      plus what to check before you negotiate &mdash; for ${brand.niche.descriptor}s. State-by-state figures
+      (${escapeHtml(NATIONAL_SALARY.source)}). For ${brand.niche.descriptor}s: pay by experience level, practice
+      setting, and specialty premium, plus what to check before you negotiate. State-by-state figures
       update daily at ${brand.domain}/salary-guide.</p>
     <p class="stamp">Figures verified ${STATS_LAST_REVIEWED} &middot; Published by ${brand.name} (${brand.domain}) &middot; Free companion to ${brand.domain}/salary-guide</p>
   </div>
@@ -457,11 +470,10 @@ function buildHtml(live: LiveInventory | null): string {
 
   <div class="card">
     <h3>Quick Answer: ${brand.niche.short} Salary in ${GUIDE_YEAR}</h3>
-    <p>The median ${brand.niche.short} salary is <strong>${NATIONAL_SALARY.formatted} per year</strong>
-      (${escapeHtml(NATIONAL_SALARY.source)}). New graduates start at $95,000-$115,000, while experienced
-      ${brand.niche.short}s (7-15 years) earn $150,000-$180,000. Private practice owners can earn
-      $180,000-$300,000+. Pay runs highest in West Coast and Northeast markets, with California, Washington,
-      and New Jersey near the top in federal wage data.</p>
+    <p>The median ${brand.niche.descriptor} salary is <strong>${NATIONAL_SALARY.formatted} per year</strong>
+      (${escapeHtml(NATIONAL_SALARY.source)}). Half of ${brand.niche.short}s earn more and half earn less.
+      The lowest paid 10% earn less than <strong>${NATIONAL_P10.formatted}</strong>, and the highest paid 10% earn more
+      than <strong>${NATIONAL_P90.formatted}</strong>.</p>
     <p class="fine">${escapeHtml(SALARY_FIGURE_PROVENANCE)}</p>
   </div>
 
@@ -471,9 +483,7 @@ function buildHtml(live: LiveInventory | null): string {
       traces to live listings on ${brand.name}. ${postingsLine}</p>
     <ul class="sources">${methodologySources}</ul>
     <p class="fine" style="margin-top:6px;">${escapeHtml(SALARY_FIGURE_PROVENANCE)} Individual offers vary by
-      employer, location, credentials, and experience. The previous wording here said these ranges &ldquo;reflect
-      the published market bands on ${brand.domain}/salary-guide&rdquo;, which pointed at the page that prints the
-      same numbers rather than at a source &mdash; circular, and it read as a citation.</p>
+      employer, location, credentials, and experience.</p>
   </div>
 
   ${buildPayByLocationSection(live)}
@@ -534,8 +544,8 @@ function buildHtml(live: LiveInventory | null): string {
 
   <section class="page-break">
     <p class="kicker">Maximize Your Pay</p>
-    <h2>Factors Affecting ${brand.niche.short} Salary &mdash; and How to Negotiate</h2>
-    <p class="section-note">Six levers that move ${brand.niche.short} compensation. Evergreen guidance &mdash;
+    <h2>Factors Affecting ${brand.niche.short} Salary, and How to Negotiate</h2>
+    <p class="section-note">Six levers that move ${brand.niche.short} compensation. Evergreen guidance:
       the same factor breakdown published on ${brand.domain}/salary-guide.</p>
     <div class="factor-grid">${factorGrid}</div>
 
@@ -549,7 +559,7 @@ function buildHtml(live: LiveInventory | null): string {
     <div class="cta">
       <h3>Find Your Next High-Paying ${brand.niche.short} Job</h3>
       <p>Browse current openings with disclosed salaries, filter by state, setting, and work type, and set free
-        job alerts at <strong>${brand.domain}/jobs</strong>. The live salary guide &mdash; updated daily &mdash;
+        job alerts at <strong>${brand.domain}/jobs</strong>. The live salary guide, updated daily,
         is always free at <strong>${brand.domain}/salary-guide</strong>.</p>
     </div>
   </section>

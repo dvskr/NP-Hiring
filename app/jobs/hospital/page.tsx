@@ -118,7 +118,7 @@ const EXPLORE_CARDS: readonly ExploreCard[] = [
   { href: '/jobs/emergency', label: 'Emergency', sub: 'ED and urgent care' },
   { href: '/jobs/geriatric', label: 'Geriatric', sub: 'Elder care' },
   { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data' },
-  { href: '/jobs/locations', label: 'By Location', sub: '50 states' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities' },
 ];
 
 /** Taxonomy slug behind an explore card, or null for a non-category link. */

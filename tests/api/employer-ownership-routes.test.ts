@@ -73,13 +73,20 @@ import { POST as sendMessage } from '@/app/api/employer/messages/route';
 import { GET as profileSnapshot } from '@/app/api/employer/profile-snapshot/route';
 import { POST as unlockBulk } from '@/app/api/employer/profiles/unlock-bulk/route';
 import { GET as receipt } from '@/app/api/employer/receipt/route';
+import { GET as savedCandidates, POST as saveCandidate } from '@/app/api/employer/saved-candidates/route';
 import { GET as notificationSettings } from '@/app/api/employer/settings/notifications/route';
 import { GET as settings, PATCH as saveSettings } from '@/app/api/employer/settings/route';
 import { POST as testimonial } from '@/app/api/employer/testimonials/route';
 import EmployerDashboardPage from '@/app/employer/dashboard/page';
 
-// The global prisma fake has no testimonial model; the testimonial route writes one.
-Object.assign(prisma, { employerTestimonial: { create: vi.fn(async () => ({ id: 'testimonial-1' })) } });
+// The global prisma fake has no testimonial, application or saved-candidate
+// model; the testimonial route writes the first, the employer send reads the
+// second, and the saved list reads the third.
+Object.assign(prisma, {
+    employerTestimonial: { create: vi.fn(async () => ({ id: 'testimonial-1' })) },
+    jobApplication: { findFirst: vi.fn(async () => null) },
+    savedCandidate: { findMany: vi.fn(async () => []) },
+});
 
 const USER_ID = 'supabase-employer';
 const EMAIL = 'hiring@clinic.example';
@@ -269,6 +276,16 @@ const SITES: readonly Site[] = [
         or: () => ownershipOr(prisma.employerJob.findFirst),
     },
     {
+        name: 'POST /api/employer/messages (the applicant check of a recipient out of the pool)',
+        run: async () => {
+            arrangeNewThread({ ...POOL_RECIPIENT, profileVisible: false, openToOffers: false });
+            return sendMessage(jsonRequest('/api/employer/messages', 'POST', {
+                recipientId: 'candidate-1', subject: 'Your application', body: 'Can we talk this week?',
+            }));
+        },
+        or: () => ownershipOr(prisma.jobApplication.findFirst, (where) => ((where.job as Where | undefined)?.employerJobs as Where | undefined)?.OR),
+    },
+    {
         name: 'POST /api/employer/profiles/unlock-bulk (postingId)',
         run: async () => {
             employerProfile();
@@ -282,6 +299,46 @@ const SITES: readonly Site[] = [
             }));
         },
         or: () => ownershipOr(prisma.employerJob.findFirst),
+    },
+    {
+        name: 'POST /api/employer/saved-candidates (postingId)',
+        run: async () => {
+            employerProfile();
+            // A talent pool member, so the save goes on to check the posting.
+            vi.mocked(prisma.userProfile.findFirst).mockResolvedValue({ id: 'candidate-profile-1' } as never);
+            vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(null as never);
+            return saveCandidate(jsonRequest('/api/employer/saved-candidates', 'POST', {
+                candidateId: 'candidate-1', postingId: 'posting-1',
+            }));
+        },
+        or: () => {
+            const wheres = wheresOf(prisma.employerJob.findFirst);
+            expect(wheres, 'the posting ownership check').toHaveLength(1);
+            expect(wheres[0]).toMatchObject({ id: 'posting-1' });
+            return wheres[0].OR;
+        },
+    },
+    {
+        name: 'GET /api/employer/saved-candidates (the titles of the postings saves name)',
+        run: async () => {
+            employerProfile();
+            vi.mocked(getEmployerTier).mockResolvedValue('pro' as never);
+            vi.mocked(getEmployerActivePostings).mockResolvedValue([] as never);
+            vi.mocked(prisma.savedCandidate.findMany).mockResolvedValue([{
+                id: 'saved-1', note: null, tags: [], savedAt: new Date(), employerJobId: 'posting-1',
+                employerJob: { id: 'posting-1', job: { title: 'FNP, Clinic A' } },
+                candidate: { supabaseId: 'candidate-1', firstName: 'Grace', lastName: 'Hopper' },
+            }] as never);
+            vi.mocked(prisma.employerJob.findMany).mockResolvedValue([] as never);
+            vi.mocked(prisma.profileView.findMany).mockResolvedValue([] as never);
+            return savedCandidates(getRequest('/api/employer/saved-candidates'));
+        },
+        or: () => {
+            const wheres = wheresOf(prisma.employerJob.findMany);
+            expect(wheres, 'the posting ownership check').toHaveLength(1);
+            expect(wheres[0]).toMatchObject({ id: { in: ['posting-1'] } });
+            return wheres[0].OR;
+        },
     },
     {
         name: 'GET /api/employer/receipt (session)',
@@ -320,6 +377,7 @@ const SITES: readonly Site[] = [
     {
         name: 'POST /api/employer/testimonials (employer name lookup)',
         run: async () => {
+            employerProfile();
             vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(null as never);
             return testimonial(jsonRequest('/api/employer/testimonials', 'POST', {
                 content: 'Hiring through the board was quick.', consent: true,
@@ -330,6 +388,7 @@ const SITES: readonly Site[] = [
     {
         name: 'POST /api/employer/testimonials (employerJobId ownership check)',
         run: async () => {
+            employerProfile();
             vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(null as never);
             return testimonial(jsonRequest('/api/employer/testimonials', 'POST', {
                 content: 'Hiring through the board was quick.', consent: true, employerJobId: 'ej-1',
@@ -344,13 +403,23 @@ const SITES: readonly Site[] = [
     },
 ];
 
-/** Sender and recipient profiles, and no existing thread, so the send is new outreach. */
-function arrangeNewThread(): void {
+/** A recipient in the candidate pool: a visible job seeker, open to offers. */
+const POOL_RECIPIENT = { role: 'job_seeker', profileVisible: true, openToOffers: true, deletedAt: null };
+
+/**
+ * Sender and recipient profiles, and no existing thread, so the send is new
+ * outreach. The employer opened the recipient's profile, so a pool candidate
+ * is in reach and the send goes on to the featured gate; one out of the pool
+ * goes to the applicant check instead (who is in reach:
+ * tests/api/employer-messages-recipient.test.ts).
+ */
+function arrangeNewThread(recipient: Record<string, unknown> = POOL_RECIPIENT): void {
     vi.mocked(prisma.userProfile.findUnique).mockImplementation((async (args: { where: { supabaseId: string } }) =>
         args.where.supabaseId === USER_ID
             ? { id: 'profile-1', firstName: 'Ada', lastName: 'Lovelace', company: 'Clinic', role: 'employer' }
-            : { id: 'profile-2', email: 'grace@example.com', firstName: 'Grace' }
+            : { id: 'profile-2', email: 'grace@example.com', firstName: 'Grace', ...recipient }
     ) as never);
+    vi.mocked(prisma.profileView.findUnique).mockResolvedValue({ id: 'view-1' } as never);
     vi.mocked(prisma.conversation.findFirst).mockResolvedValue(null as never);
     vi.mocked(canSendInMail).mockResolvedValue({ allowed: true } as never);
 }
@@ -363,6 +432,7 @@ beforeEach(() => {
     vi.mocked(prisma.employerJob.findMany).mockReset();
     vi.mocked(prisma.employerJob.findFirst).mockReset();
     vi.mocked(prisma.userProfile.findUnique).mockReset();
+    vi.mocked(prisma.userProfile.findFirst).mockReset();
 });
 
 describe('a session with an email: the ownership clause is unchanged', () => {

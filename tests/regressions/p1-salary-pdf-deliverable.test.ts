@@ -27,6 +27,14 @@
  *      /salary-guide page (the sanctioned home of that copy). If the
  *      page's bands change, this drift guard fails → edit the page,
  *      sync the generator, regenerate the PDF.
+ *   5. The copy the generator prints follows the owner's house style
+ *      (2026-09-12): no em dash and no en dash in anything a reader
+ *      sees. A page can be corrected in place; a downloaded guide keeps
+ *      whatever it was printed with. Comments and the script's own
+ *      console messages never reach the PDF, so they are exempt.
+ *      Hyphens are not policed here: the mirrored bands of guard 4
+ *      ("+10-20%", "(0-1 yr)") are byte-identical to the page and
+ *      change there first.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -219,5 +227,99 @@ describe('P1 #4 — generator copy mirrors the published /salary-guide page (dri
             expect(hubSrc, `hub missing FPA bullet: ${bullet}`).toContain(bullet);
             expect(generatorSrc, `generator missing FPA bullet: ${bullet}`).toContain(bullet);
         }
+    });
+});
+
+describe('House style: no em dash or en dash reaches the PDF', () => {
+    // `&mdash;` and `&ndash;`, their numeric spellings, and the two
+    // characters themselves (U+2014, U+2013).
+    const DASH = /&mdash;|&ndash;|&#(?:8211|8212|x201[34]);|[–—]/i;
+
+    // Comments and the script's own console messages never reach the
+    // document, so they may keep their dashes. Each is blanked in place
+    // with its newlines kept, so the line numbers reported on failure
+    // match the file. `://` is excluded so a URL cannot hide the rest of
+    // its line from the scan.
+    const blank = (match: string) => match.replace(/[^\n]/g, ' ');
+    const dashLines = (src: string): string[] =>
+        src
+            .replace(/\/\*[\s\S]*?\*\//g, blank)
+            .replace(/(?<!:)\/\/[^\n]*/g, blank)
+            .replace(/console\.\w+\([\s\S]*?\);/g, blank)
+            .split('\n')
+            .flatMap((line, i) => (DASH.test(line) ? [`${i + 1}: ${line.trim()}`] : []));
+
+    it('the generator prints none outside comments and console messages', () => {
+        // The scanner is proved on a fixture first, so that an empty result
+        // for the generator cannot be a blind spot in the scanner.
+        const fixture = [
+            '/** A block comment — exempt. */',
+            '// A line comment — exempt.',
+            "console.warn('[salary-pdf] a progress message — exempt:',",
+            '    detail);',
+            'const heading = `<h2>Pay &mdash; and Where to Look It Up</h2>`;',
+            'const band = `${low} &ndash; ${high}`;',
+            'const title = `<title>Guide — Brand</title>`;',
+            'const link = `https://example.com/guide lists $60,000–$400,000`;',
+        ].join('\n');
+        expect(dashLines(fixture).map((hit) => Number.parseInt(hit, 10))).toEqual([5, 6, 7, 8]);
+
+        // A range reads "to"; a sentence is restructured with a comma, a
+        // full stop, a colon or parentheses.
+        expect(
+            dashLines(read(GENERATOR)),
+            `${GENERATOR} prints an em dash or en dash on these lines`,
+        ).toEqual([]);
+    });
+});
+
+describe('The Quick Answer card prints the cited figures the hub prints', () => {
+    // The hub's Quick Answer was rewritten to cited figures only (the OEWS
+    // median and the 10th and 90th percentiles, all from STAT_SOURCES). The
+    // PDF kept the previous paragraph with three hand-typed ranges until it
+    // was regenerated on 2026-10-13; nothing pinned the two together.
+    const generatorSrc = read(GENERATOR);
+    const hubSrc = read(HUB_PAGE);
+    const stripComments = (s: string) =>
+        s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+    /** The Quick Answer card's markup in the generator. */
+    const card = (() => {
+        const from = generatorSrc.indexOf('<h3>Quick Answer:');
+        const to = generatorSrc.indexOf('<h3>Methodology', from);
+        expect(from, 'the Quick Answer card').toBeGreaterThan(-1);
+        expect(to, 'the Methodology card after it').toBeGreaterThan(from);
+        return generatorSrc.slice(from, to);
+    })();
+
+    it('reads the median and both percentiles from lib/stats-sources.ts, as the hub does', () => {
+        for (const src of [generatorSrc, hubSrc]) {
+            expect(src).toContain('const NATIONAL_P10 = STAT_SOURCES.salaryPercentile10;');
+            expect(src).toContain('const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90;');
+        }
+        for (const figure of ['NATIONAL_SALARY.formatted', 'NATIONAL_P10.formatted', 'NATIONAL_P90.formatted']) {
+            expect(card, `the card does not print ${figure}`).toContain(figure);
+        }
+    });
+
+    it('carries no hand-typed dollar figure', () => {
+        // Every "$" in the card is an interpolation such as ${NATIONAL_P10.formatted}.
+        expect(card).not.toMatch(/\$\d/);
+        expect(card).not.toMatch(/\d-\d/);
+    });
+
+    it('says the same thing as the hub about the two percentiles', () => {
+        for (const phrase of ['Half of ', 'The lowest paid 10% earn', 'the highest paid 10% earn more']) {
+            expect(hubSrc, `hub: ${phrase}`).toContain(phrase);
+            expect(card, `generator: ${phrase}`).toContain(phrase);
+        }
+    });
+
+    it('prints no note about the generator\'s own earlier wording', () => {
+        // A sentence about "the previous wording here" belongs in a code
+        // comment: a reader of the PDF never saw the wording it corrects.
+        const printed = stripComments(generatorSrc);
+        expect(printed).not.toMatch(/previous wording/i);
+        expect(printed).not.toMatch(/read as a citation/i);
     });
 });

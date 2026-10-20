@@ -7,6 +7,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import { verifyCsrf } from '@/lib/csrf';
 import { rateLimit } from '@/lib/rate-limit';
 import { mintDocReadUrl, extractRequestContext, toBareDocPath } from '@/lib/document-storage';
+import { isOwnMessageAttachmentKey } from '@/lib/message-attachment-key';
 import { MESSAGE_BODY_MAX, readJsonObject, validateReplyPayload } from '@/app/api/conversations/_lib/message-payload';
 import { isDeletedForViewer, visibleToViewerWhere } from '@/app/api/conversations/_lib/message-visibility';
 
@@ -40,8 +41,8 @@ export async function GET(
         const conversation = await prisma.conversation.findUnique({
             where: { id },
             include: {
-                userA: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, email: true, headline: true, specialties: true, licenseStates: true } },
-                userB: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, email: true, headline: true, specialties: true, licenseStates: true } },
+                userA: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, headline: true, specialties: true, licenseStates: true } },
+                userB: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, headline: true, specialties: true, licenseStates: true } },
                 job: { select: { id: true, title: true, slug: true } },
             },
         });
@@ -91,9 +92,13 @@ export async function GET(
         });
 
         const otherUser = conversation.participantA === profile.id ? conversation.userB : conversation.userA;
+        // SECURITY: an unnamed person with no company is "User", never the
+        // start of their email address, which this thread header showed to
+        // the other participant. The email is not read here.
+        // tests/api/conversations-deleted-and-unnamed.test.ts
         const otherName = [otherUser.firstName, otherUser.lastName].filter(Boolean).join(' ')
             || otherUser.company
-            || (otherUser.email ? otherUser.email.split('@')[0] : 'User');
+            || 'User';
         const initials = otherUser.firstName
             ? `${otherUser.firstName.charAt(0)}${(otherUser.lastName || '').charAt(0)}`.toUpperCase()
             : otherName.charAt(0).toUpperCase();
@@ -202,8 +207,8 @@ export async function POST(
         const conversation = await prisma.conversation.findUnique({
             where: { id },
             include: {
-                userA: { select: { id: true, email: true, firstName: true } },
-                userB: { select: { id: true, email: true, firstName: true } },
+                userA: { select: { id: true, email: true, firstName: true, deletedAt: true } },
+                userB: { select: { id: true, email: true, firstName: true, deletedAt: true } },
             },
         });
 
@@ -213,6 +218,22 @@ export async function POST(
 
         if (conversation.participantA !== profile.id && conversation.participantB !== profile.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // Determine recipient
+        const recipientProfile = conversation.participantA === profile.id
+            ? conversation.userB
+            : conversation.userA;
+
+        // SECURITY: a reply never reaches an account its owner deleted.
+        // Deletion hides the profile and suppresses email
+        // (app/api/auth/delete-account), yet this route stored the reply
+        // and emailed the address anyway, which POST /api/employer/messages
+        // already refuses. The thread answers exactly as an unknown one
+        // does, before the reply gate, so nothing is written or sent.
+        // tests/api/conversations-deleted-and-unnamed.test.ts
+        if (recipientProfile.deletedAt) {
+            return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
         }
 
         // LinkedIn-style reply gating: if a candidate initiated this conversation
@@ -250,22 +271,19 @@ export async function POST(
         // A sender may only attach an object they uploaded themselves.
         // The upload route keys every object under the uploader's supabase
         // uid (`${user.id}/<ts>_<name>` — see app/api/upload/message-attachment),
-        // so ownership is provable from the path prefix. Without this check a
-        // sender could store an arbitrary storage path and have the thread
-        // view mint a signed URL for someone else's private attachment.
+        // so ownership is provable from the key. Without this check a sender
+        // could store an arbitrary storage path and have the thread view mint
+        // a signed URL for someone else's private attachment. The key is
+        // matched whole: a uid prefix and a '..' check let an encoded
+        // `%2e%2e` segment through (lib/message-attachment-key.ts).
         let validatedAttachmentPath: string | null = null;
         if (attachmentUrl) {
             const barePath = toBareDocPath(attachmentUrl, 'message_attachment');
-            if (!barePath || barePath.includes('..') || !barePath.startsWith(`${user.id}/`)) {
+            if (!barePath || !isOwnMessageAttachmentKey(barePath, user.id)) {
                 return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 });
             }
             validatedAttachmentPath = barePath;
         }
-
-        // Determine recipient
-        const recipientProfile = conversation.participantA === profile.id
-            ? conversation.userB
-            : conversation.userA;
 
         // Create the reply message
         const message = await prisma.employerMessage.create({

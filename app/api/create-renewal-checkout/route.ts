@@ -43,7 +43,7 @@ import { prisma } from '@/lib/prisma';
 import { config, PricingTier } from '@/lib/config';
 import { asPaidTier } from '@/lib/pricing';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { getBaseUrl, isFeatureEnabled } from '@/lib/env';
+import { getBaseUrl, getEnv, isFeatureEnabled } from '@/lib/env';
 import { logger } from '@/lib/logger';
 import { gaCheckoutMetadata, idempotencyKeyWithGaIds } from '@/lib/analytics-server';
 import {
@@ -128,6 +128,17 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
     if (!stripe) {
+      return NextResponse.json(
+        { error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' },
+        { status: 503 }
+      );
+    }
+
+    // Without STRIPE_WEBHOOK_SECRET the Stripe webhook answers 503 to every
+    // event: it could not apply a renewal paid here (only the success page or
+    // the daily sweep could), nor act on its refunds and disputes. Same rule
+    // as /api/create-checkout (tests/regressions/paid-posting-checkout-gate.test.ts).
+    if (!getEnv().STRIPE_WEBHOOK_SECRET) {
       return NextResponse.json(
         { error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' },
         { status: 503 }

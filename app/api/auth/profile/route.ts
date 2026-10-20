@@ -9,6 +9,8 @@ import { sendSignupWelcomeEmail } from '@/lib/email-service'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { inngest } from '@/lib/inngest/client'
 import { ensureProfileFromAuth } from '@/lib/auth/ensure-profile'
+import { toOwnResumePath } from '@/lib/resume-storage'
+import { getAvatarUrl, toOwnAvatarPath } from '@/lib/supabase-storage'
 
 // Shared include for _count used by completeness scoring
 const profileInclude = {
@@ -280,8 +282,29 @@ export async function PATCH(request: NextRequest) {
     const lastName = body.lastName !== undefined ? (body.lastName ? sanitizeText(body.lastName, 50) : null) : undefined
     const phone = body.phone !== undefined ? (body.phone ? sanitizeText(body.phone, 20) : null) : undefined
     const company = body.company !== undefined ? (body.company ? sanitizeText(body.company, 100) : null) : undefined
-    const avatarUrl = body.avatarUrl !== undefined ? (body.avatarUrl ? sanitizeUrl(body.avatarUrl) : null) : undefined
-    const resumeUrl = body.resumeUrl !== undefined ? (body.resumeUrl ? sanitizeUrl(body.resumeUrl) : null) : undefined
+
+    // SECURITY (AUTH-PROFILE-1): avatarUrl and resumeUrl used to be stored as
+    // sent, so a caller could point their own profile at another user's
+    // object and every "own file" reader (signed link, export, parse, delete,
+    // the purge cron) acted on it. A value now counts only when it names a key
+    // in the caller's own upload folder; anything else is ignored (the key is
+    // left out of the update, never a 400), and null still clears. /api/upload
+    // already stores both columns after a real upload, so this write is only
+    // the settings page repeating it. A sign-in provider picture written by
+    // /auth/callback is echoed back on every save and is kept by being
+    // ignored. The avatar URL is rebuilt from the verified key so host and
+    // bucket are ours. Tests: tests/regressions/resume-ownership-writers.test.ts.
+    const ownAvatarPath = body.avatarUrl ? toOwnAvatarPath(body.avatarUrl, user.id) : null
+    const avatarUrl = body.avatarUrl !== undefined
+      ? (body.avatarUrl ? (ownAvatarPath ? getAvatarUrl(ownAvatarPath) : undefined) : null)
+      : undefined
+    const ownResumePath = body.resumeUrl ? toOwnResumePath(body.resumeUrl, user.id) : null
+    const resumeUrl = body.resumeUrl !== undefined
+      ? (body.resumeUrl ? (ownResumePath ?? undefined) : null)
+      : undefined
+    if (body.resumeUrl && !ownResumePath) {
+      logger.warn('Profile PATCH: ignored a resumeUrl outside the caller\'s upload folder', { userId: user.id })
+    }
 
     // Sanitize new PMHNP fields
     const headline = body.headline !== undefined ? (body.headline ? sanitizeText(body.headline, 120) : null) : undefined
@@ -308,8 +331,20 @@ export async function PATCH(request: NextRequest) {
       : undefined
 
     // Boolean fields
-    const openToOffers = typeof body.openToOffers === 'boolean' ? body.openToOffers : undefined
-    const profileVisible = typeof body.profileVisible === 'boolean' ? body.profileVisible : undefined
+    const requestedOpenToOffers = typeof body.openToOffers === 'boolean' ? body.openToOffers : undefined
+    const requestedProfileVisible = typeof body.profileVisible === 'boolean' ? body.profileVisible : undefined
+    // SECURITY: a soft-deleted account keeps its session through the grace
+    // period, and the settings page sends both switches on every save, so
+    // switching either on put the account back in every talent pool site
+    // with deletedAt still set. Switching on waits for a restore; switching
+    // off still saves. tests/api/profile-patch-deleted-visibility.test.ts
+    const switchesVisibilityOn = requestedOpenToOffers === true || requestedProfileVisible === true
+    const lifecycle = switchesVisibilityOn
+      ? await prisma.userProfile.findUnique({ where: { supabaseId: user.id }, select: { deletedAt: true } })
+      : null
+    const isDeleted = Boolean(lifecycle?.deletedAt)
+    const openToOffers = isDeleted && requestedOpenToOffers === true ? undefined : requestedOpenToOffers
+    const profileVisible = isDeleted && requestedProfileVisible === true ? undefined : requestedProfileVisible
 
     // DateTime field
     const availableDate = body.availableDate !== undefined

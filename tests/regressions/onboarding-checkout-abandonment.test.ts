@@ -43,6 +43,10 @@ describe('B78 — create-checkout resume mode', () => {
   it('enforces ownership and only resumes pending/expired rows', () => {
     expect(src).toMatch(/employerJob\.userId === userId/);
     expect(src).toMatch(/employerJob\.contactEmail\.toLowerCase\(\) === userEmail\.toLowerCase\(\)/);
+    // CHK-1: the contact-email fallback reaches unclaimed rows only, as
+    // lib/employer-ownership.ts#employerJobOwnershipBranches defines ownership
+    // (tests/api/create-checkout-tier.test.ts exercises it).
+    expect(src).toMatch(/const ownsByEmail =\s*employerJob\.userId === null &&/);
     expect(src).toMatch(/paymentStatus !== 'pending' && employerJob\.paymentStatus !== 'expired'/);
     expect(src).toContain("code: 'NOT_RESUMABLE'");
   });

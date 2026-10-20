@@ -125,7 +125,7 @@ const EXPLORE_CARDS: ReadonlyArray<{ href: string; label: string; sub: string; i
   { href: '/jobs/locum-tenens', label: 'Locum Tenens', sub: 'Agency assignments', icon: '/images/categories/nav/locum-tenens.webp', slug: 'locum-tenens' },
   { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Shift by shift', icon: '/images/categories/nav/per-diem.webp', slug: 'per-diem' },
   { href: '/salary-guide', label: 'Salary Guide', sub: 'Posted pay by state', icon: '/images/categories/nav/salary.webp' },
-  { href: '/jobs/locations', label: 'By Location', sub: 'Browse every state', icon: '/images/categories/nav/location.webp' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities', icon: '/images/categories/nav/location.webp' },
 ];
 
 /** Live canonical counts for the slugged explore cards, in one Promise.all. */

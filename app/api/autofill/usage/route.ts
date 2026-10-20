@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyExtensionToken } from '@/lib/verify-extension-token';
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import {
     AUTOFILL_AI_MONTHLY_LIMITS,
     getMonthlyAiGenerations,
@@ -10,6 +11,11 @@ import {
 
 
 export async function GET(req: NextRequest) {
+    // SECURITY (AUTOFILL-TRACK-1): the only autofill route that had no
+    // limiter. Test: tests/api/autofill-track-quota.test.ts
+    const rateLimitResult = await rateLimit(req, 'autofill-usage', RATE_LIMITS.general);
+    if (rateLimitResult) return rateLimitResult;
+
     try {
         const user = await verifyExtensionToken(req);
         if (!user) {
@@ -21,15 +27,16 @@ export async function GET(req: NextRequest) {
         const periodStart = startOfCurrentMonth(now);
         const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-        // Get usage for this period
-        const usageRecords = await prisma.autofillUsage.findMany({
+        // SECURITY (AUTOFILL-TRACK-1): this loaded every usage row of the
+        // month, uncapped page URLs included, only to count the ones with
+        // fields filled. The database counts them now.
+        const autofillsUsed = await prisma.autofillUsage.count({
             where: {
                 userId: user.userId,
                 createdAt: { gte: periodStart, lte: periodEnd },
+                fieldsFilled: { gt: 0 },
             },
         });
-
-        const autofillsUsed = usageRecords.filter(r => r.fieldsFilled > 0).length;
         // Audit F29: the displayed number MUST be the same SUM the
         // enforcement helper uses — both call getMonthlyAiGenerations so
         // they can never disagree.

@@ -22,7 +22,7 @@
  *   - Practice-authority labels come from lib/state-practice-authority.ts
  *     (AANP) via LICENSE_GUIDE_STATES, and the count is read from
  *     lib/stats-sources.ts — never restated as a literal.
- *   - Certification bodies are role-correct: AANP/ANCC certify NPs,
+ *   - Certification bodies are role-correct: AANPCB/ANCC certify NPs,
  *     NBCRNA certifies CRNAs, AMCB certifies CNMs.
  *
  * RENDERING RULE — never open a body line with `**bold**`. The converter
@@ -166,7 +166,7 @@ export function buildCeuGuideFaq(): CeuGuideFaq[] {
             text:
                 `No. They are two separate clocks with separate requirements, and meeting one does not satisfy the other. ` +
                 `Your state board renews your APRN license; your certifying body renews the national certification the board requires you to keep current. ` +
-                `For ${NP}s that body is AANP or ANCC; nurse anesthetists recertify through NBCRNA and certified nurse-midwives through AMCB. ` +
+                `For ${NP}s that body is AANPCB or ANCC; nurse anesthetists recertify through NBCRNA and certified nurse-midwives through AMCB. ` +
                 `Track both dates, because a lapsed certification can put the license renewal that depends on it at risk.`,
         },
         {
@@ -214,7 +214,7 @@ export function buildCeuGuideMarkdown(): string {
 The single most expensive CE mistake is treating renewal as one deadline.
 
 - **Your state APRN license** renews with the board of nursing (or equivalent agency) in each state where you hold a license. The board sets the hours, the cycle, which topics are mandatory, which accrediting organizations it recognizes, and the audit rules.
-- **Your national certification** renews with the body that issued it: AANP or ANCC for ${NP}s, NBCRNA for nurse anesthetists through its Continued Professional Certification program, and AMCB for certified nurse-midwives. Each has its own cycle, its own category rules, and its own documentation standards.
+- **Your national certification** renews with the body that issued it: AANPCB or ANCC for ${NP}s, NBCRNA for nurse anesthetists through its Continued Professional Certification program, and AMCB for certified nurse-midwives. Each has its own cycle, its own category rules, and its own documentation standards.
 
 The two overlap but are not interchangeable. Most boards require current national certification as a *condition* of license renewal, which means a lapsed certification can jeopardize a license that is otherwise in good standing. And hours that satisfy a certifying body's category rules will not necessarily satisfy a board's mandatory-topic requirement. Plan the certification cycle first, since it is usually the longer one, and then map the state requirements onto it.
 

@@ -114,11 +114,13 @@ interface ExploreCard { href: string; label: string; sub: string }
 
 const EXPLORE_CARDS: readonly ExploreCard[] = [
   { href: '/jobs/private-practice', label: 'Private Practice', sub: 'Independent roles' },
-  { href: '/jobs/locum-tenens', label: 'Locum Tenens', sub: 'Travel assignments' },
+  // Pending work 2.21: the locum tenens page's own words. "Travel assignments"
+  // described the travel landing (tests/regressions/nav-card-coverage-claims.test.ts).
+  { href: '/jobs/locum-tenens', label: 'Locum Tenens', sub: 'Agency assignments' },
   { href: '/jobs/senior', label: 'Senior', sub: 'Executive roles' },
   { href: '/jobs/remote', label: 'Remote', sub: 'Work from home' },
   { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data' },
-  { href: '/jobs/locations', label: 'By Location', sub: '50 states' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities' },
 ];
 
 /** Taxonomy slug behind an explore card, or null for a non-category link. */

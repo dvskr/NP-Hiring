@@ -21,7 +21,10 @@
  *   - the resume path decides "already paid" by payment_status, so a failed
  *     delayed payment can be retried while one that is still settling
  *     (intent 'processing') or awaiting ACH microdeposit verification
- *     (intent 'requires_action') cannot be paid twice.
+ *     (intent 'requires_action') cannot be paid twice;
+ *   - the resume path serves only the posting's owner: its claimed account,
+ *     or the contact email of an unclaimed legacy row, never the contact
+ *     email of a row another account claimed (CHK-1).
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -41,7 +44,8 @@ vi.mock('stripe', () => ({
 vi.mock('@/lib/env', () => ({
     isFeatureEnabled: vi.fn((feature: string) => feature === 'paidPosting'),
     getPaidPostingStatus: vi.fn(() => ({ enabled: true, stripeConfigured: true, available: true })),
-    getEnv: vi.fn(() => ({})),
+    // Checkout opens only with the webhook secret set (tests/regressions/paid-posting-checkout-gate.test.ts).
+    getEnv: vi.fn(() => ({ STRIPE_WEBHOOK_SECRET: 'whsec_x' })),
     getBaseUrl: vi.fn(() => 'http://localhost:3000'),
 }));
 
@@ -399,6 +403,69 @@ describe('B78 resume path — delayed payments decide by payment_status, not ses
         expect(json.code).toBe('PAYMENT_PROCESSING');
         expect(json.error).toMatch(/already received/);
         expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+});
+
+describe('B78 resume path: only the posting owner can resume it (CHK-1)', () => {
+    // The default caller (beforeEach) is user-1, signed up as Owner@clinic.example.
+    function resumableRow(owner: { userId: string | null; contactEmail: string }) {
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+            id: 'ej-7', jobId: 'job-7', paymentStatus: 'expired', pricingTier: 'pro',
+            userId: owner.userId, contactEmail: owner.contactEmail,
+            dashboardToken: 'dash-7', stripeCheckoutSessionId: 'cs_prev',
+            job: { id: 'job-7', title: 't', employer: 'e', location: 'l', archivedAt: null },
+        } as never);
+        sessionsRetrieve.mockResolvedValue({ id: 'cs_prev', status: 'open', payment_status: 'unpaid' });
+        sessionsExpire.mockResolvedValue({ id: 'cs_prev', status: 'expired' });
+    }
+
+    it("refuses a row another account claimed, even when its contact email is the caller's, before any side effect", async () => {
+        resumableRow({ userId: 'user-2', contactEmail: `OWNER@${SIGNUP_DOMAIN}` });
+
+        const { res, json } = await post({ resumeJobId: 'job-7' });
+
+        expect(res.status).toBe(403);
+        expect(json).toEqual({ error: 'You do not have access to this job' });
+        expect(sessionsRetrieve).not.toHaveBeenCalled();
+        expect(sessionsExpire).not.toHaveBeenCalled();
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(prisma.employerJob.update).not.toHaveBeenCalled();
+        expect(res.headers.get('set-cookie')).toBeNull();
+    });
+
+    it('still resumes an unclaimed legacy row filed under the caller email, whatever its case', async () => {
+        resumableRow({ userId: null, contactEmail: `OWNER@${SIGNUP_DOMAIN}` });
+
+        const { res } = await post({ resumeJobId: 'job-7' });
+
+        expect(res.status).toBe(200);
+        expect(sessionsCreate).toHaveBeenCalledOnce();
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({
+            where: { id: 'ej-7', paymentStatus: 'expired' },
+            data: { paymentStatus: 'pending' },
+        });
+        expect(res.headers.get('set-cookie')).toContain('checkout_session_bind=cs_1');
+    });
+
+    it('refuses an unclaimed row filed under another email', async () => {
+        resumableRow({ userId: null, contactEmail: 'someone@other-clinic.example' });
+
+        const { res } = await post({ resumeJobId: 'job-7' });
+
+        expect(res.status).toBe(403);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("resumes the caller's own claimed row whatever contact email it was filed under", async () => {
+        resumableRow({ userId: 'user-1', contactEmail: 'hiring@recruiter-agency.example' });
+
+        const { res } = await post({ resumeJobId: 'job-7' });
+
+        expect(res.status).toBe(200);
+        expect(sessionsCreate).toHaveBeenCalledOnce();
     });
 });
 

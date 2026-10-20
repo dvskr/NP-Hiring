@@ -1,8 +1,9 @@
 # Pending Work
 
-> The single list of everything still open, checked against the code on 2026-10-13 (after the sister board
-> links `71236b5`, the plain copy pass `a74a4d5` and the SEO, AEO and GEO content release `6263323`; all three
-> are live, and `main` is the only branch). Shipped work is at the end.
+> The single list of everything still open, checked against the code on 2026-10-20 (after the auth hotfix
+> `e78f037` and the security and register batch of 2026-10-20, which follow the sister board links `71236b5`,
+> the plain copy pass `a74a4d5` and the SEO, AEO and GEO content release `6263323`; all are live, and `main` is
+> the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -11,12 +12,16 @@
 
 | When | What happens | What must be done by then |
 |---|---|---|
+| Now | The route sweep found sign-ups could make themselves admin (closed in `e78f037`), and a test account password sits in the public repo history | OWNER runs the checks in 1.14 |
 | Now | The Google indexing service account key was pasted into a chat | OWNER rotates it, 1.4 |
 | 2026-10-01 to about 2026-10-29 | Google and Bing make their first passes over the submitted sitemap | OWNER watches Search Console weekly (1.4); submit nothing else |
-| 2026-10-16 | First court deadline named in the student loan post (a government cross motion in the Massachusetts case); more follow on 2026-10-30, 2026-11-06, 2026-11-13, 2026-11-20 and 2026-12-04 | CLAUDE re-checks the dockets, and the Oregon preliminary injunction ruling, then updates the post (2.24) |
 | About 2026-10-21 | The Department of Education's decision on the NP residency consortium's recognition is due (90 days after the July advisory committee meeting) | CLAUDE updates the fellowship post (2.24) |
 | About 2026-10-29 | Four weeks after the sitemap submission | DECISION D12: re-admit the specialty and setting by state pages if indexing looks healthy |
 | 2026-10-30 | ANCC's new FNP test content outline takes effect | CLAUDE rewords the three posts that say it is about to change (2.24) |
+| 2026-10-30 | Plaintiffs' reply in the Massachusetts student loan case | CLAUDE re-checks that docket, whether the government's 2026-10-16 motion is also a cross motion for summary judgment, and Federal Student Aid for an announcement carrying out the Oregon injunction (2.24) |
+| 2026-11-06 | Government cross motions in AANP v. McMahon; the Department's reply closes briefing in the Maryland case | CLAUDE updates the student loan post's case table and confirms the states' 2026-10-16 reply (2.24) |
+| 2026-11-13 and 2026-11-20 | The government's reply closes the Massachusetts briefing; plaintiffs' reply in AANP v. McMahon | CLAUDE (2.24) |
+| 2026-12-04 | The government's reply closes briefing in AANP v. McMahon; a ruling on the merits may follow and would end or replace the stay | CLAUDE re-checks the stay and GENERAL-26-42 (2.24) |
 | Early 2026-11 | The next monthly jobs report | CLAUDE refreshes the job outlook post (2.24) |
 | About 2026-11-06 | Quarterly re-check of the /compare claims is due (dated 2026-08-06) | CLAUDE, section 6 |
 | About 2026-11-11 | Quarterly NLC roster and scope-of-practice review is due (last 2026-08-11) | CLAUDE, section 6 |
@@ -40,7 +45,7 @@ cancel the subscription.
 `STRIPE_PLAN_PAYMENT_LINK`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `ENABLE_PAID_POSTING=true` and
 `NEXT_PUBLIC_BASE_URL=https://nphiring.com`. Keep `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`,
 `DISCORD_WEBHOOK_URL` and `SENTRY_DSN` set.
-- Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free and plan sales stay closed. Set the key and the webhook secret before the flag, or in the same deploy: after the promo, the flag and the Payment Link alone open plan sales, and a plan bought then is recorded only once the key and the secret are set (2.16). After 2027-01-01, no test-mode key and no `https://buy.stripe.com/test_` link may stay in Production.
+- Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free and plan sales stay closed. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 to every Stripe event until both are set, and plan sales stay closed until then. After 2027-01-01, no test-mode key and no `https://buy.stripe.com/test_` link may stay in Production.
 - Where: Vercel, then redeploy. Table: `docs/LAUNCH_RUNBOOK.md` section 8b.
 
 **1.3 Google Analytics.** Done 2026-09-28 (`G-PT7KQ9ZEXQ`, 14 month retention). Optional: `GA_API_SECRET`
@@ -115,11 +120,25 @@ dry run first and then with `--apply` in one transaction:
 - Why: the code fixes stop new bad rows; these repair the rows already stored.
 - Where: a terminal on a trusted machine. The repo `.env` is the production database.
 
-**1.13 Regenerate the salary guide PDF.** The download at /downloads/np-salary-guide-2026.pdf was built before
-the 2026-10-13 content release. It still prints the old growth figure (40%, 2024 to 2034) and "90 million+",
-while the site and the generator now say 41% (2025 to 2035) and "100 million+".
-- Why: the lead magnet contradicts the page that offers it until it is rebuilt.
-- Where: `scripts/generate-salary-pdf.ts` reads live medians from the database, so run it on a trusted machine (the repo `.env` is the production database), then commit the new file.
+**1.14 Security checks only you can do (urgent).** The route sweep of 2026-10-13 found three holes inherited from
+the template's first commit (2026-07-02) and live since launch; `e78f037` closed them on 2026-10-17. Claude cannot
+read production, so these are yours.
+- Planted admin accounts. Any sign-up could make itself an admin until `e78f037`. In the Supabase SQL editor
+  (read only): `select id, email, created_at, raw_user_meta_data->>'role' from auth.users where
+  coalesce(raw_user_meta_data->>'role', '') not in ('', 'job_seeker', 'employer');` and `select supabase_id,
+  email, role, created_at from public.user_profiles where role not in ('job_seeker', 'employer');`. Any row in
+  the first, or any row in the second that is not your own admin, means the hole was used: demote it and tell
+  Claude, who will trace what it did.
+- Supabase dashboard, Authentication: Site URL `https://nphiring.com`; Redirect URLs list no `*.vercel.app` or
+  `**` entry (the reset route now allows only this site's hosts, but the dashboard list is the last gate for
+  every auth email); Confirm email ON. Several session email checks rely on Confirm email being on.
+- Rotate the audit employer test account's password. `docs/AUDIT_RUNBOOK.md` printed it in plain text from the
+  first commit, and the GitHub repo is public, so it is in the public history. The doc now shows a placeholder;
+  only a new password fixes it.
+- The rebuilt job seeker comparison table (`lib/seeker-comparison.ts`) rests on pages Claude could not open:
+  Indeed's state NP career guide articles (403 to automated requests), and whether Indeed sells a paid job seeker
+  service (if so, its "Completely free" cell becomes partial). Also confirm `OPENAI_API_KEY` is set in production
+  and no database override turns the AI resume parser off; if either is off, drop that row.
 
 ## 2. Engineering (CLAUDE)
 
@@ -150,16 +169,6 @@ fee is published.
 2026)" section after the promo ends. It stays true, but in the first deploy after 2027-01-01, move that section
 to the past tense and update "Last updated".
 
-**2.16 Plan sales do not check the Stripe key.** `isPlanSaleOpen` (`lib/employer-plan-link.ts`) reads
-`ENABLE_PAID_POSTING`, the Payment Link and the promo clock, never `STRIPE_SECRET_KEY`. So with the flag on
-after the promo and a valid `https://buy.stripe.com/` link, the /pricing plan card and
-`/api/employer/plan/subscribe` send a buyer to Stripe while `POST /api/webhooks/stripe` still answers 503
-without `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`: the subscription is paid and no `EmployerPlan` row
-records it, and the daily plan reconciliation cannot recover it either, since it needs the key too. Make
-`isPlanSaleOpen` require the key and the webhook secret as well, so the sale closes while the money path
-cannot record it. Until then the deploy order in 1.2 is the only guard, and `docs/pricing-system.md` section
-1d states the gap.
-
 **2.18 Job alert salary matcher.** A job alert with a minimum salary and the /jobs salary filter use
 different rules. /jobs (`lib/filters.ts`) keeps a job whose low or high figure reaches the minimum and drops
 jobs with no salary; the alert digest (`lib/job-alerts-service.ts`) keeps a job whose high figure reaches it,
@@ -169,42 +178,16 @@ that note was removed with the other field hints (2026-10-12), so the digest rul
 It changes which jobs real subscribers receive, so ship it on its own. `tests/regressions/p2-seeker-ux-static.test.ts`
 pins the current divergence and fails when it is fixed.
 
-**2.19 Employer analytics returns any job's clicks (security).** Found open on `origin/main` on 2026-10-12.
-`app/api/employer/analytics/route.ts` builds `jobIds` from the `jobId` query parameter without checking it
-against the employer's own jobs (`const jobIds = jobIdFilter ? [jobIdFilter] : ...`), so an employer with a live
-post can read the daily apply-click series of any other job. `days` is also unbounded. Keep only owned ids
-(intersect with `employerJobs`) and clamp `days`. Small; ship it on its own branch.
-
-**2.20 Dashboard assumes every account has an email.** `app/api/dashboard/route.ts` passes `user.email!` to
-`prisma.jobAlert.count` (an undefined email drops the filter and counts every active alert) and to
-`prisma.emailLead.findUnique` (throws). Low risk; guard both.
-
-**2.21 Coverage claims on navigation cards.** Found in the 2026-10-12 cleanup: metro pages print "All 50 states"
-and the landing pages "Browse every state" on cards that may not reach every state, and the /jobs/locations
-"Travel / Locum tenens" tile merges two categories the site keeps separate. Check against live data and reword.
-
-**2.22 A copy date for the /compare hub.** The hub's sitemap date is the claims review alone
-(`COMPARE_REVIEW_DATE`, 2026-08-06), but the plain copy pass changed its title, hero and method bullets on
-2026-10-13 (`app/compare/page.tsx`). Give it an entry in `PAGE_CONTENT_DATES` and date it by the later of the two
-in `app/sitemap.ts`, as the three comparison pages already are. It is not a one-line change:
-`tests/regressions/promo-clock-pages-rerender.test.ts` walks every dated page, and the hub imports a module that
-reads the promo clock without printing a price, so it needs an exemption there.
-
-**2.23 Finish naming the certifying body.** The content release changed "AANP" to "AANPCB" (the certification
-board, which is a separate body from the association) on the listing pages, /faq, /press, /editorial-policy and
-the job description guide. "AANP or ANCC" is still printed by `app/for-employers/resources/how-to-hire/page.tsx`,
-`lib/blog-license-guides.ts` (all 51 license guides), `lib/blog-ceu-guide.ts` and
-`lib/pseo/category-city-template.tsx`, and three suites pin the old wording
-(`tests/regressions/p1-employer-content-hub.test.ts`, `tests/regressions/p1-content-library-license-guides.test.ts`,
-`tests/regressions/p2-pseo-parity-templates.test.ts`). Change the copy and the pins together. Never write
-"formerly AANPCB": its own site says "AANPCB, operating as NPCB". See D24 before touching the credential letters.
-
 **2.24 Dated posts to re-check.** The ten posts published on 2026-10-13 carry claims that expire. Each was
 re-checked against its sources that day; the dates table at the top lists the next ones.
-- `np-student-loan-limits-professional-degree`: five or more federal cases are open. Re-check each docket after
-  its deadline, and the District of Oregon ruling on the naturopathic colleges' preliminary injunction motion
-  (heard 2026-09-23): a grant there would change the sentence that says only AANP v. McMahon has changed how
-  loans are administered.
+- `np-student-loan-limits-professional-degree`: re-checked against every docket on 2026-10-17 (its review date).
+  The Oregon court's 2026-10-16 opinion was read from GovInfo on 2026-10-20 and the post now states it: a
+  preliminary injunction that makes the Department treat the N.D. degree as a professional degree for the
+  plaintiff groups and their members, with no stay pending appeal; it changes nothing for NP programs. Next: the
+  dates in the table at the top. The AFL-CIO briefing ends about 2027-01-08 (from a law firm summary; the
+  court's scheduling order could not be read). A ruling in Oregon, Maryland or Massachusetts can come at any
+  time. The review date stays the docket check day, not the ship day, because the post's own test ties every
+  "As of" date to it (`tests/regressions/student-loan-post-docket-recheck.test.ts`).
 - `np-fellowship-residency-programs`: the post says it could not confirm a final decision on the consortium's
   federal recognition. The advisory committee's July 2026 meeting report carries only its recommendation; the
   senior Department official's decision letter is due about 2026-10-21 and is posted in the Department's
@@ -237,6 +220,32 @@ re-checked against its sources that day; the dates table at the top lists the ne
 - /resources/1099-vs-w2, /resources/fpa-guide and /resources/private-practice-guide print "Last Updated" from
   review dates older than the copy the plain copy pass changed. They are review dates, so they stay until the
   guides are reviewed again (section 6).
+
+**2.26 Follow-ups from the 2026-10 security sweep.** Found by the sweep's builders and reviewers, outside what
+the batch could change safely. In rough order of value:
+- Newsletter consent: `syncToBeehiiv` subscribes every new account to the Beehiiv newsletter with no opt-in
+  check, from `app/auth/callback/route.ts`, `lib/auth/ensure-profile.ts` and `app/api/auth/profile/route.ts`,
+  against the explicit consent rule those files describe. Gate each call on the opt-in.
+- `app/api/job-alerts/route.ts` still sends the welcome email to an address that stays suppressed after a bounce
+  or a complaint (only an unsubscribe is lifted). Check `isEmailSuppressed` first.
+- The legacy ownership branch in `lib/employer-ownership.ts` (an unclaimed post filed under the session's email)
+  does not require a confirmed email, as the auth callback's legacy claim now does. Pass the confirmation in.
+- Token defaults: `EmailLead.unsubscribeToken` and `JobAlert.token` default to `cuid()` in
+  `prisma/schema.prisma`; new alerts from the signup route now get a UUID, other create sites do not. A uuid
+  default covers them all with no migration (after `prisma generate`). Rotating existing tokens is DECISION D33.
+- Billing edges (paid posting is off today): the renewal availability check ignores `STRIPE_WEBHOOK_SECRET`,
+  a key or secret made only of spaces counts as set, and the email ownership branch in
+  `app/api/verify-renewal-session/route.ts` matches rows another account owns (the CHK-1 sibling).
+- Drift guards: one shared talent pool predicate (it is written inline in seven routes) and one shared module
+  for the candidate alert caps.
+- `components/FeaturedJobsSection.tsx` queries published jobs without the global exclusions, and
+  `lib/direct-apply.ts` lacks applytojob.com in its ATS patterns.
+- `lib/compare-data.ts` says Indeed's licensure guidance was not found (2026-08-06), while the new job seeker
+  table marks it limited; settle it at the quarterly /compare review.
+- Storage housekeeping: the purge cron and the resume DELETE remove only the referenced object, so replaced
+  uploads stay forever; avatar values stored before the batch still render until a cleanup.
+- Coverage wording outside app/jobs: `components/InternalLinks.tsx` and other shared components were not scanned
+  by the new coverage test.
 
 ## 3. Decisions (DECISION)
 
@@ -290,7 +299,19 @@ Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
 | D22 | Newsletter cadence | The blog sidebar says "delivered weekly", the exit popup checkbox says "monthly". Which is true? | `components/blog/**`, `components/ExitIntentPopup.tsx` |
 | D23 | Marketing blocks kept for your call | Employer dashboard "Hiring Tips" card, the /job-alerts "Why Set Up Alerts?" card, and the /for-programs "How It Works" steps (they describe emailing us although the page has a self-serve builder) | `components/employer/EmployerDashboardClient.tsx`, `app/job-alerts/page.tsx`, `app/for-programs/page.tsx` |
 | D24 | The family NP credential letters | The content release session reported that AANPCB's handbook writes the credential as NP-C, while the posts and the tests write FNP-C. Not re-checked on 2026-10-13. Which form should the site print? | the certification posts in `content/blog`, `lib/pseo/category-faq-data.ts` |
-| D25 | "Salary Transparency on Every Listing" (accuracy) | The comparison table on /for-job-seekers claims this for us and marks Indeed and LinkedIn "Others hide salary". A card on the same page now says pay is shown whenever the employer's posting includes it, because many aggregated listings state no pay. The row is false as written and the competitor half is unverified. Recommended: remove the row, or audit the whole table as the employer comparison was (`lib/employer-comparison.ts`) | `app/for-job-seekers/page.tsx` |
+
+### 3.4c Left from the 2026-10 security sweep
+
+| # | Question | Today | Where |
+|---|---|---|---|
+| D26 | Anonymous job alert signups (sweep JA-2) | POST /api/job-alerts takes no session. For an address that unsubscribed it lifts the suppression, and for an existing alert it turns a paused alert back on and rewrites its frequency, for whoever typed the address. The exit popup promises re-enabling on repeat. Recommended: do either only for a signed-in owner of the address, or after a click on an emailed confirmation link | `app/api/job-alerts/route.ts`, `components/ExitIntentPopup.tsx` |
+| D27 | Employers created from sign-up metadata skip the free email block | The block exists only in POST /api/auth/profile and the sign-up form; an employer created in the email confirmation flow or by Google sign-in never meets it. Should such an account become a job seeker, an employer pending review, or be refused? | `lib/auth/ensure-profile.ts`, `app/auth/callback/route.ts` |
+| D28 | A signed-out newsletter signup turns a settings opt-out back on | Opt-out and the status check now need a matching session, but the public opt-in still flips a stored opt-out for any address. Double opt-in, or never flip a stored opt-out without a session? | `app/api/newsletter/route.ts` |
+| D29 | What deletion and restore do to pool visibility | A restore sets both visibility switches on, Clear All turns them back on, and Google sign-in never restores a deleted account (only the password form does), so such a session stays signed in with the account deleted. Keep the person's earlier choice, and restore on any sign-in? | `app/api/auth/restore-account/route.ts`, `app/api/profile/clear/route.ts`, `app/auth/callback/route.ts` |
+| D30 | The license states filter for employers without a posting | An alert or a candidate search filtered to a state tells an employer with no live post that every listed candidate holds that license, although the cards hide license states from them. Ignore the filter for them? | `app/api/employer/candidates/route.ts`, `app/api/cron/candidate-alerts/route.ts` |
+| D31 | What the inbox shows | Once a thread exists the inbox shows a pool candidate's full last name (the pool masks it), and a thread whose other side deleted the account stays listed with their profile fields until the purge; only replies are refused | `app/api/conversations/route.ts`, `app/api/conversations/[id]/route.ts` |
+| D32 | Moving files when a profile is relinked | A profile relinked to a new sign-in keeps resume, avatar and application files under the old account id, which the new ownership checks refuse: the person sees no resume and must upload again. Move the files and rewrite the keys, or clear them? | `lib/auth/ensure-profile.ts` |
+| D33 | Naming and token follow-ups | The FNP guide's title and tags keep "AANP vs ANCC" as a search phrase; the candidate settings list stores "AANP" as a certifying body (`config/niche/credentials.ts`); existing alert and unsubscribe tokens are cuid values. Rename, keep, rotate? | `content/blog/fnp-certification-aanp-vs-ancc.mdx`, `config/niche/credentials.ts` |
 
 ### 3.5 Audit-era items (enterprise audit)
 
@@ -375,6 +396,15 @@ tests fail until every side agrees:
 - The content release's open item "sitemap lastmod for changed tools": `PAGE_CONTENT_DATES` now dates all 33 pages the plain copy pass or the content release changed to 2026-10-13, the UTC day both went live; /terms, /privacy and /sub-processors kept their dates. The /compare hub is 2.22.
 - Ship-day review of the content release (2026-10-13): 195 time-bound claims in the ten new posts and the refreshed surfaces were re-checked at their sources. 189 held. Four were corrected: the student loan post counted three open federal cases where the dockets show at least five (in the body and in one FAQ answer), the fellowship post said every VA site names a program director, and the noncompete post described Maine's statute page as the text before the 2026 amendment. Two, on the residency consortium's federal recognition, could not be confirmed because the Department's pages refuse automated requests, so that sentence now says so. Follow-ups: 2.23 to 2.25, D24, D25, 1.13.
 - Prisma migrations: applied, most recently `20260928000000_job_content_changed_at` on 2026-09-30.
+- 2.16 Plan sales and the Stripe key: `isPlanSaleOpen` (`lib/employer-plan-link.ts`) now also requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. The /pricing plan card and `/api/employer/plan/subscribe` send no buyer to Stripe while the webhook would answer 503 and could not record the plan. The per post checkout and renewal routes and the availability endpoint apply the same rule (2026-10-20).
+- Route authorization sweep (2026-10-13): all 193 API routes read, every finding checked by two skeptics. The three critical holes (sign-up metadata could grant admin, the anonymous alert signup answered with the alert's token, and reset links could point at any vercel.app host) shipped as `e78f037` on 2026-10-17. The rest shipped in the 2026-10-20 batch: resume and avatar paths held to the owner's folder at every writer and reader; the applications and dashboard answers stopped sending employer notes and AI scores to candidates; saved candidates, candidate search, candidate alerts and the alert cron follow the talent pool rules; employer messages, replies and candidate messages refuse recipients the employer may not contact or deleted accounts; employer testimonials need an employer account; newsletter opt-out and status need a matching session; the autofill quota no longer trusts the client; admin and job list parameters are bounded; checkout resume ownership matches the employer rule; the welcome email's unsubscribe links work; new alert tokens are UUIDs and the three alert token routes are rate limited; message attachment keys are matched whole; the alert digest escapes the alert's own criteria and the welcome email the first name; employers see a signed link to an applicant's cover letter, and a cover letter upload no longer replaces the profile resume. Owner checks: 1.14. Follow-ups: 2.26, D26 to D33.
+- 1.13 Salary guide PDF: regenerated on 2026-10-13 from live, read-only counts (491 postings with pay from 65 employers in 43 states) with the 41% and 100 million+ figures and a cited quick answer.
+- 2.19 Employer analytics: a job the caller does not own answers 404, and `days` is held to 1 to 365.
+- 2.20 The dashboard handles an account with no email.
+- 2.21 Coverage claims: every card and the footer link to /jobs/locations read without a coverage count ("States and cities" on the cards), and the /jobs/locations travel tile no longer names locum tenens.
+- 2.22 The /compare hub has its own copy date.
+- 2.23 The certifying body reads AANPCB in the hiring guide, the 51 license guides, the CE hub, the category by city template, the job description templates and nine posts.
+- D25 The job seeker comparison table was audited row by row against the code and each competitor's own pages and rebuilt from the cells that hold (`lib/seeker-comparison.ts`); the "how it works" steps on the home page lost the AI and no recruiter claims.
 
 ## Shipped since 2026-08-16
 

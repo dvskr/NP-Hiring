@@ -218,9 +218,12 @@ describe('truth rules', () => {
         }
     });
 
-    it('certification bodies are specialty-correct (AANP/ANCC NPs, NBCRNA CRNA, AMCB CNM)', () => {
+    it('certification bodies are specialty-correct (AANPCB/ANCC NPs, NBCRNA CRNA, AMCB CNM)', () => {
         for (const { post } of allPosts) {
-            expect(post.content).toContain('AANP or ANCC');
+            expect(post.content).toContain('AANPCB or ANCC');
+            // AANP classifies the state's practice environment. It certifies
+            // nobody, in the application steps or in the FAQ answer.
+            expect(post.content).not.toMatch(/\bAANP or ANCC\b/);
             expect(post.content).toContain('NBCRNA');
             expect(post.content).toContain('AMCB');
         }

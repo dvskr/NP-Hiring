@@ -123,7 +123,7 @@ const EXPLORE_CARDS: readonly ExploreCard[] = [
   { href: '/jobs/private-practice', label: 'Private Practice', sub: 'Own your practice' },
   { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based' },
   { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data' },
-  { href: '/jobs/locations', label: 'By Location', sub: '50 states' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities' },
 ];
 
 /** Taxonomy slug behind an explore card, or null for a non-category link. */

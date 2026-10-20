@@ -20,7 +20,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
+import { logger } from '@/lib/logger';
+import { mintResumeReadUrl, extractRequestContext, toOwnResumePath } from '@/lib/resume-storage';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
     const rl = await rateLimit(req, 'documents:resume-me', RATE_LIMITS.profile);
@@ -40,7 +41,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: 'No resume on file' }, { status: 404 });
     }
 
-    const url = await mintResumeReadUrl(profile.resumeUrl, {
+    // SECURITY (RES-1): the column is writable by its owner, so it can name
+    // another user's object (a signed link to it came back here, logged as a
+    // self view). Only a key in the caller's own upload folder is signed.
+    // Tests: tests/regressions/resume-ownership-readers.test.ts.
+    const resumePath = toOwnResumePath(profile.resumeUrl, user.id);
+    if (!resumePath) {
+        logger.warn("Resume link refused: stored resume is outside the caller's upload folder", { userId: user.id });
+        return NextResponse.json({ error: 'No resume on file' }, { status: 404 });
+    }
+
+    const url = await mintResumeReadUrl(resumePath, {
         actorId: user.id,
         ownerId: user.id,
         audience: 'owner',

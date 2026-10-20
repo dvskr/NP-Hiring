@@ -186,13 +186,23 @@ export default function EmployerSettingsClient() {
         const newState = !newsletterOptIn;
         setNewsletterOptIn(newState);
         try {
-            await fetch('/api/newsletter', {
+            const res = await fetch('/api/newsletter', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: profile.email, optIn: newState, source: 'employer_newsletter' }),
             });
+            // Opting out needs this session's own address, so an expired
+            // session answers 401. A refused save (401, 403, 429) must not
+            // leave the switch showing a state that was never stored.
+            if (!res.ok) {
+                setNewsletterOptIn(!newState);
+                showMsg('error', res.status === 401
+                    ? 'Please sign in again to change this setting.'
+                    : 'Failed to save. Please try again.');
+            }
         } catch {
             setNewsletterOptIn(!newState);
+            showMsg('error', 'Failed to save. Please try again.');
         } finally {
             setNewsletterLoading(false);
         }

@@ -47,10 +47,10 @@ vi.mock('@/lib/resume-storage', async (importOriginal) => {
 const USER = 'aaaaaaaa-1111-2222-3333-444444444444';
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n', 'latin1');
 
-function uploadReq(): NextRequest {
+function uploadReq(type = 'resume'): NextRequest {
   const form = new FormData();
   form.append('file', new File([new Uint8Array(PDF)], 'resume.pdf', { type: 'application/pdf' }));
-  form.append('type', 'resume');
+  form.append('type', type);
   return new NextRequest('http://localhost:3000/api/upload', { method: 'POST', body: form });
 }
 
@@ -122,6 +122,36 @@ describe('POST /api/upload', () => {
     const res = await POST(uploadReq());
     expect(res.status).toBe(409);
     expect(uploadResumeMock).not.toHaveBeenCalled();
+  });
+
+  // The apply form uploaded cover letters as type 'resume', so this route
+  // recorded each one as the profile's resume: the applicant's resume was
+  // replaced by their cover letter and queued for parsing.
+  it('stores a cover letter like a resume but never records it on the profile', async () => {
+    uploadResumeMock.mockResolvedValue({ path: `local/${USER}/2-letter.pdf`, url: 'https://signed.example/y' });
+    const { POST } = await import('@/app/api/upload/route');
+    const res = await POST(uploadReq('cover_letter'));
+    expect(res.status).toBe(200);
+    expect((await res.json()).path).toBe(`local/${USER}/2-letter.pdf`);
+    expect(uploadResumeMock).toHaveBeenCalledTimes(1);
+    expect(profileUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('still refuses any other upload type', async () => {
+    const { POST } = await import('@/app/api/upload/route');
+    const res = await POST(uploadReq('passport'));
+    expect(res.status).toBe(400);
+    expect(uploadResumeMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('the apply form uploads its cover letter as a cover letter', () => {
+  it("never sends the file as the profile's resume", async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync('components/InPlatformApplyForm.tsx', 'utf8');
+    const coverUpload = src.slice(src.indexOf('setUploadingCoverLetter(true)'));
+    expect(coverUpload).toContain("formData.append('type', 'cover_letter')");
+    expect(coverUpload.slice(0, coverUpload.indexOf("fetch('/api/upload'"))).not.toContain("'type', 'resume'");
   });
 });
 

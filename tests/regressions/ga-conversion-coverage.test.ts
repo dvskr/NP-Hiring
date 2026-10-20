@@ -466,10 +466,14 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
       expect(body).not.toContain('alert-1');
       expect(Object.keys(JSON.parse(body)).sort()).toEqual(['isNew', 'success']);
     }
-    // A new alert still sends its welcome email. Which token that email's
-    // footer should carry is a separate defect (its links read the email
-    // lead's unsubscribe token), so this pins only that it went out.
-    expect(vi.mocked(sendWelcomeEmail)).toHaveBeenCalledWith(EMAIL, expect.any(String));
+    // A new alert still sends its welcome email, and the route hands it the
+    // address alone. The email's unsubscribe links resolve only the
+    // address's EmailLead token, which sendWelcomeEmail looks up itself
+    // (getOrCreateUnsubToken); the route used to pass the alert token there,
+    // so every opt-out in the email answered "Invalid token". A token of any
+    // kind passed here fails this pin. The links themselves are pinned on the
+    // real email in tests/lib/welcome-email-unsubscribe-token.test.ts.
+    expect(vi.mocked(sendWelcomeEmail).mock.calls).toEqual([[EMAIL]]);
   });
 
   it('a rejected signup carries no isNew at all, so no surface can count it', async () => {

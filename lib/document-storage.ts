@@ -25,7 +25,7 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { getPathFromUrl } from '@/lib/supabase-storage';
+import { getPathFromUrl, isOwnStoragePath } from '@/lib/supabase-storage';
 
 /* ─────────────────────────── Doc-type registry ─────────────────────── */
 
@@ -95,6 +95,28 @@ export function toBareDocPath(stored: string | null | undefined, docType: DocTyp
     return stored.replace(new RegExp(`^${bucket}/`), '');
 }
 
+/**
+ * SECURITY (EMP-RES-1, RES-1, RES-3): the stored path alone proves nothing,
+ * because its owner can write it (PATCH /api/auth/profile, POST
+ * /api/applications/apply-direct) and rows written before those were fixed
+ * may already name another user's object. Uploads are keyed
+ * `<prefix>/<owner uid>/<file>` and every caller passes the document owner's
+ * supabaseId as ctx.ownerId, so a path outside that folder is refused here,
+ * before anything is signed or downloaded. Message attachments are keyed
+ * `<uid>/<file>` and are checked by the reply route that stores them.
+ * Tests: tests/lib/storage-ownership.test.ts and, through the employer
+ * routes, tests/regressions/resume-ownership-employer-sinks.test.ts.
+ */
+function isOwnerFolderPath(path: string, docType: DocType, ctx: DocReadContext): boolean {
+    if (docType === 'message_attachment' || isOwnStoragePath(path, ctx.ownerId)) return true;
+    logger.warn('document read refused: path is outside the owner folder', {
+        docType,
+        ownerId: ctx.ownerId,
+        audience: ctx.audience,
+    });
+    return false;
+}
+
 /* ─────────────────────────── Public API ─────────────────────────── */
 
 /**
@@ -118,6 +140,7 @@ export async function mintDocReadUrl(
         });
         return null;
     }
+    if (!isOwnerFolderPath(path, docType, ctx)) return null;
 
     const cfg = DOC_TYPE_CONFIG[docType];
     const ttl = opts.ttlSeconds ?? cfg.defaultTtlSeconds;
@@ -165,7 +188,7 @@ export async function downloadDocBytes(
     ctx: DocReadContext,
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
     const path = toBareDocPath(storedPath, docType);
-    if (!path) return null;
+    if (!path || !isOwnerFolderPath(path, docType, ctx)) return null;
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

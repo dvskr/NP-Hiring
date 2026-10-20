@@ -5,11 +5,30 @@ import { getEmployerTier, getEmployerActivePostings } from '@/lib/tier-limits';
 import { PricingTier } from '@/lib/config';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
+import { scopeJobIdsToOwned } from '@/app/api/employer/applicants/scope';
+
+/** The chart window in days: DEFAULT_DAYS unless asked, never more than MAX_DAYS. */
+const DEFAULT_DAYS = 30;
+const MAX_DAYS = 365;
+
+/**
+ * SECURITY (docs/PENDING_WORK.md 2.19): `days` went through parseInt with no
+ * ceiling, and it sizes the label loop below, so ?days=100000000 ran that
+ * loop a hundred million times; 'abc' or 0 drew an empty chart. Only an
+ * all-digit value above 0 counts, held to MAX_DAYS. Pinned by
+ * tests/api/employer-analytics-ownership.test.ts.
+ */
+function parseDays(raw: string | null): number {
+    if (raw === null || !/^\d+$/.test(raw)) return DEFAULT_DAYS;
+    const days = Number(raw);
+    return days > 0 ? Math.min(days, MAX_DAYS) : DEFAULT_DAYS;
+}
 
 /**
  * GET /api/employer/analytics
  * Return view + apply-click time-series data for an employer's jobs.
- * Query params: jobId (optional), days (default 30)
+ * Query params: jobId (optional, one of the caller's own jobs unless admin),
+ * days (default 30, at most 365)
  *
  * Access:
  *   No active posting → summary totals only
@@ -44,7 +63,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const jobIdFilter = searchParams.get('jobId');
-    const days = parseInt(searchParams.get('days') || '30', 10);
+    const days = parseDays(searchParams.get('days'));
     const since = new Date();
     since.setDate(since.getDate() - days);
 
@@ -56,7 +75,19 @@ export async function GET(req: NextRequest) {
         select: { jobId: true, job: { select: { id: true, title: true, viewCount: true, applyClickCount: true } } },
     });
 
-    const jobIds = jobIdFilter ? [jobIdFilter] : employerJobs.map(ej => ej.jobId);
+    // SECURITY (docs/PENDING_WORK.md 2.19): the jobId filter replaced the owned
+    // set (`jobIdFilter ? [jobIdFilter] : owned`), so an employer with one live
+    // post could read the daily apply clicks of any job on the board. It now
+    // narrows the owned set, as on the applicants route, and a job the caller
+    // does not own answers 404 before any click is read. An admin may still
+    // name any job. Pinned by tests/api/employer-analytics-ownership.test.ts.
+    const adminJobId = isAdmin ? jobIdFilter?.trim() : '';
+    const jobIds = adminJobId
+        ? [adminJobId]
+        : scopeJobIdsToOwned(employerJobs.map(ej => ej.jobId), jobIdFilter);
+    if (jobIds === null) {
+        return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
 
     if (jobIds.length === 0) {
         return NextResponse.json({

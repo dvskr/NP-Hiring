@@ -6,6 +6,13 @@
  *
  * The fix requires an authenticated session whose email matches the requested
  * address. These tests lock that in.
+ *
+ * A matching email proves ownership only once Supabase has confirmed it, so
+ * the session must also carry email_confirmed_at, the check
+ * /api/auth/welcome already makes. Every legitimate session has it (Supabase
+ * refuses a password sign-in for an unconfirmed email and stamps it when a
+ * confirmation, magic link or verified Google sign-in completes); only a
+ * session let in on an unverified address lacks it.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
@@ -40,15 +47,38 @@ describe('GET /api/job-alerts/by-email — IDOR is closed', () => {
   });
 
   it("403 when the session email differs from the requested email (can't read someone else's tokens)", async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'sb-1', email: 'attacker@example.com' } } });
+    getUserMock.mockResolvedValue({ data: { user: { id: 'sb-1', email: 'attacker@example.com', email_confirmed_at: '2026-10-01T00:00:00Z' } } });
     const { GET } = await import('@/app/api/job-alerts/by-email/route');
     const res = await GET(req('victim@example.com') as never);
     expect(res.status).toBe(403);
     expect(prisma.jobAlert.findMany).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['no email_confirmed_at', {}],
+    ['email_confirmed_at null', { email_confirmed_at: null }],
+  ])('401 for a matching session whose email is not confirmed (%s), with no DB read', async (_label, confirmation) => {
+    // An address nobody proved: the alert tokens would go to whoever typed it.
+    getUserMock.mockResolvedValue({ data: { user: { id: 'sb-3', email: 'victim@example.com', ...confirmation } } });
+    const { GET } = await import('@/app/api/job-alerts/by-email/route');
+    const res = await GET(req('victim@example.com') as never);
+    expect(res.status).toBe(401);
+    expect(prisma.jobAlert.findMany).not.toHaveBeenCalled();
+  });
+
+  it('401 when Supabase answers with an error, even if it also returned a user', async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: 'sb-4', email: 'owner@example.com', email_confirmed_at: '2026-10-01T00:00:00Z' } },
+      error: { name: 'AuthApiError', message: 'invalid JWT' },
+    });
+    const { GET } = await import('@/app/api/job-alerts/by-email/route');
+    const res = await GET(req('owner@example.com') as never);
+    expect(res.status).toBe(401);
+    expect(prisma.jobAlert.findMany).not.toHaveBeenCalled();
+  });
+
   it('200 and returns alerts only when the session owns the email (case-insensitive)', async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'sb-2', email: 'Owner@Example.com' } } });
+    getUserMock.mockResolvedValue({ data: { user: { id: 'sb-2', email: 'Owner@Example.com', email_confirmed_at: '2026-10-01T00:00:00Z' } } });
     vi.mocked(prisma.jobAlert.findMany).mockResolvedValue([
       { id: 'a1', token: 't1', email: 'owner@example.com', name: null, keyword: null, location: null, mode: null, jobType: null, minSalary: null, maxSalary: null, frequency: 'daily', isActive: true, lastSentAt: null, createdAt: new Date() },
     ] as never);

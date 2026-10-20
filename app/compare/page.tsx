@@ -4,8 +4,8 @@
  * the same profiles the three detail pages render from — so the hub can
  * never advertise a comparison that does not exist. The hub renders only
  * each profile's names, meta title and description, none of which follow
- * the launch-promo clock, so it stays static (and its sitemap lastmod stays
- * the review date).
+ * the launch-promo clock, so it stays static (and the promo's end never
+ * moves its sitemap lastmod).
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';

@@ -22,8 +22,9 @@ import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
  *     employerJobId?: string           // optional — tie back to a specific posting
  *   }
  *
- * Auth: required. Tied to the submitter's Supabase user id and their most
- * recent employer profile so admins can review who said what before featuring.
+ * Auth: an employer account (403 for any other role). Tied to the submitter's
+ * Supabase user id and named from their most recent post or their profile,
+ * so admins can review who said what before featuring.
  */
 export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, 'testimonial', RATE_LIMITS.feedback);
@@ -35,6 +36,23 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // SECURITY: only an employer account may submit an employer story, and
+    // the name it is filed under comes from that employer's own records.
+    // Any signed-in account could submit before, a job seeker included, and
+    // the name fell back to user_metadata, which the account holder writes
+    // from the browser (supabase.auth.updateUser), so any company name could
+    // be claimed. tests/api/employer-testimonials-role.test.ts
+    const profile = await prisma.userProfile.findUnique({
+      where: { supabaseId: user.id },
+      select: { role: true, company: true, firstName: true, lastName: true, email: true },
+    });
+    if (!profile || profile.role !== 'employer') {
+      return NextResponse.json(
+        { error: 'Only employer accounts can share a story.' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -93,9 +111,10 @@ export async function POST(request: NextRequest) {
       ? displayAs
       : 'initial';
 
-    // Resolve employer name from the most recent EmployerJob — falls back to
-    // user metadata if they haven't posted yet (rare, but possible if they
-    // signed up and went straight to a feedback prompt).
+    // The employer name on the most recent post, then the profile: company,
+    // the account holder's name, and last the account email, which the
+    // public display never prints (FeaturedTestimonials shows "Verified
+    // employer" for anything with an @). Never user_metadata (see above).
     const recentJob = await prisma.employerJob.findFirst({
       where: {
         OR: employerJobOwnershipBranches(user),
@@ -105,10 +124,9 @@ export async function POST(request: NextRequest) {
     });
 
     const employerName = recentJob?.employerName
-      || (user.user_metadata?.company as string | undefined)
-      || (user.user_metadata?.full_name as string | undefined)
-      || user.email
-      || 'Anonymous employer';
+      || profile.company
+      || [profile.firstName, profile.lastName].filter(Boolean).join(' ')
+      || profile.email;
 
     // If employerJobId was passed, verify ownership before storing it.
     let verifiedJobId: string | null = null;

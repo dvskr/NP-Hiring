@@ -55,11 +55,13 @@ const stagger = {
     visible: { transition: { staggerChildren: 0.12 } },
 };
 
-/* Step copy carried over verbatim from the previous design. */
+/* Each step says only what the board does: semantic search is off by
+   default, alerts match on the criteria the seeker sets, and recruiter
+   postings are listed too (tests/regressions/featured-jobs-steps-claims.test.ts). */
 const STEPS = [
     { title: 'Build Your Profile', desc: 'Upload your resume once, then add license states, credentials, years of experience, and salary range. Reuse it on every application.' },
-    { title: 'Search & Get Matched', desc: 'Semantic AI search understands phrases like "new grad outpatient telehealth." A weekly digest emails fresh roles matched to your experience level, location, and pay.' },
-    { title: 'Apply or Message Directly', desc: 'Use one-click Easy Apply on employer-posted roles, or message the hiring manager in-app. No recruiters, no portals, and no copy-pasting.' },
+    { title: 'Search and Set Alerts', desc: 'Search by title, specialty or location, and get an email of new jobs that match your alert, daily or weekly.' },
+    { title: 'Apply or Message the Employer', desc: "Create a free account, then use Easy Apply where the employer offers it, or continue to the employer's own application. On employer-posted roles you can also message the hiring manager in-app." },
     { title: 'Start Practicing', desc: 'Save jobs, track applications, and follow up with employers, all in one dashboard. Then accept your offer and start your next clinical role.' },
 ];
 

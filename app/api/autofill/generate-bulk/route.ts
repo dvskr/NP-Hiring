@@ -6,15 +6,16 @@ import { complete } from '@/lib/ai/gateway';
 import { AiGatewayError } from '@/lib/ai/types';
 import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
 import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
+import {
+    MAX_BULK_QUESTIONS,
+    bulkAnswerQuestionsSchema,
+    type GenerateAnswerRequest,
+} from '../_lib/answer-request';
+import { isRecord } from '../_lib/input';
+import { PROFILE_PROMPT_ROWS } from '../_lib/profile-rows';
 
-interface BulkQuestion {
-    questionText: string;
-    questionKey?: string;
-    jobTitle?: string;
-    employerName?: string;
-    jobDescription?: string;
-    maxLength?: number;
-}
+/** A question after validation: typed, cut, maxLength clamped, questionKey '' when absent. */
+type BulkQuestion = GenerateAnswerRequest;
 
 interface BulkResult {
     answer: string;
@@ -41,25 +42,38 @@ export async function POST(req: NextRequest) {
         const disabled = await checkAutofillAiFeature('ai.candidate.autofill_bulk', user.userId);
         if (disabled) return disabled;
 
-        const body = await req.json();
-        const { questions } = body as { questions: BulkQuestion[] };
+        const body = await req.json().catch(() => null);
+        const rawQuestions = isRecord(body) ? body.questions : undefined;
 
-        if (!Array.isArray(questions) || questions.length === 0) {
+        if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
             return NextResponse.json({ error: 'questions array is required' }, { status: 400 });
         }
 
-        if (questions.length > 10) {
-            return NextResponse.json({ error: 'Maximum 10 questions per bulk request' }, { status: 400 });
+        if (rawQuestions.length > MAX_BULK_QUESTIONS) {
+            return NextResponse.json({ error: `Maximum ${MAX_BULK_QUESTIONS} questions per bulk request` }, { status: 400 });
         }
+
+        // SECURITY (AUTOFILL-BULK-1): each question passes the single-question
+        // schema, and only the parsed values are used from here on.
+        // Test: tests/api/autofill-bulk-input.test.ts
+        const parsedQuestions = bulkAnswerQuestionsSchema.safeParse(rawQuestions);
+        if (!parsedQuestions.success) {
+            return NextResponse.json(
+                { error: parsedQuestions.error.issues[0]?.message || 'Invalid request body' },
+                { status: 400 },
+            );
+        }
+        const questions: BulkQuestion[] = parsedQuestions.data;
 
         // Check stored responses first
         const storedResponses = await prisma.candidateOpenEndedResponse.findMany({
             where: { userId: user.userId },
         });
 
+        // A parsed questionKey is '' when absent; '' never matches a stored key.
         const findStored = (q: BulkQuestion) =>
             storedResponses.find(
-                (r) => r.questionKey === q.questionKey ||
+                (r) => (q.questionKey !== '' && r.questionKey === q.questionKey) ||
                     r.questionText.toLowerCase().includes(q.questionText.toLowerCase().substring(0, 30))
             );
 
@@ -72,12 +86,13 @@ export async function POST(req: NextRequest) {
             if (!quota.allowed) return quotaExceededResponse(quota);
         }
 
-        // Fetch profile context once
+        // Fetch profile context once. SECURITY: row counts are bounded, see
+        // ../_lib/profile-rows.ts. Test: tests/api/autofill-profile-context-bounds.test.ts
         const profile = await prisma.userProfile.findUnique({
             where: { id: user.userId },
             include: {
-                licenses: true,
-                certificationRecords: true,
+                licenses: { take: PROFILE_PROMPT_ROWS.licenses },
+                certificationRecords: { take: PROFILE_PROMPT_ROWS.certificationRecords },
                 education: { orderBy: { graduationDate: 'desc' }, take: 2 },
                 workExperience: { orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }], take: 3 },
             },
@@ -113,7 +128,7 @@ ${q.jobDescription ? `**Job Context:** ${q.jobDescription.substring(0, 500)}` : 
 
 **Candidate:** ${profileContext}
 
-Write approximately ${q.maxLength || 300} characters. Be specific and professional.`;
+Write approximately ${q.maxLength} characters. Be specific and professional.`;
 
                 const response = await complete({
                     task: 'autofill_answer',

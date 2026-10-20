@@ -125,13 +125,32 @@ export async function GET(req: NextRequest) {
                   reason: `applicants list: application ${app.id}`,
               })
             : null;
+        // SECURITY: the cover letter is stored the way the resume is (the
+        // applicant's bare upload key, apply-direct), and was handed out as
+        // stored: a key the employer's browser cannot open, or whatever link
+        // an applicant had put there, another user's signed URL included. It
+        // is signed through the same chokepoint, which refuses anything
+        // outside the applicant's own folder. The form uploads cover letters
+        // into the resumes bucket, hence the resume signer.
+        // tests/regressions/resume-ownership-employer-sinks.test.ts
+        const signedCoverLetterUrl = app.coverLetterUrl
+            ? await mintResumeReadUrl(app.coverLetterUrl, {
+                  actorId: user.id,
+                  ownerId: app.user?.supabaseId ?? 'unknown',
+                  audience: 'employer',
+                  action: 'view',
+                  ip: reqCtx.ip,
+                  userAgent: reqCtx.userAgent,
+                  reason: `applicants list: cover letter of application ${app.id}`,
+              })
+            : null;
 
         return {
             id: app.id,
             status: app.status,
             notes: app.notes,
             coverLetter: app.coverLetter || null,
-            coverLetterUrl: app.coverLetterUrl || null,
+            coverLetterUrl: signedCoverLetterUrl,
             resumeUrl: signedResumeUrl,
             appliedAt: app.appliedAt.toISOString(),
             statusUpdatedAt: app.statusUpdatedAt?.toISOString() || null,

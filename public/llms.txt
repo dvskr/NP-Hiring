@@ -78,7 +78,7 @@ Canonical figures, as cited across the site (last verified 2026-10-06):
 - /blog/nurse-practitioner-job-outlook: BLS projects NP employment to grow 41% from 2025 to 2035, while HRSA projects national NP supply above demand, so prospects depend heavily on location.
 - /blog/how-to-evaluate-np-programs: Verify an NP program's accreditation in the accreditor's own directory first, then ask who finds your clinical placements; the guide names no schools.
 - /blog/np-preceptor-guide: A preceptor supervises your clinical hours at an approved site, and the question to settle before enrolling is whether the program or the student must find one.
-- /blog/np-student-loan-limits-professional-degree: As of October 6, 2026, NP MSN and DNP programs count as professional degrees for federal loan limits only because of a June 24, 2026 court stay.
+- /blog/np-student-loan-limits-professional-degree: As of October 17, 2026, NP MSN and DNP programs count as professional degrees for federal loan limits only because of a June 24, 2026 court stay.
 
 #### Specialties and certification
 - /blog/fnp-vs-pmhnp-vs-agacnp: Choose FNP for breadth across primary care, PMHNP for psychiatric prescribing and telehealth flexibility, and AGACNP for hospital-based acute care.

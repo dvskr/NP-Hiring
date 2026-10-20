@@ -209,7 +209,9 @@ describe('PATCH /api/job-alerts/[token] validation (defect 4)', () => {
 
 describe('GET /api/job-alerts/by-email returns experience criteria (defect 5)', () => {
   it('includes newGradFriendly and minYearsExperience', async () => {
-    h.getUser.mockResolvedValue({ data: { user: { email: EMAIL } } });
+    // A confirmed session: the route refuses an unconfirmed address
+    // (tests/api/job-alerts-by-email-idor.test.ts).
+    h.getUser.mockResolvedValue({ data: { user: { email: EMAIL, email_confirmed_at: '2026-10-01T00:00:00Z' } } });
     h.jobAlert.findMany.mockResolvedValue([
       { id: 'a1', token: 't', email: EMAIL, frequency: 'weekly', isActive: true, newGradFriendly: true, minYearsExperience: 2, createdAt: new Date() },
     ]);

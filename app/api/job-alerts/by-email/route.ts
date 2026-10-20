@@ -50,9 +50,19 @@ export async function GET(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase();
 
+    // SECURITY: a matching session email proves ownership only once Supabase
+    // has confirmed the address, so the session must carry
+    // email_confirmed_at, the check /api/auth/welcome makes; a getUser error
+    // fails closed. Every legitimate session has it (Supabase refuses a
+    // password sign-in for an unconfirmed email and stamps it when a
+    // confirmation link, magic link or verified Google sign-in completes).
+    // Without it, a session Supabase let in on an unverified address would
+    // be handed that address's alert tokens. With "Confirm email" off,
+    // Supabase stamps it at sign-up, so that dashboard setting stays the
+    // real control. tests/api/job-alerts-by-email-idor.test.ts
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user || !user.email_confirmed_at) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }

@@ -842,7 +842,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
               { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', Icon: Briefcase, renders: true },
               { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', Icon: Stethoscope, renders: true },
               { href: `/salary-guide/${metro.stateSlug}`, label: 'Salary Guide', sub: `${metro.state} pay data`, Icon: DollarSign, renders: stateLinksRender },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', Icon: Building2, renders: true },
+              { href: '/jobs/locations', label: 'By Location', sub: 'States and cities', Icon: Building2, renders: true },
             ].filter((card) => card.renders).map(({ href, label, sub, Icon }) => (
               <Link key={href} href={href} className="metro-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <span aria-hidden="true" style={{ width: '48px', height: '48px', borderRadius: '14px', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>

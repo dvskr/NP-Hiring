@@ -5,7 +5,8 @@ import { logger } from '@/lib/logger';
 import { logAudit } from '@/lib/audit-log';
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
-import { deleteFile, getPathFromUrl } from '@/lib/supabase-storage';
+import { deleteFile, getPathFromUrl, toOwnAvatarPath } from '@/lib/supabase-storage';
+import { toBareResumePath, toOwnResumePath } from '@/lib/resume-storage';
 import { withCronTracking } from '@/lib/cron/track';
 import { brand } from '@/config/brand';
 
@@ -143,24 +144,45 @@ export async function GET(request: NextRequest) {
                 // Step 1: storage files (resume + avatar). Failures here are
                 // logged but don't abort the row — better to drop the DB row
                 // than to retain DB linkage to an undeletable file.
+                //
+                // SECURITY (AUTH-PROFILE-1, RES-2): both columns were writable
+                // by the user being purged, so a stored value could name
+                // another user's object and this service-role delete removed
+                // it. Only keys in this user's own upload folder are deleted;
+                // anything else is logged and left alone. toOwnResumePath also
+                // resolves the bare key /api/upload stores, which the URL-only
+                // parser skipped, so those résumés survived erasure. A sign-in
+                // provider picture is not a storage object and is skipped.
+                // Tests: tests/api/purge-soft-deleted-c3.test.ts.
                 if (u.resumeUrl) {
-                    const path = getPathFromUrl(u.resumeUrl);
+                    const path = toOwnResumePath(u.resumeUrl, u.supabaseId);
                     if (path) {
                         try {
                             await deleteFile(path, 'resume');
                         } catch (storageErr) {
                             logger.error('purge-soft-deleted: failed to delete resume file', storageErr, { userId: u.id, path });
                         }
+                    } else {
+                        logger.warn('purge-soft-deleted: resume reference is outside the user upload folder, storage left untouched', {
+                            userId: u.id,
+                            path: toBareResumePath(u.resumeUrl) ?? undefined,
+                        });
                     }
                 }
                 if (u.avatarUrl) {
-                    const path = getPathFromUrl(u.avatarUrl);
+                    const path = toOwnAvatarPath(u.avatarUrl, u.supabaseId);
+                    const storedPath = getPathFromUrl(u.avatarUrl);
                     if (path) {
                         try {
                             await deleteFile(path, 'avatar');
                         } catch (storageErr) {
                             logger.error('purge-soft-deleted: failed to delete avatar file', storageErr, { userId: u.id, path });
                         }
+                    } else if (storedPath) {
+                        logger.warn('purge-soft-deleted: avatar reference is outside the user upload folder, storage left untouched', {
+                            userId: u.id,
+                            path: storedPath,
+                        });
                     }
                 }
 

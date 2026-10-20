@@ -9,8 +9,9 @@
  * `paymentLinkUrl` is built server-side (lib/employer-plan-link.ts): it
  * carries this employer's account id as `client_reference_id` (the only key
  * the webhook attaches a plan by) and is null whenever plan sales are closed
- * (link unset or not a Stripe link, ENABLE_PAID_POSTING off, launch promo) —
- * the widget then shows its contact fallback.
+ * (link unset or not a Stripe link, ENABLE_PAID_POSTING off, STRIPE_SECRET_KEY
+ * or STRIPE_WEBHOOK_SECRET missing, launch promo) — the widget then shows its
+ * contact fallback.
  *
  * Read-only, and cheap (one plan lookup + one count), so no rate limit
  * beyond the auth gate — same reasoning as /api/employer/ai-jd/usage.

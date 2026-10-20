@@ -37,7 +37,7 @@ import {
   normalizeContentWhitespace,
 } from '@/lib/sanitize';
 import { createClient } from '@/lib/supabase/server';
-import { getBaseUrl, isFeatureEnabled } from '@/lib/env';
+import { getBaseUrl, getEnv, isFeatureEnabled } from '@/lib/env';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
 import { computeQualityScore } from '@/lib/utils/quality-score';
@@ -107,6 +107,21 @@ export async function POST(request: NextRequest) {
     const stripe = getStripe();
     if (!stripe) {
       logger.error('Paid checkout attempted but STRIPE_SECRET_KEY is not configured', null);
+      return NextResponse.json(
+        { error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' },
+        { status: 503 }
+      );
+    }
+
+    // The key takes the money; the webhook records the sale. Without
+    // STRIPE_WEBHOOK_SECRET POST /api/webhooks/stripe answers 503 to every
+    // event, so a post paid for here would publish only through the success
+    // page or the daily sweep, and its refunds and disputes would never reach
+    // it. Same rule as lib/employer-plan-link.ts#isPlanSaleOpen and
+    // /api/create-checkout/availability
+    // (tests/regressions/paid-posting-checkout-gate.test.ts).
+    if (!getEnv().STRIPE_WEBHOOK_SECRET) {
+      logger.error('Paid checkout attempted but STRIPE_WEBHOOK_SECRET is not configured', null);
       return NextResponse.json(
         { error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' },
         { status: 503 }
@@ -576,11 +591,18 @@ async function resumeAbandonedCheckout(
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
-  // Ownership mirrors the employer dashboard query: linked userId first,
-  // contactEmail as the legacy fallback for pre-auth-link rows.
+  // Ownership mirrors the employer dashboard query
+  // (lib/employer-ownership.ts#employerJobOwnershipBranches): linked userId
+  // first, contactEmail as the legacy fallback for unclaimed rows only.
+  // SECURITY (CHK-1): the email fallback used to match rows another account
+  // had claimed, so an employer signed in with a claimed posting's contact
+  // email could mint a checkout for it, restart its listing window and
+  // revive it from 'expired' (tests/api/create-checkout-tier.test.ts).
   const ownsByUser = !!userId && employerJob.userId === userId;
   const ownsByEmail =
-    !!userEmail && employerJob.contactEmail.toLowerCase() === userEmail.toLowerCase();
+    employerJob.userId === null &&
+    !!userEmail &&
+    employerJob.contactEmail.toLowerCase() === userEmail.toLowerCase();
   if (!ownsByUser && !ownsByEmail) {
     return NextResponse.json({ error: 'You do not have access to this job' }, { status: 403 });
   }

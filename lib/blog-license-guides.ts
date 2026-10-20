@@ -877,7 +877,7 @@ export function buildLicenseGuideSteps(s: LicenseGuideState): LicenseGuideStep[]
             // No per-state certification claim: nothing in repo data verifies
             // which boards require national certification, so the board
             // checklist answers for the state.
-            text: `Certify with the body that matches your role: AANP or ANCC for ${NP}s, NBCRNA for CRNAs, AMCB for certified nurse midwives. Most states require current national certification for APRN licensure; the ${s.boardName}'s checklist confirms whether ${s.name} does.`,
+            text: `Certify with the body that matches your role: AANPCB or ANCC for ${NP}s, NBCRNA for CRNAs, AMCB for certified nurse midwives. Most states require current national certification for APRN licensure; the ${s.boardName}'s checklist confirms whether ${s.name} does.`,
         },
         {
             name: `Apply for APRN licensure with the ${s.boardName}`,
@@ -939,7 +939,7 @@ export function buildLicenseGuideFaq(
         },
         {
             name: `What do I need to apply for APRN licensure in ${s.name}?`,
-            text: `An active RN license, an MSN or DNP from an accredited program, national certification where the board requires it (AANP or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. ${hasFacts
+            text: `An active RN license, an MSN or DNP from an accredited program, national certification where the board requires it (AANPCB or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. ${hasFacts
                 ? 'Fees, forms, and processing times are set by the board and change. The licensing facts on this page name the source of each figure and the date it was checked, so confirm them on the board site before you apply.'
                 : 'Fees, forms, and processing times are set by the board and change, so work directly from the board site rather than third-party summaries.'}`,
         },

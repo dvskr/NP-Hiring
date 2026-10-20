@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { toBareResumePath, toOwnResumePath } from '@/lib/resume-storage';
 
 /**
  * DELETE /api/profile/resume
@@ -33,8 +34,14 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'No resume found' }, { status: 404 });
         }
 
-        // Extract storage path from the URL
-        const storagePath = extractStoragePath(profile.resumeUrl);
+        // SECURITY (RES-2): the column is writable by its owner, so it can name
+        // another user's object, and this service-role remove used to delete
+        // whatever it named. Only a key in the caller's own upload folder is
+        // removed; the reference is cleared either way. toOwnResumePath also
+        // resolves the bare key /api/upload stores, which the old URL-only
+        // parser skipped, leaving the file behind.
+        // Tests: tests/regressions/resume-ownership-readers.test.ts.
+        const storagePath = toOwnResumePath(profile.resumeUrl, user.id);
 
         if (storagePath) {
             // Use service role key to delete from storage (bypasses RLS)
@@ -51,6 +58,11 @@ export async function DELETE(request: NextRequest) {
                 logger.error('Failed to delete resume from storage', deleteError);
                 // Continue to clear DB reference even if storage deletion fails
             }
+        } else {
+            logger.warn("Resume delete: stored resume is outside the caller's upload folder, storage left untouched", {
+                userId: user.id,
+                path: toBareResumePath(profile.resumeUrl) ?? undefined,
+            });
         }
 
         // Clear resume URL from profile
@@ -68,29 +80,5 @@ export async function DELETE(request: NextRequest) {
             { error: 'Failed to delete resume' },
             { status: 500 }
         );
-    }
-}
-
-/**
- * Extract the storage path from a Supabase storage URL.
- * Handles both signed URLs and public URLs.
- */
-function extractStoragePath(url: string): string | null {
-    try {
-        // Signed URL: /storage/v1/object/sign/resumes/path?token=...
-        const signMatch = url.match(/\/storage\/v1\/object\/sign\/resumes\/(.+?)(?:\?|$)/);
-        if (signMatch) return decodeURIComponent(signMatch[1]);
-
-        // Public URL: /storage/v1/object/public/resumes/path
-        const publicMatch = url.match(/\/storage\/v1\/object\/public\/resumes\/(.+?)(?:\?|$)/);
-        if (publicMatch) return decodeURIComponent(publicMatch[1]);
-
-        // Fallback: try to extract path after last /resumes/
-        const fallbackMatch = url.match(/\/resumes\/(.+?)(?:\?|$)/);
-        if (fallbackMatch) return decodeURIComponent(fallbackMatch[1]);
-
-        return null;
-    } catch {
-        return null;
     }
 }

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { syncToBeehiiv } from '@/lib/beehiiv'
 import { sendSignupWelcomeEmail } from '@/lib/email-service'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
-import { readSignupMetadata } from '@/lib/auth/ensure-profile'
+import { readSignupMetadata, readProviderFullName, readProviderAvatarUrl } from '@/lib/auth/ensure-profile'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -63,18 +63,30 @@ export async function GET(request: Request) {
         // is granted by a direct database action only. This branch wrote
         // `metadata.role` as it came, which made any sign-up carrying
         // role 'admin' an admin (tests/regressions/auth-callback-role-allowlist.test.ts).
-        const signupRole = readSignupMetadata(data.user).role
+        const signup = readSignupMetadata(data.user)
+        const signupRole = signup.role
 
+        // SECURITY: the names, company and avatar come from the same
+        // account-written metadata and were stored as sent: any length, any
+        // type, the company of a job seeker too, and any avatar string. They
+        // now go through readSignupMetadata (shared with
+        // ensureProfileFromAuth) and readProviderFullName /
+        // readProviderAvatarUrl from lib/auth/ensure-profile.ts, which clean
+        // and bound them the way POST /api/auth/profile treats its body; the
+        // company is kept for an employer only and the avatar only as the
+        // Google picture of a Google sign-in.
+        // tests/regressions/auth-metadata-sanitise.test.ts
+        //
         // Handle both email signup metadata and Google OAuth metadata
-        let firstName = metadata.first_name || null
-        let lastName = metadata.last_name || null
-        const avatarUrl = metadata.avatar_url || null
+        let firstName = signup.firstName
+        let lastName = signup.lastName
+        const avatarUrl = readProviderAvatarUrl(data.user)
 
         // For Google OAuth, parse full_name if firstName/lastName not provided
-        if (!firstName && !lastName && metadata.full_name) {
-          const nameParts = metadata.full_name.split(' ')
-          firstName = nameParts[0] || null
-          lastName = nameParts.slice(1).join(' ') || null
+        if (!firstName && !lastName) {
+          const fromFullName = readProviderFullName(data.user)
+          firstName = fromFullName.firstName
+          lastName = fromFullName.lastName
         }
 
         await prisma.userProfile.create({
@@ -84,7 +96,7 @@ export async function GET(request: Request) {
             firstName: firstName,
             lastName: lastName,
             role: signupRole,
-            company: metadata.company || null,
+            company: signup.company,
             avatarUrl: avatarUrl,
           }
         })
@@ -101,7 +113,7 @@ export async function GET(request: Request) {
             if (!existingEmployerLead) {
               await prisma.employerLead.create({
                 data: {
-                  companyName: metadata.company || `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown',
+                  companyName: signup.company || `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown',
                   contactEmail: data.user.email,
                   contactName: [firstName, lastName].filter(Boolean).join(' ') || null,
                   source: 'google_signup',
@@ -192,10 +204,15 @@ export async function GET(request: Request) {
             where: { supabaseId: data.user.id },
             select: { firstName: true, role: true },
           })
+          // With no profile name to use, fall back to the sign-up metadata as
+          // readSignupMetadata cleans and bounds it, never the raw value.
+          // Cleaning is not HTML escaping: the email escapes the name where
+          // it writes it into HTML (sendSignupWelcomeEmail).
+          const signup = readSignupMetadata(data.user)
           await sendSignupWelcomeEmail(
             data.user.email,
-            profile?.firstName || data.user.user_metadata?.first_name || '',
-            profile?.role || readSignupMetadata(data.user).role
+            profile?.firstName || signup.firstName || '',
+            profile?.role || signup.role
           )
           console.log('Welcome email sent', { userId: data.user.id })
         }
@@ -206,18 +223,29 @@ export async function GET(request: Request) {
 
     // Auto-link legacy jobs (e.g. guest posts) to this user
     if (data.user?.email) {
-      try {
-        await prisma.employerJob.updateMany({
-          where: {
-            contactEmail: data.user.email,
-            userId: null,
-          },
-          data: {
-            userId: data.user.id,
-          },
-        })
-      } catch (e) {
-        console.error('Failed to link legacy jobs', e)
+      // SECURITY: this hands every unclaimed job filed under the address, and
+      // its applicants, to the session, and the address proves ownership only
+      // once Supabase has confirmed it (the relink in ensureProfileFromAuth
+      // makes the same check). A session let in on an unverified address
+      // claimed them all. Every legitimate session carries the stamp, so a
+      // refused claim waits for a confirmed sign-in to the address.
+      // tests/regressions/auth-callback-legacy-claim-confirmed-email.test.ts
+      if (data.user.email_confirmed_at) {
+        try {
+          await prisma.employerJob.updateMany({
+            where: {
+              contactEmail: data.user.email,
+              userId: null,
+            },
+            data: {
+              userId: data.user.id,
+            },
+          })
+        } catch (e) {
+          console.error('Failed to link legacy jobs', e)
+        }
+      } else {
+        console.warn('Auth callback: legacy job link skipped, email not confirmed', { userId: data.user.id })
       }
     }
 

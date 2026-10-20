@@ -60,7 +60,7 @@ export interface JdTemplate {
 const REQUIRED_QUALS_BLOCK = `<h3>Required qualifications</h3>
 <ul>
 <li>Master's or doctoral degree (MSN or DNP) from an accredited ${brand.niche.short} program</li>
-<li>Active, unrestricted national ${brand.niche.short} board certification (ANCC or AANP) in your population focus</li>
+<li>Active, unrestricted national ${brand.niche.short} board certification (ANCC or AANPCB) in your population focus</li>
 <li>Active RN and APRN/NP licensure in {{state}}</li>
 <li>Active, unrestricted DEA registration with Schedule II authority (or willingness to obtain it by the start date)</li>
 <li>[Set your experience requirement, for example "New grads welcome", "1+ year preferred", or "3+ years required"]</li>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage'
+import { mintResumeReadUrl, extractRequestContext, toOwnResumePath } from '@/lib/resume-storage'
 import { verifyExtensionToken } from '@/lib/verify-extension-token'
 import { logAudit } from '@/lib/audit-log'
 
@@ -48,6 +48,13 @@ export async function GET(req: NextRequest) {
         })
 
         if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+
+        // SECURITY (RES-3): the column is writable by its owner, so it can name
+        // another user's object, which the export used to sign and return. Only
+        // a key in this profile's own upload folder is signed. supabaseId, not
+        // the session id: the extension branch looks the profile up by its id.
+        // Tests: tests/regressions/resume-ownership-readers.test.ts.
+        const resumePath = toOwnResumePath(profile.resumeUrl, profile.supabaseId)
 
         void logAudit({
             action: 'data.export',
@@ -166,8 +173,8 @@ export async function GET(req: NextRequest) {
             },
             meta: {
                 lastUpdated: profile.updatedAt,
-                resumeUrl: profile.resumeUrl
-                    ? await mintResumeReadUrl(profile.resumeUrl, {
+                resumeUrl: resumePath
+                    ? await mintResumeReadUrl(resumePath, {
                           actorId: profile.supabaseId,
                           ownerId: profile.supabaseId,
                           audience: 'export',

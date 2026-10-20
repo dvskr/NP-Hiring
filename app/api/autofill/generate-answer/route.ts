@@ -5,33 +5,15 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
 import { complete } from '@/lib/ai/gateway';
 import { AiGatewayError } from '@/lib/ai/types';
-import { z } from 'zod';
 import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
 import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
 import { fetchResumeTextFromSignedUrl } from '../_lib/resume-text';
+import { generateAnswerRequestSchema } from '../_lib/answer-request';
+import { PROFILE_PROMPT_ROWS } from '../_lib/profile-rows';
 
-// ─── Request validation (audit B96) ───
-//
-// Every field below lands in the LLM prompt, so unvalidated input was both
-// a prompt-bloat cost vector (unbounded questionText/jobDescription) and a
-// correctness bug (non-string questionText threw on .toLowerCase → 500;
-// absurd maxLength values steered the "approximately N characters" prompt
-// instruction). maxLength is clamped server-side — malformed values degrade
-// to the 300-char default instead of failing the fill.
-export const generateAnswerRequestSchema = z.object({
-    questionText: z.string().trim().min(1, 'questionText is required').max(2_000),
-    questionKey: z.string().max(200).optional().nullable().catch(null),
-    jobTitle: z.string().max(300).catch(''),
-    jobDescription: z.string().max(20_000).catch(''),
-    employerName: z.string().max(300).catch(''),
-    maxLength: z.coerce.number().int().min(20).max(1_500).catch(300),
-}).transform((v) => ({
-    ...v,
-    questionKey: v.questionKey ?? '',
-    jobTitle: v.jobTitle ?? '',
-    jobDescription: v.jobDescription ?? '',
-    employerName: v.employerName ?? '',
-}));
+// Request validation (audit B96) lives in ../_lib/answer-request.ts, shared
+// with generate-bulk. Re-exported for the B96 regression test.
+export { generateAnswerRequestSchema };
 
 
 export async function POST(req: NextRequest) {
@@ -86,13 +68,15 @@ export async function POST(req: NextRequest) {
         const quota = await checkAutofillAiQuota(user.userId, 1);
         if (!quota.allowed) return quotaExceededResponse(quota);
 
-        // Fetch candidate profile for context
+        // Fetch candidate profile for context. SECURITY: row counts are
+        // bounded, see ../_lib/profile-rows.ts.
+        // Test: tests/api/autofill-profile-context-bounds.test.ts
         const candidateProfile = await prisma.userProfile.findUnique({
             where: { id: user.userId },
             include: {
-                licenses: true,
-                certificationRecords: true,
-                education: { orderBy: { graduationDate: 'desc' } },
+                licenses: { take: PROFILE_PROMPT_ROWS.licenses },
+                certificationRecords: { take: PROFILE_PROMPT_ROWS.certificationRecords },
+                education: { orderBy: { graduationDate: 'desc' }, take: PROFILE_PROMPT_ROWS.education },
                 workExperience: { orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }], take: 3 },
             },
         });

@@ -131,7 +131,7 @@ const EXPLORE_CARDS: ReadonlyArray<{ href: string; label: string; sub: string; i
   { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' },
   { href: '/jobs/pediatric', label: 'Pediatric', sub: 'Youth and family care' },
   { href: '/salary-guide', label: 'Salary Guide', sub: 'Posted pay by state', icon: '/images/categories/nav/salary.webp' },
-  { href: '/jobs/locations', label: 'By Location', sub: 'Browse every state', icon: '/images/categories/nav/location.webp' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities', icon: '/images/categories/nav/location.webp' },
 ];
 
 /** Taxonomy slug a card points at, or null for a non-category destination. */

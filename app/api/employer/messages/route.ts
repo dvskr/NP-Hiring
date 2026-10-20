@@ -6,8 +6,48 @@ import { sendEmployerMessageNotification } from '@/lib/email-service';
 import { canSendInMail, getEmployerTier } from '@/lib/tier-limits';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
-import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
+import { employerJobOwnershipBranches, type EmployerJobOwner } from '@/lib/employer-ownership';
 import { readJsonObject, validateEmployerSendPayload } from '@/app/api/conversations/_lib/message-payload';
+
+/** What the send path reads about a recipient to decide whether it is in reach. */
+interface RecipientReach {
+    readonly role: string;
+    readonly profileVisible: boolean;
+    readonly openToOffers: boolean;
+}
+
+/**
+ * Whether this employer may open a NEW thread with the recipient, through one
+ * of the two places the dashboard offers it:
+ *   - the candidate pool: a job seeker visible to employers and open to
+ *     offers (the filter GET /api/employer/candidates applies) whose profile
+ *     this employer opened. The Message button lives on that profile page,
+ *     and the page records the ProfileView before it renders.
+ *   - the applicants view: anyone who applied to one of this employer's own
+ *     jobs, whatever their pool settings.
+ * A reply in an existing thread never comes through here.
+ */
+async function mayOpenThreadWith(
+    user: EmployerJobOwner,
+    recipientSupabaseId: string,
+    recipient: RecipientReach,
+): Promise<boolean> {
+    if (recipient.role === 'job_seeker' && recipient.profileVisible && recipient.openToOffers) {
+        const opened = await prisma.profileView.findUnique({
+            where: { viewerId_candidateId: { viewerId: user.id, candidateId: recipientSupabaseId } },
+            select: { id: true },
+        });
+        if (opened) return true;
+    }
+    const application = await prisma.jobApplication.findFirst({
+        where: {
+            userId: recipientSupabaseId,
+            job: { employerJobs: { OR: employerJobOwnershipBranches(user) } },
+        },
+        select: { id: true },
+    });
+    return application !== null;
+}
 
 /**
  * GET /api/employer/messages — List sent messages for the employer
@@ -41,7 +81,7 @@ export async function GET(req: NextRequest) {
             take: 50,
             include: {
                 recipient: {
-                    select: { firstName: true, lastName: true, email: true },
+                    select: { firstName: true, lastName: true },
                 },
                 job: {
                     select: { id: true, title: true },
@@ -55,7 +95,12 @@ export async function GET(req: NextRequest) {
             body: m.body,
             sentAt: m.sentAt.toISOString(),
             readAt: m.readAt?.toISOString() || null,
-            recipientName: [m.recipient.firstName, m.recipient.lastName].filter(Boolean).join(' ') || m.recipient.email || 'Unknown',
+            // SECURITY: an unnamed recipient is "Candidate", never the raw
+            // email address this list used to fall back to. The applicants
+            // view never shows an applicant's email, and the pool shows one
+            // only with full profile access.
+            // tests/api/employer-messages-recipient.test.ts
+            recipientName: [m.recipient.firstName, m.recipient.lastName].filter(Boolean).join(' ') || 'Candidate',
             jobTitle: m.job?.title || null,
         }));
 
@@ -101,10 +146,24 @@ export async function POST(req: NextRequest) {
         // Look up recipient first (needed for conversation check)
         const recipient = await prisma.userProfile.findUnique({
             where: { supabaseId: recipientId },
-            select: { id: true, email: true, firstName: true },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                role: true,
+                profileVisible: true,
+                openToOffers: true,
+                deletedAt: true,
+            },
         });
 
-        if (!recipient) {
+        // SECURITY: an account its owner deleted is never a recipient, not
+        // even for a reply in an existing thread. Deletion hides the profile
+        // and stops email (app/api/auth/delete-account), yet this route
+        // stored the message and emailed the address anyway. It answers
+        // exactly as an unknown id does.
+        // tests/api/employer-messages-recipient.test.ts
+        if (!recipient || recipient.deletedAt) {
             return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
         }
 
@@ -128,6 +187,19 @@ export async function POST(req: NextRequest) {
         });
 
         if (!existingConversation) {
+            // SECURITY: new outreach reaches only someone this employer may
+            // contact (mayOpenThreadWith above). The recipient was never
+            // checked, so an employer past the featured gate could open a
+            // thread with, and email, any profile id: a seeker who hid their
+            // profile or switched off "Open to offers", another employer, an
+            // admin. This runs before the featured gate, so anyone out of
+            // reach answers exactly as an unknown id does and the answer
+            // cannot be used to probe which ids exist.
+            // tests/api/employer-messages-recipient.test.ts
+            if (!(await mayOpenThreadWith(user, recipientId, recipient))) {
+                return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
+            }
+
             // NEW outreach — requires a featured job posting + InMail credit
             // Gate: messaging requires a featured job posting
             if (jobId) {

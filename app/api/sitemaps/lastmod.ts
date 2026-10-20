@@ -75,12 +75,12 @@ export async function latestJobContentDate(where: Prisma.JobWhereInput): Promise
  * When each code-authored page's copy last changed (a UTC calendar day), for
  * its sitemap lastmod. Pages whose main content is a live job list, or live
  * figures computed from one, are dated from the jobs instead and are not
- * listed here. A comparison page carries the later of COMPARE_REVIEW_DATE
- * (lib/compare-data.ts, the date its claims were checked, which is not
- * bumped for a copy edit that re-checked nothing) and its entry here, when
- * one exists, for a copy or link change since that review. The specialty
- * salary pages carry the later of their own jobs' newest content change and
- * the specialty template's entry here.
+ * listed here. A comparison page, like the /compare hub, carries the later
+ * of COMPARE_REVIEW_DATE (lib/compare-data.ts, the date the claims were
+ * checked, which is not bumped for a copy edit that re-checked nothing) and
+ * its entry here, when one exists, for a copy or link change since that
+ * review. The specialty salary pages carry the later of their own jobs'
+ * newest content change and the specialty template's entry here.
  *
  * BUMP A PAGE'S DATE IN THE SAME CHANGE THAT EDITS WHAT IT SAYS: its own
  * copy, or a component or config value it renders (a byline, a hero, a
@@ -98,13 +98,18 @@ export async function latestJobContentDate(where: Prisma.JobWhereInput): Promise
  * the SEO, AEO and GEO release retitled the tools, rewrote the job seeker
  * hero and guides, added the full practice quick answer, and moved the growth
  * figure (2025 to 2035), the HRSA floor, the stats review date and the
- * certifying body names. Neither had moved its entries, so this change dates
- * all 33 pages to the day they went live. The notes on single entries below
- * record what else changed on that page, oldest first.
+ * certifying body names. Neither had moved its entries, so that change dated
+ * all 33 pages it covered to the day they went live (the /compare entry came
+ * later, see its note). The notes on single entries below record what else
+ * changed on that page, oldest first.
  */
 export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/for-employers': '2026-10-13',
-  '/for-job-seekers': '2026-10-13',
+  // 2026-10-20 (security and register batch): the comparison table is rebuilt
+  // from audited cells (lib/seeker-comparison.ts, register D25), its
+  // surrounding cards say only what the board does, and the "how it works"
+  // steps (components/FeaturedJobs.tsx) lose the AI and no recruiter claims.
+  '/for-job-seekers': '2026-10-20',
   '/about': '2026-10-13',
   '/editorial-policy': '2026-10-13',
   '/faq': '2026-10-13',
@@ -146,11 +151,20 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/tools/private-practice-revenue-calculator': '2026-10-13',
   '/tools/cost-per-hire-calculator': '2026-10-13',
   '/for-employers/resources': '2026-10-13',
-  '/for-employers/resources/how-to-hire': '2026-10-13',
+  // 2026-10-20 (register 2.23): the credential checklist and the first FAQ
+  // answer name the certifying body AANPCB.
+  '/for-employers/resources/how-to-hire': '2026-10-20',
   '/for-employers/resources/job-description-guide': '2026-10-13',
   '/for-employers/resources/job-description-templates': '2026-10-13',
   // Every template page renders from one template file and lib/jd-templates.ts.
-  '/for-employers/resources/job-description-templates/[id]': '2026-10-13',
+  // 2026-10-20 (register 2.23): each template's credentials line names the
+  // certifying body AANPCB.
+  '/for-employers/resources/job-description-templates/[id]': '2026-10-20',
+  // 2026-10-13 (plain copy pass): a new title, no hero line or closing
+  // line, and rewritten method bullets (app/compare/page.tsx). The entry
+  // came later (backlog 2.22): until then the review alone dated the hub.
+  // COMPARE_REVIEW_DATE stays: nobody re-checked the claims.
+  '/compare': '2026-10-13',
   // CQ-13: the licensure row and advantage now link the scope of practice
   // explorer (lib/compare-data.ts). COMPARE_REVIEW_DATE stays: nobody
   // re-checked the claims.
@@ -188,10 +202,13 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
  * (pageContentDate); before it nothing here changes. Add a page in the same
  * change that makes its copy follow the promo clock, and only then: listing
  * one whose copy does not switch over-claims a change. Every comparison page
- * is here because each states our price in its capability table.
+ * is here because each states our price in its capability table; their hub
+ * prints no price and is not.
  * tests/regressions/promo-clock-pages-rerender.test.ts holds the set to the
  * sources in both directions: a dated page whose code reads the promo clock
- * has to be here (and re-render hourly), and a page here has to read it.
+ * has to be here (and re-render hourly), and a page here has to read it. The
+ * hub is that suite's one exemption: it builds the comparison profiles to
+ * list them and prints only fields that are the same in both phases.
  */
 export const PROMO_SWITCH_PATHS: ReadonlySet<string> = new Set([
   '/pricing',

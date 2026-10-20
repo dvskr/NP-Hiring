@@ -42,10 +42,16 @@ Object.assign(prisma.jobAlert, { findFirst: extra.jobAlertFindFirst });
 const USER_ID = 'auth-user-1';
 const EMAIL = 'new.account@example.com';
 
-/** Run the callback for a first sign-in whose auth metadata is `metadata`. */
-async function firstSignIn(metadata: Record<string, unknown>): Promise<{ created: Record<string, unknown>; location: string | null }> {
+/**
+ * Run the callback for a first sign-in whose auth metadata is `metadata`.
+ * `appMetadata` is what Supabase records about the sign-in (the provider).
+ */
+async function firstSignIn(
+    metadata: Record<string, unknown>,
+    appMetadata: Record<string, unknown> = {},
+): Promise<{ created: Record<string, unknown>; location: string | null }> {
     mocks.exchangeCodeForSession.mockResolvedValue({
-        data: { user: { id: USER_ID, email: EMAIL, user_metadata: metadata } },
+        data: { user: { id: USER_ID, email: EMAIL, app_metadata: appMetadata, user_metadata: metadata } },
         error: null,
     });
     // No profile yet on the first read; afterwards the row the callback wrote.
@@ -87,12 +93,17 @@ describe('GET /auth/callback: the role written on a first sign-in', () => {
     });
 
     it('defaults to job_seeker when the metadata carries no role (Google sign-in)', async () => {
-        const { created } = await firstSignIn({ full_name: 'Ada Lovelace', avatar_url: 'https://example.com/a.png' });
+        const googlePicture = 'https://lh3.googleusercontent.com/a/ACg8ocK1example=s96-c';
+        const { created } = await firstSignIn(
+            { full_name: 'Ada Lovelace', avatar_url: googlePicture },
+            { provider: 'google', providers: ['google'] },
+        );
         expect(created.role).toBe('job_seeker');
         // The Google name and avatar handling is untouched by the allow-list.
+        // Which avatars are kept is pinned in auth-metadata-sanitise.test.ts.
         expect(created.firstName).toBe('Ada');
         expect(created.lastName).toBe('Lovelace');
-        expect(created.avatarUrl).toBe('https://example.com/a.png');
+        expect(created.avatarUrl).toBe(googlePicture);
     });
 
     it('keeps employer, with its lead and its welcome email', async () => {

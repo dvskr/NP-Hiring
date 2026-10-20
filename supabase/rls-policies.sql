@@ -7,16 +7,32 @@
 -- in the browser) can read ALL rows in tables that hold user data â€”
 -- including user_profiles, candidate licenses, saved jobs, messages, etc.
 --
--- Paste this file ONCE into Supabase Dashboard â†’ SQL Editor â†’ Run.
--- Safe to re-run: every policy uses `CREATE POLICY IF NOT EXISTS` pattern
--- (Postgres 15+) or is DROP-then-CREATE.
+-- NOT APPLIED AUTOMATICALLY. No deploy step or migration runs this file.
+-- The live database (docs/AUDIT_RUNBOOK.md A.10) has only the two
+-- blog_posts policies, and the anon and authenticated roles hold a table
+-- grant on blog_posts only, so no other table is reachable through the data
+-- API whatever this file says. Applying it, or restoring any grant, is an
+-- owner decision: review every policy below against the live grants first.
+--
+-- To apply: paste it into Supabase Dashboard, SQL Editor, and run it.
+-- Safe to re-run: every policy is DROP POLICY IF EXISTS, then CREATE POLICY.
+--
+-- Every policy below only reads (FOR SELECT). The app writes every table
+-- through its own routes (Prisma, with the service role) and queries no
+-- table but blog_posts through supabase-js, so no write policy is needed,
+-- and a FOR ALL owner policy would let the owner of a row write any of its
+-- columns through PostgREST.
 --
 -- Coverage:
---   - user_profiles, candidate_* tables â†’ owner-only
---   - employer_jobs, employer-side records â†’ owner-only
---   - saved_jobs, job_alerts, conversations, messages â†’ owner-only
---   - public job data (jobs, companies) â†’ readable when published
---   - audit/system tables â†’ service_role only (denies anon entirely)
+--   - user_profiles: each signed-in user may read their own row, and
+--     nothing else; no writes and no cross-user reads (see that section)
+--   - candidate_* tables: the owner may read their own rows
+--   - employer_jobs, employer-side records: the owner may read their own rows
+--   - saved_jobs, job_applications: the owner may read their own rows
+--   - conversations, messages: each participant may read them
+--   - job_alerts, email_leads: no policy, so service_role only
+--   - public job data (jobs, companies): readable when published
+--   - audit/system tables: service_role only (denies anon entirely)
 --
 -- The Prisma client in our Next.js server uses the SERVICE_ROLE_KEY for
 -- writes, which bypasses RLS. The anon key (browser) is restricted by these
@@ -63,80 +79,86 @@ CREATE POLICY category_city_snippets_public_read ON category_city_snippets
 
 -- â”€â”€ User-owned tables (auth.uid() match) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+-- SECURITY: read-only, own row only. This policy was FOR ALL with no column
+-- limit, so once applied with a grant restored a signed-in user could PATCH
+-- or INSERT their own row through PostgREST with {"role":"admin"}, and every
+-- admin guard reads that column. A second policy let ANY signed-in user read
+-- every visible profile with all of its columns (EEO answers, NPI and DEA
+-- numbers, address). Profiles are written only by the app's own routes
+-- (Prisma, which bypasses RLS), and employers browse candidates through
+-- those routes, which choose the columns, so no write policy and no browse
+-- policy is needed. The own-row read stays: every owner policy below finds
+-- the caller's profile id with a subquery on this table, which RLS filters
+-- through this policy. The DROP below removes a browse policy an older run
+-- of this file created. tests/regressions/rls-user-profiles-policy.test.ts
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_profiles_owner ON user_profiles;
 CREATE POLICY user_profiles_owner ON user_profiles
-    FOR ALL TO authenticated
-    USING (supabase_id = auth.uid()::text)
-    WITH CHECK (supabase_id = auth.uid()::text);
--- Also allow employers to see profiles where profile_visible=true
-DROP POLICY IF EXISTS user_profiles_employer_browse ON user_profiles;
-CREATE POLICY user_profiles_employer_browse ON user_profiles
     FOR SELECT TO authenticated
-    USING (profile_visible = true AND open_to_offers = true);
+    USING (supabase_id = auth.uid()::text);
+DROP POLICY IF EXISTS user_profiles_employer_browse ON user_profiles;
 
+-- SECURITY: every owner and participant policy from here down was FOR ALL
+-- with no column limit, the class user_profiles had: once applied with a
+-- grant restored, the owner of a row could write any of its columns through
+-- PostgREST (publish or mark paid their own employer_jobs row, save
+-- candidates or add alerts past the routes' plan and pool gates, insert
+-- messages as either participant). The app writes all of these tables
+-- through Prisma alone, so each policy now only reads.
+-- tests/regressions/rls-user-profiles-policy.test.ts
 ALTER TABLE candidate_licenses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_licenses_owner ON candidate_licenses;
 CREATE POLICY candidate_licenses_owner ON candidate_licenses
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_certifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_certifications_owner ON candidate_certifications;
 CREATE POLICY candidate_certifications_owner ON candidate_certifications
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_education ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_education_owner ON candidate_education;
 CREATE POLICY candidate_education_owner ON candidate_education
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_work_experience ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_work_experience_owner ON candidate_work_experience;
 CREATE POLICY candidate_work_experience_owner ON candidate_work_experience
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_references ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_references_owner ON candidate_references;
 CREATE POLICY candidate_references_owner ON candidate_references
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_screening_answers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_screening_answers_owner ON candidate_screening_answers;
 CREATE POLICY candidate_screening_answers_owner ON candidate_screening_answers
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_open_ended_responses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_open_ended_responses_owner ON candidate_open_ended_responses;
 CREATE POLICY candidate_open_ended_responses_owner ON candidate_open_ended_responses
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE saved_jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS saved_jobs_owner ON saved_jobs;
 CREATE POLICY saved_jobs_owner ON saved_jobs
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE job_applications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS job_applications_owner ON job_applications;
 CREATE POLICY job_applications_owner ON job_applications
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 -- â”€â”€ Job alerts (email-keyed, no user_id) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- These use the alert's confirmation_token for ownership; not exposed to
@@ -152,48 +174,48 @@ ALTER TABLE email_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employer_jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_jobs_owner ON employer_jobs;
 CREATE POLICY employer_jobs_owner ON employer_jobs
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE saved_candidates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS saved_candidates_owner ON saved_candidates;
 CREATE POLICY saved_candidates_owner ON saved_candidates
-    FOR ALL TO authenticated
-    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_tags ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_tags_owner ON candidate_tags;
 CREATE POLICY candidate_tags_owner ON candidate_tags
-    FOR ALL TO authenticated
-    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE employer_testimonials ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_testimonials_public_read ON employer_testimonials;
 CREATE POLICY employer_testimonials_public_read ON employer_testimonials
     FOR SELECT TO anon, authenticated
     USING (featured_at IS NOT NULL);
+-- The owner policy was employer_testimonials_owner_write, FOR ALL: an owner
+-- could set featured_at on their own row and so publish it under the public
+-- read above. It only reads now, under a name that says so; the first DROP
+-- removes the write policy an older run of this file created.
 DROP POLICY IF EXISTS employer_testimonials_owner_write ON employer_testimonials;
-CREATE POLICY employer_testimonials_owner_write ON employer_testimonials
-    FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+DROP POLICY IF EXISTS employer_testimonials_owner ON employer_testimonials;
+CREATE POLICY employer_testimonials_owner ON employer_testimonials
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE employer_candidate_alerts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_candidate_alerts_owner ON employer_candidate_alerts;
 CREATE POLICY employer_candidate_alerts_owner ON employer_candidate_alerts
-    FOR ALL TO authenticated
-    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    FOR SELECT TO authenticated
+    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 -- â”€â”€ Messaging (both participants can access) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS conversations_participant ON conversations;
 CREATE POLICY conversations_participant ON conversations
-    FOR ALL TO authenticated
+    FOR SELECT TO authenticated
     USING (
         participant_a IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
         OR participant_b IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
@@ -202,7 +224,7 @@ CREATE POLICY conversations_participant ON conversations
 ALTER TABLE employer_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_messages_participant ON employer_messages;
 CREATE POLICY employer_messages_participant ON employer_messages
-    FOR ALL TO authenticated
+    FOR SELECT TO authenticated
     USING (
         sender_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
         OR recipient_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
@@ -211,7 +233,7 @@ CREATE POLICY employer_messages_participant ON employer_messages
 ALTER TABLE profile_views ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS profile_views_owner ON profile_views;
 CREATE POLICY profile_views_owner ON profile_views
-    FOR ALL TO authenticated
+    FOR SELECT TO authenticated
     USING (viewer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 -- â”€â”€ System / audit tables â€” service_role only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

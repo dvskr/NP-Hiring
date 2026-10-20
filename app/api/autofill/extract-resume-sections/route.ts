@@ -7,6 +7,11 @@ import { complete } from '@/lib/ai/gateway';
 import { AiGatewayError } from '@/lib/ai/types';
 import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
 import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
+import { isRecord } from '../_lib/input';
+
+const DEFAULT_SECTIONS = ['education', 'experience'];
+/** scripts/extract-pdf-text.js already cuts at 6,000; the route does not rely on it alone. */
+const MAX_RESUME_TEXT_CHARS = 6_000;
 
 /**
  * POST /api/autofill/extract-resume-sections
@@ -29,8 +34,14 @@ export async function POST(req: NextRequest) {
         const disabled = await checkAutofillAiFeature('ai.candidate.autofill_extract', user.userId);
         if (disabled) return disabled;
 
-        const body = await req.json().catch(() => ({}));
-        const { sections = ['education', 'experience'] } = body as { sections?: string[] };
+        // AUTOFILL-CLASSIFY-1 (reviewed sibling): a null body or a numeric
+        // `sections` answered 500, and a string one was searched as text.
+        // Anything but an array gets both sections, the default as before.
+        // Test: tests/api/autofill-extract-sections-input.test.ts
+        const body = await req.json().catch(() => null);
+        const sections = isRecord(body) && Array.isArray(body.sections)
+            ? body.sections.filter((s): s is string => typeof s === 'string')
+            : DEFAULT_SECTIONS;
 
         // Monthly AI-generation quota (audit F29) — checked before any
         // resume fetch / model work.
@@ -62,7 +73,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Extract resume text
-        const resumeText = await extractResumeText(freshResumeUrl);
+        const resumeText = (await extractResumeText(freshResumeUrl)).slice(0, MAX_RESUME_TEXT_CHARS);
         if (!resumeText) {
             return NextResponse.json({ error: 'Could not extract text from resume', education: [], experience: [] }, { status: 200 });
         }

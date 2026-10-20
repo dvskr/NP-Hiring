@@ -20,7 +20,7 @@ import { CATEGORY_FILTERS, CATEGORY_EXCLUSIONS } from '@/lib/filters'
 import { logger } from '@/lib/logger'
 import { brand } from '@/config/brand'
 import { BEST_SORT_ORDER_BY, compareJobsBest } from '@/lib/utils/job-sort'
-import { renderJobCardHtml } from '@/lib/utils/render-job-card'
+import { renderJobCardHtml, escapeHtml } from '@/lib/utils/render-job-card'
 import { classifyJob } from '@/lib/ai/job-classifier'
 import {
   ATS_HOST_SUBSTRINGS,
@@ -114,13 +114,17 @@ function timeAgo(date: Date): string {
 }
 
 // ─── Build a single alert email HTML (V2 Warm Diorama) ────────────────────────
-function buildAlertHtml(
+// Exported for tests/lib/job-alert-digest-escaping.test.ts.
+export function buildAlertHtml(
   jobs: Array<{ id: string; title: string; employer: string; location: string; minSalary?: number | null; maxSalary?: number | null; normalizedMinSalary?: number | null; normalizedMaxSalary?: number | null; mode?: string | null; jobType?: string | null; isFeatured?: boolean; applyOnPlatform?: boolean; sourceType?: string | null; createdAt: Date }>,
   alertToken: string,
   criteriaText: string,
   filteredUrl: string,
   totalCount?: number
 ): string {
+  // SECURITY: criteriaText is the alert's own keyword and location, which
+  // whoever created the alert chose (POST /api/job-alerts takes no session),
+  // so it is escaped where it enters the HTML below, as the job cards are.
   const jobCount = totalCount || jobs.length
   const displayJobs = jobs.slice(0, 10)
   const jobCardsHtml = displayJobs.map((job, index) => {
@@ -151,7 +155,7 @@ function buildAlertHtml(
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${V2.bgCardAlt};border-radius:8px;border:1px solid ${V2.borderLight};">
           <tr><td style="padding:12px 16px;">
             <p style="margin:0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Your Alert</p>
-            <p style="margin:4px 0 0;font-family:${SANS_V2};font-size:14px;color:${V2.textBody};">${criteriaText}</p>
+            <p style="margin:4px 0 0;font-family:${SANS_V2};font-size:14px;color:${V2.textBody};">${escapeHtml(criteriaText)}</p>
           </td></tr>
         </table>
       </td></tr>
@@ -177,7 +181,9 @@ function buildAlertHtml(
 }
 
 // ─── HTML to plain text (for plain-text email fallback) ───────────────────────
-function htmlToPlainText(html: string): string {
+// Exported for tests/lib/job-alert-digest-escaping.test.ts. The entities the
+// HTML escaping writes are decoded here, so the plain-text part reads as typed.
+export function htmlToPlainText(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<br\s*\/?>/gi, '\n')
@@ -187,6 +193,10 @@ function htmlToPlainText(html: string): string {
     .replace(/<a[^>]+href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, '$2 ($1)')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/gi, ' ')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
     .replace(/&amp;/gi, '&')
     .replace(/&middot;/gi, '·')
     .replace(/&copy;/gi, '©')

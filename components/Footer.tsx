@@ -54,7 +54,11 @@ const tailColumns: FooterColumn[] = [
       { label: `${brand.niche.short} Jobs in Florida`, href: '/jobs/state/florida' },
       { label: `${brand.niche.short} Jobs in Texas`, href: '/jobs/state/texas' },
       { label: `${brand.niche.short} Jobs in Massachusetts`, href: '/jobs/state/massachusetts' },
-      { label: 'Browse All 50 States', href: '/jobs/locations' },
+      // Pending work 2.21: the directory lists the states and cities hiring
+      // today, so the link names it the way its title and every card that
+      // links it do. It read "Browse All 50 States", a count the directory
+      // does not back (tests/regressions/nav-card-coverage-claims.test.ts).
+      { label: 'Browse States and Cities', href: '/jobs/locations' },
     ],
   },
   {

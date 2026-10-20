@@ -6,6 +6,14 @@ import { complete } from '@/lib/ai/gateway';
 import { AiGatewayError } from '@/lib/ai/types';
 import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
 import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
+import {
+    MAX_EMPLOYER_NAME_CHARS,
+    MAX_JOB_DESCRIPTION_CHARS,
+    MAX_JOB_TITLE_CHARS,
+    cleanText,
+    isRecord,
+} from '../_lib/input';
+import { PROFILE_PROMPT_ROWS } from '../_lib/profile-rows';
 
 export async function POST(req: NextRequest) {
     // Rate limiting
@@ -23,8 +31,16 @@ export async function POST(req: NextRequest) {
         const disabled = await checkAutofillAiFeature('ai.candidate.cover_letter', user.userId);
         if (disabled) return disabled;
 
-        const body = await req.json();
-        const { jobTitle, employerName, jobDescription } = body;
+        // SECURITY (sibling of AUTOFILL-CLASSIFY-1 and AUTOFILL-BULK-1):
+        // jobTitle and employerName reached the cover_letter prompt uncut, and
+        // malformed JSON or a non-string jobDescription answered 500. Each
+        // value is now a string cut to the caps generate-answer uses.
+        // Test: tests/api/autofill-cover-letter-input.test.ts
+        const body = await req.json().catch(() => null);
+        const input: Record<string, unknown> = isRecord(body) ? body : {};
+        const jobTitle = cleanText(input.jobTitle, MAX_JOB_TITLE_CHARS);
+        const employerName = cleanText(input.employerName, MAX_EMPLOYER_NAME_CHARS);
+        const jobDescription = cleanText(input.jobDescription, MAX_JOB_DESCRIPTION_CHARS);
 
         if (!jobTitle || !employerName) {
             return NextResponse.json({ error: 'jobTitle and employerName are required' }, { status: 400 });
@@ -46,12 +62,14 @@ export async function POST(req: NextRequest) {
         }
         if (!quota.allowed) return quotaExceededResponse(quota);
 
-        // Fetch candidate profile for context
+        // Fetch candidate profile for context. SECURITY: row counts are
+        // bounded, see ../_lib/profile-rows.ts.
+        // Test: tests/api/autofill-profile-context-bounds.test.ts
         const profile = await prisma.userProfile.findUnique({
             where: { id: user.userId },
             include: {
-                licenses: true,
-                certificationRecords: true,
+                licenses: { take: PROFILE_PROMPT_ROWS.licenses },
+                certificationRecords: { take: PROFILE_PROMPT_ROWS.certificationRecords },
                 education: { orderBy: { graduationDate: 'desc' }, take: 2 },
                 workExperience: { orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }], take: 3 },
             },

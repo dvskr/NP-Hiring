@@ -63,11 +63,13 @@ describe('B2/B100 — message edit endpoint matches the send path', () => {
 
 describe('B99 — attachment path must belong to the sender', () => {
   const rel = 'app/api/conversations/[id]/route.ts';
-  it('normalizes the client-supplied path and checks the uploader-uid prefix', () => {
+  it('normalizes the client-supplied path and matches the whole key to the uploader', () => {
     const src = read(rel);
     expect(src).toContain("toBareDocPath(attachmentUrl, 'message_attachment')");
-    expect(src).toContain('barePath.startsWith(`${user.id}/`)');
-    expect(src).toMatch(/barePath\.includes\('\.\.'\)/);
+    // A prefix and '..' check let `<uid>/%2e%2e/<other uid>/...` through;
+    // the key is matched whole (tests/lib/message-attachment-key.test.ts).
+    expect(src).toContain('isOwnMessageAttachmentKey(barePath, user.id)');
+    expect(src).not.toMatch(/barePath\.startsWith\(/);
   });
   it('stores only the validated path, never the raw request value', () => {
     const src = read(rel);

@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
     // If specific IDs are requested, return exactly those jobs (for saved/applied pages)
     const idsParam = searchParams.get('ids');
     if (idsParam) {
-      const ids = idsParam.split(',').filter(Boolean);
+      // Each id once: the list went into the IN clause exactly as sent
+      // (JOBS-1, tests/api/jobs.test.ts). Not capped at MAX_LIMIT:
+      // app/saved/page.tsx sends the whole saved or applied list in one
+      // request and shows any id left out as "Listing no longer available".
+      const ids = [...new Set(idsParam.split(',').filter(Boolean))];
       if (ids.length > 0) {
         const jobs = await prisma.job.findMany({
           where: { id: { in: ids }, isPublished: true },

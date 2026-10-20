@@ -244,7 +244,7 @@ async function getLocationStats() {
 const JOB_TYPE_TILES: ReadonlyArray<{ href: string; icon: Art; label: string; sub: string }> = [
   { href: '/jobs/remote', icon: NAV_ICONS.remote, label: 'Remote', sub: 'Work from anywhere' },
   { href: '/jobs/telehealth', icon: NAV_ICONS.telehealth, label: 'Telehealth', sub: 'Virtual patient care' },
-  { href: '/jobs/travel', icon: NAV_ICONS.travel, label: 'Travel', sub: 'Locum tenens' },
+  { href: '/jobs/travel', icon: NAV_ICONS.travel, label: 'Travel', sub: 'Short-term assignments' },
   { href: '/jobs/new-grad', icon: NAV_ICONS['new-grad'], label: 'New Grad', sub: 'Entry-level friendly' },
   { href: '/jobs/per-diem', icon: NAV_ICONS['per-diem'], label: 'Per Diem', sub: 'Flexible scheduling' },
 ];

@@ -9,14 +9,8 @@ import { AiGatewayError } from '@/lib/ai/types';
 import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
 import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
 import { fetchResumeTextFromSignedUrl } from '../_lib/resume-text';
-
-interface FieldToClassify {
-    label: string;
-    placeholder: string;
-    attributes: Record<string, string>;
-    fieldType: string;
-    options: string[];
-}
+import { parseClassifyRequest, type FieldToClassify } from '../_lib/classify-input';
+import { PROFILE_PROMPT_ROWS } from '../_lib/profile-rows';
 
 interface ClassifiedField {
     index: number;
@@ -179,38 +173,29 @@ export async function POST(req: NextRequest) {
         const disabled = await checkAutofillAiFeature('ai.candidate.autofill_classify', user.userId);
         if (disabled) return disabled;
 
-        const body = await req.json();
-        const {
-            fields,
-            jobTitle = '',
-            jobDescription = '',
-            employerName = '',
-        } = body as {
-            fields: FieldToClassify[];
-            jobTitle?: string;
-            jobDescription?: string;
-            employerName?: string;
-        };
-
-        if (!fields || !Array.isArray(fields) || fields.length === 0) {
+        // SECURITY (AUTOFILL-CLASSIFY-1): typed and cut before anything reads
+        // it, the first 40 fields only; see ../_lib/classify-input.ts.
+        // Test: tests/api/autofill-classify-input.test.ts
+        const input = parseClassifyRequest(await req.json().catch(() => null));
+        if (!input) {
             return NextResponse.json({ error: 'fields array is required' }, { status: 400 });
         }
-
-        // Cap fields per request
-        const fieldsToProcess = fields.slice(0, 40);
+        const { fields: fieldsToProcess, jobTitle, jobDescription, employerName } = input;
 
         // Monthly AI-generation quota (audit F29) — checked BEFORE the model
         // call so an over-quota request never reaches the provider.
         const quota = await checkAutofillAiQuota(user.userId, 1);
         if (!quota.allowed) return quotaExceededResponse(quota);
 
-        // Fetch candidate profile for context
+        // Fetch candidate profile for context. SECURITY: row counts are
+        // bounded, see ../_lib/profile-rows.ts.
+        // Test: tests/api/autofill-profile-context-bounds.test.ts
         const candidateProfile = await prisma.userProfile.findUnique({
             where: { id: user.userId },
             include: {
-                licenses: true,
-                certificationRecords: true,
-                education: { orderBy: { graduationDate: 'desc' } },
+                licenses: { take: PROFILE_PROMPT_ROWS.licenses },
+                certificationRecords: { take: PROFILE_PROMPT_ROWS.certificationRecords },
+                education: { orderBy: { graduationDate: 'desc' }, take: PROFILE_PROMPT_ROWS.education },
                 workExperience: { orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }], take: 5 },
             },
         });
@@ -588,9 +573,16 @@ function buildClassifyPrompt(
 
         if (field.options?.length > 0) {
             const opts = field.options.map((o) => stripPageDelimiters(o)).join(' | ');
-            line += ` | Options: [${opts}]`;
-            if (['select', 'radio', 'custom-dropdown'].includes(field.fieldType)) {
-                line += ` ⚠️ VALUE MUST EXACTLY MATCH one of these options`;
+            if (field.optionsCut) {
+                // AUTOFILL-CLASSIFY-1: the list was cut to the option budget,
+                // so the right option may be missing; demanding an exact
+                // match would push the model to a wrong one.
+                line += ` | Options (partial list): [${opts}]`;
+            } else {
+                line += ` | Options: [${opts}]`;
+                if (['select', 'radio', 'custom-dropdown'].includes(field.fieldType)) {
+                    line += ` ⚠️ VALUE MUST EXACTLY MATCH one of these options`;
+                }
             }
         } else if (['select', 'custom-dropdown'].includes(field.fieldType)) {
             // Dropdown without options — give AI a hint about expected values

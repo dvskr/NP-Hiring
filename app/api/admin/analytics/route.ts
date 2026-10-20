@@ -4,6 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { ctDayBounds } from '@/lib/format-ct';
+import { parsePagingParam } from '@/app/api/admin/jobs/_lib/job-input';
+
+// Not exported: a 'use server' module may export async functions only.
+const DEFAULT_DAYS = 30;
+const MAX_DAYS = 365;
 
 /**
  * GET /api/admin/analytics
@@ -20,7 +25,10 @@ export async function GET(request: NextRequest) {
 
     try {
         const { searchParams } = new URL(request.url);
-        const days = Math.min(Math.max(parseInt(searchParams.get('days') || '30', 10), 1), 365);
+        // Math.min/Math.max pass NaN through, so ?days=abc built an invalid
+        // `since` and answered 500. Junk, zero and negatives now read the
+        // default window (tests/regressions/admin-query-params.test.ts).
+        const days = parsePagingParam(searchParams.get('days'), DEFAULT_DAYS, MAX_DAYS);
         const section = searchParams.get('section');
         const jobId = searchParams.get('jobId');
 
@@ -80,7 +88,7 @@ export async function GET(request: NextRequest) {
             // Referrer breakdown
             const referrers: Record<string, number> = {};
             views.forEach(v => {
-                const ref = v.referrer ? new URL(v.referrer).hostname : 'direct';
+                const ref = referrerHost(v.referrer);
                 referrers[ref] = (referrers[ref] || 0) + 1;
             });
 
@@ -338,6 +346,21 @@ export async function GET(request: NextRequest) {
 }
 
 /* ─── Helpers ─── */
+
+/**
+ * The referrer's hostname for the drill-down breakdown. A stored referrer is
+ * the raw Referer header GET /api/jobs/[id] saved, so it need not be a URL:
+ * new URL() threw on one forged value and the whole drill-down answered 500
+ * (tests/regressions/admin-query-params.test.ts).
+ */
+function referrerHost(referrer: string | null): string {
+    if (!referrer) return 'direct';
+    try {
+        return new URL(referrer).hostname;
+    } catch {
+        return 'unknown';
+    }
+}
 
 /**
  * Bucket events by CT calendar day (Goal #5).

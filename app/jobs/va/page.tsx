@@ -159,7 +159,7 @@ const EXPLORE_CARDS: ReadonlyArray<{ href: string; label: string; sub: string; i
   { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: '/images/categories/nav/inpatient.webp' },
   { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: '/images/categories/nav/outpatient.webp' },
   { href: '/salary-guide', label: 'Salary Guide', sub: 'Posted pay by state', icon: '/images/categories/nav/salary.webp' },
-  { href: '/jobs/locations', label: 'By Location', sub: 'Browse every state', icon: '/images/categories/nav/location.webp' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities', icon: '/images/categories/nav/location.webp' },
 ];
 
 /** Taxonomy slug a card points at, or null for a non-category destination. */

@@ -162,18 +162,55 @@ export async function deleteFile(path: string, fileType: 'resume' | 'avatar'): P
 }
 
 /**
- * Get a signed URL for a resume file (valid for 1 hour)
+ * One segment of an upload key. uploadResume and uploadAvatar build every key
+ * as `<upload prefix>/<uploader's supabase uid>/<timestamped name>`. The prefix
+ * ('local', 'dev' or 'prod') and the uid always fit this set, and a resume
+ * name is sanitized to it. An avatar name ends in the uploaded file's own
+ * extension, unsanitized: an avatar key holding another character fails the
+ * ownership rule below, so PATCH /api/auth/profile ignores it and the purge
+ * cron leaves that object in storage (the URL /api/upload stored still shows).
  */
-export async function getResumeUrl(path: string): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from(RESUME_BUCKET)
-    .createSignedUrl(path, 3600); // 1 hour in seconds
+const UPLOAD_KEY_SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
 
-  if (error) {
-    throw new Error(`Failed to generate URL: ${error.message}`);
-  }
+/**
+ * SECURITY (AUTH-PROFILE-1, RES-1 to RES-4, APP-2, EMP-RES-1): true only for
+ * an upload key in `ownerId`'s own folder, exactly `<prefix>/<ownerId>/<file>`.
+ *
+ * The stored resume and avatar columns were writable by their owner, so a
+ * stored value proved nothing about whose object it named, and the readers
+ * signed, downloaded or deleted it with the service role. Every writer and
+ * reader of those columns now checks this first.
+ *
+ * Allow-list, not deny-list: storage-js puts the key into the request URL
+ * unencoded, where '..', '%2e%2e', a backslash, a tab, '?' or '#' would change
+ * which object is addressed, so anything outside UPLOAD_KEY_SEGMENT fails. A
+ * one word prefix is not pinned to the current STORAGE_UPLOAD_PREFIX: ownership
+ * rests on the uid segment, and a prefix change must not lock owners out of
+ * older uploads. A multi-part prefix is accepted only when it is exactly the
+ * configured one, so a deployment that set one is not locked out either.
+ * Tests: tests/lib/storage-ownership.test.ts.
+ */
+export function isOwnStoragePath(
+  path: string | null | undefined,
+  ownerId: string | null | undefined,
+): boolean {
+  if (typeof path !== 'string' || typeof ownerId !== 'string' || ownerId === '') return false;
+  const segments = path.split('/');
+  if (segments.length < 3 || !segments.every((segment) => UPLOAD_KEY_SEGMENT.test(segment))) return false;
+  const prefixSegments = segments.slice(0, -2);
+  const isKnownPrefix = prefixSegments.length === 1 || prefixSegments.join('/') === UPLOAD_PREFIX;
+  return isKnownPrefix && segments[segments.length - 2] === ownerId;
+}
 
-  return data.signedUrl;
+/**
+ * The key of a stored avatar URL when it names an object in `ownerId`'s own
+ * upload folder, otherwise null (another user's avatar, a sign-in provider
+ * picture, any other link, a non-string).
+ */
+export function toOwnAvatarPath(stored: unknown, ownerId: string): string | null {
+  if (typeof stored !== 'string') return null;
+  const path = getPathFromUrl(stored);
+  return isOwnStoragePath(path, ownerId) ? path : null;
 }
 
 /**

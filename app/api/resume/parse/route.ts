@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { parseResume, ParsedResume } from '@/lib/resume-parser';
 import { rateLimit } from '@/lib/rate-limit';
 import { downloadResumeBytes, extractRequestContext, toBareResumePath } from '@/lib/resume-storage';
+import { isOwnStoragePath } from '@/lib/supabase-storage';
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { inngest } from '@/lib/inngest/client';
 
@@ -13,7 +14,8 @@ import { inngest } from '@/lib/inngest/client';
  * Parse an uploaded resume with AI and auto-fill the user's profile.
  *
  * Accepts either:
- *  - { resumeUrl: string } — path in Supabase Storage (e.g. "resumes/userId/file.pdf")
+ *  - { resumeUrl: string } — the caller's own key in Supabase Storage
+ *    ("<prefix>/<supabaseId>/<timestamp>-<file>", optionally as a signed URL)
  *  - multipart/form-data with a "file" field
  */
 
@@ -34,18 +36,6 @@ const SUPPORTED_RESUME_CONTENT_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
 ]);
-
-/**
- * Storage object keys are forward-slash relative paths
- * ("<prefix>/<supabaseId>/<timestamp>-<file>" — see uploadResume in
- * lib/supabase-storage.ts). A leading slash, backslashes, or dot /
- * dot-dot segments never occur in legitimate uploads — treat them as
- * hostile input (audit V7).
- */
-function containsPathTraversal(path: string): boolean {
-  if (path.startsWith('/') || path.includes('\\')) return true;
-  return path.split('/').some((segment) => segment === '..' || segment === '.');
-}
 
 function inferContentTypeFromPath(resumePath: string): string {
   const lower = resumePath.toLowerCase();
@@ -127,7 +117,7 @@ export async function POST(request: NextRequest) {
       // IDOR guard (audit V7): never trust the client-supplied storage
       // path. Normalize it, reject traversal outright, and require it to
       // resolve to the caller's OWN stored resume (profile.resumeUrl,
-      // written by /api/upload). Without this, any authenticated user
+      // caller-writable: see RES-4). Without this, any authenticated user
       // who obtained another candidate's storage path (e.g. from a
       // previously-minted signed URL) could re-download and parse that
       // resume here — with the access audit-logged as a self-parse
@@ -141,9 +131,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (containsPathTraversal(requestedPath)) {
-        logger.warn('Resume parse blocked: traversal attempt in resumeUrl', { userId: user.id });
-        return NextResponse.json({ error: 'Invalid resume path' }, { status: 403 });
+      // SECURITY (RES-4): profile.resumeUrl is writable by the caller (PATCH
+      // /api/auth/profile, older rows included), so matching it alone passed
+      // when the column and the request both named another user's object.
+      // The key must also sit in the caller's own upload folder; the shared
+      // rule rejects traversal, encoded and foreign-folder keys alike.
+      // Tests: tests/regressions/resume-parse-idor.test.ts.
+      if (!isOwnStoragePath(requestedPath, user.id)) {
+        logger.warn("Resume parse blocked: path is outside the caller's upload folder", { userId: user.id });
+        return NextResponse.json(
+          { error: 'You can only parse your own uploaded resume.' },
+          { status: 403 },
+        );
       }
 
       const profileRow = await prisma.userProfile.findUnique({
@@ -168,8 +167,9 @@ export async function POST(request: NextRequest) {
       await markProfilePending(user.id);
 
       const reqCtx = extractRequestContext(request);
-      // ownedPath is verified above to be the caller's own document, so
-      // the audit row's ownerId === actorId is genuinely accurate.
+      // ownedPath is verified above to be the caller's own stored resume, in
+      // the caller's own upload folder, so the audit row's ownerId ===
+      // actorId is genuinely accurate.
       const downloaded = await downloadResumeBytes(ownedPath, {
         actorId: user.id,
         ownerId: user.id,

@@ -78,7 +78,8 @@ vi.mock('@/lib/analytics-server', async (importOriginal) => ({
 vi.mock('@/lib/env', () => ({
   isFeatureEnabled: vi.fn((feature: string) => feature === 'paidPosting'),
   getPaidPostingStatus: vi.fn(() => ({ enabled: true, stripeConfigured: true, available: true })),
-  getEnv: vi.fn(() => ({})),
+  // Checkout opens only with the webhook secret set (tests/regressions/paid-posting-checkout-gate.test.ts).
+  getEnv: vi.fn(() => ({ STRIPE_WEBHOOK_SECRET: 'whsec_x' })),
   getBaseUrl: vi.fn(() => 'http://localhost:3000'),
 }));
 

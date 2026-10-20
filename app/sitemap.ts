@@ -365,11 +365,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // or by a later copy or link change recorded in PAGE_CONTENT_DATES (CQ-13
   // relinked the Indeed and ENP Network licensure rows), or, once it has
   // passed, by the launch promo's end, when its price statements switched to
-  // the ladder (pageContentDate, PROMO_SWITCH_PATHS). The hub renders only
-  // each profile's meta title and description, so the review date holds.
+  // the ladder (pageContentDate, PROMO_SWITCH_PATHS). The hub is dated the
+  // same way, by the review, whose date its method bullets print, or by a
+  // later change to its own copy. It prints no price, so the promo's end
+  // never dates it.
   const P5_CONTENT_DATE = new Date(COMPARE_REVIEW_DATE)
   const comparePages: MetadataRoute.Sitemap = [
-    { url: `${baseUrl}${COMPARE_HUB_PATH}`, lastModified: P5_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${baseUrl}${COMPARE_HUB_PATH}`, lastModified: latestOf(P5_CONTENT_DATE, pageContentDate(COMPARE_HUB_PATH)) ?? P5_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.6 },
     ...COMPARE_PAGE_PATHS.map(path => ({
       url: `${baseUrl}${path}`,
       lastModified: latestOf(P5_CONTENT_DATE, pageContentDate(path)) ?? P5_CONTENT_DATE,

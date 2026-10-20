@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { toOwnResumePath } from '@/lib/resume-storage';
 import { buildApplicationStatusFields } from './status-fields';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -22,23 +23,6 @@ function sanitizeText(text: string): string {
         .replace(/javascript:/gi, '')     // strip javascript: protocol
         .replace(/on\w+\s*=/gi, '')       // strip inline event handlers
         .trim();
-}
-
-/** Only allow resume URLs from our own Supabase storage */
-function isValidResumeUrl(url: string): boolean {
-    try {
-        const parsed = new URL(url);
-        const allowedHosts = [
-            process.env.NEXT_PUBLIC_SUPABASE_URL
-                ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-                : '',
-            'supabase.co',
-        ].filter(Boolean);
-
-        return allowedHosts.some(host => parsed.hostname.endsWith(host as string));
-    } catch {
-        return false;
-    }
 }
 
 /**
@@ -95,28 +79,36 @@ export async function POST(request: NextRequest) {
             sanitizedCoverLetter = sanitizeText(coverLetter).slice(0, MAX_COVER_LETTER_LENGTH) || null;
         }
 
-        // Validate resume URL (must be from our Supabase storage)
+        // SECURITY (APP-2): both values used to be stored after a host-suffix
+        // check only, and the employer's applicant list signs the stored
+        // resume with the service role, so an applicant could hand an employer
+        // a fresh link to another user's file. A value now counts only when it
+        // names a key in the applicant's own upload folder (/api/upload keys
+        // every file there, cover letters included), and the bare key is
+        // stored. That also accepts the bare key the form posts for a profile
+        // resume or a cover letter, which the old URL parse refused.
+        // Tests: tests/regressions/resume-ownership-writers.test.ts.
         let validResumeUrl: string | null = null;
         if (resumeUrl && typeof resumeUrl === 'string') {
-            if (!isValidResumeUrl(resumeUrl)) {
+            validResumeUrl = toOwnResumePath(resumeUrl, user.id);
+            if (!validResumeUrl) {
                 return NextResponse.json(
                     { error: 'Invalid resume URL. Please upload your resume through the platform.' },
                     { status: 400 }
                 );
             }
-            validResumeUrl = resumeUrl;
         }
 
         // Validate cover letter URL (if uploaded as PDF)
         let validCoverLetterUrl: string | null = null;
         if (coverLetterUrl && typeof coverLetterUrl === 'string') {
-            if (!isValidResumeUrl(coverLetterUrl)) {
+            validCoverLetterUrl = toOwnResumePath(coverLetterUrl, user.id);
+            if (!validCoverLetterUrl) {
                 return NextResponse.json(
                     { error: 'Invalid cover letter URL. Please upload your cover letter through the platform.' },
                     { status: 400 }
                 );
             }
-            validCoverLetterUrl = coverLetterUrl;
         }
 
         // 3. Verify the job exists and accepts platform applications
@@ -182,8 +174,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'User profile not found' }, { status: 403 });
         }
 
-        // Use provided (validated) resume URL, or fall back to profile resume
-        const applicationResumeUrl = validResumeUrl || profile.resumeUrl || null;
+        // Use provided (validated) resume URL, or fall back to profile resume.
+        // The profile column is writable by its owner too (APP-2), so the
+        // fallback passes the same check; a value outside the applicant's own
+        // folder counts as no resume.
+        const applicationResumeUrl = validResumeUrl || toOwnResumePath(profile.resumeUrl, user.id);
 
         // 5a. Validate screening answers (if the job has questions)
         let validatedAnswers: { questionId: string; questionText: string; answer: string }[] | null = null;

@@ -62,13 +62,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (rawType !== 'resume' && rawType !== 'avatar') {
+    // A cover letter is stored exactly like a resume (same bucket and key
+    // shape, so the ownership checks and the employer's signed link work),
+    // but it is not the profile's resume. The apply form sent it as type
+    // 'resume', so every cover letter replaced the applicant's resume on the
+    // profile and was queued for parsing.
+    // tests/regressions/p10-auth-account-security-resume-upload-parse.test.ts
+    const isCoverLetter = rawType === 'cover_letter';
+    if (rawType !== 'resume' && rawType !== 'avatar' && !isCoverLetter) {
       return NextResponse.json(
-        { error: 'Invalid upload type. Must be "resume" or "avatar"' },
+        { error: 'Invalid upload type. Must be "resume", "cover_letter" or "avatar"' },
         { status: 400 }
       );
     }
-    uploadType = rawType;
+    uploadType = isCoverLetter ? 'resume' : rawType;
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -99,7 +106,9 @@ export async function POST(request: NextRequest) {
     // Upload based on type (using authenticated user's ID)
     const result = await storeFile(buffer, file, uploadType, user.id);
 
-    if (uploadType === 'resume') {
+    if (isCoverLetter) {
+      // Nothing is recorded on the profile: the application stores the key.
+    } else if (uploadType === 'resume') {
       // Store the permanent storage path (not the signed URL which expires).
       // Sprint 2.1.P5: status stays 'pending' until the client commits the
       // preview via the ResumeAutofillReview modal (`/api/resume/parse`

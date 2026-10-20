@@ -17,6 +17,7 @@ import {
     type DocReadContext,
     type DocReadAudience,
 } from '@/lib/document-storage';
+import { isOwnStoragePath } from '@/lib/supabase-storage';
 
 /** Default TTL for resume signed URLs — 15 minutes. */
 export const DEFAULT_RESUME_URL_TTL_SECONDS = 15 * 60;
@@ -26,6 +27,23 @@ export type ResumeReadContext = DocReadContext;
 
 export function toBareResumePath(stored: string | null | undefined): string | null {
     return toBareDocPath(stored, 'resume');
+}
+
+/**
+ * SECURITY (AUTH-PROFILE-1, RES-1 to RES-4, APP-2, EMP-RES-1): the bare key
+ * of a stored or submitted resume value when it names an object in
+ * `ownerId`'s own upload folder, otherwise null. One normalizer
+ * (toBareResumePath) followed by the one ownership rule (isOwnStoragePath).
+ *
+ * A resume reference is writable by its owner, so the value alone never
+ * proves whose object it names. Writers store only what this returns, and
+ * readers sign, download or delete only what this returns, with `ownerId`
+ * the document owner's supabaseId. Non-string input answers null.
+ * Tests: tests/lib/storage-ownership.test.ts.
+ */
+export function toOwnResumePath(stored: unknown, ownerId: string | null | undefined): string | null {
+    const path = typeof stored === 'string' ? toBareResumePath(stored) : null;
+    return isOwnStoragePath(path, ownerId) ? path : null;
 }
 
 export async function mintResumeReadUrl(

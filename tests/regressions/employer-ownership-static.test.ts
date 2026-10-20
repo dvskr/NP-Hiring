@@ -151,10 +151,14 @@ const OWNERSHIP_SITES: ReadonlyArray<[string, number]> = [
     ['app/api/employer/invoice/route.ts', 1],
     ['app/api/employer/jobs/[jobId]/archive/route.ts', 1],
     ['app/api/employer/jobs/[jobId]/toggle-publish/route.ts', 1],
-    ['app/api/employer/messages/route.ts', 2],
+    // The featured gate (job-scoped and not), and the applicant check of a
+    // new thread's recipient (EMP-MSG-1).
+    ['app/api/employer/messages/route.ts', 3],
     ['app/api/employer/profile-snapshot/route.ts', 1],
     ['app/api/employer/profiles/unlock-bulk/route.ts', 1],
     ['app/api/employer/receipt/route.ts', 1],
+    // The postingId of a save, and the posting titles of the list (EMP-SAVED-1).
+    ['app/api/employer/saved-candidates/route.ts', 2],
     ['app/api/employer/settings/notifications/route.ts', 1],
     ['app/api/employer/settings/route.ts', 2],
     ['app/api/employer/testimonials/route.ts', 2],

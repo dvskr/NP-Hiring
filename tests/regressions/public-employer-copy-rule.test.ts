@@ -38,6 +38,9 @@ const SURFACES: readonly string[] = [
     'app/success',
     'components/EmployerHowItWorks.tsx',
     'components/tools',
+    'app/for-job-seekers',
+    'lib/seeker-comparison.ts',
+    'components/FeaturedJobs.tsx',
 ];
 
 interface VisibleText {

@@ -10,11 +10,15 @@
  *     money CTA into someone else's payment page;
  *   - plan sales are closed while ENABLE_PAID_POSTING is off or the launch
  *     promo runs (every post is free then; a $399/month charge buys nothing);
+ *   - plan sales are closed while STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET
+ *     is missing: POST /api/webhooks/stripe answers 503 without either, so
+ *     Stripe would take a payment the webhook cannot record (the daily plan
+ *     reconciliation needs the key too);
  *   - a signed-in employer's link carries `client_reference_id` (their
  *     account id — the ONLY key the webhook attaches a plan by) and
  *     `prefilled_email`.
  */
-import { getEnv, isFeatureEnabled } from '@/lib/env';
+import { getEnv, getPaidPostingStatus } from '@/lib/env';
 import { config } from '@/lib/config';
 import { logger } from '@/lib/logger';
 
@@ -45,10 +49,22 @@ export function isValidPlanPaymentLink(value: string): boolean {
   }
 }
 
-/** True when the plan can be bought right now (link configured, paid posting on, promo over). */
+/**
+ * True when the plan can be bought right now: link configured, paid posting
+ * on, Stripe able to record the sale (the secret key and the webhook secret
+ * both set), promo over.
+ */
 export function isPlanSaleOpen(now: Date = new Date()): boolean {
   try {
-    return planPaymentLinkBase() !== null && isFeatureEnabled('paidPosting') && !config.isPromoActive(now);
+    // Backlog 2.16 (tests/regressions/plan-sale-requires-stripe-webhook.test.ts):
+    // the sale used to open with a Stripe secret missing, while the webhook
+    // answered 503 and recorded nothing. `available` is ENABLE_PAID_POSTING on
+    // with STRIPE_SECRET_KEY set (lib/env); it ignores the webhook secret,
+    // which is checked beside it.
+    return planPaymentLinkBase() !== null
+      && getPaidPostingStatus().available
+      && !!getEnv().STRIPE_WEBHOOK_SECRET
+      && !config.isPromoActive(now);
   } catch {
     return false;
   }

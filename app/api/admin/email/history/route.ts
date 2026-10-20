@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
+import { parsePagingParam } from '@/app/api/admin/jobs/_lib/job-input';
+
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+/** Keeps (page - 1) * limit inside Prisma's safe skip range. */
+const MAX_PAGE = 1_000_000;
 
 /**
  * GET /api/admin/email/history
@@ -11,8 +17,12 @@ export async function GET(req: Request) {
     if (authError) return authError;
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    // A bare parseInt sent NaN or a negative skip/take to Prisma (500), let
+    // ?limit=100000000 return the whole table and ?limit=0 report Infinity
+    // pages. Junk now falls back to the defaults, as in GET /api/admin/jobs
+    // (tests/regressions/admin-query-params.test.ts).
+    const page = parsePagingParam(searchParams.get('page'), 1, MAX_PAGE);
+    const limit = parsePagingParam(searchParams.get('limit'), DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const skip = (page - 1) * limit;
 
     try {

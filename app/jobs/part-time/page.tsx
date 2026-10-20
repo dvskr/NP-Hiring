@@ -121,7 +121,7 @@ const EXPLORE_CARDS: ReadonlyArray<{ href: string; label: string; sub: string; i
   { href: '/jobs/contract', label: 'Contract', sub: 'Fixed-term roles', icon: '/images/categories/nav/contract.webp', slug: 'contract' },
   { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp', slug: 'remote' },
   { href: '/salary-guide', label: 'Salary Guide', sub: 'Posted pay by state', icon: '/images/categories/nav/salary.webp' },
-  { href: '/jobs/locations', label: 'By Location', sub: 'Browse every state', icon: '/images/categories/nav/location.webp' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities', icon: '/images/categories/nav/location.webp' },
 ];
 
 /** Live canonical counts for the slugged explore cards, in one Promise.all. */

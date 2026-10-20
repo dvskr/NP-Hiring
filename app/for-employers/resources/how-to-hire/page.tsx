@@ -11,7 +11,7 @@
  *  - Credentialing durations, fees, and state-specific requirements are
  *    NOT stated as facts; the copy points at the state board of nursing
  *    and the AANP state-practice-environment source instead.
- *  - Certification bodies are named correctly per role (AANP/ANCC for
+ *  - Certification bodies are named correctly per role (AANPCB/ANCC for
  *    NPs, NBCRNA for CRNAs, AMCB for CNMs).
  *  - Article dateModified renders the LAST_REVIEWED constant — never
  *    new Date() (fabricated-freshness rule, audit P0 #23). The only clock
@@ -125,7 +125,7 @@ const HIRING_STEPS = [
 ] as const;
 
 // Credential checklist — evergreen verification steps. Certification
-// bodies per the truth rules: AANP/ANCC certify NPs; NBCRNA certifies
+// bodies per the truth rules: AANPCB/ANCC certify NPs; NBCRNA certifies
 // CRNAs; AMCB certifies CNMs. No fees, CE hours, or processing times are
 // stated — those vary by state and belong to the state board.
 const CREDENTIAL_CHECKLIST = [
@@ -135,7 +135,7 @@ const CREDENTIAL_CHECKLIST = [
   },
   {
     title: 'National board certification',
-    body: `${brand.niche.long}s certify through AANP or ANCC in their population focus. If you are hiring for the wider APRN cohort, the certifying body differs by role: NBCRNA for nurse anesthetists (CRNAs) and AMCB for certified nurse-midwives (CNMs). Verify the certification is active and matches the population your role serves.`,
+    body: `${brand.niche.long}s certify through AANPCB or ANCC in their population focus. If you are hiring for the wider APRN cohort, the certifying body differs by role: NBCRNA for nurse anesthetists (CRNAs) and AMCB for certified nurse-midwives (CNMs). Verify the certification is active and matches the population your role serves.`,
   },
   {
     title: 'State RN and APRN licensure',
@@ -175,7 +175,7 @@ const TIMELINE_POINTS = [
 const FAQS = [
   {
     q: `What credentials should I verify before hiring a ${brand.niche.descriptor}?`,
-    a: `Verify five things: an MSN or DNP from an accredited program; active national board certification (AANP or ANCC for ${brand.niche.short}s, in the population focus your role serves); active, unrestricted RN and APRN licensure in your state (checkable via your state board of nursing, with Nursys as the national RN verification system); active DEA registration if the role prescribes controlled substances; and an NPI number for billing and payer enrollment.`,
+    a: `Verify five things: an MSN or DNP from an accredited program; active national board certification (AANPCB or ANCC for ${brand.niche.short}s, in the population focus your role serves); active, unrestricted RN and APRN licensure in your state (checkable via your state board of nursing, with Nursys as the national RN verification system); active DEA registration if the role prescribes controlled substances; and an NPI number for billing and payer enrollment.`,
   },
   {
     q: `Does my ${brand.niche.short} hire need a collaborating physician?`,

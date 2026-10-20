@@ -209,8 +209,9 @@ export default function PricingPage() {
     // buyer in, sends an employer who already has a plan to the dashboard,
     // and adds their account id to the link (the only key the webhook
     // attaches a plan by). While plan sales are closed — link unset or not a
-    // Stripe link, ENABLE_PAID_POSTING off, or the free launch promo running
-    // — the card routes to support instead (lib/employer-plan-link.ts).
+    // Stripe link, ENABLE_PAID_POSTING off, STRIPE_SECRET_KEY or
+    // STRIPE_WEBHOOK_SECRET missing, or the free launch promo running — the
+    // card routes to support instead (lib/employer-plan-link.ts).
     const planSaleOpen = isPlanSaleOpen();
     const planHref = planSaleOpen ? '/api/employer/plan/subscribe' : `mailto:${brand.email.support}`;
     const planCtaLabel = planSaleOpen ? 'Subscribe to the plan' : 'Ask about the plan';

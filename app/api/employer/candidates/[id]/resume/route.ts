@@ -20,7 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
+import { mintResumeReadUrl, extractRequestContext, toOwnResumePath } from '@/lib/resume-storage';
 
 // Employer-side: extra-short TTL because the URL goes through a 302
 // redirect and never lives in the browser address bar for long. 60s is
@@ -83,13 +83,20 @@ export async function GET(
         },
         select: { resumeUrl: true },
     });
-    if (!candidate || !candidate.resumeUrl) {
+    // SECURITY (EMP-RES-1): the unlock gates above prove the caller may read
+    // this candidate's resume, not that the stored value is it: the candidate
+    // can write that column, so it could name another user's object. Only a
+    // key in the candidate's own upload folder is signed (mintDocReadUrl
+    // enforces the same rule for every caller).
+    // Tests: tests/regressions/resume-ownership-readers.test.ts.
+    const resumePath = toOwnResumePath(candidate?.resumeUrl, id);
+    if (!resumePath) {
         return NextResponse.json({ error: 'Resume not available' }, { status: 404 });
     }
 
     // Centralized helper handles both legacy URL and bare-path values
     // and audit-logs the access (audience='employer' or 'admin').
-    const downloadUrl = await mintResumeReadUrl(candidate.resumeUrl, {
+    const downloadUrl = await mintResumeReadUrl(resumePath, {
         actorId: user.id,
         ownerId: id,
         audience: isAdmin ? 'admin' : 'employer',

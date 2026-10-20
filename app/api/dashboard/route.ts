@@ -20,6 +20,15 @@ export async function GET(request: Request) {
         const savedJobIdsParam = url.searchParams.get('savedJobIds') || ''
         const savedJobIds = savedJobIdsParam ? savedJobIdsParam.split(',').filter(Boolean) : []
 
+        // SECURITY (docs/PENDING_WORK.md 2.20): Supabase types User.email as
+        // optional, and an account created without one has none. The two
+        // email-keyed queries below took `user.email!`; Prisma drops an
+        // undefined condition, so the alert count covered every active alert on
+        // the board, and findUnique threw on the missing unique key, turning the
+        // dashboard into a 500. With no email there is nothing to count or look
+        // up. tests/api/dashboard-email-guard.test.ts
+        const email = user.email || null
+
         // Run all queries in parallel
         const [profile, applicationCount, applications, alertCount, savedJobs, recommendedJobs, emailLead] =
             await Promise.all([
@@ -80,11 +89,22 @@ export async function GET(request: Request) {
                 }),
 
                 // 3. Last 5 applications with job details
+                // SECURITY: this used `include`, which returns every column, so
+                // the dashboard payload carried the employer's private notes
+                // (the auto-reject reason among them) and the employer-side AI
+                // assessment (aiMatchScore, aiMatchReasons, aiMissingItems), as
+                // GET /api/applications did (APP-1). Select only what the Recent
+                // Applications card in components/dashboard/DashboardContent.tsx
+                // reads. A new column stays hidden until it is added here.
+                // tests/api/dashboard-application-fields.test.ts
                 prisma.jobApplication.findMany({
                     where: { userId: user.id },
                     orderBy: { appliedAt: 'desc' },
                     take: 5,
-                    include: {
+                    select: {
+                        id: true,
+                        appliedAt: true,
+                        status: true,
                         job: {
                             select: {
                                 id: true,
@@ -101,13 +121,15 @@ export async function GET(request: Request) {
                     },
                 }),
 
-                // 4. Active alerts count
-                prisma.jobAlert.count({
-                    where: {
-                        email: { equals: user.email!, mode: 'insensitive' },
-                        isActive: true,
-                    },
-                }),
+                // 4. Active alerts count (0 without an email, see above)
+                email
+                    ? prisma.jobAlert.count({
+                        where: {
+                            email: { equals: email, mode: 'insensitive' },
+                            isActive: true,
+                        },
+                    })
+                    : Promise.resolve(0),
 
                 // 5. Saved jobs details (from localStorage IDs)
                 savedJobIds.length > 0
@@ -134,11 +156,13 @@ export async function GET(request: Request) {
                 // 6. Recommended jobs (matching preferences or most recent)
                 getRecommendedJobs(user.id),
 
-                // 7. Newsletter subscription status
-                prisma.emailLead.findUnique({
-                    where: { email: user.email! },
-                    select: { newsletterOptIn: true },
-                }),
+                // 7. Newsletter subscription status (skipped without an email)
+                email
+                    ? prisma.emailLead.findUnique({
+                        where: { email },
+                        select: { newsletterOptIn: true },
+                    })
+                    : Promise.resolve(null),
             ])
 
         // EmployerMessage.recipientId and ProfileView.candidateId both reference

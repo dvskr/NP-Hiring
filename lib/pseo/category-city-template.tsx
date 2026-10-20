@@ -1097,10 +1097,11 @@ export function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): str
  * ONE builder feeds both the visible accordion answer and the FAQPage
  * JSON-LD (B52 rule), so a wrong body here is wrong in both places.
  *
- * WHY THIS EXISTS: the template asserted "National board certification (ANCC
- * or AANP)" for EVERY category. That is factually wrong for the APRN cohort
+ * WHY THIS EXISTS: the template gave EVERY category one answer, the NP answer
+ * that DEFAULT_CREDENTIALS below now carries (national board certification
+ * through AANPCB or ANCC). That is factually wrong for the APRN cohort
  * this board carries (CRNAs certify through the NBCRNA and CNMs through the
- * AMCB, neither of which administers an AANP/ANCC exam) and wrong for the
+ * AMCB, neither of which administers an AANPCB/ANCC exam) and wrong for the
  * population-specific NP tracks (PNCB for pediatrics, NCC for neonatal and
  * women's health, ANCC/AACN for acute care and CNS).
  *
@@ -1128,11 +1129,11 @@ const DEFAULT_CREDENTIALS: CategoryCredentialFacts = {
   article: 'an',
   standaloneLabel: false,
   degree: `a master's or doctoral degree from an accredited ${brand.niche.descriptor} program`,
-  certification: 'national board certification through AANP or ANCC on the population track that matches the role',
+  certification: 'national board certification through AANPCB or ANCC on the population track that matches the role',
   dea: 'DEA registration for prescribing controlled substances',
 };
 
-/** Categories whose certifying body is NOT AANP/ANCC (or is track-specific). */
+/** Categories whose certifying body is NOT AANPCB/ANCC (or is track-specific). */
 const CATEGORY_CREDENTIALS: Record<string, CategoryCredentialFacts> = {
   anesthesia: {
     role: 'CRNA',

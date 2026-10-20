@@ -254,7 +254,7 @@ The one true security blind spot, tested directly. Result: **clean.**
 ## B.1 Setup
 ```powershell
 $env:AUDIT_SEEKER_EMAIL = "dvskr.1234@gmail.com"; $env:AUDIT_SEEKER_PASS = "<seeker-pass>"
-$env:AUDIT_EMPLOYER_EMAIL = "test@pmhnphiring.com"; $env:AUDIT_EMPLOYER_PASS = "6174@Sensei"
+$env:AUDIT_EMPLOYER_EMAIL = "test@pmhnphiring.com"; $env:AUDIT_EMPLOYER_PASS = "<employer-pass>"
 ```
 **Gotcha:** the live site is behind Vercel Attack Challenge Mode — `curl`/`fetch` get 429. Always use a real headless browser (all scripts do).
 

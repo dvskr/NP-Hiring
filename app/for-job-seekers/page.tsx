@@ -7,9 +7,12 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import FeaturedJobsSection from '@/components/FeaturedJobsSection';
 import { prisma } from '@/lib/prisma';
 import { getSiteStats } from '@/lib/site-stats';
+// D25 (2026-10-17): the comparison rows are ONE audited module, with the
+// evidence for every cell in its header (pattern: lib/employer-comparison.ts).
+import { SEEKER_COMPARISON_CHECKED_MONTH, SEEKER_COMPARISON_ROWS } from '@/lib/seeker-comparison';
 import {
   ArrowRight, Search, Users, Briefcase, MapPin,
-  Check, X, Star, Sparkles, DollarSign, Bell, Bookmark, FileText, SlidersHorizontal, BookOpen, Gift, Award,
+  Check, X, Star, DollarSign, Bell, Bookmark, FileText, SlidersHorizontal, BookOpen, Gift, Award,
 } from 'lucide-react';
 
 export const revalidate = 3600;
@@ -78,18 +81,29 @@ async function getStats() {
   }
 }
 
-const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-  { feature: `100% ${brand.niche.short}-Only Jobs`, us: true, indeed: false, linkedin: false },
-  { feature: 'Salary Transparency on Every Listing', us: true, indeed: false, linkedin: false, note: 'Others hide salary' },
-  { feature: 'Completely Free for Job Seekers', us: true, indeed: true, linkedin: 'partial', note: 'LinkedIn: premium features cost extra' },
-  { feature: 'AI Match Scoring', us: true, indeed: false, linkedin: false },
-  { feature: 'Easy Apply or Apply on the Employer Site', us: true, indeed: true, linkedin: true },
-  { feature: '50-State Licensure Guides', us: true, indeed: false, linkedin: false },
-  { feature: 'State-by-State Salary Data', us: true, indeed: 'partial', linkedin: false },
-  { feature: 'Save & Track Applications', us: true, indeed: true, linkedin: true },
-  { feature: 'AI Resume Parser', us: true, indeed: false, linkedin: false },
-  { feature: 'Zero Spam or Recruiter Noise', us: true, indeed: false, linkedin: false },
-];
+/**
+ * One comparison mark, as the audited /for-employers table renders it. D25
+ * (2026-10-17): the old cells were bare icons a screen reader announced as
+ * nothing, and "Partial" in #F59E0B with #94A3B8 greys failed AA. Each icon
+ * is now decorative with the meaning in sr-only text, and "partial" reads
+ * "Limited", which the caption and the footnote define
+ * (tests/regressions/seeker-comparison-table.test.ts).
+ */
+function comparisonMark(value: true | false | 'partial', isUs: boolean) {
+  if (value === true) return (
+    <>
+      <Check size={16} aria-hidden="true" style={{ color: isUs ? '#BE185D' : '#64748B', display: 'block', margin: '0 auto' }} />
+      <span className="sr-only">Included</span>
+    </>
+  );
+  if (value === 'partial') return <span style={{ fontSize: '11px', color: '#B45309', fontWeight: 600 }}>Limited</span>;
+  return (
+    <>
+      <X size={16} aria-hidden="true" style={{ color: '#9CA3AF', display: 'block', margin: '0 auto' }} />
+      <span className="sr-only">Not offered</span>
+    </>
+  );
+}
 
 /**
  * The job search guides block (2026-10-06). Each title is the post's own
@@ -249,22 +263,28 @@ export default async function ForJobSeekersPage() {
           <div className="seeker-bento" style={{
             display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridTemplateRows: 'auto', gap: '14px',
           }}>
-            {/* ROW 1: AI Matching (8 cols) + Salary Data (4 cols) */}
-            <div className="seeker-bento-hero-1 emp-bento-card" style={{
+            {/* ROW 1: Licensure Guides (8 cols) + Salary (4 cols). D25
+                (2026-10-17): the AI match scoring card that led this grid is
+                gone. No match score reaches a job seeker, and its picture
+                showed a match percentage, so neither can be reused. */}
+            <div className="seeker-bento-hero-3 emp-bento-card" style={{
               ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden',
               display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center',
             }}>
               <div style={{ padding: '32px 28px' }}>
                 <div style={iconBg}>
-                  <Sparkles size={24} />
+                  <BookOpen size={24} />
                 </div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>AI Match Scoring</h3>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>50-State Licensure Guides</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Every job gets a 0 to 100 match score based on your license, specialty, experience, location, and salary preferences.
+                  {/* D25 (2026-10-17): dropped "salary data" from this list. A
+                      guide shows state pay only in its gated market snapshot
+                      (components/blog/LicenseGuideMarketSnapshot.tsx). */}
+                  Requirements, board links, practice authority, and step-by-step instructions for every state.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src="/images/job-seekers/bento-match.webp" alt="AI match scoring" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
+                <Image src="/images/job-seekers/bento-guides.webp" alt="50-state licensure guides" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -283,8 +303,11 @@ export default async function ForJobSeekersPage() {
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
                   {/* Was "salary ranges on every listing": false whenever a
                       posting states no pay. Scoped to the policy llms.txt and
-                      /editorial-policy state (2026-10-06). */}
-                  Pay is shown whenever the employer&apos;s posting includes it, reproduced as posted and never estimated.
+                      /editorial-policy state (2026-10-06). D25 (2026-10-17):
+                      cut "reproduced as posted and never estimated". The
+                      enrich-jobs cron fills missing pay from an AI read of
+                      the description, annualized, and marks it estimated. */}
+                  Pay is shown whenever the employer&apos;s posting includes it.
                 </p>
               </div>
             </div>
@@ -303,7 +326,11 @@ export default async function ForJobSeekersPage() {
                 <SlidersHorizontal size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Application Tracking</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Track every application status from Applied to Hired.</p>
+              {/* D25 (2026-10-17): was "Track every application status from
+                  Applied to Hired". Only an employer moves a status, and an
+                  application finished on an employer's own site stays at
+                  Applied (app/api/employer/applicants/route.ts). */}
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Your applications in one list, with any status updates from the employer.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -311,50 +338,43 @@ export default async function ForJobSeekersPage() {
                 <FileText size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>AI Resume Parser</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Upload your resume and AI fills in your profile instantly.</p>
+              {/* D25 (2026-10-17): was "AI fills in your profile instantly". A
+                  parse can take minutes, and the profile changes only after
+                  the seeker reviews a preview (app/api/resume/parse/route.ts). */}
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Upload your resume, check what AI reads from it, then add it to your profile.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <div style={iconBgCentered}>
                 <Bookmark size={22} />
               </div>
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Save & Compare</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Bookmark jobs, compare benefits, and decide on your terms.</p>
+              {/* D25 (2026-10-17): was "Save & Compare". Saved jobs have no
+                  comparison feature. */}
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Saved Jobs</h3>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Bookmark jobs and come back to them when you are ready to apply.</p>
             </div>
 
-            {/* ROW 3: Licensure Guides (8 cols) + Free Forever (4 cols) */}
-            <div className="seeker-bento-hero-3 emp-bento-card" style={{
-              ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden',
-              display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center',
-            }}>
-              <div style={{ padding: '32px 28px' }}>
-                <div style={iconBg}>
-                  <BookOpen size={24} />
-                </div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>50-State Licensure Guides</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Requirements, board links, practice authority, salary data, and step-by-step instructions for every state.
-                </p>
-              </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src="/images/job-seekers/bento-guides.webp" alt="50-state licensure guides" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
-            </div>
-
+            {/* ROW 3: the free band (12 cols), now that the Licensure card
+                sits in row 1. D25 (2026-10-17): was "Free Forever". Free for job
+                seekers is true today and is the table's row, but "Forever"
+                is a promise the owner has not made, and the autofill
+                extension code already defines paid tiers
+                (app/api/autofill/_lib/quota.ts). */}
             <div className="seeker-bento-free emp-bento-card" style={{
-              ...clayCard, gridColumn: 'span 4',
-              padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+              ...clayCard, gridColumn: 'span 12',
+              padding: '24px 28px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px 24px',
               background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
               border: '2px solid rgba(190,24,93,0.15)',
             }}>
-              <div style={{ ...iconBg, background: 'rgba(190,24,93,0.1)', color: '#BE185D' }}>
+              <div style={{ ...iconBg, background: 'rgba(190,24,93,0.1)', color: '#BE185D', marginBottom: 0, flexShrink: 0 }}>
                 <Gift size={22} />
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Free Forever</h3>
-              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                No subscriptions. No premium tiers.<br />
-                Every feature is free for job seekers.
-              </p>
+              <div style={{ flex: '1 1 260px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 4px' }}>Free for Job Seekers</h3>
+                <p style={{ fontSize: '13px', color: '#BE185D', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
+                  No subscriptions. No premium tiers.
+                </p>
+              </div>
               <Link href="/jobs" className="seeker-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
                 background: '#BE185D', color: '#fff', textDecoration: 'none',
@@ -406,12 +426,16 @@ export default async function ForJobSeekersPage() {
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 6: COMPARISON TABLE + CTA (slate)
+          D25 (2026-10-17): the rows come from lib/seeker-comparison.ts,
+          which records why each cell is what it is. The markup is the
+          audited /for-employers table: a caption that defines Limited,
+          scoped headers, text for every icon, AA colours, and a dated
+          footnote with a correction link. The "Why Switch" eyebrow went
+          with the old rows: Indeed matches us in three of the five rows and
+          LinkedIn in one, so the table no longer argues for leaving either.
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            Why Switch
-          </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '44px' }}>
             How We Compare
           </h2>
@@ -419,42 +443,53 @@ export default async function ForJobSeekersPage() {
           <div className="seeker-compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px', alignItems: 'start' }}>
             {/* Comparison Table */}
             <div className="seeker-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
+                <caption className="sr-only">
+                  Feature comparison between {brand.name}, Indeed, and LinkedIn for {brand.niche.descriptor} job
+                  seekers. &quot;Limited&quot; means the capability exists but is restricted, costs extra, or varies by plan.
+                </caption>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
-                    <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '12px' }}>{brand.name}</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
+                    <th scope="col" style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
+                    <th scope="col" style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '12px' }}>{brand.name}</th>
+                    <th scope="col" style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
+                    <th scope="col" style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {comparisonRows.map((row, i) => {
-                    const renderCell = (val: true | false | 'partial', isUs: boolean) => {
-                      if (val === true) return <Check size={16} style={{ color: isUs ? '#BE185D' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
-                      if (val === 'partial') return <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>Partial</span>;
-                      return <X size={16} style={{ color: '#D1D5DB', display: 'block', margin: '0 auto' }} />;
-                    };
-                    return (
-                      <tr key={row.feature} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                        <td style={{ padding: '12px 24px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                          <span style={{ color: '#1A2E35', fontWeight: 500 }}>{row.feature}</span>
-                          {row.note && <span style={{ display: 'block', fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{row.note}</span>}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>
-                          {renderCell(row.us, true)}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                          {renderCell(row.indeed, false)}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                          {renderCell(row.linkedin, false)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {SEEKER_COMPARISON_ROWS.map((row, i) => (
+                    <tr key={row.feature} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
+                      <th scope="row" style={{ padding: '12px 24px', borderBottom: '1px solid rgba(0,0,0,0.04)', textAlign: 'left', fontWeight: 500 }}>
+                        <span style={{ color: '#1A2E35', fontWeight: 500 }}>{row.feature}</span>
+                        {row.note && <span style={{ display: 'block', fontSize: '11px', color: '#64748B', marginTop: '2px', fontWeight: 400 }}>{row.note}</span>}
+                      </th>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>
+                        {comparisonMark(row.us, true)}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                        {comparisonMark(row.indeed, false)}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                        {comparisonMark(row.linkedin, false)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
+              </div>
+              {/* Honesty footnote, as on /for-employers, plus the month the
+                  competitor columns were last checked against their own pages. */}
+              <p style={{ fontSize: '11.5px', color: '#64748B', lineHeight: 1.6, margin: 0, padding: '14px 24px 18px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                <strong style={{ color: '#475569' }}>Limited</strong> means the capability exists but is restricted,
+                costs extra, or varies by plan. The Indeed and LinkedIn columns describe their publicly documented
+                standard offerings as of {SEEKER_COMPARISON_CHECKED_MONTH}. These change often, so check their sites
+                before deciding. Spot something out of date?{' '}
+                <a href={`mailto:${brand.email.contact}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>
+                  Tell us
+                </a>{' '}
+                and we will correct it.
+              </p>
             </div>
 
             {/* CTA Card */}
@@ -479,7 +514,9 @@ export default async function ForJobSeekersPage() {
                   <span style={{ color: '#BE185D' }}>Dream Role</span>?
                 </h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
-                  100% free. No sign-up required to browse. Create a profile to apply and get matched.
+                  {/* D25 (2026-10-17): "and get matched" rested on the removed
+                      match scoring row. */}
+                  100% free. No sign-up required to browse. Create a profile to apply.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link href="/jobs" className="seeker-cta-primary" style={{
@@ -551,7 +588,11 @@ export default async function ForJobSeekersPage() {
             {[
               {
                 title: `2026 ${brand.niche.short} Salary Guide`,
-                desc: `State-by-state salary data, experience-based ranges, and negotiation strategies. See what ${brand.niche.short}s actually earn.`,
+                // D25 (2026-10-17): was "State-by-state salary data ... See what
+                // NPs actually earn". A state shows a median only above the
+                // publishing gate (components/tools/benchmark-model.ts), and the
+                // state figures are posted pay, not earnings.
+                desc: 'National pay data, posted pay by state where enough listings show it, experience-based ranges, and negotiation strategies.',
                 href: '/salary-guide',
                 IconComponent: DollarSign,
                 iconColor: '#BE185D',
@@ -688,19 +729,19 @@ export default async function ForJobSeekersPage() {
           .seeker-types-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .seeker-resource-grid { grid-template-columns: 1fr !important; }
           .seeker-bento { grid-template-columns: 1fr !important; }
-          .seeker-bento-hero-1, .seeker-bento-hero-2, .seeker-bento-hero-3, .seeker-bento-free {
+          .seeker-bento-hero-2, .seeker-bento-hero-3, .seeker-bento-free {
             grid-column: span 1 !important;
           }
-          .seeker-bento-hero-1, .seeker-bento-hero-3 {
+          .seeker-bento-hero-3 {
             grid-template-columns: 1fr !important;
           }
           .seeker-bento > div { grid-column: span 1 !important; }
         }
         @media (min-width: 769px) and (max-width: 1024px) {
           .seeker-bento { grid-template-columns: repeat(6, 1fr) !important; }
-          .seeker-bento-hero-1, .seeker-bento-hero-3 { grid-column: span 6 !important; }
+          .seeker-bento-hero-3 { grid-column: span 6 !important; }
           .seeker-bento-hero-2, .seeker-bento-free { grid-column: span 6 !important; }
-          .seeker-bento > div:not(.seeker-bento-hero-1):not(.seeker-bento-hero-2):not(.seeker-bento-hero-3):not(.seeker-bento-free) {
+          .seeker-bento > div:not(.seeker-bento-hero-2):not(.seeker-bento-hero-3):not(.seeker-bento-free) {
             grid-column: span 3 !important;
           }
           .seeker-types-grid { grid-template-columns: repeat(2, 1fr) !important; }

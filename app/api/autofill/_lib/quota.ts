@@ -7,9 +7,9 @@
  * generations in one row counted as 1 toward enforcement but 10 in the UI.
  *
  * Contract:
- *   - `getMonthlyAiGenerations` is THE number: the SUM of
- *     autofill_usage.ai_generations for the current calendar month. Both the
- *     enforcement path (this file) and the display path
+ *   - `getMonthlyAiGenerations` is THE number: the SUM of the positive
+ *     autofill_usage.ai_generations values for the current calendar month.
+ *     Both the enforcement path (this file) and the display path
  *     (/api/autofill/usage) call it, so they can never disagree again.
  *   - Every autofill AI route calls `checkAutofillAiQuota` BEFORE the model
  *     call, passing how many generations the request will consume
@@ -46,11 +46,17 @@ export function startOfCurrentMonth(now: Date = new Date()): Date {
  * /api/autofill/usage endpoint displays.
  */
 export async function getMonthlyAiGenerations(userId: string): Promise<number> {
+    // SECURITY (AUTOFILL-TRACK-1): /api/autofill/track used to store
+    // aiGenerations from the request body, so one row of -100000 drove this
+    // SUM negative and lifted every cap. That handler now always stores 0.
+    // The filter keeps a negative row already stored out of the SUM; a clamp
+    // alone would let that row absorb real usage for the rest of the month.
+    // The clamp is the last guard. Test: tests/api/autofill-track-quota.test.ts
     const agg = await prisma.autofillUsage.aggregate({
-        where: { userId, createdAt: { gte: startOfCurrentMonth() } },
+        where: { userId, createdAt: { gte: startOfCurrentMonth() }, aiGenerations: { gt: 0 } },
         _sum: { aiGenerations: true },
     });
-    return agg._sum.aiGenerations ?? 0;
+    return Math.max(0, agg._sum.aiGenerations ?? 0);
 }
 
 export interface AutofillQuotaResult {

@@ -8,8 +8,9 @@
  *       figure — every label, meta sentence, FAQ answer and OG param must
  *       name the discipline or withhold the claim.
  *
- *   #8  APRN qualification FAQ: the category×city template asserted
- *       "National board certification (ANCC or AANP)" for all 42 categories.
+ *   #8  APRN qualification FAQ: the category×city template gave all 42
+ *       categories one answer, the NP answer that is now only the default
+ *       (national board certification through AANPCB or ANCC).
  *       CRNAs certify through the NBCRNA and CNMs through the AMCB; the
  *       population tracks use PNCB / NCC / AACN. Wrong in the visible answer
  *       AND in its FAQPage schema (one array feeds both — B52).
@@ -151,7 +152,7 @@ describe('P2 #7 — no pSEO surface implies an all-NP shortage figure', () => {
 // ─── #8 — certification bodies are correct per specialty ────────────────────
 
 describe('P2 #8 — qualification FAQ names the right certifying body', () => {
-    it('CRNA certification routes through the NBCRNA, not AANP/ANCC', () => {
+    it('CRNA certification routes through the NBCRNA, not AANPCB/ANCC', () => {
         const creds = getCategoryCredentials('anesthesia');
         expect(creds.role).toBe('CRNA');
         expect(creds.certification).toContain('NBCRNA');
@@ -159,7 +160,7 @@ describe('P2 #8 — qualification FAQ names the right certifying body', () => {
         expect(creds.degree).toContain('Council on Accreditation');
     });
 
-    it('CNM certification routes through the AMCB, not AANP/ANCC', () => {
+    it('CNM certification routes through the AMCB, not AANPCB/ANCC', () => {
         const creds = getCategoryCredentials('midwifery');
         expect(creds.role).toBe('CNM');
         expect(creds.certification).toContain('American Midwifery Certification Board (AMCB)');
@@ -173,13 +174,17 @@ describe('P2 #8 — qualification FAQ names the right certifying body', () => {
         expect(getCategoryCredentials('women-health').certification).toContain('National Certification Corporation (NCC)');
         expect(getCategoryCredentials('clinical-nurse-specialist').certification).toContain('AACN');
         expect(getCategoryCredentials('acute-care').certification).toContain('AACN');
-        // AANP administers no acute-care exam.
+        // AANPCB has no exam on the acute care track, and AANP certifies
+        // nobody; the substring check rules out both names.
         expect(getCategoryCredentials('acute-care').certification).not.toContain('AANP');
     });
 
-    it('NP categories keep the AANP/ANCC answer', () => {
+    it('NP categories keep the AANPCB/ANCC answer', () => {
         for (const slug of ['remote', 'family-practice', 'primary-care', 'telehealth']) {
-            expect(getCategoryCredentials(slug).certification, slug).toContain('AANP or ANCC');
+            const { certification } = getCategoryCredentials(slug);
+            expect(certification, slug).toContain('AANPCB or ANCC');
+            // AANP is the membership association and certifies nobody.
+            expect(certification, slug).not.toMatch(/\bAANP\b/);
         }
     });
 

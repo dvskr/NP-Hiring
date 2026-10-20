@@ -1,7 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { SPECIALTY_PRESETS, LICENSE_STATE_OPTIONS } from '@/config/niche/credentials';
+
+// SECURITY (EMP-ALERT-1): the POST body used to be stored as it arrived. A
+// 70,000 entry specialties array was saved as one comma string, and the
+// daily candidate-alerts cron turned each entry into its own query branch,
+// past the Postgres bind limit, which aborted the run for every alert
+// after it; a list that was not an array answered 500. Each list is now
+// capped, and an entry may not hold the comma the stored string is split
+// on. The caps come from the option lists the settings page offers: every
+// state, and twice the specialty presets, because GET hands stored values
+// back and the page posts them again, including any outside today's
+// presets. The cron applies the same caps to rows stored before this check.
+// Test: tests/api/employer-candidate-alerts-body.test.ts
+const MAX_ALERT_SPECIALTIES = SPECIALTY_PRESETS.length * 2;
+const MAX_ALERT_STATES = LICENSE_STATE_OPTIONS.length;
+const MAX_SPECIALTY_LENGTH = 60;
+const MAX_EXPERIENCE_YEARS = 60;
+const MAX_WORK_MODE_LENGTH = 30;
+
+const alertBodySchema = z.object({
+    specialties: z
+        .array(z.string().trim().min(1).max(MAX_SPECIALTY_LENGTH).regex(/^[^,]+$/))
+        .max(MAX_ALERT_SPECIALTIES)
+        .optional(),
+    states: z
+        .array(z.string().trim().regex(/^[A-Za-z]{2}$/).transform(s => s.toUpperCase()))
+        .max(MAX_ALERT_STATES)
+        .optional(),
+    minExperience: z.number().int().min(0).max(MAX_EXPERIENCE_YEARS).nullable().optional(),
+    workMode: z.string().trim().max(MAX_WORK_MODE_LENGTH).nullable().optional(),
+    isActive: z.boolean().optional(),
+});
+
+/** Stored form of a filter list: unique entries joined with commas, or null for no filter. */
+function joinAlertList(list: string[] | undefined): string | null {
+    return list && list.length > 0 ? Array.from(new Set(list)).join(',') : null;
+}
+
+/** Stored comma string back to a list, without the empty entries the POST would refuse. */
+function splitAlertList(value: string | null): string[] {
+    return value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
+}
 
 /**
  * GET /api/employer/candidate-alerts
@@ -28,11 +71,13 @@ export async function GET() {
         where: { employerId: profile.id },
     });
 
+    // The settings page posts this object back as it is, so the lists must
+    // pass the POST schema: a row such as "TX," would otherwise block saves.
     return NextResponse.json({
         alert: alert ? {
             id: alert.id,
-            specialties: alert.specialties ? alert.specialties.split(',').map(s => s.trim()) : [],
-            states: alert.states ? alert.states.split(',').map(s => s.trim()) : [],
+            specialties: splitAlertList(alert.specialties),
+            states: splitAlertList(alert.states),
             minExperience: alert.minExperience,
             workMode: alert.workMode,
             isActive: alert.isActive,
@@ -43,7 +88,8 @@ export async function GET() {
 /**
  * POST /api/employer/candidate-alerts
  * Create or update alert preferences.
- * Body: { specialties?: string[], states?: string[], minExperience?: number, workMode?: string, isActive?: boolean }
+ * Body: { specialties?: string[], states?: string[], minExperience?: number | null, workMode?: string | null, isActive?: boolean }
+ * validated by alertBodySchema above; anything else answers 400.
  */
 export async function POST(req: NextRequest) {
     // Rate limiting
@@ -66,12 +112,26 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { specialties, states, minExperience, workMode, isActive } = body;
+    // SECURITY (EMP-ALERT-1): parse before anything is stored; malformed JSON
+    // and a body outside the schema answer 400 instead of 500.
+    let body: unknown;
+    try {
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+    const parsed = alertBodySchema.safeParse(body);
+    if (!parsed.success) {
+        return NextResponse.json(
+            { error: 'Invalid alert preferences', details: parsed.error.issues },
+            { status: 400 },
+        );
+    }
+    const { specialties, states, minExperience, workMode, isActive } = parsed.data;
 
     const data = {
-        specialties: specialties?.length ? specialties.join(',') : null,
-        states: states?.length ? states.join(',') : null,
+        specialties: joinAlertList(specialties),
+        states: joinAlertList(states),
         minExperience: minExperience ?? null,
         workMode: workMode || null,
         isActive: isActive ?? true,

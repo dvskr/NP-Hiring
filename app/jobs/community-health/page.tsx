@@ -130,7 +130,7 @@ const EXPLORE_CARDS: readonly ExploreCard[] = [
   { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: '/images/categories/nav/inpatient.webp' },
   { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: '/images/categories/nav/outpatient.webp' },
   { href: '/salary-guide', label: 'Salary Guide', sub: '2026 pay data', icon: '/images/categories/nav/salary.webp' },
-  { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'States and cities', icon: '/images/categories/nav/location.webp' },
 ];
 
 /** Taxonomy slug behind an explore card, or null for a non-category link. */

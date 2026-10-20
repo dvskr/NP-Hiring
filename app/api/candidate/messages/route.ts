@@ -55,19 +55,24 @@ export async function GET(req: NextRequest) {
         let employerProfile = employerJobRecord.userId
             ? await prisma.userProfile.findUnique({
                 where: { supabaseId: employerJobRecord.userId },
-                select: { id: true },
+                select: { id: true, deletedAt: true },
             })
             : null;
 
         if (!employerProfile && employerJobRecord.contactEmail) {
             employerProfile = await prisma.userProfile.findFirst({
                 where: { email: employerJobRecord.contactEmail, role: 'employer' },
-                select: { id: true },
+                select: { id: true, deletedAt: true },
             });
         }
 
         if (!employerProfile) {
             return NextResponse.json({ canMessage: true }); // No employer found, let frontend handle
+        }
+        // A deleted employer account is not reachable (POST below refuses it),
+        // so no compose box is offered. tests/api/candidate-messages-deleted-employer.test.ts
+        if (employerProfile.deletedAt) {
+            return NextResponse.json({ canMessage: false });
         }
 
         // Check for existing conversation
@@ -211,19 +216,25 @@ export async function POST(req: NextRequest) {
         let employerProfile = employerJobRecord.userId
             ? await prisma.userProfile.findUnique({
                 where: { supabaseId: employerJobRecord.userId },
-                select: { id: true, email: true, firstName: true, company: true },
+                select: { id: true, email: true, firstName: true, company: true, deletedAt: true },
             })
             : null;
 
-        // Fallback: find by contact email if userId didn't work
+        // Fallback: find by contact email if userId didn't work. Employer
+        // profiles only, as the GET above looks them up: a job seeker who
+        // shares the contact address must not receive the message.
         if (!employerProfile && employerJobRecord.contactEmail) {
             employerProfile = await prisma.userProfile.findFirst({
-                where: { email: employerJobRecord.contactEmail },
-                select: { id: true, email: true, firstName: true, company: true },
+                where: { email: employerJobRecord.contactEmail, role: 'employer' },
+                select: { id: true, email: true, firstName: true, company: true, deletedAt: true },
             });
         }
 
-        if (!employerProfile) {
+        // SECURITY: an employer account in its deletion grace period is not
+        // reachable; the message was stored and emailed to it. Same rule as
+        // POST /api/employer/messages and the reply route apply to a deleted
+        // recipient. tests/api/candidate-messages-deleted-employer.test.ts
+        if (!employerProfile || employerProfile.deletedAt) {
             return NextResponse.json({ error: 'Unable to reach this employer. They may not have an account yet.' }, { status: 404 });
         }
 

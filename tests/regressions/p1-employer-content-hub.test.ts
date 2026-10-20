@@ -216,11 +216,20 @@ describe('P1 #18: guide truth rules', () => {
 
   it('how-to-hire names the correct certification body per role', () => {
     const src = read(HOW_TO_HIRE);
-    // NPs certify via AANP/ANCC; the APRN-cohort note must name NBCRNA
+    // NPs certify via AANPCB/ANCC; the APRN-cohort note must name NBCRNA
     // (CRNA) and AMCB (CNM) — never blur them together.
-    expect(src).toContain('AANP or ANCC');
+    expect(src).toContain('AANPCB or ANCC');
+    // AANP is the association behind the State Practice Environment the
+    // page cites. It certifies nobody, in the copy or in a comment.
+    expect(src).not.toMatch(/\bAANP(?: or |\/)ANCC\b/);
     expect(src).toContain('NBCRNA');
     expect(src).toContain('AMCB');
+  });
+
+  it('every template skeleton asks for ANCC or AANPCB board certification', () => {
+    for (const template of JD_TEMPLATES) {
+      expect(renderTemplate(template, {}), template.id).toContain('board certification (ANCC or AANPCB)');
+    }
   });
 
   it('state-licensure specifics defer to the state board, not invented facts', () => {

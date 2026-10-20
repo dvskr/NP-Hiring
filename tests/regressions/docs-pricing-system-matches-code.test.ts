@@ -25,7 +25,7 @@
  * also fails when the code starts reading the key and the warning stays.
  */
 import path from 'node:path';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import { config } from '@/lib/config';
 import { isPlanEntitled, mapStripeSubscriptionStatus } from '@/lib/employer-plan';
 import { PROMO_SWITCH_PATHS } from '@/app/api/sitemaps/lastmod';
@@ -142,6 +142,17 @@ describe('section 1: the copy and the switch at config.promoEndsAt', () => {
 
 describe('section 1d and the register: what the flag opens without the Stripe key', () => {
     const LINK = 'https://buy.stripe.com/abc123';
+    // The check loads lib/env and lib/employer-plan-link on a fresh module
+    // graph, which can outlast vitest's 5 second default when a full run
+    // saturates the workers. Both are loaded once here, on the hook's own
+    // budget, so their cold load is not charged to the test (as in
+    // tests/regressions/paid-posting-checkout-gate.test.ts).
+    const FRESH_IMPORT_TIMEOUT_MS = 20_000;
+
+    beforeAll(async () => {
+        await import('@/lib/env');
+        await import('@/lib/employer-plan-link');
+    }, 60_000);
 
     afterEach(() => {
         vi.unstubAllEnvs();
@@ -179,7 +190,7 @@ describe('section 1d and the register: what the flag opens without the Stripe ke
             expect(flagBullet, 'isPlanSaleOpen now needs the key: drop the warning from section 1d').not.toContain('plan sales open as soon as');
             expect(pending, 'isPlanSaleOpen now needs the key: close 2.16 in docs/PENDING_WORK.md').not.toContain(registerItem);
         }
-    });
+    }, FRESH_IMPORT_TIMEOUT_MS);
 });
 
 describe('section 2: the flows', () => {

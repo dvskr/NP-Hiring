@@ -33,8 +33,8 @@ export async function GET() {
                 ],
             },
             include: {
-                userA: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, email: true, headline: true, specialties: true, licenseStates: true } },
-                userB: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, email: true, headline: true, specialties: true, licenseStates: true } },
+                userA: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, headline: true, specialties: true, licenseStates: true } },
+                userB: { select: { id: true, supabaseId: true, firstName: true, lastName: true, company: true, role: true, avatarUrl: true, headline: true, specialties: true, licenseStates: true } },
                 job: { select: { id: true, title: true, slug: true } },
                 messages: {
                     orderBy: { sentAt: 'desc' },
@@ -61,9 +61,13 @@ export async function GET() {
         const formatted = conversations.map(conv => {
             const otherUser = conv.participantA === profile.id ? conv.userB : conv.userA;
             const lastMsg = conv.messages[0] || null;
+            // SECURITY: an unnamed person with no company is "User", never
+            // the start of their email address, which this list showed to
+            // the other side of every thread. The email is not read here.
+            // tests/api/conversations-deleted-and-unnamed.test.ts
             const otherName = [otherUser.firstName, otherUser.lastName].filter(Boolean).join(' ')
                 || otherUser.company
-                || (otherUser.email ? otherUser.email.split('@')[0] : 'User');
+                || 'User';
             const initials = otherUser.firstName
                 ? `${otherUser.firstName.charAt(0)}${(otherUser.lastName || '').charAt(0)}`.toUpperCase()
                 : otherName.charAt(0).toUpperCase();

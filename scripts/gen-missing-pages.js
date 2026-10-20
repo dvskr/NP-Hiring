@@ -233,7 +233,7 @@ export default async function ${UpperName}({ searchParams }: PageProps) {
               { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital', emoji: '🏥' },
               { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic', emoji: '🏢' },
               { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', emoji: '💰' },
-              { href: '/jobs/locations', label: 'By Location', sub: '50 states', emoji: '📍' },
+              { href: '/jobs/locations', label: 'By Location', sub: 'States and cities', emoji: '📍' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center' }}>
                 <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>{c.emoji}</span>

@@ -10,9 +10,9 @@
  *      each page lists, never PseoStats.updatedAt; omitted when unreadable.
  *   4. /api/sitemaps/index: each child dated by the newest lastmod inside it.
  *   5. /sitemap.xml: content dates everywhere, /blog from its newest listed
- *      post, copy dates on code-authored pages, each comparison page's later
- *      of its review and copy dates, each specialty salary page's own
- *      bucket date, the state hub verdicts
+ *      post, copy dates on code-authored pages, the later of the claims
+ *      review and the copy date on each comparison page and on their hub,
+ *      each specialty salary page's own bucket date, the state hub verdicts
  *      (Rhode Island), the salary specialty verdicts, one URL per company
  *      display slug, and dioramas only on the gated state entries.
  *   6. vercel.json caches the sitemaps for the routes' own hour.
@@ -115,6 +115,20 @@ const UNTOUCHED_PAGE_DATES: Readonly<Record<string, string>> = {
     '/privacy': '2026-09-15',
     '/sub-processors': '2026-09-12',
 };
+
+/**
+ * The UTC day the security and register batch shipped, and the pages whose
+ * rendered copy it changed: the rebuilt job seeker comparison table and its
+ * cards (D25), and the AANPCB naming in the hiring guide and every job
+ * description template (2.23). Same rule as above: move the constant and
+ * these entries together if the batch ships on a later day.
+ */
+const SECURITY_BATCH_DAY = '2026-10-20';
+const SECURITY_BATCH_PAGES: readonly string[] = [
+    '/for-job-seekers',
+    '/for-employers/resources/how-to-hire',
+    '/for-employers/resources/job-description-templates/[id]',
+];
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1). */
 const PROMO_SWITCH_PAGES = [
@@ -292,17 +306,23 @@ describe('lastmod helpers', () => {
         expect(withPromoSwitch(new Date('nope'), AFTER_SWITCH)).toBeUndefined();
     });
 
-    it('2026-10-13: every page the plain copy pass or the content release changed carries the ship day, and no other page moved', () => {
-        // Between them the two changes edited what every dated page says
-        // except three (see the note above PAGE_CONTENT_DATES): reworded UI
-        // copy and removed explanatory text; new tool titles, H1s and
-        // descriptions; the job seeker hero and guides; the full practice
-        // quick answer; the 2025 to 2035 growth figure, the HRSA floor, the
-        // stats review date and the certifying body names. Pinning every
-        // entry makes a partial move fail, and a blanket move too.
+    it('every page carries the ship day of the last change to its copy, and no other page moved', () => {
+        // The plain copy pass and the content release (2026-10-13) edited
+        // what every dated page says except three (see the note above
+        // PAGE_CONTENT_DATES): reworded UI copy and removed explanatory text;
+        // new tool titles, H1s and descriptions; the job seeker hero and
+        // guides; the full practice quick answer; the 2025 to 2035 growth
+        // figure, the HRSA floor, the stats review date and the certifying
+        // body names. The security and register batch then changed three
+        // more pages. Pinning every entry makes a partial move fail, and a
+        // blanket move too.
         expect(Object.keys(UNTOUCHED_PAGE_DATES).filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
+        expect(SECURITY_BATCH_PAGES.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            expect(day, pagePath).toBe(UNTOUCHED_PAGE_DATES[pagePath] ?? CONTENT_RELEASE_DAY);
+            const expected = SECURITY_BATCH_PAGES.includes(pagePath)
+                ? SECURITY_BATCH_DAY
+                : UNTOUCHED_PAGE_DATES[pagePath] ?? CONTENT_RELEASE_DAY;
+            expect(day, pagePath).toBe(expected);
         }
     });
 
@@ -331,6 +351,22 @@ describe('lastmod helpers', () => {
             expect(pageContentDate(pagePath, PROMO_RUNNING), pagePath).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
             // Its price statements still switch at the promo end, which dates it afterwards.
             expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
+        }
+    });
+
+    it('plain copy pass: the /compare hub carries its ship day, on both sides of the promo end', () => {
+        // The plain copy pass retitled the hub, removed its hero line and
+        // rewrote its method bullets (app/compare/page.tsx). That is later
+        // than the claims review, and COMPARE_REVIEW_DATE did not move:
+        // nobody re-checked the claims.
+        const copyDate = new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`);
+        expect(PAGE_CONTENT_DATES[COMPARE_HUB_PATH]).toBe(CONTENT_RELEASE_DAY);
+        expect(copyDate.getTime()).toBeGreaterThan(new Date(COMPARE_REVIEW_DATE).getTime());
+        // The hub prints no price, so its copy does not follow the promo
+        // clock and the switch never dates it.
+        expect(PROMO_SWITCH_PATHS.has(COMPARE_HUB_PATH)).toBe(false);
+        for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
+            expect(pageContentDate(COMPARE_HUB_PATH, at)).toEqual(copyDate);
         }
     });
 
@@ -616,24 +652,23 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         }
     });
 
-    it('a comparison page carries the later of its claims review and its own copy change; the hub keeps the review date', async () => {
+    it('a comparison page and the hub each carry the later of the claims review and their own copy change', async () => {
         const entries = await byUrl();
         const reviewed = new Date(COMPARE_REVIEW_DATE);
         // Each page's copy changed after the review: CQ-13 relinked the Indeed
         // and ENP Network pages, the AANP and ENP Network price sentences were
         // corrected, and on 2026-10-13 all three got the moved stats review
-        // date and a trimmed template. The review date is not moved for a copy
+        // date and a trimmed template, and the hub a new title, no hero line
+        // and rewritten method bullets. The review date is not moved for a copy
         // edit that re-checked no claim, so the copy date is what the sitemap emits.
-        for (const pagePath of COMPARE_PAGE_PATHS) {
+        for (const pagePath of [COMPARE_HUB_PATH, ...COMPARE_PAGE_PATHS]) {
             expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(pageContentDate(pagePath));
             expect(pageContentDate(pagePath)!.getTime(), pagePath).toBeGreaterThan(reviewed.getTime());
         }
-        expect(entries.get(`${BASE}/compare/np-hiring-vs-aanp-jobcenter`)?.lastModified)
-            .toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
-        // The hub is dated by the claims review alone. (Its hero line and
-        // method bullets were trimmed on 2026-10-13; giving it a copy date
-        // of its own is docs/PENDING_WORK.md 2.22.)
-        expect(entries.get(`${BASE}${COMPARE_HUB_PATH}`)?.lastModified).toEqual(reviewed);
+        for (const pagePath of [COMPARE_HUB_PATH, '/compare/np-hiring-vs-aanp-jobcenter']) {
+            expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath)
+                .toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
+        }
     });
 
     it('2.1: until the promo ends, no page is dated by the switch', async () => {
@@ -663,7 +698,8 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         expect(entries.get(`${BASE}/about`)?.lastModified).toEqual(pageContentDate('/about', PROMO_RUNNING));
         expect(entries.get(`${BASE}/tools/licensure-checker`)?.lastModified)
             .toEqual(pageContentDate('/tools/licensure-checker', PROMO_RUNNING));
-        expect(entries.get(`${BASE}${COMPARE_HUB_PATH}`)?.lastModified).toEqual(new Date(COMPARE_REVIEW_DATE));
+        // The comparison hub prints no price: it keeps its copy date while its three pages switch.
+        expect(entries.get(`${BASE}${COMPARE_HUB_PATH}`)?.lastModified).toEqual(pageContentDate(COMPARE_HUB_PATH, PROMO_RUNNING));
         expect(entries.get(`${BASE}/jobs`)?.lastModified).toEqual(CONTENT);
         // The homepage's employer band switched too, and its jobs (CONTENT) are older.
         expect(entries.get(BASE)?.lastModified).toEqual(SWITCH);
