@@ -179,24 +179,30 @@ export async function POST(request: NextRequest) {
           }
           logger.info('EmployerLead created for employer signup', { email })
         } else {
-          // Job seekers go into email_leads table
+          // Job seekers go into email_leads table. The newsletter flag takes
+          // the same explicit true as the Beehiiv sync below.
+          const hasNewsletterOptIn = newsletterOptIn === true
           await prisma.emailLead.upsert({
             where: { email },
             update: {
               isSubscribed: true,
-              newsletterOptIn: newsletterOptIn ? true : undefined,
+              newsletterOptIn: hasNewsletterOptIn ? true : undefined,
             },
             create: {
               email,
               source: 'signup',
               isSubscribed: true,
-              newsletterOptIn: !!newsletterOptIn,
+              newsletterOptIn: hasNewsletterOptIn,
             },
           })
           logger.info('EmailLead created for job seeker signup', { email })
 
-          // Sync to Beehiiv newsletter (fire-and-forget)
-          syncToBeehiiv(email, { utmSource: 'signup' })
+          // The Beehiiv newsletter only with the form's newsletter opt-in
+          // (fire-and-forget); it ran for every new seeker.
+          // tests/regressions/newsletter-consent-signup-paths.test.ts
+          if (hasNewsletterOptIn) {
+            syncToBeehiiv(email, { utmSource: 'signup' })
+          }
         }
       } catch (leadError) {
         logger.error('Failed to create lead', leadError)

@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { mintResumeReadUrl, extractRequestContext, toOwnResumePath } from '@/lib/resume-storage';
+import { talentPoolWhere } from '@/lib/candidate-pool';
 
 // Employer-side: extra-short TTL because the URL goes through a 302
 // redirect and never lives in the browser address bar for long. 60s is
@@ -75,12 +76,7 @@ export async function GET(
 
     // Load the candidate with full privacy gates honored.
     const candidate = await prisma.userProfile.findFirst({
-        where: {
-            supabaseId: id,
-            profileVisible: true,
-            openToOffers: true,
-            role: 'job_seeker',
-        },
+        where: { supabaseId: id, ...talentPoolWhere() },
         select: { resumeUrl: true },
     });
     // SECURITY (EMP-RES-1): the unlock gates above prove the caller may read

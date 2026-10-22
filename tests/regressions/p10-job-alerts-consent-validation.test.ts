@@ -42,7 +42,7 @@ vi.mock('@/lib/rate-limit', () => ({
   RATE_LIMITS: { jobAlerts: { limit: 10, windowSeconds: 60 } },
 }));
 vi.mock('@/lib/beehiiv', () => ({ syncToBeehiiv: h.syncToBeehiiv }));
-vi.mock('@/lib/email-service', () => ({ sendWelcomeEmail: h.sendWelcomeEmail }));
+vi.mock('@/lib/email-service', () => ({ sendWelcomeEmail: h.sendWelcomeEmail, isEmailSuppressed: vi.fn().mockResolvedValue(false) }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn().mockResolvedValue({ auth: { getUser: h.getUser } }),
@@ -163,8 +163,9 @@ describe('POST /api/job-alerts lifts unsubscribe suppression only (defect 3)', (
       where: { email: EMAIL },
       data: { isSubscribed: true, isSuppressed: false, suppressedAt: null, suppressionReason: null },
     });
+    // A deleted account stays suppressed (security review of register 2.26).
     expect(h.userProfile.updateMany).toHaveBeenCalledWith({
-      where: { email: { equals: EMAIL, mode: 'insensitive' } },
+      where: { email: { equals: EMAIL, mode: 'insensitive' }, deletedAt: null },
       data: { emailSuppressed: false, emailSuppressedAt: null },
     });
     const batchCalls = h.$transaction.mock.calls

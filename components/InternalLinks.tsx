@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { MapPin, Briefcase, Wifi, Video, Calendar } from 'lucide-react';
 import { brand } from '@/config/brand';
+import { jobTypeValueCategory, type JobTypeCategory } from '@/lib/pseo/category-structural';
 
 interface InternalLinksProps {
     state?: string | null;
@@ -17,9 +18,24 @@ interface InternalLinksProps {
     isTelehealth?: boolean;
     /** The page's resolved primary employment type, never the raw column. */
     jobType?: string | null;
+    /** True when the job carries the travel tag, so /jobs/travel lists it. */
+    isTravel?: boolean;
     /** The verified work mode label (resolveWorkModeLabel), never the raw column. */
     mode?: string | null;
 }
+
+/**
+ * The landing for each job type that has a link here, chosen by the rule the
+ * landings list by (jobTypeValueCategory). Register 2.26: a Contract job was
+ * sent to /jobs/travel, which lists only jobs tagged travel, and a Locum
+ * Tenens job had no link.
+ * Test: tests/regressions/internal-links-job-type-landings.test.ts
+ */
+const JOB_TYPE_LANDINGS: Partial<Record<JobTypeCategory, { href: string; label: string; Icon: typeof Calendar }>> = {
+    'per-diem': { href: '/jobs/per-diem', label: `View Per Diem ${brand.niche.short} Jobs`, Icon: Calendar },
+    contract: { href: '/jobs/contract', label: `View Contract ${brand.niche.short} Jobs`, Icon: Briefcase },
+    'locum-tenens': { href: '/jobs/locum-tenens', label: `View Locum Tenens ${brand.niche.short} Jobs`, Icon: Briefcase },
+};
 
 /* ═══ Clay tokens ═══ */
 const clayShadow = '8px 8px 20px rgba(0,0,0,0.07), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)';
@@ -34,6 +50,7 @@ export default function InternalLinks({
     isRemote,
     isTelehealth,
     jobType,
+    isTravel,
     mode,
 }: InternalLinksProps) {
     const links: { href: string; label: string; icon: React.ReactNode }[] = [];
@@ -70,15 +87,17 @@ export default function InternalLinks({
     }
 
     // Job type specific links
-    if (jobType?.toLowerCase().includes('per diem') || jobType?.toLowerCase().includes('prn')) {
+    const jobTypeCategory = jobTypeValueCategory(jobType);
+    const typeLanding = jobTypeCategory ? JOB_TYPE_LANDINGS[jobTypeCategory] : undefined;
+    if (typeLanding) {
         links.push({
-            href: '/jobs/per-diem',
-            label: `View Per Diem ${brand.niche.short} Jobs`,
-            icon: <Calendar style={{ width: '14px', height: '14px' }} />,
+            href: typeLanding.href,
+            label: typeLanding.label,
+            icon: <typeLanding.Icon style={{ width: '14px', height: '14px' }} />,
         });
     }
 
-    if (jobType?.toLowerCase().includes('contract') || jobType?.toLowerCase().includes('travel')) {
+    if (isTravel) {
         links.push({
             href: '/jobs/travel',
             label: `Explore Travel ${brand.niche.short} Positions`,

@@ -232,8 +232,12 @@ export async function completeSignupOptIns(
     },
   })
 
-  // Beehiiv newsletter sync (fire-and-forget inside the lib)
-  syncToBeehiiv(email, { utmSource: 'signup' })
+  // Beehiiv newsletter sync (fire-and-forget inside the lib), only with the
+  // newsletter opt-in: it ran for every new seeker whatever the checkbox
+  // said. tests/regressions/newsletter-consent-signup-paths.test.ts
+  if (derived.newsletterOptIn) {
+    syncToBeehiiv(email, { utmSource: 'signup' })
+  }
 
   if (derived.wantJobHighlights) {
     const existingAlert = await prisma.jobAlert.findFirst({ where: { email } })

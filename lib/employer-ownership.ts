@@ -19,6 +19,14 @@ import type { Prisma } from '@prisma/client';
  * method away from an authorization bypass. A blank email counts as none.
  *
  * The email is matched exactly as given, as the routes always matched it.
+ *
+ * SECURITY (register 2.26): the email counts only once Supabase has confirmed
+ * it (`email_confirmed_at`). An unconfirmed address proves nothing about who
+ * holds the inbox, and the fallback hands the session every unclaimed post
+ * filed under it, with its applicants. The auth callback's legacy claim and
+ * the profile relink apply the same rule. Every caller passes the user from
+ * `supabase.auth.getUser()`, which carries the stamp.
+ * tests/lib/employer-ownership.test.ts
  */
 
 /** What the ownership clause reads from a Supabase session user. */
@@ -27,6 +35,8 @@ export interface EmployerJobOwner {
     readonly id: string;
     /** The sign-in email. Supabase leaves it unset for some sign-in methods. */
     readonly email?: string | null;
+    /** When Supabase confirmed that email; unset until it is confirmed. */
+    readonly email_confirmed_at?: string | null;
 }
 
 /**
@@ -41,10 +51,37 @@ export interface EmployerJobOwner {
  * which would match every row.
  */
 export function employerJobOwnershipBranches(user: EmployerJobOwner): Prisma.EmployerJobWhereInput[] {
+    requireUserId(user);
+    const claimed: Prisma.EmployerJobWhereInput = { userId: user.id };
+    const email = legacyOwnerEmail(user);
+    return email === null ? [claimed] : [claimed, { userId: null, contactEmail: email }];
+}
+
+/**
+ * The same rule for a row a route has already loaded: claimed by the user,
+ * or unclaimed and filed under the user's confirmed email. Register 2.26: the
+ * applicants PATCH and the notification settings PATCH wrote the legacy rule
+ * inline and skipped the confirmation.
+ * tests/lib/employer-ownership.test.ts, tests/api/employer-legacy-owner-patch.test.ts
+ */
+export function isEmployerJobOwner(
+    row: { readonly userId: string | null; readonly contactEmail: string | null },
+    user: EmployerJobOwner,
+): boolean {
+    requireUserId(user);
+    if (row.userId !== null) return row.userId === user.id;
+    const email = legacyOwnerEmail(user);
+    return email !== null && row.contactEmail === email;
+}
+
+function requireUserId(user: EmployerJobOwner): void {
     if (typeof user.id !== 'string' || user.id.trim() === '') {
         throw new TypeError('Employer job ownership needs the signed-in user id.');
     }
-    const claimed: Prisma.EmployerJobWhereInput = { userId: user.id };
-    const email = typeof user.email === 'string' && user.email.trim() !== '' ? user.email : null;
-    return email === null ? [claimed] : [claimed, { userId: null, contactEmail: email }];
+}
+
+/** The email the legacy branch may match: confirmed and not blank, otherwise none. */
+function legacyOwnerEmail(user: EmployerJobOwner): string | null {
+    const isConfirmed = typeof user.email_confirmed_at === 'string' && user.email_confirmed_at !== '';
+    return isConfirmed && typeof user.email === 'string' && user.email.trim() !== '' ? user.email : null;
 }

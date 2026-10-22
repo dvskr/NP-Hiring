@@ -26,11 +26,13 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
 const deleteFileMock = vi.fn().mockResolvedValue(undefined);
+const removeFoldersMock = vi.fn().mockResolvedValue({ removed: 0, failed: [] });
 const adminDeleteUserMock = vi.fn().mockResolvedValue({ error: null });
 
 vi.mock('@/lib/supabase-storage', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/supabase-storage')>()),
     deleteFile: (...args: unknown[]) => deleteFileMock(...args),
+    removeUserUploadFolders: (...args: unknown[]) => removeFoldersMock(...args),
 }));
 vi.mock('@/lib/logger', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -61,6 +63,52 @@ describe('purge-soft-deleted C3 — full PII erasure', () => {
         vi.clearAllMocks();
         process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
         process.env.SUPABASE_SERVICE_ROLE_KEY = 'service_role_key_test';
+        // The re-check just before an account's files go: still deleted and due.
+        vi.mocked(prisma.userProfile.findFirst).mockResolvedValue({ id: 'due' } as never);
+    });
+
+    // Review of 2.26 (L2): the profile goes in the same run, so a folder the
+    // erasure could not empty is never revisited. The audit record names it.
+    it('names the upload folders it could not empty in the purge audit record', async () => {
+        vi.mocked(prisma.userProfile.findMany).mockResolvedValue([
+            { id: 'u8', supabaseId: 'sb8', email: 'g8@example.com', resumeUrl: null, avatarUrl: null },
+        ] as never);
+        removeFoldersMock.mockResolvedValueOnce({ removed: 3, failed: ['resumes/local/sb8'] });
+        vi.mocked(prisma.userProfile.delete).mockResolvedValue({} as never);
+
+        const { GET } = await import('@/app/api/cron/purge-soft-deleted/route');
+        const res = await GET(fakeRequest() as never);
+        const { logAudit } = await import('@/lib/audit-log');
+
+        expect((await res.json()).purgedCount).toBe(1);
+        expect(vi.mocked(logAudit)).toHaveBeenCalledWith(expect.objectContaining({
+            action: 'account.purge',
+            metadata: expect.objectContaining({ uploadFoldersLeft: ['resumes/local/sb8'] }),
+        }));
+    });
+
+    // Security review of 2.26: the batch is read once, and each account now
+    // takes several storage round trips, so an account restored after the
+    // read lost every upload while its profile survived. It is re-read first.
+    it('skips an account restored after the batch was read: no file, no profile, no auth user touched', async () => {
+        vi.mocked(prisma.userProfile.findMany).mockResolvedValue([
+            { id: 'u9', supabaseId: 'sb9', email: 'back@example.com', resumeUrl: 'local/sb9/1700000000000-cv.pdf', avatarUrl: null },
+        ] as never);
+        vi.mocked(prisma.userProfile.findFirst).mockResolvedValue(null as never);
+
+        const { GET } = await import('@/app/api/cron/purge-soft-deleted/route');
+        const res = await GET(fakeRequest() as never);
+
+        expect(res.status).toBe(200);
+        expect((await res.json()).purgedCount).toBe(0);
+        expect(prisma.userProfile.findFirst).toHaveBeenCalledWith({
+            where: { id: 'u9', deletedAt: { not: null }, purgeAt: { lte: expect.any(Date) } },
+            select: { id: true },
+        });
+        expect(deleteFileMock).not.toHaveBeenCalled();
+        expect(removeFoldersMock).not.toHaveBeenCalled();
+        expect(prisma.userProfile.delete).not.toHaveBeenCalled();
+        expect(adminDeleteUserMock).not.toHaveBeenCalled();
     });
 
     it('deletes resume + avatar + embedding + anonymizes email_sends + drops profile + deletes auth', async () => {
@@ -87,6 +135,8 @@ describe('purge-soft-deleted C3 — full PII erasure', () => {
         // Storage
         expect(deleteFileMock).toHaveBeenCalledWith('local/sb1/1700000000000-cv.pdf', 'resume');
         expect(deleteFileMock).toHaveBeenCalledWith('local/sb1/1700000000000.jpg', 'avatar');
+        // Register 2.26: every earlier upload in the account folders goes too.
+        expect(removeFoldersMock).toHaveBeenCalledWith('sb1');
         // Embedding
         expect(prisma.candidateEmbedding.delete).toHaveBeenCalledWith({ where: { supabaseId: 'sb1' } });
         // Email anonymization

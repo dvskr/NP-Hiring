@@ -30,6 +30,7 @@ import { canUnlockCandidate, getEmployerTier } from '@/lib/tier-limits';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
+import { talentPoolWhere } from '@/lib/candidate-pool';
 
 const requestSchema = z.object({
   candidateIds: z.array(z.string().min(1)).min(1).max(100),
@@ -117,14 +118,9 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Privacy gate — candidate must still be visible + open to offers.
+      // Privacy gate: the candidate must still be in the talent pool.
       const candidate = await prisma.userProfile.findFirst({
-        where: {
-          supabaseId: candidateId,
-          profileVisible: true,
-          openToOffers: true,
-          role: 'job_seeker',
-        },
+        where: { supabaseId: candidateId, ...talentPoolWhere() },
         select: { supabaseId: true },
       });
       if (!candidate) {

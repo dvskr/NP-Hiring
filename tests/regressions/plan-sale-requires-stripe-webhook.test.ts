@@ -109,10 +109,20 @@ describe('backlog 2.16: the plan is sold only while the webhook could record the
         ['STRIPE_WEBHOOK_SECRET is unset', { STRIPE_WEBHOOK_SECRET: undefined }],
         ['STRIPE_WEBHOOK_SECRET is empty', { STRIPE_WEBHOOK_SECRET: '' }],
         ['both secrets are unset', { STRIPE_SECRET_KEY: undefined, STRIPE_WEBHOOK_SECRET: undefined }],
+        // Register 2.26: a value of spaces passed every "is it set" check, so
+        // the plan was sold while the webhook could verify nothing.
+        ['STRIPE_SECRET_KEY is only spaces', { STRIPE_SECRET_KEY: '   ' }],
+        ['STRIPE_WEBHOOK_SECRET is only whitespace', { STRIPE_WEBHOOK_SECRET: ' \n\t ' }],
     ])('is closed, and hands out no link, when %s: the webhook answers 503', async (_label, missing) => {
         const { saleOpen, link, webhookStatus } = await answersUnder(missing);
         expect(webhookStatus).toBe(503);
         expect(saleOpen).toBe(false);
         expect(link).toBeNull();
+    }, FRESH_IMPORT_TIMEOUT_MS);
+
+    it('reads a secret pasted with stray whitespace as the secret itself', async () => {
+        const { saleOpen, webhookStatus } = await answersUnder({ STRIPE_SECRET_KEY: ' sk_test_x\n', STRIPE_WEBHOOK_SECRET: 'whsec_x\n' });
+        expect(webhookStatus).toBe(400);
+        expect(saleOpen).toBe(true);
     }, FRESH_IMPORT_TIMEOUT_MS);
 });

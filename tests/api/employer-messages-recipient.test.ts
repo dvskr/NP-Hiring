@@ -87,6 +87,8 @@ type Select = Record<string, unknown>;
 interface SessionUser {
     id: string;
     email?: string;
+    /** Supabase stamps it once the address is confirmed; real sessions carry it. */
+    email_confirmed_at?: string;
 }
 
 type ProfileRow = {
@@ -143,11 +145,12 @@ interface Store {
 const EMPLOYER_EMAIL = 'hiring@clinic.example';
 const OTHER_EMPLOYER_EMAIL = 'talent@other-clinic.example';
 const ADMIN_EMAIL = 'staff@nphiring.example';
-const EMPLOYER: SessionUser = { id: 'auth-employer', email: EMPLOYER_EMAIL };
+const CONFIRMED_AT = '2026-10-01T00:00:00Z';
+const EMPLOYER: SessionUser = { id: 'auth-employer', email: EMPLOYER_EMAIL, email_confirmed_at: CONFIRMED_AT };
 /** The same account through a sign-in method that carries no email. */
 const EMPLOYER_NO_EMAIL: SessionUser = { id: 'auth-employer' };
-const OTHER_EMPLOYER: SessionUser = { id: 'auth-other-employer', email: OTHER_EMPLOYER_EMAIL };
-const ADMIN: SessionUser = { id: 'auth-admin', email: ADMIN_EMAIL };
+const OTHER_EMPLOYER: SessionUser = { id: 'auth-other-employer', email: OTHER_EMPLOYER_EMAIL, email_confirmed_at: CONFIRMED_AT };
+const ADMIN: SessionUser = { id: 'auth-admin', email: ADMIN_EMAIL, email_confirmed_at: CONFIRMED_AT };
 const DELETED_ON = new Date('2026-10-01T12:00:00.000Z');
 const NOT_FOUND = { status: 404, body: { error: 'Recipient not found' } };
 

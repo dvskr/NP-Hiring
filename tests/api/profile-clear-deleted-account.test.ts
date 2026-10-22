@@ -62,7 +62,11 @@ const SEEKER_ID = 'auth-seeker';
 const DELETED_ON = new Date('2026-10-01T12:00:00.000Z');
 const PURGE_ON = new Date('2026-10-31T12:00:00.000Z');
 
-/** The filter GET /api/employer/candidates and the other pool sites apply. */
+/**
+ * The flags and role of the talent pool rule. The shared rule
+ * (lib/candidate-pool.ts) also checks deletedAt since register 2.26; this
+ * check leaves it out, so it pins that the flags alone keep the account out.
+ */
 const TALENT_POOL = { profileVisible: true, openToOffers: true, role: 'job_seeker' } as const;
 
 /** Rows the clear hard-deletes, one model per row type. */

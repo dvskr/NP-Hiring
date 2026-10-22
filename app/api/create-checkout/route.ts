@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     // The SIGNUP email domain (not the form's contactEmail) anchors the
     // per-domain intro price, mirroring /api/jobs/post-free (audit #26).
     let userId: string | null = null;
-    let profileEmail: string | null = null;
+    let confirmedEmail: string | null = null;
     let signupDomain: string | null = null;
     try {
       const supabase = await createClient();
@@ -168,7 +168,11 @@ export async function POST(request: NextRequest) {
         );
       }
       userId = user.id;
-      profileEmail = profile.email ?? user.email ?? null;
+      // The email proves ownership of an unclaimed row only once Supabase has
+      // confirmed it, as in lib/employer-ownership.ts (register 2.26). The
+      // confirmation certifies the sign-in email, never the profile's stored
+      // copy, which can differ after a sign-in email change.
+      confirmedEmail = user.email_confirmed_at && user.email?.trim() ? user.email : null;
       signupDomain = domainOf(user.email) ?? domainOf(profile.email);
     } catch (authErr) {
       logger.warn('Failed to fetch user session in create-checkout', { error: authErr });
@@ -185,7 +189,7 @@ export async function POST(request: NextRequest) {
     // The employer dashboard's "Complete payment" action posts
     // { resumeJobId } for a row stuck 'pending' (or swept to 'expired').
     if (typeof rawBody.resumeJobId === 'string' && rawBody.resumeJobId.trim()) {
-      return resumeAbandonedCheckout(stripe, rawBody.resumeJobId.trim(), userId, profileEmail, gaMetadata);
+      return resumeAbandonedCheckout(stripe, rawBody.resumeJobId.trim(), userId, confirmedEmail, gaMetadata);
     }
 
     // Sanitize core fields

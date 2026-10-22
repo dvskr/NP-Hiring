@@ -101,8 +101,14 @@ export async function GET(request: Request) {
           }
         })
 
-        // Sync new user to Beehiiv newsletter (fire-and-forget)
-        syncToBeehiiv(data.user.email, { utmSource: 'google_signup' })
+        // The Beehiiv newsletter only with the sign-up form's newsletter
+        // opt-in (fire-and-forget). This synced every first sign-in, of
+        // every role, whatever the checkbox said; a Google sign-in carries
+        // no checkbox, so it is not subscribed.
+        // tests/regressions/newsletter-consent-signup-paths.test.ts
+        if (signup.newsletterOptIn) {
+          syncToBeehiiv(data.user.email, { utmSource: 'google_signup' })
+        }
 
         // Create lead records (mirrors /api/auth/profile POST logic)
         try {

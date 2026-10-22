@@ -64,6 +64,8 @@ describe('purge-soft-deleted F34 — relation-less orphan models are purged', ()
         vi.clearAllMocks();
         process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
         process.env.SUPABASE_SERVICE_ROLE_KEY = 'service_role_key_test';
+        // The purge re-reads each account before erasing it: still deleted and due.
+        vi.mocked(prisma.userProfile.findFirst).mockResolvedValue({ id: dueUser.id } as never);
     });
 
     it('deletes SavedJob + PushSubscription + JobDraft by supabase auth id', async () => {

@@ -75,6 +75,8 @@ import { PATCH } from '@/app/api/employer/jobs/[jobId]/archive/route';
 interface SessionUser {
     id: string;
     email: string;
+    /** The legacy email branch needs a confirmed email (register 2.26). */
+    email_confirmed_at: string;
 }
 
 /** A Supabase session from a sign-in method that carries no email. */
@@ -105,9 +107,10 @@ const NOW = new Date('2026-10-01T15:00:00.000Z');
 const ARCHIVED_ON = new Date('2026-09-20T09:00:00.000Z');
 const JOB_ID = 'job-1';
 const OWN_JOB_ID = 'job-2';
-const OWNER: SessionUser = { id: 'supabase-owner', email: 'hiring@clinic.example' };
-const OTHER: SessionUser = { id: 'supabase-other', email: 'talent@other-clinic.example' };
-const ADMIN: SessionUser = { id: 'supabase-admin', email: 'staff@nphiring.example' };
+const CONFIRMED = '2026-01-15T10:00:00.000Z';
+const OWNER: SessionUser = { id: 'supabase-owner', email: 'hiring@clinic.example', email_confirmed_at: CONFIRMED };
+const OTHER: SessionUser = { id: 'supabase-other', email: 'talent@other-clinic.example', email_confirmed_at: CONFIRMED };
+const ADMIN: SessionUser = { id: 'supabase-admin', email: 'staff@nphiring.example', email_confirmed_at: CONFIRMED };
 const PHONE_USER: EmailLessSession = { id: 'supabase-phone' };
 /** The archive write in full: a field more or less is a regression. */
 const ARCHIVE_WRITE = { archivedAt: NOW, isPublished: false, isManuallyUnpublished: true };

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
+import { employerJobOwnershipBranches, isEmployerJobOwner } from '@/lib/employer-ownership';
 
 /**
  * GET /api/employer/settings/notifications
@@ -70,11 +70,10 @@ export async function PATCH(req: NextRequest) {
     }
 
     // P5.A (2026-06-01): contactEmail fallback only for legacy rows
-    // without a claimed userId — blocks impersonation by signing up
-    // with an existing employer's contactEmail.
-    const isOwner = employerJob.userId === user.id
-        || (employerJob.userId === null && employerJob.contactEmail === user.email);
-    if (!isOwner) {
+    // without a claimed userId, which blocks impersonation by signing up
+    // with an existing employer's contactEmail; and only for a confirmed
+    // email (lib/employer-ownership.ts, register 2.26).
+    if (!isEmployerJobOwner(employerJob, user)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

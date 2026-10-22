@@ -11,6 +11,8 @@ import {
     sortByJitteredScore,
 } from '@/lib/utils/rotation';
 import { brand } from '@/config/brand';
+import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
+import { liveLinkWhere } from '@/lib/dead-link-threshold';
 
 // Revalidate every 60 seconds — fresh data without per-request DB hits
 export const revalidate = 60;
@@ -123,6 +125,13 @@ export default async function FeaturedJobsSection() {
                         ],
                     },
                     directApplyOnly,
+                    // What every listing hides: rows classified as another
+                    // profession, the provider title vetoes, and dead apply
+                    // links. This query skipped them, so the home page could
+                    // feature a job /jobs hides (register 2.26).
+                    // tests/regressions/featured-jobs-exclusions.test.ts
+                    ...GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })),
+                    liveLinkWhere(),
                 ],
             },
             orderBy: [

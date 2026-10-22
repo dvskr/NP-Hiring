@@ -132,7 +132,7 @@ describe('verify-checkout-session — B114 auth + ownership gate', () => {
       job: { title: 'PMHNP', slug: 'pmhnp-job-1', isPublished: true },
     } as never);
     getUserMock.mockResolvedValue({
-      data: { user: { id: 'some-user-id', email: 'owner@clinic.EXAMPLE' } },
+      data: { user: { id: 'some-user-id', email: 'owner@clinic.EXAMPLE', email_confirmed_at: '2026-10-01T00:00:00Z' } },
       error: null,
     });
     const { GET } = await import('@/app/api/verify-checkout-session/route');
@@ -141,5 +141,36 @@ describe('verify-checkout-session — B114 auth + ownership gate', () => {
     expect(res.status).toBe(200);
     expect(json.dashboardToken).toBeUndefined();
     expect(json.tokenDeliveredViaEmail).toBe(true);
+  });
+
+  // Register 2.26: the email fallback is for unclaimed rows only, and only for
+  // a confirmed email, as lib/employer-ownership.ts defines ownership.
+  it('403s a caller whose email matches a checkout another account claimed', async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: 'someone-else', email: 'owner@clinic.example', email_confirmed_at: '2026-10-01T00:00:00Z' } },
+      error: null,
+    });
+    const { GET } = await import('@/app/api/verify-checkout-session/route');
+    const res = await GET(makeReq('cs_123'));
+    const json = await res.json();
+    expect(res.status).toBe(403);
+    expect(json.jobTitle).toBeUndefined();
+  });
+
+  it('403s an unconfirmed email on a legacy row without userId', async () => {
+    vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+      dashboardToken: 'secret-token',
+      paymentStatus: 'paid',
+      contactEmail: 'owner@clinic.example',
+      userId: null,
+      job: { title: 'PMHNP', slug: 'pmhnp-job-1', isPublished: true },
+    } as never);
+    getUserMock.mockResolvedValue({
+      data: { user: { id: 'some-user-id', email: 'owner@clinic.example' } },
+      error: null,
+    });
+    const { GET } = await import('@/app/api/verify-checkout-session/route');
+    const res = await GET(makeReq('cs_123'));
+    expect(res.status).toBe(403);
   });
 });

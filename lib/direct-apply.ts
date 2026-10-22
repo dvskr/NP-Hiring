@@ -26,6 +26,8 @@ export const ATS_PATTERNS: ReadonlyArray<RegExp> = [
   /smartrecruiters\.com/i,
   /icims\.com/i,
   /jazz\.co/i,
+  // JazzHR's apply pages (jazz.co is its older domain). Register 2.26.
+  /\.applytojob\.com/i,
   /bamboohr\.com/i,
   /usajobs\.gov/i,
   /apply\.workable\.com/i,

@@ -13,11 +13,13 @@
  * answer with a clean 503 instead of crashing at module import.
  */
 import Stripe from 'stripe';
+import { cleanSecret } from '@/lib/clean-secret';
 
 export const STRIPE_API_VERSION = '2025-11-17.clover' as const;
 
 export function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
+  // Trimmed, and unset when only whitespace (cleanSecret, register 2.26).
+  const key = cleanSecret(process.env.STRIPE_SECRET_KEY);
   if (!key) return null;
   return new Stripe(key, { apiVersion: STRIPE_API_VERSION });
 }

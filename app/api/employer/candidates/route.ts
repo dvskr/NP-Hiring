@@ -5,6 +5,7 @@ import { getEmployerTier, getEmployerActivePostings } from '@/lib/tier-limits'
 import { PricingTier } from '@/lib/config'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { parsePagination } from '@/app/api/jobs/pagination'
+import { talentPoolWhere } from '@/lib/candidate-pool'
 
 /**
  * Bounds on the search inputs. Each specialty or state term becomes its own
@@ -78,11 +79,7 @@ export async function GET(req: NextRequest) {
 
     // Build WHERE clause
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
-        profileVisible: true,
-        openToOffers: true,
-        role: 'job_seeker',
-    }
+    const where: any = talentPoolWhere()
 
     // Text search: match against the fields a recruiter actually searches
     // by — name, headline, specialties, certifications, work mode (so

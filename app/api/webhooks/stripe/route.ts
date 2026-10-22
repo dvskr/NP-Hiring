@@ -1,5 +1,6 @@
 import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
+import { cleanSecret } from '@/lib/clean-secret';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -100,7 +101,8 @@ export async function POST(request: NextRequest) {
   let dedupedEventId: string | null = null;
   try {
     const stripe = getStripe();
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    // Trimmed, and unset when only whitespace (cleanSecret, register 2.26).
+    const webhookSecret = cleanSecret(process.env.STRIPE_WEBHOOK_SECRET);
     if (!stripe || !webhookSecret) {
       logger.error('Stripe webhook called but STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET is missing', null);
       return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });

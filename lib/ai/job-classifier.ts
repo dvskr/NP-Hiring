@@ -55,6 +55,8 @@ export const ATS_HOST_SUBSTRINGS: ReadonlyArray<string> = [
     'smartrecruiters.com',
     'icims.com',
     'jazz.co',
+    // JazzHR's apply pages (register 2.26). tests/regressions/ats-host-lists-agree.test.ts
+    '.applytojob.com',
     'bamboohr.com',
     'usajobs.gov',
     'apply.workable.com',

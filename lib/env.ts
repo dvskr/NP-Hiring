@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 import { brand } from '@/config/brand';
+import { cleanSecret } from '@/lib/clean-secret';
 
 const envSchema = z.object({
     // Database (required)
@@ -41,9 +42,9 @@ const envSchema = z.object({
     // runtime if missing — better to fail at startup so misconfiguration is loud.
     RESEND_WEBHOOK_SECRET: z.string().optional(),
 
-    // Stripe (optional - for paid posting)
-    STRIPE_SECRET_KEY: z.string().optional(),
-    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    // Stripe (optional - for paid posting). Read through cleanSecret below.
+    STRIPE_SECRET_KEY: z.string().optional().transform(cleanSecret),
+    STRIPE_WEBHOOK_SECRET: z.string().optional().transform(cleanSecret),
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
     // Master switch for paid job posting. Strict 'true' enables the checkout
     // APIs (Stripe keys then required — see scripts/fork-preflight.ts); any
@@ -237,10 +238,10 @@ export function validateEnvironmentAtStartup(): EnvStartupReport {
             warnings.push('INNGEST_SIGNING_KEY is unset — Inngest cannot invoke scheduled/durable functions on this deployment');
         }
         if (process.env.ENABLE_PAID_POSTING === 'true') {
-            if (!process.env.STRIPE_SECRET_KEY) {
+            if (!cleanSecret(process.env.STRIPE_SECRET_KEY)) {
                 warnings.push('ENABLE_PAID_POSTING=true but STRIPE_SECRET_KEY is unset — paid checkout cannot complete');
             }
-            if (!process.env.STRIPE_WEBHOOK_SECRET) {
+            if (!cleanSecret(process.env.STRIPE_WEBHOOK_SECRET)) {
                 warnings.push('ENABLE_PAID_POSTING=true but STRIPE_WEBHOOK_SECRET is unset — payment webhooks are rejected; paid jobs will never activate');
             }
             if (!process.env.STRIPE_PLAN_PAYMENT_LINK) {

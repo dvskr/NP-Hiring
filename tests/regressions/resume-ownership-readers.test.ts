@@ -24,7 +24,9 @@ const h = vi.hoisted(() => ({
   from: vi.fn(),
   createSignedUrl: vi.fn(),
   remove: vi.fn(),
+  list: vi.fn(),
   userProfile: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+  jobApplication: { findMany: vi.fn() },
   profileView: { findUnique: vi.fn() },
   auditCreate: vi.fn(),
   verifyExtensionToken: vi.fn(),
@@ -41,6 +43,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     userProfile: h.userProfile,
     profileView: h.profileView,
+    jobApplication: h.jobApplication,
     documentAccessLog: { create: h.auditCreate },
   },
 }));
@@ -97,7 +100,11 @@ function exportProfile(resumeUrl: string | null): Record<string, unknown> {
 
 beforeEach(() => {
   h.getUser.mockResolvedValue({ data: { user: { id: ME } }, error: null });
-  h.from.mockImplementation(() => ({ createSignedUrl: h.createSignedUrl, remove: h.remove }));
+  // The delete's sweep of earlier uploads (tests/api/profile-resume-delete-sweep.test.ts)
+  // finds an empty folder here, so every remove below is the delete's own.
+  h.from.mockImplementation(() => ({ createSignedUrl: h.createSignedUrl, remove: h.remove, list: h.list }));
+  h.list.mockResolvedValue({ data: [], error: null });
+  h.jobApplication.findMany.mockResolvedValue([]);
   h.createSignedUrl.mockImplementation(async (path: string) => ({
     data: { signedUrl: signedUrlFor(path) },
     error: null,

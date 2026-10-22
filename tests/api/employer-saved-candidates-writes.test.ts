@@ -76,10 +76,10 @@ function matches(row: Row, where: Row): boolean {
 }
 
 const EMPLOYER = { id: 'supabase-employer', email: 'hiring@clinic.example' };
-const POOL = { role: 'job_seeker', profileVisible: true, openToOffers: true };
+const POOL = { role: 'job_seeker', profileVisible: true, openToOffers: true, deletedAt: null };
 
 const PROFILES: readonly Row[] = [
-    { id: 'profile-employer', supabaseId: EMPLOYER.id, role: 'employer', profileVisible: true, openToOffers: true },
+    { id: 'profile-employer', supabaseId: EMPLOYER.id, role: 'employer', profileVisible: true, openToOffers: true, deletedAt: null },
     { id: 'profile-saved', supabaseId: 'seeker-saved', ...POOL },
     { id: 'profile-not-saved', supabaseId: 'seeker-not-saved', ...POOL },
 ];

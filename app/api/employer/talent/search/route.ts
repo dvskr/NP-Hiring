@@ -40,6 +40,7 @@ import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { logger } from '@/lib/logger';
 import { AI_DAILY_CAPS } from '@/lib/ai-usage';
 import { midnightCentralTimeAsUtc } from '@/lib/time';
+import { talentPoolWhere } from '@/lib/candidate-pool';
 
 const RERANK_DAILY_CAP = AI_DAILY_CAPS.talent_search_rerank;
 
@@ -244,9 +245,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const profiles = await prisma.userProfile.findMany({
         where: {
             supabaseId: { in: vectorHits.map((h) => h.supabaseId) },
-            profileVisible: true,
-            openToOffers: true,
-            role: 'job_seeker',
+            ...talentPoolWhere(),
         },
         select,
     });

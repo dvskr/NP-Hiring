@@ -62,9 +62,12 @@ const escapeRe = (text: string): string => text.replace(/[.*+?^${}()|[\]\\/]/g, 
 /** `href: '<href>'` in an object literal, in any quotes. */
 const literalHref = (href: string): RegExp => new RegExp(`\\bhref:\\s*(['"\`])${escapeRe(href)}\\1`, 'g');
 
-/** A `{ ... }` literal, nested one level at most, that links `href`. */
+/** A balanced `{ ... }` group, nested two levels at most (an icon's `style={{ ... }}`). */
+const GROUP = String.raw`\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}`;
+
+/** A `{ ... }` literal, holding groups nested two levels at most, that links `href`. */
 const linkLiteral = (href: string): RegExp =>
-    new RegExp(`\\{(?:[^{}]|\\{[^{}]*\\})*?${literalHref(href).source}(?:[^{}]|\\{[^{}]*\\})*\\}`, 'g');
+    new RegExp(`\\{(?:[^{}]|${GROUP})*?${literalHref(href).source}(?:[^{}]|${GROUP})*\\}`, 'g');
 
 const DIRECTORY_HREF = '/jobs/locations';
 const DIRECTORY_LITERAL = linkLiteral(DIRECTORY_HREF);
@@ -304,8 +307,11 @@ describe('2.21: the directory travel tile describes the travel page', () => {
 /**
  * Travel and locum tenens each have a landing of their own, and neither
  * bucket counts the other's roles (tests/unit/category-predicate.test.ts).
- * A card under app/jobs that links one never describes itself with the
- * other's name, anywhere in its source but its paths.
+ * A card that links one never describes itself with the other's name,
+ * anywhere in its source but its paths. Register 2.26: the check read only
+ * the route files under app/jobs; it now reads every component, every lib
+ * module and the generator too, where the job page's own links live
+ * (components/InternalLinks.tsx, tests/regressions/internal-links-job-type-landings.test.ts).
  */
 describe('2.21: a travel or locum tenens card names its own category', () => {
     const SIBLINGS = [
@@ -314,12 +320,18 @@ describe('2.21: a travel or locum tenens card names its own category', () => {
     ];
 
     it.each(SIBLINGS)('no card that links $href names the other', ({ href, other }) => {
-        const cards = PAGE_SOURCES.flatMap(({ file, src }) =>
+        const cards = SOURCES.flatMap(({ file, src }) =>
             [...src.matchAll(linkLiteral(href))].map(([source]) => ({ file, source })),
         );
-        const hrefs = PAGE_SOURCES.reduce((total, { src }) => total + (src.match(literalHref(href))?.length ?? 0), 0);
+        const hrefs = SOURCES.reduce((total, { src }) => total + (src.match(literalHref(href))?.length ?? 0), 0);
         expect(cards, `a literal that links ${href} went unread`).toHaveLength(hrefs);
         expect(cards.length).toBeGreaterThanOrEqual(4);
+        expect(cards.some((card) => card.file === 'components/InternalLinks.tsx')).toBe(true);
         expect(cards.filter((card) => other.test(unpathed(card.source))).map((card) => `${card.file}: ${card.source}`)).toEqual([]);
+    });
+
+    it('reads a link literal whose icon carries a style object', () => {
+        const literal = "{ href: '/jobs/travel', label: 'Explore Travel Positions', icon: <Briefcase style={{ width: '14px' }} /> }";
+        expect([...literal.matchAll(linkLiteral('/jobs/travel'))].map(([source]) => source)).toEqual([literal]);
     });
 });

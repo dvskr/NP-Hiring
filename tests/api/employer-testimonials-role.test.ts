@@ -61,6 +61,8 @@ const EMAIL = 'hiring@clinic.example';
 const SESSION = {
     id: 'auth-account',
     email: EMAIL,
+    // The legacy email branch needs a confirmed email (register 2.26).
+    email_confirmed_at: '2026-01-15T10:00:00.000Z',
     user_metadata: { company: 'Kaiser Permanente', full_name: 'Mallory Example' },
 };
 const STORY = { content: 'We hired two family NPs within a month of posting.', consent: true, displayAs: 'full' };

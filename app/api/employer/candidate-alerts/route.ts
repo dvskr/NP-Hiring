@@ -3,21 +3,21 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { SPECIALTY_PRESETS, LICENSE_STATE_OPTIONS } from '@/config/niche/credentials';
+import {
+    MAX_ALERT_SPECIALTIES,
+    MAX_ALERT_STATES,
+    joinAlertList,
+    splitAlertList,
+} from '@/lib/candidate-alert-filters';
 
 // SECURITY (EMP-ALERT-1): the POST body used to be stored as it arrived. A
 // 70,000 entry specialties array was saved as one comma string, and the
 // daily candidate-alerts cron turned each entry into its own query branch,
 // past the Postgres bind limit, which aborted the run for every alert
 // after it; a list that was not an array answered 500. Each list is now
-// capped, and an entry may not hold the comma the stored string is split
-// on. The caps come from the option lists the settings page offers: every
-// state, and twice the specialty presets, because GET hands stored values
-// back and the page posts them again, including any outside today's
-// presets. The cron applies the same caps to rows stored before this check.
+// capped (lib/candidate-alert-filters.ts, shared with the cron), and an
+// entry may not hold the comma the stored string is split on.
 // Test: tests/api/employer-candidate-alerts-body.test.ts
-const MAX_ALERT_SPECIALTIES = SPECIALTY_PRESETS.length * 2;
-const MAX_ALERT_STATES = LICENSE_STATE_OPTIONS.length;
 const MAX_SPECIALTY_LENGTH = 60;
 const MAX_EXPERIENCE_YEARS = 60;
 const MAX_WORK_MODE_LENGTH = 30;
@@ -35,16 +35,6 @@ const alertBodySchema = z.object({
     workMode: z.string().trim().max(MAX_WORK_MODE_LENGTH).nullable().optional(),
     isActive: z.boolean().optional(),
 });
-
-/** Stored form of a filter list: unique entries joined with commas, or null for no filter. */
-function joinAlertList(list: string[] | undefined): string | null {
-    return list && list.length > 0 ? Array.from(new Set(list)).join(',') : null;
-}
-
-/** Stored comma string back to a list, without the empty entries the POST would refuse. */
-function splitAlertList(value: string | null): string[] {
-    return value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
-}
 
 /**
  * GET /api/employer/candidate-alerts
@@ -72,12 +62,14 @@ export async function GET() {
     });
 
     // The settings page posts this object back as it is, so the lists must
-    // pass the POST schema: a row such as "TX," would otherwise block saves.
+    // pass the POST schema: a row such as "TX,", or one stored over the caps
+    // before they existed, would otherwise block saves. The caps also cut
+    // each list to the entries the digest uses.
     return NextResponse.json({
         alert: alert ? {
             id: alert.id,
-            specialties: splitAlertList(alert.specialties),
-            states: splitAlertList(alert.states),
+            specialties: splitAlertList(alert.specialties, MAX_ALERT_SPECIALTIES),
+            states: splitAlertList(alert.states, MAX_ALERT_STATES),
             minExperience: alert.minExperience,
             workMode: alert.workMode,
             isActive: alert.isActive,

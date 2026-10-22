@@ -51,7 +51,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 vi.mock('@/lib/rate-limit', () => ({ rateLimit: h.rateLimit, RATE_LIMITS }));
 vi.mock('@/lib/beehiiv', () => ({ syncToBeehiiv: vi.fn() }));
-vi.mock('@/lib/email-service', () => ({ sendWelcomeEmail: vi.fn().mockResolvedValue({ success: true }) }));
+vi.mock('@/lib/email-service', () => ({ sendWelcomeEmail: vi.fn().mockResolvedValue({ success: true }), isEmailSuppressed: vi.fn().mockResolvedValue(false) }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 
 import { DELETE, GET, POST } from '@/app/api/job-alerts/route';

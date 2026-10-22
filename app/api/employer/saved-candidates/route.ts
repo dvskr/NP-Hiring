@@ -6,14 +6,7 @@ import { PricingTier } from '@/lib/config';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
-
-/**
- * The talent pool gate every employer read of a candidate applies (the
- * candidate list, the candidate page, the resume download, bulk unlock, AI
- * search): a job seeker's profile, visible to employers and open to offers.
- * The soft delete clears both flags, so a deleted account is out too.
- */
-const TALENT_POOL = { profileVisible: true, openToOffers: true, role: 'job_seeker' } as const;
+import { talentPoolWhere } from '@/lib/candidate-pool';
 
 /** A saved row's note keeps at most this many characters, here and on PATCH /note. */
 const MAX_NOTE_LENGTH = 2000;
@@ -91,7 +84,7 @@ export async function GET(req: NextRequest) {
     // pool gate applies here as on the candidate list, admins included. The
     // row is kept and shows again if the seeker rejoins the pool.
     // Pinned by tests/api/employer-saved-candidates-pool-gate.test.ts.
-    const whereClause: Record<string, unknown> = { employerId: profile.id, candidate: TALENT_POOL };
+    const whereClause: Record<string, unknown> = { employerId: profile.id, candidate: talentPoolWhere() };
     if (postingId) {
         whereClause.employerJobId = postingId;
     }
@@ -235,7 +228,7 @@ export async function POST(req: NextRequest) {
     // that matches no profile.
     // Pinned by tests/api/employer-saved-candidates-pool-gate.test.ts.
     const candidate = await prisma.userProfile.findFirst({
-        where: { supabaseId: candidateId, ...TALENT_POOL },
+        where: { supabaseId: candidateId, ...talentPoolWhere() },
         select: { id: true },
     });
 

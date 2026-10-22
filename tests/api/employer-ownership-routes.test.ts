@@ -90,7 +90,10 @@ Object.assign(prisma, {
 
 const USER_ID = 'supabase-employer';
 const EMAIL = 'hiring@clinic.example';
-const WITH_EMAIL = { id: USER_ID, email: EMAIL };
+/** A real session: Supabase stamps email_confirmed_at once the address is confirmed. */
+const WITH_EMAIL = { id: USER_ID, email: EMAIL, email_confirmed_at: '2026-10-01T00:00:00Z' };
+/** The same address before Supabase confirmed it (register 2.26). */
+const UNCONFIRMED_EMAIL = { id: USER_ID, email: EMAIL };
 /** A Supabase session from a sign-in method that carries no email. */
 const WITHOUT_EMAIL = { id: USER_ID };
 const JOB_ID = 'job-1';
@@ -453,6 +456,16 @@ describe('a session with an email: the ownership clause is unchanged', () => {
 
         expect(res.status).toBe(200);
         expect(ownershipOr(prisma.employerJob.findMany)).toEqual(CLAIMED_AND_LEGACY);
+    });
+});
+
+describe('a session whose email is not confirmed: claimed rows only (register 2.26)', () => {
+    it.each(SITES.map((site) => [site.name, site] as const))('%s', async (_name, site) => {
+        signIn(UNCONFIRMED_EMAIL);
+
+        await site.run();
+
+        expect(site.or()).toEqual(CLAIMED_ONLY);
     });
 });
 

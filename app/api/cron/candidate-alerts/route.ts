@@ -7,7 +7,8 @@ import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
 import { getEmployerActivePostings } from '@/lib/tier-limits';
-import { SPECIALTY_PRESETS, LICENSE_STATE_OPTIONS } from '@/config/niche/credentials';
+import { talentPoolWhere } from '@/lib/candidate-pool';
+import { MAX_ALERT_SPECIALTIES, MAX_ALERT_STATES, splitAlertList } from '@/lib/candidate-alert-filters';
 import { brand } from '@/config/brand';
 
 export const maxDuration = 120; // 2 minutes — email sends to multiple employers
@@ -15,28 +16,11 @@ export const maxDuration = 120; // 2 minutes — email sends to multiple employe
 // SECURITY (CRON-1): the digest picked new job seekers with only role and
 // profileVisible, so a candidate who had switched "Open to offers" off was
 // still emailed to employers, although every employer-facing candidate
-// route hides them. This is the pool rule of GET /api/employer/candidates,
-// plus the deleted check.
-// Test: tests/api/cron-candidate-alerts-pool.test.ts
-const LIVE_POOL_WHERE: Prisma.UserProfileWhereInput = {
-    role: 'job_seeker',
-    profileVisible: true,
-    openToOffers: true,
-    deletedAt: null,
-};
-
+// route hides them. It now takes the shared talent pool rule.
 // SECURITY (EMP-ALERT-1): stored lists get the caps POST
-// /api/employer/candidate-alerts now enforces, because rows saved before
-// that check can hold tens of thousands of entries, one query branch each.
-// Empty entries are dropped: an empty `contains` matches every candidate.
+// /api/employer/candidate-alerts enforces, because rows saved before that
+// check can hold tens of thousands of entries, one query branch each.
 // Test: tests/api/cron-candidate-alerts-pool.test.ts
-const MAX_ALERT_SPECIALTIES = SPECIALTY_PRESETS.length * 2;
-const MAX_ALERT_STATES = LICENSE_STATE_OPTIONS.length;
-
-function splitAlertList(value: string | null, cap: number): string[] {
-    if (!value) return [];
-    return value.split(',').map(s => s.trim()).filter(Boolean).slice(0, cap);
-}
 
 // SECURITY (CRON-1): the list route serves only employers and admins, so an
 // alert whose owner has since lost that role, or deleted the account, is
@@ -83,7 +67,7 @@ function buildCandidateWhere(
         ...(typeof alert.minExperience === 'number' ? { yearsExperience: { gte: alert.minExperience } } : {}),
         ...(alert.workMode ? { preferredWorkMode: { equals: alert.workMode, mode: 'insensitive' as const } } : {}),
         // Spread last, so no alert filter can override the pool rule.
-        ...LIVE_POOL_WHERE,
+        ...talentPoolWhere(),
     };
 }
 

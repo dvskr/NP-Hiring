@@ -114,7 +114,7 @@ beforeEach(() => {
     // below switches it back on.
     vi.spyOn(config, 'isPromoActive').mockReturnValue(false);
     process.env.STRIPE_SECRET_KEY = 'sk_test_x';
-    getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email: `Owner@${SIGNUP_DOMAIN}` } }, error: null });
+    getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email: `Owner@${SIGNUP_DOMAIN}`, email_confirmed_at: '2026-10-01T00:00:00Z' } }, error: null });
     vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'user-1', role: 'employer', email: `owner@${SIGNUP_DOMAIN}` } as never);
     vi.mocked(prisma.$transaction).mockImplementation(((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
     vi.mocked(prisma.job.create).mockResolvedValue({ id: 'job-1' } as never);
@@ -447,6 +447,31 @@ describe('B78 resume path: only the posting owner can resume it (CHK-1)', () => 
             data: { paymentStatus: 'pending' },
         });
         expect(res.headers.get('set-cookie')).toContain('checkout_session_bind=cs_1');
+    });
+
+    // Register 2.26: the email proves ownership only once Supabase has confirmed it.
+    it('refuses an unclaimed legacy row to a caller whose email is not confirmed', async () => {
+        getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email: `Owner@${SIGNUP_DOMAIN}` } }, error: null });
+        resumableRow({ userId: null, contactEmail: `OWNER@${SIGNUP_DOMAIN}` });
+
+        const { res } = await post({ resumeJobId: 'job-7' });
+
+        expect(res.status).toBe(403);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+    });
+
+    // Security review of 2.26: the confirmation certifies the sign-in email,
+    // so the profile's stored email (which can differ once the sign-in email
+    // changes) proves nothing.
+    it("refuses an unclaimed legacy row filed under the profile's stored email when the sign-in email differs", async () => {
+        getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email: 'personal@home.example', email_confirmed_at: '2026-10-01T00:00:00Z' } }, error: null });
+        resumableRow({ userId: null, contactEmail: `owner@${SIGNUP_DOMAIN}` });
+
+        const { res } = await post({ resumeJobId: 'job-7' });
+
+        expect(res.status).toBe(403);
+        expect(sessionsCreate).not.toHaveBeenCalled();
     });
 
     it('refuses an unclaimed row filed under another email', async () => {

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
+import { employerJobOwnershipBranches, isEmployerJobOwner } from '@/lib/employer-ownership';
 import { scopeJobIdsToOwned } from './scope';
 
 /**
@@ -261,15 +261,12 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    // P5.A: tightened ownership. Same logic as the listing query above —
-    // contactEmail fallback only applies when the row has no claimed
-    // userId. Prevents takeover by signup-with-existing-employer-email.
+    // P5.A: tightened ownership. Same rule as the listing query above
+    // (lib/employer-ownership.ts): the contactEmail fallback applies only to
+    // a row with no claimed userId, and only for a confirmed email.
     const employerJob = application.job.employerJobs;
     const isAdmin = profile.role === 'admin';
-    const isOwner = isAdmin || (!!employerJob && (
-        (employerJob.userId && employerJob.userId === user.id) ||
-        (!employerJob.userId && employerJob.contactEmail === user.email)
-    ));
+    const isOwner = isAdmin || (!!employerJob && isEmployerJobOwner(employerJob, user));
 
     if (!isOwner) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

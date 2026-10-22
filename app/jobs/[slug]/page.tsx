@@ -957,6 +957,9 @@ export default async function JobPage({ params }: JobPageProps) {
   const employmentTypes = resolveEmploymentTypes(job);
   const jobTypeLabel = employmentTypeLabel(employmentTypes);
   const primaryJobType = employmentTypes[0] ?? null;
+  // The travel link only for a job with the travel tag, which /jobs/travel
+  // lists (register 2.26).
+  const isTravelJob = job.categoryTags?.includes('travel') === true;
 
   // Determine if job is telehealth/remote for internal linking
   const isTelehealth = job.mode?.toLowerCase().includes('telehealth') ||
@@ -1419,6 +1422,7 @@ export default async function JobPage({ params }: JobPageProps) {
                   isRemote={isVerifiedRemote}
                   isTelehealth={isTelehealth}
                   jobType={primaryJobType}
+                  isTravel={isTravelJob}
                   mode={workModeLabel}
                 />
               </div>

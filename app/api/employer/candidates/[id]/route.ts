@@ -6,6 +6,7 @@ import { PricingTier } from '@/lib/config'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage'
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership'
+import { talentPoolWhere } from '@/lib/candidate-pool'
 
 /**
  * Check whether an employer has at least one active FEATURED job posting.
@@ -72,14 +73,9 @@ export async function GET(
     // Full access if: admin, OR has active posting, OR already unlocked this candidate
     const hasFullAccess = isAdmin || !!existingView || await hasActiveFeaturedPost(user.id)
 
-    // Fetch candidate (privacy check: must be visible + open to offers)
+    // Fetch candidate (privacy check: must be in the talent pool)
     const candidate = await prisma.userProfile.findFirst({
-        where: {
-            supabaseId: id,
-            profileVisible: true,
-            openToOffers: true,
-            role: 'job_seeker',
-        },
+        where: { supabaseId: id, ...talentPoolWhere() },
     })
 
     if (!candidate) {

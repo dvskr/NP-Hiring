@@ -18,7 +18,9 @@ async function getAuthedUser(): Promise<{ id: string; email: string | null } | n
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-    return { id: user.id, email: user.email ?? null };
+    // The email proves ownership only once Supabase has confirmed it, as in
+    // the shared ownership rule (lib/employer-ownership.ts, register 2.26).
+    return { id: user.id, email: user.email_confirmed_at ? (user.email ?? null) : null };
   } catch {
     return null;
   }
@@ -111,10 +113,15 @@ export async function GET(request: NextRequest) {
     // EmployerJob row: userId when the posting is account-linked;
     // contactEmail covers legacy rows with no linked account. Mirrors the
     // ownership check in /api/verify-checkout-session.
+    // SECURITY (register 2.26, the CHK-1 sibling): the email fallback matched
+    // rows another account had claimed; it is for unclaimed rows only, as
+    // lib/employer-ownership.ts defines ownership.
+    // tests/api/verify-renewal-session-sec3.test.ts
     if (!cookieMatches && authedUser) {
       const ownsRenewal =
         (employerJob.userId !== null && employerJob.userId === authedUser.id) ||
-        (authedUser.email !== null &&
+        (employerJob.userId === null &&
+          authedUser.email !== null &&
           employerJob.contactEmail.toLowerCase() === authedUser.email.toLowerCase());
       if (!ownsRenewal) {
         logger.warn('Verify renewal session: authed caller does not own this session', {

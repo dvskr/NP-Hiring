@@ -1,9 +1,9 @@
 # Pending Work
 
-> The single list of everything still open, checked against the code on 2026-10-20 (after the auth hotfix
-> `e78f037` and the security and register batch of 2026-10-20, which follow the sister board links `71236b5`,
-> the plain copy pass `a74a4d5` and the SEO, AEO and GEO content release `6263323`; all are live, and `main` is
-> the only branch). Shipped work is at the end.
+> The single list of everything still open, checked against the code on 2026-10-22 (after the auth hotfix
+> `e78f037`, the security and register batch `8d32e1e` of 2026-10-20 and the sweep follow-ups of 2026-10-22,
+> which follow the sister board links `71236b5`, the plain copy pass `a74a4d5` and the SEO, AEO and GEO content
+> release `6263323`; all are live, and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -139,6 +139,20 @@ read production, so these are yours.
   Indeed's state NP career guide articles (403 to automated requests), and whether Indeed sells a paid job seeker
   service (if so, its "Completely free" cell becomes partial). Also confirm `OPENAI_API_KEY` is set in production
   and no database override turns the AI resume parser off; if either is off, drop that row.
+- Avatars stored before 2026-10-20. Since the batch, a profile picture is stored only from the account's own
+  upload folder or, for a Google sign-in, Google's picture host, but older values still render to employers and
+  candidates. In the SQL editor (read only), with your project URL in place of `<project>`:
+  `select supabase_id, avatar_url from public.user_profiles where avatar_url is not null and avatar_url !~
+  ('^https://<project>\.supabase\.co/storage/v1/object/public/avatars/[A-Za-z0-9_-]+/' || supabase_id ||
+  '/[A-Za-z0-9._-]+$') and avatar_url !~ '^https://lh3\.googleusercontent\.com/';`. Each row is a picture
+  the account did not upload itself. Clear them with the same condition (`update public.user_profiles set
+  avatar_url = null where ...`), or tell Claude what they are.
+- Employers with an unconfirmed email. Since 2026-10-22 an unclaimed post filed under an email belongs to a
+  session only once that email is confirmed. With Confirm email ON nobody unconfirmed can sign in, so this
+  should find nothing. In the SQL editor (read only): `select u.email, count(ej.id) from auth.users u join
+  public.employer_jobs ej on ej.user_id is null and ej.contact_email = u.email where u.email_confirmed_at is
+  null group by u.email;`. Any row is an employer who loses those posts and their applicants until the address
+  is confirmed (resend the confirmation from Authentication, Users).
 
 ## 2. Engineering (CLAUDE)
 
@@ -221,31 +235,9 @@ re-checked against its sources that day; the dates table at the top lists the ne
   review dates older than the copy the plain copy pass changed. They are review dates, so they stay until the
   guides are reviewed again (section 6).
 
-**2.26 Follow-ups from the 2026-10 security sweep.** Found by the sweep's builders and reviewers, outside what
-the batch could change safely. In rough order of value:
-- Newsletter consent: `syncToBeehiiv` subscribes every new account to the Beehiiv newsletter with no opt-in
-  check, from `app/auth/callback/route.ts`, `lib/auth/ensure-profile.ts` and `app/api/auth/profile/route.ts`,
-  against the explicit consent rule those files describe. Gate each call on the opt-in.
-- `app/api/job-alerts/route.ts` still sends the welcome email to an address that stays suppressed after a bounce
-  or a complaint (only an unsubscribe is lifted). Check `isEmailSuppressed` first.
-- The legacy ownership branch in `lib/employer-ownership.ts` (an unclaimed post filed under the session's email)
-  does not require a confirmed email, as the auth callback's legacy claim now does. Pass the confirmation in.
-- Token defaults: `EmailLead.unsubscribeToken` and `JobAlert.token` default to `cuid()` in
-  `prisma/schema.prisma`; new alerts from the signup route now get a UUID, other create sites do not. A uuid
-  default covers them all with no migration (after `prisma generate`). Rotating existing tokens is DECISION D33.
-- Billing edges (paid posting is off today): the renewal availability check ignores `STRIPE_WEBHOOK_SECRET`,
-  a key or secret made only of spaces counts as set, and the email ownership branch in
-  `app/api/verify-renewal-session/route.ts` matches rows another account owns (the CHK-1 sibling).
-- Drift guards: one shared talent pool predicate (it is written inline in seven routes) and one shared module
-  for the candidate alert caps.
-- `components/FeaturedJobsSection.tsx` queries published jobs without the global exclusions, and
-  `lib/direct-apply.ts` lacks applytojob.com in its ATS patterns.
-- `lib/compare-data.ts` says Indeed's licensure guidance was not found (2026-08-06), while the new job seeker
-  table marks it limited; settle it at the quarterly /compare review.
-- Storage housekeeping: the purge cron and the resume DELETE remove only the referenced object, so replaced
-  uploads stay forever; avatar values stored before the batch still render until a cleanup.
-- Coverage wording outside app/jobs: `components/InternalLinks.tsx` and other shared components were not scanned
-  by the new coverage test.
+**2.26 Follow-ups from the 2026-10 security sweep.** All but one shipped on 2026-10-22 (see Closed). Left:
+`lib/compare-data.ts` says Indeed's licensure guidance was not found (2026-08-06), while the job seeker table
+marks it limited; settle it at the quarterly /compare review (section 6). The avatar cleanup is yours (1.14).
 
 ## 3. Decisions (DECISION)
 
@@ -312,6 +304,8 @@ Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
 | D31 | What the inbox shows | Once a thread exists the inbox shows a pool candidate's full last name (the pool masks it), and a thread whose other side deleted the account stays listed with their profile fields until the purge; only replies are refused | `app/api/conversations/route.ts`, `app/api/conversations/[id]/route.ts` |
 | D32 | Moving files when a profile is relinked | A profile relinked to a new sign-in keeps resume, avatar and application files under the old account id, which the new ownership checks refuse: the person sees no resume and must upload again. Move the files and rewrite the keys, or clear them? | `lib/auth/ensure-profile.ts` |
 | D33 | Naming and token follow-ups | The FNP guide's title and tags keep "AANP vs ANCC" as a search phrase; the candidate settings list stores "AANP" as a certifying body (`config/niche/credentials.ts`); existing alert and unsubscribe tokens are cuid values. Rename, keep, rotate? | `content/blog/fnp-certification-aanp-vs-ancc.mdx`, `config/niche/credentials.ts` |
+| D34 | Newsletter consent that someone else can give | Since 2026-10-22 a new account joins the Beehiiv newsletter only when it opted in, but the email sign-up form and the exit popup tick the box for the person. US law allows that; a privacy reader, or a European visitor's law, counts a pre-ticked box as no choice. The opt-in is also whatever the sign-up form sent, so a stranger who signs up someone else's address opts it in once its owner clicks the confirmation link, and the anonymous newsletter and alert forms subscribe any typed address. Start both boxes unchecked, and send a Beehiiv double opt-in? | `components/auth/SignUpForm.tsx`, `components/ExitIntentPopup.tsx`, `app/api/newsletter/route.ts` |
+| D35 | What deleting a resume does to the applications sent with it | An application stores the key of the resume it was sent with, which is usually the profile resume itself. Deleting the resume removes that file even when an application names it, so the employer's resume link for that application stops working; since 2026-10-22 older files an application names are kept. Keep the file while an application names it, or remove every copy on delete? | `app/api/profile/resume/route.ts`, `app/api/applications/apply-direct/route.ts` |
 
 ### 3.5 Audit-era items (enterprise audit)
 
@@ -405,6 +399,7 @@ tests fail until every side agrees:
 - 2.22 The /compare hub has its own copy date.
 - 2.23 The certifying body reads AANPCB in the hiring guide, the 51 license guides, the CE hub, the category by city template, the job description templates and nine posts.
 - D25 The job seeker comparison table was audited row by row against the code and each competitor's own pages and rebuilt from the cells that hold (`lib/seeker-comparison.ts`); the "how it works" steps on the home page lost the AI and no recruiter claims.
+- 2.26 Sweep follow-ups (2026-10-22): a new account joins the newsletter only when it opted in, on all three sign-up paths, and the stored newsletter flag takes the same explicit opt-in; the alert welcome email skips an address suppressed after a bounce or a complaint (and skips the email, not the signup, when that check fails), and an alert signup no longer lifts the suppression of a deleted account; the legacy ownership branch (an unclaimed post filed under the session's email) needs a confirmed sign-in email, in every route that uses it (the applicants and notification settings writes included) and in the checkout and renewal verify routes; every capability token defaults to a UUID; a Stripe key or webhook secret made only of spaces counts as unset, and the expiry warning offers a renewal only while the webhook secret is set; every talent pool read uses one rule (`lib/candidate-pool.ts`), which also leaves deleted accounts out, the AI search's vector query included, and the candidate alert caps live in one module (`lib/candidate-alert-filters.ts`), so the settings page gets back a row stored over the caps cut to what the digest uses; the featured jobs on the home page hide what /jobs hides; JazzHR apply pages count as the employer's site in the label and on every surface that features such jobs; account erasure empties the upload folders under every upload prefix, re-reads each account first so one restored mid-run keeps its files, and names any folder it could not empty in the purge audit record; deleting a resume also removes the earlier uploads older than a day that no application names (D35 covers the current file); the job page's type links go to the landing that lists the job (a contract job was sent to Travel), and the travel and locum tenens card check reads components and lib modules too. Owner check: the last bullet of 1.14.
 
 ## Shipped since 2026-08-16
 

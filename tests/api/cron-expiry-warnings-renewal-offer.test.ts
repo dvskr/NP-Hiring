@@ -32,7 +32,9 @@ vi.mock('@/lib/email-service', () => ({
     escapeHtml: (s: string) => s,
 }));
 const getPaidPostingStatus = vi.fn();
-vi.mock('@/lib/env', () => ({ getPaidPostingStatus }));
+// The webhook secret is set unless a test says otherwise.
+const getEnv = vi.fn(() => ({ STRIPE_WEBHOOK_SECRET: 'whsec_x' as string | undefined }));
+vi.mock('@/lib/env', () => ({ getPaidPostingStatus, getEnv }));
 const getPlanSlotStatus = vi.fn();
 vi.mock('@/lib/employer-plan', () => ({ getPlanSlotStatus }));
 vi.mock('@/lib/auth/verify-cron-or-admin', () => ({ verifyCronOrAdmin: vi.fn().mockResolvedValue(null) }));
@@ -266,6 +268,22 @@ describe('after the promo with paid posting off', () => {
         expect(html).not.toContain(`$${config.renewalPrice}`);
         expect(html).not.toMatch(/free through/i);
         expect(html).toContain('Go to Your Dashboard');
+    });
+});
+
+// Register 2.26: the renewal and post checkouts refuse while STRIPE_WEBHOOK_SECRET
+// is unset (the webhook could not record the sale), so no email may offer either.
+describe('after the promo with paid posting on but no webhook secret', () => {
+    it('offers nothing the checkout would refuse', async () => {
+        vi.setSystemTime(AFTER_PROMO);
+        getPaidPostingStatus.mockReturnValue({ enabled: true, stripeConfigured: true, available: true });
+        getEnv.mockReturnValueOnce({ STRIPE_WEBHOOK_SECRET: undefined });
+        seed([row('a', { status: 'paid', expiresInDays: 3 })], [row('gone', { status: 'paid', expiresInDays: -1 })]);
+
+        await runCron();
+
+        expect(warningOptionsFor('a')).toMatchObject({ renewalPurchasable: false, postingPurchasable: false });
+        expect(postExpiryHtml('gone')).not.toContain(`${config.renewalPrice}`);
     });
 });
 

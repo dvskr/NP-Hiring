@@ -81,6 +81,7 @@ vi.mock('@/lib/rate-limit', () => ({
 vi.mock('@/lib/beehiiv', () => ({ syncToBeehiiv: vi.fn() }));
 vi.mock('@/lib/email-service', () => ({
   sendWelcomeEmail: vi.fn().mockResolvedValue({ success: true }),
+  isEmailSuppressed: vi.fn().mockResolvedValue(false),
   sendNewApplicationEmail: vi.fn().mockResolvedValue({ success: true }),
   sendApplicationConfirmationEmail: vi.fn().mockResolvedValue({ success: true }),
 }));

@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { logAudit } from '@/lib/audit-log';
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
-import { deleteFile, getPathFromUrl, toOwnAvatarPath } from '@/lib/supabase-storage';
+import { deleteFile, getPathFromUrl, removeUserUploadFolders, toOwnAvatarPath } from '@/lib/supabase-storage';
 import { toBareResumePath, toOwnResumePath } from '@/lib/resume-storage';
 import { withCronTracking } from '@/lib/cron/track';
 import { brand } from '@/config/brand';
@@ -135,6 +135,21 @@ export async function GET(request: NextRequest) {
 
         for (const u of due) {
             try {
+                // The batch was read once and every account takes several
+                // storage round trips, so an account restored since then
+                // (restore-account clears deletedAt and purgeAt) would lose
+                // every upload while its profile survived. Each account is
+                // re-read as still deleted and due before anything is erased.
+                // Tests: tests/api/purge-soft-deleted-c3.test.ts.
+                const stillDue = await prisma.userProfile.findFirst({
+                    where: { id: u.id, deletedAt: { not: null }, purgeAt: { lte: new Date() } },
+                    select: { id: true },
+                });
+                if (!stillDue) {
+                    logger.info('purge-soft-deleted: account restored since the batch was read, skipped', { userId: u.id });
+                    continue;
+                }
+
                 // C3 fix (2026-06-01): full PII purge — privacy policy promises
                 // erasure but the prior version left résumé files, candidate
                 // embeddings, and email_sends rows behind. Now each lifecycle
@@ -184,6 +199,25 @@ export async function GET(request: NextRequest) {
                             path: storedPath,
                         });
                     }
+                }
+
+                // Step 1b (register 2.26): every other object in the account's
+                // own upload folders (earlier resumes, the cover letters stored
+                // beside them, earlier avatars, message attachments). The steps
+                // above removed only what the profile pointed at. The profile
+                // goes in this run, so a folder left unemptied is named in the
+                // audit record below, the one place it can still be found.
+                // Tests: tests/lib/remove-user-upload-folders.test.ts.
+                let uploadFoldersLeft: readonly string[] = [];
+                try {
+                    const folders = await removeUserUploadFolders(u.supabaseId);
+                    uploadFoldersLeft = folders.failed;
+                    if (folders.failed.length > 0) {
+                        logger.error('purge-soft-deleted: some upload folders could not be emptied', null, { userId: u.id, failed: folders.failed });
+                    }
+                } catch (foldersErr) {
+                    uploadFoldersLeft = ['all upload folders'];
+                    logger.error('purge-soft-deleted: failed to empty upload folders', foldersErr, { userId: u.id });
                 }
 
                 // Step 2: candidate embedding (no FK to user; orphan-cleanable
@@ -254,6 +288,7 @@ export async function GET(request: NextRequest) {
                         email: u.email,
                         hadResume: u.resumeUrl != null,
                         hadAvatar: u.avatarUrl != null,
+                        uploadFoldersLeft,
                     },
                 });
                 purged++;

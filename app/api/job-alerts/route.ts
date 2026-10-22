@@ -5,7 +5,7 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeJobAlert } from '@/lib/sanitize';
 import { syncToBeehiiv } from '@/lib/beehiiv';
 import { logger } from '@/lib/logger';
-import { sendWelcomeEmail } from '@/lib/email-service';
+import { sendWelcomeEmail, isEmailSuppressed } from '@/lib/email-service';
 
 interface CreateAlertBody {
   email: string;
@@ -72,6 +72,16 @@ function shouldLiftSuppressionOnSignup(
  */
 function jobAlertLockKey(normalizedEmail: string): string {
   return `job_alert:create:${normalizedEmail}`;
+}
+
+/** isEmailSuppressed, failing closed: an address whose state cannot be read is treated as suppressed. */
+async function isSuppressedOrUnknown(normalizedEmail: string): Promise<boolean> {
+  try {
+    return await isEmailSuppressed(normalizedEmail);
+  } catch (error) {
+    logger.error('Job alert signup: could not read suppression, welcome email skipped', error);
+    return true;
+  }
 }
 
 // POST - Create new job alert
@@ -201,8 +211,10 @@ export async function POST(request: NextRequest) {
             suppressionReason: null,
           },
         }),
+        // A deleted account stays suppressed (its deletion set the flag), as
+        // in app/api/email/_lib/subscription.ts.
         prisma.userProfile.updateMany({
-          where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
+          where: { email: { equals: normalizedEmail, mode: 'insensitive' }, deletedAt: null },
           data: { emailSuppressed: false, emailSuppressedAt: null },
         }),
       ]);
@@ -301,8 +313,13 @@ export async function POST(request: NextRequest) {
     // unsubscribe token itself, the only token its opt-out links resolve
     // (this call used to pass the alert token, so they all answered
     // "Invalid token").
+    // Never to a suppressed address: asked after the unsubscribe lift above,
+    // so only a bounce, a complaint or a suppressed profile skips the welcome
+    // email, as it skips every digest. The alert is stored by now, so a
+    // failed check skips the email instead of failing the request.
+    // tests/api/job-alerts-welcome-suppressed.test.ts
     const isNewlyConfirmed = !existing || !existing.confirmedAt;
-    if (isNewlyConfirmed) {
+    if (isNewlyConfirmed && !(await isSuppressedOrUnknown(normalizedEmail))) {
       await sendWelcomeEmail(normalizedEmail);
     }
 

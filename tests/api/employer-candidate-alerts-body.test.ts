@@ -278,4 +278,23 @@ describe('GET /api/employer/candidate-alerts hands back lists the POST accepts',
         const saved = await POST(post(alert));
         expect(saved.status).toBe(200);
     });
+
+    it('hands back a row stored before the caps cut to the entries the digest uses, so it saves again', async () => {
+        // Register 2.26: GET returned every stored entry, so a row saved before
+        // EMP-ALERT-1 came back over the cap and the page could not save it.
+        alertFindFirst.mockResolvedValue({
+            id: 'alert-1',
+            specialties: Array.from({ length: 5_000 }, (_, i) => `Specialty ${i}`).join(','),
+            states: [...LICENSE_STATE_OPTIONS, ...LICENSE_STATE_OPTIONS].join(','),
+            minExperience: null,
+            workMode: null,
+            isActive: true,
+        });
+        const { alert } = await (await GET()).json();
+        expect(alert.specialties).toHaveLength(MAX_SPECIALTIES);
+        expect(alert.specialties[0]).toBe('Specialty 0');
+        expect(alert.states).toEqual(LICENSE_STATE_OPTIONS);
+
+        expect((await POST(post(alert))).status).toBe(200);
+    });
 });

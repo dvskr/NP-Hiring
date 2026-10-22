@@ -130,7 +130,7 @@ describe('verify-renewal-session — Sec3 cookie binding + B114 auth gate', () =
       job: { id: 'job-1', title: 'PMHNP' },
     } as never);
     getUserMock.mockResolvedValue({
-      data: { user: { id: 'some-user-id', email: 'owner@clinic.EXAMPLE' } },
+      data: { user: { id: 'some-user-id', email: 'owner@clinic.EXAMPLE', email_confirmed_at: '2026-10-01T00:00:00Z' } },
       error: null,
     });
     const { GET } = await import('@/app/api/verify-renewal-session/route');
@@ -139,5 +139,35 @@ describe('verify-renewal-session — Sec3 cookie binding + B114 auth gate', () =
     expect(res.status).toBe(200);
     expect(json.dashboardToken).toBeUndefined();
     expect(json.tokenDeliveredViaEmail).toBe(true);
+  });
+
+  // Register 2.26, the CHK-1 sibling: the email fallback is for unclaimed rows
+  // only, as the shared ownership rule (lib/employer-ownership.ts) defines it.
+  it('403s a caller whose email matches a posting another account claimed', async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: 'someone-else', email: 'owner@clinic.example', email_confirmed_at: '2026-10-01T00:00:00Z' } },
+      error: null,
+    });
+    const { GET } = await import('@/app/api/verify-renewal-session/route');
+    const res = await GET(makeReq('sess_123'));
+    const json = await res.json();
+    expect(res.status).toBe(403);
+    expect(json.jobTitle).toBeUndefined();
+  });
+
+  it('403s an unconfirmed email on an unclaimed posting: the address proves nothing yet', async () => {
+    vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+      dashboardToken: 'secret-token',
+      userId: null,
+      contactEmail: 'owner@clinic.example',
+      job: { id: 'job-1', title: 'PMHNP' },
+    } as never);
+    getUserMock.mockResolvedValue({
+      data: { user: { id: 'some-user-id', email: 'owner@clinic.example' } },
+      error: null,
+    });
+    const { GET } = await import('@/app/api/verify-renewal-session/route');
+    const res = await GET(makeReq('sess_123'));
+    expect(res.status).toBe(403);
   });
 });

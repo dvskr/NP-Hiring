@@ -11,7 +11,7 @@ import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
 import { config } from '@/lib/config'
 import { brand } from '@/config/brand'
-import { getPaidPostingStatus } from '@/lib/env'
+import { getEnv, getPaidPostingStatus } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import { getPlanSlotStatus } from '@/lib/employer-plan'
 import { nextNewPostPrice, renewalSavingsLabel, resolveRenewalOffer, type RenewalOffer } from '@/lib/pricing'
@@ -54,7 +54,11 @@ interface RenewalContext {
 
 function readRenewalPurchasable(): boolean {
   try {
-    return getPaidPostingStatus().available
+    // The renewal and post checkouts also refuse while STRIPE_WEBHOOK_SECRET
+    // is unset, because the webhook could not record the sale; the email
+    // must not offer what they refuse (register 2.26).
+    // tests/api/cron-expiry-warnings-renewal-offer.test.ts
+    return getPaidPostingStatus().available && !!getEnv().STRIPE_WEBHOOK_SECRET
   } catch (error) {
     // Fail closed: an unreadable flag must never put a renewal the checkout
     // may refuse into an employer's inbox.

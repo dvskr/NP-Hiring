@@ -59,7 +59,7 @@ const US_STATES = [
     'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC',
 ];
 
-const POOL_GATE = { profileVisible: true, openToOffers: true, role: 'job_seeker' };
+const POOL_GATE = { profileVisible: true, openToOffers: true, role: 'job_seeker', deletedAt: null };
 
 type Where = Record<string, unknown> & {
     OR?: Record<string, { contains: string }>[];

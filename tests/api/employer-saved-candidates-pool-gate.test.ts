@@ -91,8 +91,10 @@ function matches(row: Row, where: Row): boolean {
     });
 }
 
-const EMPLOYER = { id: 'supabase-employer', email: 'hiring@clinic.example' };
-const ADMIN = { id: 'supabase-admin', email: 'admin@board.example' };
+// The legacy email branch needs a confirmed email (register 2.26).
+const CONFIRMED = '2026-01-15T10:00:00.000Z';
+const EMPLOYER = { id: 'supabase-employer', email: 'hiring@clinic.example', email_confirmed_at: CONFIRMED };
+const ADMIN = { id: 'supabase-admin', email: 'admin@board.example', email_confirmed_at: CONFIRMED };
 const OTHER_EMPLOYER_ID = 'supabase-other-employer';
 
 function profile(id: string, supabaseId: string, role: string, firstName: string, flags: Row): Row {
@@ -138,6 +140,12 @@ const PROFILES = {
         openToOffers: false,
         deletedAt: new Date('2026-10-01T00:00:00Z'),
     }),
+    // Deleted with both flags still on: only the deletion check of the shared
+    // pool rule (lib/candidate-pool.ts, register 2.26) keeps it out.
+    deletedFlagsOn: profile('profile-deleted-flags-on', 'seeker-deleted-flags-on', 'job_seeker', 'Eve', {
+        ...OPEN,
+        deletedAt: new Date('2026-10-01T00:00:00Z'),
+    }),
     // Employer accounts keep the schema defaults for both flags, so only the role keeps them out.
     otherEmployer: profile('profile-other-employer', OTHER_EMPLOYER_ID, 'employer', 'Otto', OPEN),
 };
@@ -170,6 +178,7 @@ const SAVED: readonly Row[] = [
     savedRow('saved-hidden', 'profile-employer', PROFILES.hidden, null),
     savedRow('saved-closed', 'profile-employer', PROFILES.closed, null),
     savedRow('saved-deleted', 'profile-employer', PROFILES.deleted, null),
+    savedRow('saved-deleted-flags-on', 'profile-employer', PROFILES.deletedFlagsOn, null),
     savedRow('saved-other-employer', 'profile-employer', PROFILES.otherEmployer, null),
     savedRow('saved-in-pool-posting', 'profile-employer', PROFILES.inPool, POSTINGS.own),
     savedRow('saved-hidden-posting', 'profile-employer', PROFILES.hidden, POSTINGS.own),
@@ -256,6 +265,7 @@ describe('POST /api/employer/saved-candidates: only a talent pool member can be 
         ['hidden from employers', 'seeker-hidden'],
         ['closed to offers', 'seeker-closed'],
         ['deleted (both flags cleared)', 'seeker-deleted'],
+        ['deleted with both flags still on', 'seeker-deleted-flags-on'],
         ['another employer', OTHER_EMPLOYER_ID],
         ['an admin', ADMIN.id],
     ])('answers 404 and writes nothing for a profile that is %s', async (_label, candidateId) => {

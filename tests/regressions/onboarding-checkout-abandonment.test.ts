@@ -31,8 +31,10 @@ describe('B78 — create-checkout resume mode', () => {
     expect(src).toMatch(/typeof rawBody\.resumeJobId === 'string'/);
     // gaMetadata carries the consented GA client and session ids so a resumed
     // checkout keeps its attribution (tests/regressions/checkout-ga-attribution.test.ts
-    // owns that contract); everything else about the call is unchanged.
-    expect(src).toMatch(/return resumeAbandonedCheckout\(stripe, rawBody\.resumeJobId\.trim\(\), userId, profileEmail, gaMetadata\)/);
+    // owns that contract); the caller's sign-in email reaches the resume only
+    // once Supabase has confirmed it (register 2.26).
+    expect(src).toMatch(/return resumeAbandonedCheckout\(stripe, rawBody\.resumeJobId\.trim\(\), userId, confirmedEmail, gaMetadata\)/);
+    expect(src).toMatch(/confirmedEmail = user\.email_confirmed_at && user\.email\?\.trim\(\) \? user\.email : null;/);
     // The branch sits AFTER the auth block — anonymous callers never reach it.
     const authGate = src.indexOf("return NextResponse.json({ error: 'Authentication required' }, { status: 401 })");
     const resumeBranch = src.indexOf('return resumeAbandonedCheckout(');

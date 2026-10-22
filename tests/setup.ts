@@ -232,6 +232,7 @@ vi.mock('@/lib/sentry', () => {
 vi.mock('@/lib/email-service', () => {
     return {
         sendWelcomeEmail: vi.fn().mockResolvedValue({ success: true }),
+        isEmailSuppressed: vi.fn().mockResolvedValue(false),
         sendConfirmationEmail: vi.fn().mockResolvedValue({ success: true }),
         sendRenewalConfirmationEmail: vi.fn().mockResolvedValue({ success: true }),
         sendExpiryWarningEmail: vi.fn().mockResolvedValue({ success: true }),

@@ -12,12 +12,18 @@
  *     undefined value as "no condition", and matched every unclaimed row.
  *   - A missing user id throws instead of building `{ userId: undefined }`,
  *     which would match every row.
+ *   - An email Supabase has not confirmed proves nothing (register 2.26), so
+ *     it gets the claimed-row branch only; the auth callback's legacy claim
+ *     and the profile relink apply the same rule.
+ *   - isEmployerJobOwner, the same rule for a row a route has already loaded,
+ *     agrees with the branches for every row and every kind of session.
  */
 import { describe, it, expect } from 'vitest';
-import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
+import { employerJobOwnershipBranches, isEmployerJobOwner, type EmployerJobOwner } from '@/lib/employer-ownership';
 
 const USER_ID = 'supabase-owner';
 const EMAIL = 'hiring@clinic.example';
+const CONFIRMED = '2026-10-01T00:00:00Z';
 
 interface Row {
     id: string;
@@ -49,14 +55,14 @@ function reachable(where: Where): string[] {
 
 describe('employerJobOwnershipBranches', () => {
     it('gives a user with an email their claimed rows and the unclaimed rows under that email', () => {
-        expect(employerJobOwnershipBranches({ id: USER_ID, email: EMAIL })).toEqual([
+        expect(employerJobOwnershipBranches({ id: USER_ID, email: EMAIL, email_confirmed_at: CONFIRMED })).toEqual([
             { userId: USER_ID },
             { userId: null, contactEmail: EMAIL },
         ]);
     });
 
     it('matches the email exactly as given, as the routes always did', () => {
-        const [, legacy] = employerJobOwnershipBranches({ id: USER_ID, email: 'Hiring@Clinic.example' });
+        const [, legacy] = employerJobOwnershipBranches({ id: USER_ID, email: 'Hiring@Clinic.example', email_confirmed_at: CONFIRMED });
 
         expect(legacy).toEqual({ userId: null, contactEmail: 'Hiring@Clinic.example' });
     });
@@ -67,7 +73,15 @@ describe('employerJobOwnershipBranches', () => {
         ['an empty email', ''],
         ['a blank email', '   '],
     ])('gives a user with %s their claimed rows only', (_label, email) => {
-        expect(employerJobOwnershipBranches({ id: USER_ID, email })).toEqual([{ userId: USER_ID }]);
+        expect(employerJobOwnershipBranches({ id: USER_ID, email, email_confirmed_at: CONFIRMED })).toEqual([{ userId: USER_ID }]);
+    });
+
+    it.each<[string, string | null | undefined]>([
+        ['no confirmation', undefined],
+        ['a null confirmation', null],
+        ['an empty confirmation', ''],
+    ])('gives a user whose email has %s their claimed rows only', (_label, emailConfirmedAt) => {
+        expect(employerJobOwnershipBranches({ id: USER_ID, email: EMAIL, email_confirmed_at: emailConfirmedAt })).toEqual([{ userId: USER_ID }]);
     });
 
     it('reads a session user that carries no email key at all', () => {
@@ -87,7 +101,7 @@ describe('employerJobOwnershipBranches', () => {
 
 describe('what the branches reach', () => {
     it('with an email: the claimed row and the unclaimed legacy row under it, never a row another account claimed', () => {
-        const where = { OR: employerJobOwnershipBranches({ id: USER_ID, email: EMAIL }) };
+        const where = { OR: employerJobOwnershipBranches({ id: USER_ID, email: EMAIL, email_confirmed_at: CONFIRMED }) };
 
         expect(reachable(where)).toEqual(['own-claimed', 'own-legacy']);
     });
@@ -100,5 +114,33 @@ describe('what the branches reach', () => {
         // The bypass the helper closes: undefined drops the email condition.
         expect(reachable(inline)).toEqual(['own-claimed', 'own-legacy', 'other-legacy']);
         expect(reachable(built)).toEqual(['own-claimed']);
+    });
+});
+
+describe('isEmployerJobOwner', () => {
+    const SESSIONS: ReadonlyArray<[string, EmployerJobOwner]> = [
+        ['a confirmed email', { id: USER_ID, email: EMAIL, email_confirmed_at: CONFIRMED }],
+        ['an unconfirmed email', { id: USER_ID, email: EMAIL }],
+        ['a blank email', { id: USER_ID, email: '  ', email_confirmed_at: CONFIRMED }],
+        ['no email', { id: USER_ID }],
+        ['the same email in another case', { id: USER_ID, email: 'Hiring@Clinic.example', email_confirmed_at: CONFIRMED }],
+        ['another account', { id: 'supabase-other', email: 'talent@other-clinic.example', email_confirmed_at: CONFIRMED }],
+    ];
+
+    it.each(SESSIONS)('agrees with the branches for a session with %s', (_label, user) => {
+        const branches = { OR: employerJobOwnershipBranches(user) };
+        for (const row of ROWS) {
+            expect(isEmployerJobOwner(row, user), row.id).toBe(matches(row, branches));
+        }
+    });
+
+    it('gives an unconfirmed email no unclaimed row, where the inline checks it replaces did', () => {
+        const legacy = ROWS.find((row) => row.id === 'own-legacy')!;
+        expect(isEmployerJobOwner(legacy, { id: USER_ID, email: EMAIL })).toBe(false);
+        expect(isEmployerJobOwner(legacy, { id: USER_ID, email: EMAIL, email_confirmed_at: CONFIRMED })).toBe(true);
+    });
+
+    it('throws for a missing user id, as the branches do', () => {
+        expect(() => isEmployerJobOwner(ROWS[0], { id: '', email: EMAIL })).toThrow(TypeError);
     });
 });

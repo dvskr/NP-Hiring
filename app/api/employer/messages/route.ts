@@ -8,21 +8,15 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { employerJobOwnershipBranches, type EmployerJobOwner } from '@/lib/employer-ownership';
 import { readJsonObject, validateEmployerSendPayload } from '@/app/api/conversations/_lib/message-payload';
-
-/** What the send path reads about a recipient to decide whether it is in reach. */
-interface RecipientReach {
-    readonly role: string;
-    readonly profileVisible: boolean;
-    readonly openToOffers: boolean;
-}
+import { isInTalentPool, type TalentPoolFlags } from '@/lib/candidate-pool';
 
 /**
  * Whether this employer may open a NEW thread with the recipient, through one
  * of the two places the dashboard offers it:
- *   - the candidate pool: a job seeker visible to employers and open to
- *     offers (the filter GET /api/employer/candidates applies) whose profile
- *     this employer opened. The Message button lives on that profile page,
- *     and the page records the ProfileView before it renders.
+ *   - the candidate pool (lib/candidate-pool.ts, the rule every pool read
+ *     applies) and a profile this employer opened. The Message button lives
+ *     on that profile page, and the page records the ProfileView before it
+ *     renders.
  *   - the applicants view: anyone who applied to one of this employer's own
  *     jobs, whatever their pool settings.
  * A reply in an existing thread never comes through here.
@@ -30,9 +24,9 @@ interface RecipientReach {
 async function mayOpenThreadWith(
     user: EmployerJobOwner,
     recipientSupabaseId: string,
-    recipient: RecipientReach,
+    recipient: TalentPoolFlags,
 ): Promise<boolean> {
-    if (recipient.role === 'job_seeker' && recipient.profileVisible && recipient.openToOffers) {
+    if (isInTalentPool(recipient)) {
         const opened = await prisma.profileView.findUnique({
             where: { viewerId_candidateId: { viewerId: user.id, candidateId: recipientSupabaseId } },
             select: { id: true },

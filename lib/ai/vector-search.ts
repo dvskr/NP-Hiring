@@ -101,7 +101,7 @@ export async function platformRevenueJobsWithSimilarity(
     const vec = toVectorLiteral(queryEmbedding);
     // The regex below is the postgres-flavor counterpart of the ATS_PATTERNS
     // array in job-classifier.ts. Keep them aligned: changes to one require
-    // changes to the other.
+    // changes to the other (tests/regressions/ats-host-lists-agree.test.ts).
     const sql = `
         SELECT je.job_id, (je.embedding <=> '${vec}'::vector) AS distance
         FROM job_embeddings je
@@ -113,7 +113,7 @@ export async function platformRevenueJobsWithSimilarity(
               j.source_type = 'employer'
               OR j.apply_on_platform = true
               OR j.source_type = 'direct'
-              OR j.apply_link ~* '\\.myworkdayjobs\\.com|greenhouse\\.io|lever\\.co|jobs\\.ashbyhq\\.com|smartrecruiters\\.com|icims\\.com|jazz\\.co|bamboohr\\.com|usajobs\\.gov|apply\\.workable\\.com|careers\\.|jobs\\.'
+              OR j.apply_link ~* '\\.myworkdayjobs\\.com|greenhouse\\.io|lever\\.co|jobs\\.ashbyhq\\.com|smartrecruiters\\.com|icims\\.com|jazz\\.co|\\.applytojob\\.com|bamboohr\\.com|usajobs\\.gov|apply\\.workable\\.com|careers\\.|jobs\\.'
           );
     `;
     const rows = await prisma.$queryRawUnsafe<JobSearchRow[]>(sql);
@@ -210,6 +210,8 @@ export async function semanticCandidateSearch(
         JOIN user_profiles up ON up.supabase_id = ce.supabase_id
         WHERE up.deleted_at IS NULL
           AND up.profile_visible = true
+          AND up.open_to_offers = true
+          AND up.role = 'job_seeker'
           ${stateFilter}
         ORDER BY ce.embedding <=> '${vec}'::vector
         LIMIT ${Math.max(1, Math.min(200, k))};
