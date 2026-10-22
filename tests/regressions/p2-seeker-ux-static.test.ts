@@ -198,7 +198,7 @@ describe('P2 #3 — alert keyword suggestions are title-shaped, not profile pres
   });
 });
 
-describe('P2 #3 — the salary field does not claim parity with the /jobs filter', () => {
+describe('P2 #3 — the alert salary field and the /jobs filter share one rule (2.18)', () => {
   const publicForm = read('app/job-alerts/page.tsx');
   const manageForm = read('app/job-alerts/manage/page.tsx');
 
@@ -208,53 +208,43 @@ describe('P2 #3 — the salary field does not claim parity with the /jobs filter
     }
   });
 
-  it('names both matchers so the divergence is visible to the next reader', () => {
+  it('both form comments name the one rule, and no longer describe two', () => {
     for (const src of [publicForm, manageForm]) {
+      expect(src).toContain('salaryClause');
       expect(src).toContain('lib/filters.ts');
-      expect(src).toContain('lib/job-alerts-service.ts');
+      expect(src).not.toMatch(/MATCHERS/);
     }
   });
 
-  it('carries no explanatory note under the field, and points at the matcher fix instead', () => {
-    // Owner call 2026-10-12: form fields carry no explanatory hints. The
-    // floor-only gap (a "$130,000/yr" posting normalizes to max:null, so a
-    // $100k+ alert omits it) is fixed in the digest matcher, tracked as
-    // docs/PENDING_WORK.md 2.18, not explained to the visitor.
+  it('carries no explanatory note under the field', () => {
+    // Owner call 2026-10-12: form fields carry no explanatory hints.
     for (const src of [publicForm, manageForm]) {
       expect(src).not.toContain('min-salary-note');
       expect(src).not.toMatch(/won&apos;t be identical/);
-      expect(src).toContain('docs/PENDING_WORK.md');
     }
   });
 
-  it('pins the normalizer behaviour behind the floor-only gap', () => {
-    // If the ANNUAL branch ever starts inferring a max, the gap closes on
-    // its own and PENDING_WORK 2.18 should be revisited.
-    // Behavioural since the 2026-09-28 extractor rewrite (indexing audit
-    // CQ-02) folded the period branches into one table: a single annual
-    // figure still yields NO max.
+  it('pins the normalizer behaviour that made the two rules part ways', () => {
+    // A single annual figure still yields NO max (indexing audit CQ-02), so a
+    // rule that reads only the high figure misses those postings. Both rules
+    // now read the low figure too (tests/lib/job-alert-salary-filter.test.ts).
     expect(extractSalary('Salary: $120,000 per year')).toMatchObject({ min: 120000, max: null, period: 'year' });
     expect(extractSalary('$120,000 annually')).toMatchObject({ min: 120000, max: null, period: 'year' });
   });
 
-  it('pins the known divergence — if these are aligned, close PENDING_WORK 2.18', () => {
-    // Deliberately asserts the CURRENT (divergent) clauses. Aligning the
-    // digest matcher with the board filter is the real fix (2.18); when it
-    // lands this test fails, which is the signal to update it and the two
-    // form comments that describe the gap.
+  it('the digest takes the board filter itself for the minimum', () => {
     const boardFilter = read('lib/filters.ts');
     const digestMatcher = read('lib/job-alerts-service.ts');
 
-    // /jobs: min >= X OR max >= X → salary-less EXCLUDED, floor-only INCLUDED.
-    // The clause now lives in salaryClause(salaryMin), called with filters.salaryMin.
+    // /jobs: min >= X OR max >= X, in salaryClause(salaryMin).
     expect(boardFilter).toMatch(
       /normalizedMinSalary:\s*\{\s*gte:\s*(?:filters\.)?salaryMin\s*\}[\s\S]{0,120}normalizedMaxSalary:\s*\{\s*gte:\s*(?:filters\.)?salaryMin\s*\}/,
     );
     expect(boardFilter).toMatch(/salaryClause\(filters\.salaryMin\)/);
-    // digest: max >= X OR both null → salary-less INCLUDED, floor-only EXCLUDED.
-    expect(digestMatcher).toMatch(
-      /normalizedMaxSalary:\s*\{\s*gte:\s*alert\.minSalary\s*\}[\s\S]{0,200}AND:\s*\[\{\s*normalizedMinSalary:\s*null\s*\},\s*\{\s*normalizedMaxSalary:\s*null\s*\}\]/,
-    );
+    // The digest calls the same clause, and no longer writes its own.
+    expect(digestMatcher).toMatch(/import \{[^}]*\bsalaryClause\b[^}]*\} from '@\/lib\/filters'/);
+    expect(digestMatcher).toContain('salaryClause(alert.minSalary ?? null)');
+    expect(digestMatcher).not.toMatch(/normalizedMaxSalary:\s*\{\s*gte:\s*alert\.minSalary\s*\}/);
   });
 });
 

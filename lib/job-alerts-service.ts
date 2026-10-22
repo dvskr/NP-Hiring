@@ -16,7 +16,7 @@ import {
   V2, SANS as SANS_V2, SERIF as SERIF_V2,
 } from '@/lib/email-templates-v2'
 import { Prisma } from '@prisma/client'
-import { CATEGORY_FILTERS, CATEGORY_EXCLUSIONS } from '@/lib/filters'
+import { CATEGORY_FILTERS, CATEGORY_EXCLUSIONS, salaryClause } from '@/lib/filters'
 import { logger } from '@/lib/logger'
 import { brand } from '@/config/brand'
 import { BEST_SORT_ORDER_BY, compareJobsBest } from '@/lib/utils/job-sort'
@@ -81,6 +81,32 @@ function buildCriteriaSummary(alert: { keyword?: string | null; location?: strin
     else parts.push(`up to $${maxK}k`)
   }
   return parts.length > 0 ? parts.join(' · ') : `All ${brand.niche.short} jobs`
+}
+
+/**
+ * The salary part of an alert's job query. The minimum is the /jobs salary
+ * filter itself (salaryClause, lib/filters.ts): a job whose low or high
+ * figure reaches it, never a job that posts no pay. Register 2.18: the digest
+ * kept only a job whose high figure reached it, plus every job with no pay,
+ * so a single-figure posting ("$130,000/yr" stores no high figure) was left
+ * out of a $100k+ alert that /jobs, and the email's own "View All Matching
+ * Jobs" link, listed it for. A maximum has no /jobs filter; it keeps a job
+ * whose low figure is at or under it, or a job with no pay.
+ * Tests: tests/lib/job-alert-salary-filter.test.ts
+ */
+export function alertSalaryConditions(alert: { minSalary?: number | null; maxSalary?: number | null }): Prisma.JobWhereInput[] {
+  const conditions: Prisma.JobWhereInput[] = []
+  const minimum = salaryClause(alert.minSalary ?? null)
+  if (minimum) conditions.push(minimum)
+  if (alert.maxSalary) {
+    conditions.push({
+      OR: [
+        { normalizedMinSalary: { lte: alert.maxSalary } },
+        { AND: [{ normalizedMinSalary: null }, { normalizedMaxSalary: null }] },
+      ],
+    })
+  }
+  return conditions
 }
 
 // ─── Build pre-filtered jobs URL from alert criteria ──────────────────────────
@@ -383,24 +409,8 @@ export async function sendJobAlerts(): Promise<{
           whereClause.jobType = alert.jobType
         }
 
-        // ── Salary: range overlap, but INCLUDE jobs with no salary data ──
-        if (alert.minSalary) {
-          ;(whereClause.AND as Prisma.JobWhereInput[]).push({
-            OR: [
-              { normalizedMaxSalary: { gte: alert.minSalary } },
-              // Include jobs with no salary data — don't exclude unknowns
-              { AND: [{ normalizedMinSalary: null }, { normalizedMaxSalary: null }] },
-            ]
-          })
-        }
-        if (alert.maxSalary) {
-          ;(whereClause.AND as Prisma.JobWhereInput[]).push({
-            OR: [
-              { normalizedMinSalary: { lte: alert.maxSalary } },
-              { AND: [{ normalizedMinSalary: null }, { normalizedMaxSalary: null }] },
-            ]
-          })
-        }
+        // ── Salary: the /jobs rule for the minimum (register 2.18) ──
+        ;(whereClause.AND as Prisma.JobWhereInput[]).push(...alertSalaryConditions(alert))
 
         // Phase 5 #16 — experience filter alignment with /jobs UI.
         // 2026-05-16: tightened to match buildWhereClause exactly. Previous

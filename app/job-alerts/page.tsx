@@ -469,38 +469,15 @@ function JobAlertsContent() {
                     </select>
                   </div>
 
-                  {/* Minimum salary — the BUCKETS are shared with the /jobs
-                      salary filter (config/niche/stats.ts), but the two
-                      MATCHERS are different rules and this page must not
-                      claim otherwise:
-
-                        /jobs   lib/filters.ts, `filters.salaryMin` clause:
-                                normalizedMinSalary >= X OR normalizedMaxSalary >= X
-                                → salary-less jobs EXCLUDED,
-                                  floor-only jobs INCLUDED.
-
-                        digest  lib/job-alerts-service.ts, `alert.minSalary`:
-                                normalizedMaxSalary >= X
-                                OR (normalizedMinSalary IS NULL AND normalizedMaxSalary IS NULL)
-                                → salary-less jobs INCLUDED,
-                                  floor-only jobs EXCLUDED.
-
-                      Because buildFilteredJobsUrl() points the digest's
-                      "View All Matching Jobs" button at /jobs?salaryMin=,
-                      the email and the page it links to can return different
-                      sets. Aligning them means changing the digest matcher,
-                      which lives outside this package (docs/PENDING_WORK.md
+                  {/* Minimum salary: the buckets are shared with the /jobs
+                      salary filter (config/niche/stats.ts), and so is the
+                      rule. The digest (lib/job-alerts-service.ts) calls
+                      salaryClause from lib/filters.ts: a job whose low or
+                      high figure reaches the minimum, never a job that posts
+                      no pay. So the email and its "View All Matching Jobs"
+                      link (/jobs?salaryMin=) list the same jobs (register
                       2.18). The field carries no explanatory note (owner
-                      call, 2026-10-12); fix the matcher, not the copy.
-
-                      NB: neither rule is uniformly "stricter" — they diverge
-                      in BOTH directions. The board drops salary-less jobs the
-                      digest keeps; the digest drops floor-only jobs the board
-                      keeps. Floor-only is not an edge case: job-normalizer.ts
-                      returns {min, max: null} for any single-figure salary
-                      text ("$130,000/yr" hits the ANNUAL branch with no
-                      second capture), so those postings are invisible to a
-                      $100k+ alert. */}
+                      call, 2026-10-12). */}
                   <div>
                     <label htmlFor="alert-min-salary" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
                       Minimum Salary <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>

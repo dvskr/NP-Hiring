@@ -447,18 +447,13 @@ function ManageAlertsContent() {
                   </select>
                 </div>
 
-                {/* Minimum salary — the BUCKETS are shared with the /jobs
-                    salary filter (config/niche/stats.ts); the MATCHERS are
-                    not the same rule:
-                      /jobs  (lib/filters.ts)  min >= X OR max >= X
-                             → salary-less EXCLUDED, floor-only INCLUDED
-                      digest (lib/job-alerts-service.ts)
-                             max >= X OR (min IS NULL AND max IS NULL)
-                             → salary-less INCLUDED, floor-only EXCLUDED
-                    So the digest and the /jobs?salaryMin= link it carries can
-                    return different sets (docs/PENDING_WORK.md 2.18). The
+                {/* Minimum salary: the buckets are shared with the /jobs
+                    salary filter (config/niche/stats.ts), and so is the rule.
+                    The digest (lib/job-alerts-service.ts) calls salaryClause
+                    from lib/filters.ts, so the email and the /jobs?salaryMin=
+                    link it carries list the same jobs (register 2.18). The
                     field carries no explanatory note (owner call,
-                    2026-10-12); fix the matcher, not the copy. */}
+                    2026-10-12). */}
                 <div>
                   <label htmlFor="new-alert-min-salary" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
                     <DollarSign size={10} style={{ display: 'inline', marginRight: '3px' }} />Minimum Salary

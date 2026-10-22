@@ -1,9 +1,10 @@
 # Pending Work
 
 > The single list of everything still open, checked against the code on 2026-10-22 (after the auth hotfix
-> `e78f037`, the security and register batch `8d32e1e` of 2026-10-20 and the sweep follow-ups of 2026-10-22,
-> which follow the sister board links `71236b5`, the plain copy pass `a74a4d5` and the SEO, AEO and GEO content
-> release `6263323`; all are live, and `main` is the only branch). Shipped work is at the end.
+> `e78f037`, the security and register batch `8d32e1e` of 2026-10-20, and the sweep follow-ups `a8f1d4b` and
+> the alert salary rule of 2026-10-22, which follow the sister board links `71236b5`, the plain copy pass
+> `a74a4d5` and the SEO, AEO and GEO content release `6263323`; all are live, and `main` is the only branch).
+> Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -182,15 +183,6 @@ fee is published.
 **2.15 /terms after the promo.** /terms is static and keeps its dated "Launch promotion (through December 31,
 2026)" section after the promo ends. It stays true, but in the first deploy after 2027-01-01, move that section
 to the past tense and update "Last updated".
-
-**2.18 Job alert salary matcher.** A job alert with a minimum salary and the /jobs salary filter use
-different rules. /jobs (`lib/filters.ts`) keeps a job whose low or high figure reaches the minimum and drops
-jobs with no salary; the alert digest (`lib/job-alerts-service.ts`) keeps a job whose high figure reaches it,
-plus jobs with no salary. A posting with a single figure ("$130,000/yr" stores no high figure) is therefore
-left out of a $100k+ alert although /jobs lists it. The two alert forms used to explain this under the field;
-that note was removed with the other field hints (2026-10-12), so the digest rule should now match /jobs.
-It changes which jobs real subscribers receive, so ship it on its own. `tests/regressions/p2-seeker-ux-static.test.ts`
-pins the current divergence and fails when it is fixed.
 
 **2.24 Dated posts to re-check.** The ten posts published on 2026-10-13 carry claims that expire. Each was
 re-checked against its sources that day; the dates table at the top lists the next ones.
@@ -400,6 +392,7 @@ tests fail until every side agrees:
 - 2.23 The certifying body reads AANPCB in the hiring guide, the 51 license guides, the CE hub, the category by city template, the job description templates and nine posts.
 - D25 The job seeker comparison table was audited row by row against the code and each competitor's own pages and rebuilt from the cells that hold (`lib/seeker-comparison.ts`); the "how it works" steps on the home page lost the AI and no recruiter claims.
 - 2.26 Sweep follow-ups (2026-10-22): a new account joins the newsletter only when it opted in, on all three sign-up paths, and the stored newsletter flag takes the same explicit opt-in; the alert welcome email skips an address suppressed after a bounce or a complaint (and skips the email, not the signup, when that check fails), and an alert signup no longer lifts the suppression of a deleted account; the legacy ownership branch (an unclaimed post filed under the session's email) needs a confirmed sign-in email, in every route that uses it (the applicants and notification settings writes included) and in the checkout and renewal verify routes; every capability token defaults to a UUID; a Stripe key or webhook secret made only of spaces counts as unset, and the expiry warning offers a renewal only while the webhook secret is set; every talent pool read uses one rule (`lib/candidate-pool.ts`), which also leaves deleted accounts out, the AI search's vector query included, and the candidate alert caps live in one module (`lib/candidate-alert-filters.ts`), so the settings page gets back a row stored over the caps cut to what the digest uses; the featured jobs on the home page hide what /jobs hides; JazzHR apply pages count as the employer's site in the label and on every surface that features such jobs; account erasure empties the upload folders under every upload prefix, re-reads each account first so one restored mid-run keeps its files, and names any folder it could not empty in the purge audit record; deleting a resume also removes the earlier uploads older than a day that no application names (D35 covers the current file); the job page's type links go to the landing that lists the job (a contract job was sent to Travel), and the travel and locum tenens card check reads components and lib modules too. Owner check: the last bullet of 1.14.
+- 2.18 Job alert salary rule (2026-10-22, shipped on its own): an alert's minimum salary now keeps exactly the jobs the /jobs salary filter keeps (`salaryClause` in `lib/filters.ts`): a job whose low or high figure reaches it, never a job with no pay. A single-figure posting ("$130,000/yr") now reaches a $100k+ alert, and jobs that post no pay no longer do, so the email and its "View All Matching Jobs" link list the same jobs. A maximum keeps its rule.
 
 ## Shipped since 2026-08-16
 
