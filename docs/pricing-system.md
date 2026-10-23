@@ -674,6 +674,14 @@ Applied via the deploy build (`prisma migrate deploy`) — never run migrations 
 The promo needs NOTHING from Stripe. Everything below must be live **before January 1, 2027** (see [LAUNCH_RUNBOOK.md §8](./LAUNCH_RUNBOOK.md)):
 
 - [ ] `ENABLE_PAID_POSTING=true` + `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` in Vercel. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 until both are set, and plan sales stay closed until then (§1d)
+- [ ] (Optional, recommended) Restricted live key in place of the standard secret key. `STRIPE_SECRET_KEY` takes either, and a restricted key can do only what it is given, so a leaked key cannot refund, pay out, or change products and prices (it can still read the checkout sessions it lists). Every Stripe call in the code needs exactly these permissions:
+  - Checkout Sessions: Write (create and expire a session; Write includes the retrieve and list calls)
+  - Payment Intents: Read (the resume, verify and reconciliation paths retrieve a session with its `payment_intent` expanded)
+  - Subscriptions: Read (retrieve and list)
+  - Invoices: Read (retrieve, for invoice and receipt links)
+  - Customer portal: Write (create a portal session for "Manage billing")
+  - Nothing for the webhook: `webhooks.constructEvent` checks the signature locally against `STRIPE_WEBHOOK_SECRET`.
+  Create the key in a sandbox first, run one per post checkout, one renewal, one plan purchase and one portal visit, then read the key's request logs (API keys, the key's menu, View request logs) for any 403 and add what it names. Stripe's guide: https://docs.stripe.com/keys/restricted-api-keys
 - [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` registered; event filter includes `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` (the list in `.env.example`; `processEvent` in app/api/webhooks/stripe/route.ts handles every one except `customer.subscription.created`, a deliberate no-op)
 - [ ] Stripe Payment Link for the Employer plan (recurring, $399/month, billing address + tax ID required, **limit customers to one subscription** on) → `STRIPE_PLAN_PAYMENT_LINK` (must be a `https://buy.stripe.com/` URL)
 - [ ] Dashboard → Settings → Payment methods: choose the methods offered on per-post Checkout (the sessions no longer pin `card`; delayed methods are safe — fulfilment waits for `payment_status: 'paid'`)

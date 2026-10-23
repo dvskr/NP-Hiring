@@ -172,7 +172,9 @@ closed until the promo ends, and only renewals become purchasable.
 - [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` with **all 11**
       events below (the list in `.env.example`; `processEvent` in
       `app/api/webhooks/stripe/route.ts` handles every one except
-      `customer.subscription.created`, a deliberate no-op). Copy its signing secret.
+      `customer.subscription.created`, a deliberate no-op). Set its API version to
+      `2026-08-26.dahlia`, the version `lib/stripe.ts` pins, so the events arrive
+      in the shapes the webhook reads. Copy its signing secret.
 
 | Event | What the site does with it |
 |---|---|

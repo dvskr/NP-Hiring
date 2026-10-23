@@ -47,7 +47,7 @@ cancel the subscription.
 `NEXT_PUBLIC_BASE_URL=https://nphiring.com`. Keep `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`,
 `DISCORD_WEBHOOK_URL` and `SENTRY_DSN` set.
 - Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free and plan sales stay closed. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 to every Stripe event until both are set, and plan sales stay closed until then. After 2027-01-01, no test-mode key and no `https://buy.stripe.com/test_` link may stay in Production.
-- Where: Vercel, then redeploy. Table: `docs/LAUNCH_RUNBOOK.md` section 8b.
+- Where: Vercel, then redeploy. Table: `docs/LAUNCH_RUNBOOK.md` section 8b. A restricted live key can stand in for the secret key; its permissions are in `docs/pricing-system.md` section 9b.
 
 **1.3 Google Analytics.** Done 2026-09-28 (`G-PT7KQ9ZEXQ`, 14 month retention). Optional: `GA_API_SECRET`
 (plus `GA_MEASUREMENT_ID` if it differs) for server-side purchase events once paid posting is on.
@@ -160,15 +160,6 @@ read production, so these are yours.
 **2.3 Repair garbled city slugs.** `PseoStats` and the snippet tables still hold slugs such as
 `la-caada-flintridge-ca`, and those pages sit out of the sitemap. `scripts/repair-city-slug-diacritics-db.ts`
 (run `--check` first) writes to production, so it needs your OK.
-
-**2.8 Stripe SDK upgrade and the restricted key list.** Upgrade `stripe` from ^20 to ^22 and rerun the webhook
-suites. It needs `npm install` in the main checkout, which is safe now that no other worktree shares its
-`node_modules` (2.9 closed on 2026-10-13). The other half of the old item is open too: the permission list for a restricted live key is not written yet
-(`docs/pricing-system.md` has no such section). It belongs there as section 9b, beside the production Stripe
-checklist, and has to cover every Stripe call in the code:
-Checkout Sessions create, retrieve (with `payment_intent` expanded), list and expire; Subscriptions retrieve
-and list; Invoices retrieve; Customer Portal sessions create. `webhooks.constructEvent` needs no permission, as
-it verifies the signature locally. Until the list is written, the live key in 1.2 has to be the standard secret key.
 
 **2.11 Guest Easy Apply: closed.** Closed (owner decision 2026-09): applying requires an NP Hiring account
 for external and Easy Apply jobs alike; guest Easy Apply will not be built; JobPosting directApply stays false.
@@ -392,6 +383,7 @@ tests fail until every side agrees:
 - 2.23 The certifying body reads AANPCB in the hiring guide, the 51 license guides, the CE hub, the category by city template, the job description templates and nine posts.
 - D25 The job seeker comparison table was audited row by row against the code and each competitor's own pages and rebuilt from the cells that hold (`lib/seeker-comparison.ts`); the "how it works" steps on the home page lost the AI and no recruiter claims.
 - 2.26 Sweep follow-ups (2026-10-22): a new account joins the newsletter only when it opted in, on all three sign-up paths, and the stored newsletter flag takes the same explicit opt-in; the alert welcome email skips an address suppressed after a bounce or a complaint (and skips the email, not the signup, when that check fails), and an alert signup no longer lifts the suppression of a deleted account; the legacy ownership branch (an unclaimed post filed under the session's email) needs a confirmed sign-in email, in every route that uses it (the applicants and notification settings writes included) and in the checkout and renewal verify routes; every capability token defaults to a UUID; a Stripe key or webhook secret made only of spaces counts as unset, and the expiry warning offers a renewal only while the webhook secret is set; every talent pool read uses one rule (`lib/candidate-pool.ts`), which also leaves deleted accounts out, the AI search's vector query included, and the candidate alert caps live in one module (`lib/candidate-alert-filters.ts`), so the settings page gets back a row stored over the caps cut to what the digest uses; the featured jobs on the home page hide what /jobs hides; JazzHR apply pages count as the employer's site in the label and on every surface that features such jobs; account erasure empties the upload folders under every upload prefix, re-reads each account first so one restored mid-run keeps its files, and names any folder it could not empty in the purge audit record; deleting a resume also removes the earlier uploads older than a day that no application names (D35 covers the current file); the job page's type links go to the landing that lists the job (a contract job was sent to Travel), and the travel and locum tenens card check reads components and lib modules too. Owner check: the last bullet of 1.14.
+- 2.8 Stripe SDK and the restricted key (2026-10-22): `stripe` is on ^22 (22.6.2) and `lib/stripe.ts` pins its API version, `2026-08-26.dahlia`; none of the Dahlia breaking changes touches a field the code sends or reads, and a test holds the pin to the installed SDK. The permission list for a restricted live key is in `docs/pricing-system.md` section 9b, checked against every Stripe call in the code, and the launch runbook (8a) gives the live webhook the same API version.
 - 2.18 Job alert salary rule (2026-10-22, shipped on its own): an alert's minimum salary now keeps exactly the jobs the /jobs salary filter keeps (`salaryClause` in `lib/filters.ts`): a job whose low or high figure reaches it, never a job with no pay. A single-figure posting ("$130,000/yr") now reaches a $100k+ alert, and jobs that post no pay no longer do, so the email and its "View All Matching Jobs" link list the same jobs. A maximum keeps its rule.
 
 ## Shipped since 2026-08-16

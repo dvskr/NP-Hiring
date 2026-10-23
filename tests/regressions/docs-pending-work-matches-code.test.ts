@@ -26,7 +26,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { config } from '@/lib/config';
-import { between, existsInRepo, isSource, lineWith, readRepo, repoPathsNamed, walk, withoutComments } from '../support/docs-vs-code';
+import { between, existsInRepo, lineWith, readRepo, repoPathsNamed, withoutComments } from '../support/docs-vs-code';
 
 const pending = readRepo('docs/PENDING_WORK.md');
 const pricingDoc = readRepo('docs/pricing-system.md');
@@ -91,47 +91,19 @@ describe('section 2: what is listed as open engineering is open', () => {
         // an unshipped release "merged".)
         expect(engineering).not.toContain('**2.9 ');
         expect(closed).toMatch(/2\.9 Worktree housekeeping: done on 2026-10-13/);
-        // 2.8 waited on it for `npm install` in the shared checkout.
-        expect(between(pending, '**2.8 ', '**2.11 ')).not.toMatch(/so it waits for\s+2\.9/);
+        // 2.8 waited on it for `npm install` in the shared checkout; 2.8 itself
+        // closed on 2026-10-22 (the next case).
     });
 
-    it('2.8 points at the restricted key list only once docs/pricing-system.md carries one', () => {
-        const item = between(pending, '**2.8 ', '**2.11 ');
-        const listWritten = /restricted/i.test(pricingDoc);
-        if (listWritten) {
-            expect(item, 'docs/pricing-system.md now carries the restricted key list: point 2.8 at it').not.toMatch(/not written yet/);
-            expect(item).toMatch(/`docs\/pricing-system\.md`/);
-            return;
-        }
-        expect(item, '2.8 points at a list docs/pricing-system.md does not carry').not.toMatch(/is in `docs\/pricing-system\.md`/);
-        expect(item).toMatch(/not written yet/);
-
-        // Until then 2.8 itself lists what the key must allow: every Stripe
-        // call in app/ and lib/. constructEvent verifies a signature locally
-        // and needs no permission.
-        const LABELS: Record<string, string> = {
-            'checkout.sessions': 'Checkout Sessions',
-            subscriptions: 'Subscriptions',
-            invoices: 'Invoices',
-            'billingPortal.sessions': 'Customer Portal sessions',
-        };
-        const calls = new Map<string, Set<string>>();
-        for (const file of [...walk('app', isSource), ...walk('lib', isSource)]) {
-            for (const match of withoutComments(readRepo(file)).matchAll(/\bstripe(?:Client)?\.((?:[a-zA-Z]+\.)+)([a-zA-Z]+)\(/g)) {
-                const resource = match[1].slice(0, -1);
-                if (resource === 'webhooks') continue;
-                if (!calls.has(resource)) calls.set(resource, new Set());
-                calls.get(resource)!.add(match[2]);
-            }
-        }
-        expect([...calls.keys()].sort(), 'a Stripe resource 2.8 does not name: add it to the item and to LABELS').toEqual(Object.keys(LABELS).sort());
-        const clauses = item.slice(item.indexOf('every Stripe call')).split(/[;.]/);
-        for (const [resource, methods] of calls) {
-            const clause = clauses.find((candidate) => candidate.includes(LABELS[resource]));
-            expect(clause, LABELS[resource]).toBeDefined();
-            const documented = [...clause!.matchAll(/\b(create|retrieve|list|expire|update|cancel|del|search)\b/g)].map((match) => match[1]);
-            expect(documented.sort(), LABELS[resource]).toEqual([...methods].sort());
-        }
+    it('2.8 is closed: the SDK is on ^22 and docs/pricing-system.md carries the restricted key list', () => {
+        // Closed on 2026-10-22. What the key must allow is now pinned against
+        // every Stripe call in the code by the 9b check in
+        // docs-pricing-system-matches-code.test.ts.
+        const pkg = JSON.parse(readRepo('package.json')) as { dependencies: Record<string, string> };
+        expect(pkg.dependencies.stripe).toMatch(/^\^22\./);
+        expect(pricingDoc).toMatch(/Restricted live key/);
+        expect(engineering, '2.8 is done: it belongs under Closed, not in section 2').not.toContain('**2.8 ');
+        expect(closed).toMatch(/^- 2\.8 /m);
     });
 
     it('2.17 stays open exactly while an email subject or preview carries a dash', () => {
