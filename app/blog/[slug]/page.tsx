@@ -17,6 +17,8 @@ import {
     type BlogPost,
 } from '@/lib/blog';
 import { autoLinkCategories } from '@/lib/autoLink';
+import { loadEmptyLandingSlugs } from '@/lib/pseo/landing-verdicts';
+import { mayLinkLanding, unlinkClosedLandings } from '@/lib/pseo/live-landing-links';
 import { buildLicenseGuideHowTo, getLicenseGuideState, isLicenseGuideStateIndexable } from '@/lib/blog-license-guides';
 import {
     buildLicenseGuideDescription,
@@ -205,8 +207,12 @@ function licenseGuideCta(license: LicenseGuideContext): JobsCta {
     return { intro: `Ready to start your career? Browse ${NP} positions:`, links };
 }
 
-/** Career posts: the all-jobs link plus up to four category links matched on the copy. */
-function careerPostCta(post: BlogPost): JobsCta {
+/**
+ * Career posts: the all-jobs link plus up to four category links matched on
+ * the copy, never to a landing known to be empty (register 2.25: it answers
+ * 404).
+ */
+function careerPostCta(post: BlogPost, emptyLandings: ReadonlySet<string> | null): JobsCta {
     const categoryLinks = [
         { match: /remote|work.from.home/i, label: 'Remote Jobs', href: '/jobs/remote' },
         { match: /telehealth|virtual/i, label: 'Telehealth Jobs', href: '/jobs/telehealth' },
@@ -218,7 +224,7 @@ function careerPostCta(post: BlogPost): JobsCta {
         { match: /outpatient|clinic/i, label: 'Outpatient Jobs', href: '/jobs/outpatient' },
     ];
     const fullText = `${post.title} ${post.content.slice(0, 500)}`;
-    const matched = categoryLinks.filter((l) => l.match.test(fullText)).slice(0, 4);
+    const matched = categoryLinks.filter((l) => l.match.test(fullText) && mayLinkLanding(l.href, emptyLandings)).slice(0, 4);
     return {
         intro: 'Looking for your next role?',
         links: [
@@ -315,12 +321,16 @@ export default async function BlogPostPage({ params }: Props) {
     const licenseSlugMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
     const license = licenseSlugMatch ? await loadLicenseGuideContext(licenseSlugMatch[1]) : null;
     const howTo = licenseSlugMatch ? buildLicenseGuideHowTo(licenseSlugMatch[1]) : null;
-    const jobsCta = license ? licenseGuideCta(license) : careerPostCta(post);
+    const emptyLandings = await loadEmptyLandingSlugs('blog-post');
+    const jobsCta = license ? licenseGuideCta(license) : careerPostCta(post, emptyLandings);
 
     // Convert markdown to HTML and auto-link states
     let contentHtml = markdownToHtml(post.content);
     contentHtml = autoLinkStates(contentHtml);
     contentHtml = autoLinkCategories(contentHtml);
+    // A link to a landing known to be empty (it answers 404) keeps its words
+    // and loses the link (register 2.25).
+    contentHtml = unlinkClosedLandings(contentHtml, emptyLandings);
     // Re-sanitize after the regex-based auto-linkers so any false-positive
     // injection (state names appearing inside attribute values, etc.) gets
     // caught by the same sanitize-html config the markdown step already used.

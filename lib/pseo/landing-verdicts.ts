@@ -13,12 +13,15 @@
  * Every internal link surface that may only point at indexable landings
  * reads this one rule: the sitewide footer (M-02, lib/pseo/
  * footer-category-loader.ts) and the /jobs hub editorial (M-07,
- * lib/pseo/hub-category-links.ts). The read is cached across requests for an
- * hour, so a page that renders per request adds no query per render.
+ * lib/pseo/hub-category-links.ts). Links written into content and page code
+ * read the looser loadEmptyLandingSlugs below instead: they may point at a
+ * landing that renders `noindex`, never at one that 404s. Each read is cached
+ * across requests for an hour, so a page that renders per request adds no
+ * query per render.
  */
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { pseoStatsFreshnessThreshold, shouldIndexCategoryLanding } from './render-gate';
+import { pseoStatsFreshnessThreshold, shouldIndexCategoryLanding, shouldRenderCategoryLanding } from './render-gate';
 
 /** Seconds the verdict list is reused across requests. */
 export const LANDING_VERDICT_CACHE_SECONDS = 3600;
@@ -78,6 +81,47 @@ export async function loadIndexableLandingSlugs(surface: string): Promise<Readon
     return new Set(await cachedIndexableLandingSlugs());
   } catch (error) {
     console.error(`[${surface}] category-landing index verdicts unavailable:`, error);
+    return null;
+  }
+}
+
+/**
+ * Slugs of the landings known to answer 404 now, uncached: a fresh
+ * 'category-landing' row whose stored count fails the render floor
+ * (shouldRenderCategoryLanding). The cron writes that row for every landing.
+ * For links written into content and page code (lib/pseo/live-landing-links.ts),
+ * which may point at a landing that renders `noindex` but never at one that
+ * 404s; a landing with no fresh row is unknown, so it is not listed.
+ * Allowed to throw.
+ */
+export async function readEmptyLandingSlugs(): Promise<string[]> {
+  const rows = await prisma.pseoStats.findMany({
+    where: {
+      type: 'category-landing',
+      locationSlug: LANDING_LOCATION_SLUG,
+      updatedAt: { gte: pseoStatsFreshnessThreshold() },
+    },
+    select: { categorySlug: true, totalJobs: true },
+  });
+  return Array.isArray(rows)
+    ? rows.filter((row) => !shouldRenderCategoryLanding(row.totalJobs)).map((row) => row.categorySlug)
+    : [];
+}
+
+const cachedEmptyLandingSlugs = unstable_cache(readEmptyLandingSlugs, ['empty-landing-slugs'], {
+  revalidate: LANDING_VERDICT_CACHE_SECONDS,
+});
+
+/**
+ * Empty landing slugs, or null when the rows cannot be read, in which case
+ * every link stays. `surface` names the caller in the error log.
+ * Tests: tests/lib/empty-landing-slugs.test.ts
+ */
+export async function loadEmptyLandingSlugs(surface: string): Promise<ReadonlySet<string> | null> {
+  try {
+    return new Set(await cachedEmptyLandingSlugs());
+  } catch (error) {
+    console.error(`[${surface}] category-landing rows unavailable:`, error);
     return null;
   }
 }

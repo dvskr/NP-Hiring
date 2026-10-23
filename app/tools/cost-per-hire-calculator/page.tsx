@@ -152,7 +152,7 @@ export default function CostPerHireCalculatorPage() {
           <Breadcrumbs items={[
             { label: 'Home', href: '/' },
             { label: 'Tools', href: '/tools' },
-            { label: 'Cost Per Hire' },
+            { label: 'Cost to Hire' },
           ]} />
           <div style={{ maxWidth: '760px' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: TOOL_ACCENT, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '10px' }}>

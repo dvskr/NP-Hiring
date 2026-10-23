@@ -10,6 +10,14 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 // brand.editorial.reviewer (config/brand.ts) so they can never disagree —
 // same wiring as app/blog/[slug]/page.tsx.
 import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
+import { loadEmptyLandingSlugs } from '@/lib/pseo/landing-verdicts';
+import { mayLinkLanding } from '@/lib/pseo/live-landing-links';
+
+// The private practice jobs card follows that landing's live job count, so
+// the page re-renders hourly, as the count read is cached (register 2.25).
+export const revalidate = 3600;
+
+const PRIVATE_PRACTICE_JOBS = '/jobs/private-practice';
 
 // Editorial review constants — bump LAST_REVIEWED on each pass so Article
 // dateModified reflects real freshness, not the original publish date.
@@ -158,7 +166,10 @@ export const metadata: Metadata = {
   alternates: { canonical: `${brand.baseUrl}/resources/private-practice-guide` },
 };
 
-export default function PrivatePracticeGuidePage() {
+export default async function PrivatePracticeGuidePage() {
+  // The landing answers 404 while it has no jobs (TECH-06), so its card is
+  // left out then (lib/pseo/live-landing-links.ts).
+  const showPracticeJobs = mayLinkLanding(PRIVATE_PRACTICE_JOBS, await loadEmptyLandingSlugs('private-practice-guide'));
   const steps = [
     {
       number: 1,
@@ -499,10 +510,12 @@ export default function PrivatePracticeGuidePage() {
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</h3>
               <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>What employed roles pay in your state: the opportunity cost of going independent.</p>
             </Link>
-            <Link href="/jobs/private-practice" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Private practice jobs</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Browse private practice {brand.niche.short} positions.</p>
-            </Link>
+            {showPracticeJobs && (
+              <Link href={PRIVATE_PRACTICE_JOBS} className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Private practice jobs</h3>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Browse private practice {brand.niche.short} positions.</p>
+              </Link>
+            )}
           </div>
         </div>
       </div>

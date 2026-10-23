@@ -36,6 +36,12 @@ import {
 } from '@/components/tools/practice-revenue-model';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { loadEmptyLandingSlugs } from '@/lib/pseo/landing-verdicts';
+import { mayLinkLanding } from '@/lib/pseo/live-landing-links';
+
+// The private practice roles card follows that landing's live job count, so
+// the page re-renders hourly, as the count read is cached (register 2.25).
+export const revalidate = 3600;
 
 const PAGE_PATH = '/tools/private-practice-revenue-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
@@ -129,7 +135,10 @@ const FAQS = [
 const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
-export default function PrivatePracticeRevenueCalculatorPage() {
+export default async function PrivatePracticeRevenueCalculatorPage() {
+  // A landing answers 404 while it has no jobs (TECH-06), so its card is
+  // left out then (lib/pseo/live-landing-links.ts).
+  const emptyLandings = await loadEmptyLandingSlugs('private-practice-calculator');
   return (
     <>
       <script
@@ -170,7 +179,7 @@ export default function PrivatePracticeRevenueCalculatorPage() {
           <Breadcrumbs items={[
             { label: 'Home', href: '/' },
             { label: 'Tools', href: '/tools' },
-            { label: 'Private Practice Revenue' },
+            { label: 'Private Practice Income' },
           ]} />
           <div style={{ maxWidth: '760px' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: TOOL_ACCENT, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '10px' }}>
@@ -256,7 +265,7 @@ export default function PrivatePracticeRevenueCalculatorPage() {
               { href: '/tools/1099-vs-w2-calculator', title: '1099 vs W-2 calculator', blurb: 'The tax this net figure sits before, modeled properly.' },
               { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'What employed roles pay: the opportunity cost of going independent.' },
               { href: '/jobs/private-practice', title: 'Private practice roles', blurb: 'Work inside an existing practice before you start one.' },
-            ].map((l) => (
+            ].filter((l) => mayLinkLanding(l.href, emptyLandings)).map((l) => (
               <Link key={l.href} href={l.href} className="tool-card" style={{ ...clayCard, padding: '20px 20px 18px', textDecoration: 'none', display: 'block' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <Building2 size={15} color={TOOL_ACCENT} aria-hidden="true" />

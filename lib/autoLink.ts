@@ -20,9 +20,10 @@ const CATEGORY_LINKS: { pattern: RegExp; href: string; label: string }[] = [
 
     // Specialties
     { pattern: /\b(new\s*[-\s]?grad\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/new-grad', label: `new grad ${brand.niche.short} jobs` },
-    { pattern: /\b(child\s+(?:and\s+)?adolescent\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/child-adolescent', label: `child & adolescent ${brand.niche.short} jobs` },
-    { pattern: /\b(substance\s+abuse\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/substance-abuse', label: `substance abuse ${brand.niche.short} jobs` },
-    { pattern: /\b(addiction\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/addiction', label: `addiction ${brand.niche.short} jobs` },
+    // Register 2.25: the child and adolescent, substance abuse and addiction
+    // patterns linked /jobs pages this board never had (a 404 for any post
+    // that matched), so they were removed. Every href here is a page
+    // (tests/regressions/live-landing-links.test.ts).
 
     // Resources
     { pattern: /\b(PMHNP\s+salary\s+(?:guide|data|information|comparison))\b/gi, href: '/salary-guide', label: `${brand.niche.short} salary guide` },
@@ -131,11 +132,14 @@ export function getJobRelatedResources(job: {
     if (titleLower.includes('new grad') || titleLower.includes('entry level')) {
         links.push({ label: `New Grad ${brand.niche.short} Jobs`, href: '/jobs/new-grad' });
     }
+    // Register 2.25: these linked /jobs/child-adolescent and /jobs/addiction,
+    // pages this board never had; their roles fold into these two landings
+    // (lib/pseo/category-tagger.ts).
     if (titleLower.includes('child') || titleLower.includes('adolescent') || titleLower.includes('pediatric')) {
-        links.push({ label: `Child & Adolescent ${brand.niche.short} Jobs`, href: '/jobs/child-adolescent' });
+        links.push({ label: `Pediatric ${brand.niche.short} Jobs`, href: '/jobs/pediatric' });
     }
     if (titleLower.includes('substance') || titleLower.includes('addiction')) {
-        links.push({ label: `Addiction ${brand.niche.short} Jobs`, href: '/jobs/addiction' });
+        links.push({ label: `Psychiatric Mental Health ${brand.niche.short} Jobs`, href: '/jobs/psychiatric-mental-health' });
     }
     if (titleLower.includes('inpatient')) {
         links.push({ label: `Inpatient ${brand.niche.short} Jobs`, href: '/jobs/inpatient' });

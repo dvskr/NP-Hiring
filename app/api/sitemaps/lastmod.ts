@@ -137,7 +137,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // new titles (app/tools/tools-registry.ts).
   '/resources': '2026-10-13',
   '/resources/fpa-guide': '2026-10-13',
-  '/resources/private-practice-guide': '2026-10-13',
+  // 2026-10-23 (register 2.25): the private practice jobs card follows that
+  // landing's job count, and the landing had none at ship.
+  '/resources/private-practice-guide': '2026-10-23',
   '/resources/1099-vs-w2': '2026-10-13',
   '/scope-of-practice': '2026-10-13',
   '/tools': '2026-10-13',
@@ -147,9 +149,10 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/tools/cost-of-living-comparison': '2026-10-13',
   '/tools/licensure-checker': '2026-10-13',
   '/tools/salary-benchmark': '2026-10-13',
-  '/tools/specialty-finder': '2026-10-13',
-  '/tools/private-practice-revenue-calculator': '2026-10-13',
-  '/tools/cost-per-hire-calculator': '2026-10-13',
+  // 2026-10-23 (register 2.25): the last breadcrumb names the tool as its title does.
+  '/tools/specialty-finder': '2026-10-23',
+  '/tools/private-practice-revenue-calculator': '2026-10-23',
+  '/tools/cost-per-hire-calculator': '2026-10-23',
   '/for-employers/resources': '2026-10-13',
   // 2026-10-20 (register 2.23): the credential checklist and the first FAQ
   // answer name the certifying body AANPCB.

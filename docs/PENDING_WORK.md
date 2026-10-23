@@ -1,10 +1,10 @@
 # Pending Work
 
-> The single list of everything still open, checked against the code on 2026-10-22 (after the auth hotfix
-> `e78f037`, the security and register batch `8d32e1e` of 2026-10-20, and the sweep follow-ups `a8f1d4b` and
-> the alert salary rule of 2026-10-22, which follow the sister board links `71236b5`, the plain copy pass
-> `a74a4d5` and the SEO, AEO and GEO content release `6263323`; all are live, and `main` is the only branch).
-> Shipped work is at the end.
+> The single list of everything still open, checked against the code on 2026-10-23 (after the auth hotfix
+> `e78f037`, the security and register batch `8d32e1e` of 2026-10-20, the sweep follow-ups `a8f1d4b`, the alert
+> salary rule `4a445ce` and the Stripe SDK upgrade `85116c1` of 2026-10-22, and the content follow-ups of
+> 2026-10-23, which follow the sister board links `71236b5`, the plain copy pass `a74a4d5` and the SEO, AEO and
+> GEO content release `6263323`; all are live, and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -16,7 +16,7 @@
 | Now | The route sweep found sign-ups could make themselves admin (closed in `e78f037`), and a test account password sits in the public repo history | OWNER runs the checks in 1.14 |
 | Now | The Google indexing service account key was pasted into a chat | OWNER rotates it, 1.4 |
 | 2026-10-01 to about 2026-10-29 | Google and Bing make their first passes over the submitted sitemap | OWNER watches Search Console weekly (1.4); submit nothing else |
-| About 2026-10-21 | The Department of Education's decision on the NP residency consortium's recognition is due (90 days after the July advisory committee meeting) | CLAUDE updates the fellowship post (2.24) |
+| Since about 2026-10-21 | The Department of Education's decision on the NP residency consortium's recognition was due (90 days after the July advisory committee meeting). The committee's recommendation is in the fellowship post; the decision letter is in a system that refuses automated requests | Open it in a browser, then CLAUDE states the outcome in the fellowship post (2.24) |
 | About 2026-10-29 | Four weeks after the sitemap submission | DECISION D12: re-admit the specialty and setting by state pages if indexing looks healthy |
 | 2026-10-30 | ANCC's new FNP test content outline takes effect | CLAUDE rewords the three posts that say it is about to change (2.24) |
 | 2026-10-30 | Plaintiffs' reply in the Massachusetts student loan case | CLAUDE re-checks that docket, whether the government's 2026-10-16 motion is also a cross motion for summary judgment, and Federal Student Aid for an announcement carrying out the Oregon injunction (2.24) |
@@ -185,12 +185,13 @@ re-checked against its sources that day; the dates table at the top lists the ne
   court's scheduling order could not be read). A ruling in Oregon, Maryland or Massachusetts can come at any
   time. The review date stays the docket check day, not the ship day, because the post's own test ties every
   "As of" date to it (`tests/regressions/student-loan-post-docket-recheck.test.ts`).
-- `np-fellowship-residency-programs`: the post says it could not confirm a final decision on the consortium's
-  federal recognition. The advisory committee's July 2026 meeting report carries only its recommendation; the
-  senior Department official's decision letter is due about 2026-10-21 and is posted in the Department's
-  e-Recognition system. Those pages refuse automated requests, so open them in a browser, then state the
-  outcome with its date. The same post's UC Davis line ("reaccreditation due in 2026") should be re-read against
-  the consortium's August 2026 notice of accreditation actions.
+- `np-fellowship-residency-programs`: re-checked on 2026-10-22. The advisory committee's report of its July
+  2026 meeting (the NACIQI archive) records a 12 to 0 vote recommending five more years of recognition and a
+  monitoring report within 12 months, and the post now states it (its review date is that check day). The senior Department official's
+  decision letter, due about 2026-10-21, is posted in the Department's e-Recognition system, which refuses
+  automated requests, as does the consortium's own site, so a person has to open them in a browser; then
+  state the outcome with its date. The same post's UC Davis line ("reaccreditation due in 2026") should be
+  re-read against the consortium's August 2026 notice of accreditation actions, on that site.
 - `how-to-become-a-nurse-practitioner`, `fnp-certification-aanp-vs-ancc` and `fnp-vs-pmhnp-vs-agacnp`: reword
   "about to change" once the ANCC outline is in force.
 - `nurse-practitioner-job-outlook`: refresh after each monthly jobs report it cites.
@@ -203,17 +204,13 @@ re-checked against its sources that day; the dates table at the top lists the ne
   for some minority owners. Confirm against the statute, then tighten the cell. The Maine statute page also
   flags a second version of subsection 5 that takes effect on 2027-01-01.
 
-**2.25 Smaller follow-ups from the content release.**
-- A blog post has no "content changed" stamp apart from `reviewed` (`lib/blog-mdx-posts.ts`), so the 18
-  refreshed posts keep their earlier review dates as sitemap dates although their copy changed on 2026-10-13.
-  Under-claiming is the safe side; a separate stamp would fix it.
-- The cert guides link /jobs/anesthesia and /jobs/adult-gerontology
-  (`tests/regressions/p5-cert-guides-series.test.ts` pins both links), and the content release session reported
-  that an empty hub answers 404. Not re-checked on 2026-10-13: confirm, then either keep the hubs rendering or
-  drop the links.
-- Six priority posts sit outside the 700 to 1,200 word band the content plan set.
-- Three tool breadcrumbs keep the old tool names ("Specialty Finder", "Private Practice Revenue", "Cost Per
-  Hire") under the new page titles.
+**2.25 Smaller follow-ups from the content release.** Three shipped on 2026-10-23 (see Closed). Left:
+- A blog post has no "content changed" stamp apart from `reviewed`. A post served from its `.mdx` file
+  (`lib/blog-mdx-posts.ts`) is dated in the sitemap by `reviewed`; a post synced into `blog_posts` is dated by
+  that row's `updated_at`, which Prisma stamps on every write of `scripts/sync-blog-to-db.ts` (a production
+  write you run). BlogPosting.dateModified reads `reviewed` first either way, so a refreshed post can keep an
+  earlier date than its copy. Under-claiming is the safe side; a frontmatter stamp read by both paths, and a
+  sync run, would fix it.
 - /resources/1099-vs-w2, /resources/fpa-guide and /resources/private-practice-guide print "Last Updated" from
   review dates older than the copy the plain copy pass changed. They are review dates, so they stay until the
   guides are reviewed again (section 6).
@@ -384,6 +381,7 @@ tests fail until every side agrees:
 - D25 The job seeker comparison table was audited row by row against the code and each competitor's own pages and rebuilt from the cells that hold (`lib/seeker-comparison.ts`); the "how it works" steps on the home page lost the AI and no recruiter claims.
 - 2.26 Sweep follow-ups (2026-10-22): a new account joins the newsletter only when it opted in, on all three sign-up paths, and the stored newsletter flag takes the same explicit opt-in; the alert welcome email skips an address suppressed after a bounce or a complaint (and skips the email, not the signup, when that check fails), and an alert signup no longer lifts the suppression of a deleted account; the legacy ownership branch (an unclaimed post filed under the session's email) needs a confirmed sign-in email, in every route that uses it (the applicants and notification settings writes included) and in the checkout and renewal verify routes; every capability token defaults to a UUID; a Stripe key or webhook secret made only of spaces counts as unset, and the expiry warning offers a renewal only while the webhook secret is set; every talent pool read uses one rule (`lib/candidate-pool.ts`), which also leaves deleted accounts out, the AI search's vector query included, and the candidate alert caps live in one module (`lib/candidate-alert-filters.ts`), so the settings page gets back a row stored over the caps cut to what the digest uses; the featured jobs on the home page hide what /jobs hides; JazzHR apply pages count as the employer's site in the label and on every surface that features such jobs; account erasure empties the upload folders under every upload prefix, re-reads each account first so one restored mid-run keeps its files, and names any folder it could not empty in the purge audit record; deleting a resume also removes the earlier uploads older than a day that no application names (D35 covers the current file); the job page's type links go to the landing that lists the job (a contract job was sent to Travel), and the travel and locum tenens card check reads components and lib modules too. Owner check: the last bullet of 1.14.
 - 2.8 Stripe SDK and the restricted key (2026-10-22): `stripe` is on ^22 (22.6.2) and `lib/stripe.ts` pins its API version, `2026-08-26.dahlia`; none of the Dahlia breaking changes touches a field the code sends or reads, and a test holds the pin to the installed SDK. The permission list for a restricted live key is in `docs/pricing-system.md` section 9b, checked against every Stripe call in the code, and the launch runbook (8a) gives the live webhook the same API version.
+- 2.25 Content release follow-ups (2026-10-23): on 2026-10-22 /jobs/anesthesia answered 200, but /jobs/adult-gerontology and /jobs/private-practice had no jobs and answered 404 (TECH-06), and a post body, the private practice guide and the private practice income calculator linked them. Post bodies, the blog's related jobs box and those two pages now drop a link to a landing whose stats row counts no job (`lib/pseo/live-landing-links.ts`); a landing with a few jobs renders and stays linked, and every link stays while the rows cannot be read. The category auto-linker no longer links three /jobs pages the board never had. The three tool breadcrumbs name the tools as their titles do (Specialty Quiz, Private Practice Income, Cost to Hire). The six priority posts of the content plan sit inside the 700 to 1,200 word band (`tests/regressions/p1-content-library-blog-seed.test.ts` holds them there); the 21 longer posts are the long-form guides of July and October, outside that plan.
 - 2.18 Job alert salary rule (2026-10-22, shipped on its own): an alert's minimum salary now keeps exactly the jobs the /jobs salary filter keeps (`salaryClause` in `lib/filters.ts`): a job whose low or high figure reaches it, never a job with no pay. A single-figure posting ("$130,000/yr") now reaches a $100k+ alert, and jobs that post no pay no longer do, so the email and its "View All Matching Jobs" link list the same jobs. A maximum keeps its rule.
 
 ## Shipped since 2026-08-16

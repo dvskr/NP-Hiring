@@ -130,6 +130,21 @@ const SECURITY_BATCH_PAGES: readonly string[] = [
     '/for-employers/resources/job-description-templates/[id]',
 ];
 
+/**
+ * The UTC day the register follow-ups (2.24 and 2.25) shipped, and the pages
+ * whose rendered page they changed: the three tool breadcrumbs that kept the
+ * retired tool names, and the private practice guide, whose jobs card left
+ * with the empty landing it linked. Same rule: move the constant and these
+ * entries together if the change ships on a later day.
+ */
+const FOLLOW_UPS_DAY = '2026-10-23';
+const FOLLOW_UPS_PAGES: readonly string[] = [
+    '/tools/specialty-finder',
+    '/tools/private-practice-revenue-calculator',
+    '/tools/cost-per-hire-calculator',
+    '/resources/private-practice-guide',
+];
+
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1). */
 const PROMO_SWITCH_PAGES = [
     '/pricing',
@@ -314,14 +329,17 @@ describe('lastmod helpers', () => {
         // guides; the full practice quick answer; the 2025 to 2035 growth
         // figure, the HRSA floor, the stats review date and the certifying
         // body names. The security and register batch then changed three
-        // more pages. Pinning every entry makes a partial move fail, and a
-        // blanket move too.
+        // more pages, and the register follow-ups three tool breadcrumbs.
+        // Pinning every entry makes a partial move fail, and a blanket move too.
         expect(Object.keys(UNTOUCHED_PAGE_DATES).filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
         expect(SECURITY_BATCH_PAGES.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
+        expect(FOLLOW_UPS_PAGES.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = SECURITY_BATCH_PAGES.includes(pagePath)
-                ? SECURITY_BATCH_DAY
-                : UNTOUCHED_PAGE_DATES[pagePath] ?? CONTENT_RELEASE_DAY;
+            const expected = FOLLOW_UPS_PAGES.includes(pagePath)
+                ? FOLLOW_UPS_DAY
+                : SECURITY_BATCH_PAGES.includes(pagePath)
+                    ? SECURITY_BATCH_DAY
+                    : UNTOUCHED_PAGE_DATES[pagePath] ?? CONTENT_RELEASE_DAY;
             expect(day, pagePath).toBe(expected);
         }
     });
