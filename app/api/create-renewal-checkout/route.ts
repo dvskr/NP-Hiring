@@ -43,6 +43,7 @@ import { prisma } from '@/lib/prisma';
 import { config, PricingTier } from '@/lib/config';
 import { asPaidTier } from '@/lib/pricing';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { readJsonObject, stringField } from '@/lib/request-body';
 import { getBaseUrl, getEnv, isFeatureEnabled } from '@/lib/env';
 import { logger } from '@/lib/logger';
 import { gaCheckoutMetadata, idempotencyKeyWithGaIds } from '@/lib/analytics-server';
@@ -105,12 +106,6 @@ const PAYMENT_IN_FLIGHT_MESSAGES: Record<RenewalPaymentInFlightState, string> = 
 /** Which message wins when several payments are in flight: the money already taken first. */
 const PAYMENT_IN_FLIGHT_PRECEDENCE: readonly RenewalPaymentInFlightState[] = ['paid_unapplied', 'processing', 'awaiting_verification'];
 
-interface RenewalCheckoutBody {
-  jobId: string;
-  editToken: string;
-  tier?: PricingTier; // ignored — single tier model
-}
-
 export async function POST(request: NextRequest) {
     // Rate limiting
     const rateLimitResult = await rateLimit(request, 'renewal-checkout', RATE_LIMITS.postJob);
@@ -145,8 +140,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: RenewalCheckoutBody = await request.json();
-    const { jobId, editToken } = body;
+    // Both must be plain strings before they reach findFirst: an object there
+    // is a Prisma filter ({ not: '' } matched every post). A body `tier` is
+    // ignored; the row's own tier decides the renewal. lib/request-body.ts.
+    const body = await readJsonObject(request);
+    const jobId = stringField(body?.jobId);
+    const editToken = stringField(body?.editToken);
 
     // Validate required fields
     if (!jobId || !editToken) {
