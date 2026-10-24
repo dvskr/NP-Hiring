@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
+import { stringField } from '@/lib/request-body';
 
 /**
  * GET /api/admin/email/templates — List all templates
@@ -46,9 +47,18 @@ export async function POST(req: Request) {
 
         let template;
         if (id) {
-            // Update existing
+            // Update existing. The id is the only key of the update, so it must
+            // be a plain string: an object or a number made Prisma throw and
+            // answered 500. lib/request-body.ts
+            const templateId = stringField(id);
+            if (!templateId) {
+                return NextResponse.json(
+                    { success: false, error: 'Template ID must be a string' },
+                    { status: 400 }
+                );
+            }
             template = await prisma.emailTemplate.update({
-                where: { id },
+                where: { id: templateId },
                 data: { name, subject, body },
             });
         } else {

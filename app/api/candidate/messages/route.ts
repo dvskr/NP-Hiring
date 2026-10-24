@@ -3,6 +3,7 @@ import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { readJsonObject, stringField } from '@/lib/request-body';
 import { sanitizeText } from '@/lib/sanitize';
 import { sendCandidateInquiryNotification } from '@/lib/email-service';
 
@@ -165,17 +166,22 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
-        // Parse request body
-        const body = await req.json();
-        const { jobId, subject, body: messageBody } = body;
+        // Parse request body. All three values must be strings: jobId is the
+        // lookup key of job.findUnique below (an object there answered 500),
+        // and .trim() threw on subject and body when they were not.
+        // lib/request-body.ts
+        const body = await readJsonObject(req);
+        const jobId = stringField(body?.jobId);
+        const subject = body?.subject;
+        const messageBody = body?.body;
 
         if (!jobId) {
             return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
         }
-        if (!subject || !subject.trim()) {
+        if (typeof subject !== 'string' || !subject.trim()) {
             return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
         }
-        if (!messageBody || !messageBody.trim()) {
+        if (typeof messageBody !== 'string' || !messageBody.trim()) {
             return NextResponse.json({ error: 'Message body is required' }, { status: 400 });
         }
         if (messageBody.length > 2000) {

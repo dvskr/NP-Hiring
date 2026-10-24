@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { readJsonObject, stringField } from '@/lib/request-body';
 
 /**
  * GET /api/employer/tags — List employer's custom tags
@@ -98,8 +99,11 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { tagId } = body;
+    // deleteMany takes a non-unique where, so an object here is a Prisma filter
+    // ({ not: '' } matched every tag the caller owns): the id must be a plain
+    // string before it reaches the query. lib/request-body.ts
+    const body = await readJsonObject(req);
+    const tagId = stringField(body?.tagId);
 
     if (!tagId) {
         return NextResponse.json({ error: 'tagId is required' }, { status: 400 });

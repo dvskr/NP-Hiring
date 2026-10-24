@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { stringField } from '@/lib/request-body';
 import { employerJobOwnershipBranches, isEmployerJobOwner } from '@/lib/employer-ownership';
 import { scopeJobIdsToOwned } from './scope';
 
@@ -237,7 +238,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { applicationId, status, notes } = body;
+    // applicationId is the only key of the findUnique and the update below, so
+    // it must be a plain string: an object there answered an unhandled 500.
+    // A null body reads as no fields. lib/request-body.ts
+    const { status, notes } = body ?? {};
+    const applicationId = stringField(body?.applicationId);
 
     if (!applicationId) {
         return NextResponse.json({ error: 'applicationId is required' }, { status: 400 });
