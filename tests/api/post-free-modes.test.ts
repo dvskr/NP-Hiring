@@ -11,12 +11,19 @@
  *           config.durationDays, snapshots the SIGNUP domain into quotaDomain,
  *           and the response carries mode 'promo'. The abuse cap
  *           (config.promoMaxActivePostsPerDomain, re-counted inside the
- *           transaction) 403s with promoCapReached.
- *   plan  — after the promo, an entitled Employer plan with a free slot writes
- *           'plan' / 'plan'; the slot is re-counted inside the transaction and
- *           a full plan 403s with planSlotsFull.
+ *           transaction) 403s with promoCapReached. A 5-post pack credit is
+ *           not read and not spent: the promo wins.
+ *   pack  — after the promo, a usable 5-post pack credit publishes the post:
+ *           one credit is spent INSIDE the Serializable transaction that
+ *           creates the post (a conditional decrement, lib/post-packs.ts), the
+ *           row is written 'pack' / 'pack' with postPackId, and the response
+ *           carries mode 'pack' and the credits left. A credit spent first by a
+ *           parallel post answers 409 packCreditUnavailable, a serialization
+ *           conflict 409 retry, never 500, and nothing is written either way.
  *   paid  — otherwise 403 { requiresPayment, mode: 'intro' | 'paid', tier,
  *           price, priceCents } from the same quote the checkout charges.
+ * The Employer plan path is gone (phase 2 of the 2027 re-price: no plan row
+ * exists in production).
  *
  * Plus the signup-domain rules that never change: a free-mail signup is 400
  * even during the promo, and the form contactEmail can never shift the domain.
@@ -26,6 +33,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { paidPostWhere } from '@/lib/pricing';
+import { usablePackWhere } from '@/lib/post-packs';
 import { sendConfirmationEmail } from '@/lib/email-service';
 
 const getUserMock = vi.fn();
@@ -49,9 +57,6 @@ vi.mock('@/lib/sanitize', () => ({
 
 vi.mock('@/lib/inngest/client', () => ({ inngest: { send: vi.fn().mockResolvedValue(undefined) } }));
 vi.mock('@/lib/search-indexing', () => ({ pingAllSearchEngines: vi.fn().mockResolvedValue(undefined) }));
-
-const planSlotMock = vi.fn();
-vi.mock('@/lib/employer-plan', () => ({ getPlanSlotStatus: planSlotMock }));
 
 const DURING_PROMO = new Date('2026-10-01T12:00:00.000Z');
 const AFTER_PROMO = new Date('2027-03-01T12:00:00.000Z');
@@ -84,14 +89,23 @@ function signedInEmployer(email = `owner@${SIGNUP_DOMAIN}`) {
     vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'user-1', role: 'employer', email } as never);
 }
 
-function noPlan() {
-    planSlotMock.mockResolvedValue({ plan: null, entitled: false, slots: 0, used: 0, remaining: 0, canPost: false });
+const PACK_EXPIRES = new Date('2027-12-15T00:00:00.000Z');
+
+/** The account's usable packs, as getPackCreditStatus reads them: before the post, then after its credit is spent. */
+function packCredits(before: number, after: number = before - 1) {
+    const usable = (remaining: number) => (remaining > 0 ? [{ creditsRemaining: remaining, creditsTotal: config.packPosts, creditsRevoked: 0, expiresAt: PACK_EXPIRES }] : []);
+    vi.mocked(prisma.employerPostPack.findMany)
+        .mockResolvedValueOnce(usable(before) as never)
+        .mockResolvedValueOnce(usable(after) as never);
+    vi.mocked(prisma.employerPostPack.findFirst).mockResolvedValue({ id: 'pack-1' } as never);
+    vi.mocked(prisma.employerPostPack.updateMany).mockResolvedValue({ count: 1 } as never);
 }
 
-function entitledPlan(slots: number, used: number) {
-    planSlotMock.mockResolvedValue({
-        plan: { id: 'plan-1', slots }, entitled: true, slots, used, remaining: Math.max(0, slots - used), canPost: used < slots,
-    });
+/** No pack: the table as tests/setup.ts leaves it, with any queued answer from an earlier test dropped. */
+function noPack() {
+    vi.mocked(prisma.employerPostPack.findMany).mockReset().mockResolvedValue([] as never);
+    vi.mocked(prisma.employerPostPack.findFirst).mockReset().mockResolvedValue(null as never);
+    vi.mocked(prisma.employerPostPack.updateMany).mockReset().mockResolvedValue({ count: 0 } as never);
 }
 
 function wireWrites() {
@@ -118,6 +132,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers({ toFake: ['Date'] });
     wireWrites();
+    noPack();
 });
 
 afterEach(() => {
@@ -128,7 +143,6 @@ describe('launch promo — every post is free', () => {
     beforeEach(() => {
         vi.setSystemTime(DURING_PROMO);
         signedInEmployer();
-        noPlan();
     });
 
     it("publishes a 'promo' row for the full duration and reports mode 'promo'", async () => {
@@ -202,56 +216,129 @@ describe('launch promo — every post is free', () => {
         expect(json.mode).toBe('promo');
         expect(prisma.employerJob.count).not.toHaveBeenCalledWith({ where: paidPostWhere(SIGNUP_DOMAIN) });
     });
-});
 
-describe('Employer plan — after the promo, a free slot publishes a plan row', () => {
-    beforeEach(() => {
-        vi.setSystemTime(AFTER_PROMO);
-        signedInEmployer();
-    });
-
-    it("publishes a 'plan' / 'plan' row and reports mode 'plan'", async () => {
-        entitledPlan(5, 3);
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(3 as never); // in-transaction re-count
+    it('ignores a 5-post pack: the promo wins, and the credit is neither read nor spent', async () => {
+        packCredits(5);
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
 
         const { res, json } = await post();
 
         expect(res.status).toBe(200);
-        expect(json).toMatchObject({ success: true, mode: 'plan' });
-        expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).toMatchObject({
-            paymentStatus: 'plan',
-            pricingTier: 'plan',
-            quotaDomain: SIGNUP_DOMAIN,
-        });
-        expect(planSlotMock).toHaveBeenCalledWith('user-1', AFTER_PROMO);
-        expect(vi.mocked(sendConfirmationEmail).mock.calls[0][7]).toBe('plan');
-    });
-
-    it('re-counts live plan posts through the transaction client so a parallel submit cannot over-fill the plan', async () => {
-        entitledPlan(5, 4); // entitlement read says one slot left…
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(5 as never); // …but the snapshot count says full
-
-        const { res, json } = await post();
-
-        expect(res.status).toBe(403);
-        expect(json.planSlotsFull).toBe(true);
-        expect(json.error).toContain('5');
-        expect(prisma.employerJob.count).toHaveBeenCalledWith({
-            where: {
-                userId: 'user-1',
-                paymentStatus: 'plan',
-                job: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: AFTER_PROMO } }] },
-            },
-        });
-        expect(prisma.job.create).not.toHaveBeenCalled();
+        expect(json.mode).toBe('promo');
+        expect(json).not.toHaveProperty('pack');
+        expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).toMatchObject({ paymentStatus: 'promo', pricingTier: 'pro' });
+        expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).not.toHaveProperty('postPackId');
+        expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
+        expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
     });
 });
 
-describe('paid ladder — after the promo with no plan slot', () => {
+describe('5-post pack: after the promo, a usable credit publishes the post', () => {
     beforeEach(() => {
         vi.setSystemTime(AFTER_PROMO);
         signedInEmployer();
-        noPlan();
+    });
+
+    it("spends one credit and publishes a 'pack' / 'pack' row that names its pack", async () => {
+        packCredits(5);
+
+        const { res, json } = await post();
+
+        expect(res.status).toBe(200);
+        expect(json).toMatchObject({
+            success: true,
+            jobId: 'job-1',
+            mode: 'pack',
+            pack: { remaining: 4, total: config.packPosts, expiresAt: PACK_EXPIRES.toISOString() },
+        });
+        expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).toMatchObject({
+            paymentStatus: 'pack',
+            pricingTier: 'pack',
+            postPackId: 'pack-1',
+            userId: 'user-1',
+            quotaDomain: SIGNUP_DOMAIN,
+        });
+        const job = vi.mocked(prisma.job.create).mock.calls[0][0].data as { expiresAt: Date; isPublished: boolean };
+        expect(job.isPublished).toBe(true);
+        expect(Math.round((job.expiresAt.getTime() - AFTER_PROMO.getTime()) / DAY_MS)).toBe(config.durationDays);
+        // A pack post is never priced: the paid-post count is not consulted.
+        expect(prisma.employerJob.count).not.toHaveBeenCalledWith({ where: paidPostWhere(SIGNUP_DOMAIN) });
+    });
+
+    it('reads the credit for the account, then spends it inside the Serializable transaction, before the post is created', async () => {
+        packCredits(2);
+
+        await post();
+
+        expect(prisma.employerPostPack.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: usablePackWhere('user-1', AFTER_PROMO) }));
+        expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'Serializable' });
+        expect(prisma.employerPostPack.updateMany).toHaveBeenCalledWith({
+            where: { id: 'pack-1', userId: 'user-1', status: 'paid', expiresAt: { gt: AFTER_PROMO }, creditsRemaining: { gt: 0 } },
+            data: { creditsRemaining: { decrement: 1 } },
+        });
+        const spent = vi.mocked(prisma.employerPostPack.updateMany).mock.invocationCallOrder[0];
+        expect(spent).toBeLessThan(vi.mocked(prisma.job.create).mock.invocationCallOrder[0]);
+        expect(spent).toBeLessThan(vi.mocked(prisma.employerJob.create).mock.invocationCallOrder[0]);
+    });
+
+    it('reports the credits left after this post, across the packs, from inside the transaction', async () => {
+        packCredits(1, 0);
+
+        const { json } = await post();
+
+        expect(json.pack).toEqual({ remaining: 0, total: 0, expiresAt: null });
+    });
+
+    it("sends the confirmation email in 'pack' mode, with no invoice", async () => {
+        packCredits(3);
+
+        await post();
+
+        const args = vi.mocked(sendConfirmationEmail).mock.calls[0];
+        expect(args[6]).toBeUndefined();
+        expect(args[7]).toBe('pack');
+    });
+
+    it('a credit spent first by a parallel post answers 409 packCreditUnavailable and writes nothing', async () => {
+        packCredits(1);
+        vi.mocked(prisma.employerPostPack.updateMany).mockResolvedValue({ count: 0 } as never);
+
+        const { res, json } = await post();
+
+        expect(res.status).toBe(409);
+        expect(json.packCreditUnavailable).toBe(true);
+        expect(json.error).not.toMatch(/[–—]| - /);
+        expect(prisma.job.create).not.toHaveBeenCalled();
+        expect(prisma.employerJob.create).not.toHaveBeenCalled();
+        expect(sendConfirmationEmail).not.toHaveBeenCalled();
+    });
+
+    it('a serialization conflict (P2034) answers 409 try again, never 500', async () => {
+        packCredits(2);
+        vi.mocked(prisma.$transaction).mockRejectedValueOnce(Object.assign(new Error('could not serialize access'), { code: 'P2034' }) as never);
+
+        const { res, json } = await post();
+
+        expect(res.status).toBe(409);
+        expect(json.retry).toBe(true);
+        expect(json.error).toMatch(/try again/i);
+        expect(sendConfirmationEmail).not.toHaveBeenCalled();
+    });
+
+    it('any other failure inside the transaction is still a 500', async () => {
+        packCredits(2);
+        vi.mocked(prisma.$transaction).mockRejectedValueOnce(new Error('connection reset') as never);
+
+        const { res } = await post();
+
+        expect(res.status).toBe(500);
+    });
+});
+
+describe('paid ladder — after the promo with no pack credit', () => {
+    beforeEach(() => {
+        vi.setSystemTime(AFTER_PROMO);
+        signedInEmployer();
     });
 
     it('403s requiresPayment with the intro price when the domain has no paid post', async () => {
@@ -291,19 +378,24 @@ describe('paid ladder — after the promo with no plan slot', () => {
         });
     });
 
-    it('a plan that exists but is not entitled falls through to the ladder', async () => {
-        planSlotMock.mockResolvedValue({ plan: { id: 'plan-1', slots: 5 }, entitled: false, slots: 5, used: 0, remaining: 0, canPost: false });
+    it('a pack whose credits are spent, expired or revoked falls through to the ladder', async () => {
+        // No usable pack (getPackCreditStatus reads only usable ones), but a paid
+        // Stripe pack at the domain used the intro price up.
         vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.employerPostPack.count).mockResolvedValueOnce(1 as never);
+
         const { res, json } = await post();
+
         expect(res.status).toBe(403);
-        expect(json.mode).toBe('intro');
+        expect(json).toMatchObject({ requiresPayment: true, mode: 'paid', tier: 'pro', price: config.postingPrice });
+        expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 });
 
 describe('signup-domain rules that hold in every mode', () => {
     beforeEach(() => {
         vi.setSystemTime(DURING_PROMO);
-        noPlan();
     });
 
     it('400s a free-mail signup even during the promo, ignoring a company contactEmail on the form', async () => {
@@ -311,15 +403,24 @@ describe('signup-domain rules that hold in every mode', () => {
         const { res, json } = await post({ ...BODY, contactEmail: 'hr@clinic.example' });
         expect(res.status).toBe(400);
         expect(json.error).toBe('Company email required');
-        expect(planSlotMock).not.toHaveBeenCalled();
         expect(prisma.job.create).not.toHaveBeenCalled();
+    });
+
+    it('400s a free-mail signup after the promo too, before any pack credit is read', async () => {
+        vi.setSystemTime(AFTER_PROMO);
+        signedInEmployer('someone@gmail.com');
+        packCredits(5);
+        const { res } = await post();
+        expect(res.status).toBe(400);
+        expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
+        expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
     });
 
     it('401s an anonymous caller before any pricing decision', async () => {
         getUserMock.mockResolvedValue({ data: { user: null }, error: null });
         const { res } = await post();
         expect(res.status).toBe(401);
-        expect(planSlotMock).not.toHaveBeenCalled();
+        expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
     });
 
     it('403s a job-seeker account', async () => {
@@ -327,7 +428,7 @@ describe('signup-domain rules that hold in every mode', () => {
         vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'seeker-1', role: 'job_seeker' } as never);
         const { res } = await post();
         expect(res.status).toBe(403);
-        expect(planSlotMock).not.toHaveBeenCalled();
+        expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
     });
 
     it('400s when required fields are missing, before touching auth', async () => {

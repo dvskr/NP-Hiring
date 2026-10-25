@@ -69,6 +69,8 @@ function row(paymentStatus: string, pricingTier = 'pro', archivedAt: Date | null
         contactEmail: 'owner@clinic.example',
         paymentStatus,
         pricingTier,
+        // As NEW_POST_CHARGE_SELECT loads it: no 'new' charge, so the base renewal price.
+        jobCharges: [],
         // A post well inside its renewal cap (tests/api/create-renewal-checkout-cap.test.ts covers the cap).
         job: { id: 'job-1', title: 'PMHNP', employer: 'Clinic Co', location: 'Remote', archivedAt, expiresAt: null, createdAt: new Date(Date.now() - 30 * 86_400_000) },
     } as never);

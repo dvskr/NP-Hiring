@@ -26,13 +26,15 @@
  * And the renewal price (2027 re-price): a renewal costs the base price, or
  * the pro price for a post bought at the posting price. The server sends each
  * row's own price (renewalPrice), and the renewal modal on both surfaces
- * prints it and measures its saving from it, never from the other price.
+ * prints it and measures its saving from it, never from the other price. The
+ * pro-price modals render in employer-dashboard-edit-render-pro-renewal.test.ts.
  *
  * State reaches these components through effects, which do not run under
  * renderToStaticMarkup, so each case seeds the component's useState values
- * in order (see renderDashboard and renderEditPage), the technique of
- * tests/regressions/checkout-page-server-quote.test.ts. A useState added
- * ahead of those positions means updating the seed list.
+ * in order (dashboardSeeds and editPageSeeds in
+ * tests/support/employer-surface-state.ts, shared with that suite), the
+ * technique of tests/regressions/checkout-page-server-quote.test.ts. A
+ * useState added ahead of those positions means updating the seed list there.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import React from 'react';
@@ -41,6 +43,27 @@ import { config } from '@/lib/config';
 import { renewalSavingsLine } from '@/lib/renewal-offer';
 import EmployerDashboardClient from '@/components/employer/EmployerDashboardClient';
 import EditJobPage from '@/app/jobs/edit/[token]/page';
+import {
+    ARCHIVED_ON,
+    FRESH_LISTING_FREE,
+    FRESH_LISTING_LADDER,
+    LABEL,
+    LADDER_START,
+    LAST_PROMO_INSTANT,
+    OR_POST_AGAIN_FREE,
+    POST_INCLUDES,
+    RUNS_UNTIL,
+    SAVINGS_CLAIM,
+    dashboardProps,
+    dashboardSeeds,
+    editPageProps,
+    editPageSeeds,
+    jobRow,
+    rendered,
+    type DashboardJob,
+    type DashboardState,
+    type EditPageState,
+} from '../support/employer-surface-state';
 
 const seeded = vi.hoisted(() => ({ values: [] as unknown[], index: 0 }));
 
@@ -83,25 +106,6 @@ vi.mock('react-quill-new', () => ({ default: () => null }));
 vi.mock('react-quill-new/dist/quill.snow.css', () => ({}));
 vi.mock('@/components/ScreeningQuestionsBuilder', () => ({ default: () => null }));
 
-const LAST_PROMO_INSTANT = new Date(Date.parse(config.promoEndsAt) - 1);
-const LADDER_START = new Date(config.promoEndsAt);
-/** Before both instants: an expired post. */
-const EXPIRED_ON = '2026-12-20T12:00:00.000Z';
-/** Well after both instants: a post with time left that is not ending soon. */
-const RUNS_UNTIL = '2027-02-15T12:00:00.000Z';
-const ARCHIVED_ON = '2026-12-10T12:00:00.000Z';
-
-const LABEL = config.promoEndsLabel;
-const POST_INCLUDES = `${config.durationDays} days with its own ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails`;
-
-/** Text as renderToStaticMarkup prints it, in an element or an attribute. */
-const rendered = (text: string): string => text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
-
 /** Promo language that must never be a current offer once the promo has ended. */
 const PROMO_OFFER = /\bfree\b|launch promo|launch period|\$0\b/i;
 
@@ -128,14 +132,6 @@ function promoOfferIn(html: string): string | null {
     const first = Math.min(...found);
     return page.slice(Math.max(0, first - 80), first + 80);
 }
-
-/** A saving claimed beside a renewal price, in renewalSavingsLabel's words. */
-const SAVINGS_CLAIM = /Save \d+% vs\./;
-
-// The sentences both surfaces share.
-const FRESH_LISTING_FREE = `You can post this role again as a fresh listing, free through ${LABEL}. It runs ${POST_INCLUDES}.`;
-const FRESH_LISTING_LADDER = `You can post this role again as a fresh listing: $${config.introPrice} for your company's first paid post, $${config.postingPrice} after that. It runs ${POST_INCLUDES}.`;
-const OR_POST_AGAIN_FREE = `Or post this role again as a fresh listing, free through ${LABEL}.`;
 
 function renderWith<P extends object>(component: React.ComponentType<P>, props: P, state: unknown[]): string {
     seeded.values = state;
@@ -182,92 +178,9 @@ describe('the promo-offer detector', () => {
 
 /* ════════════════════════════ The dashboard ════════════════════════════ */
 
-interface DashboardJob {
-    id: string;
-    title: string;
-    isPublished: boolean;
-    isFeatured: boolean;
-    viewCount: number;
-    applyClickCount: number;
-    applicantCount?: number;
-    createdAt: string;
-    expiresAt: string | null;
-    archivedAt: string | null;
-    editToken: string;
-    paymentStatus: string;
-    pricingTier: string;
-    /** What this post pays to renew, in dollars: the server's answer (lib/renewal-price.ts). */
-    renewalPrice: number;
-    slug: string | null;
-}
-
-/** An expired, published post renewable at the base price, unless overridden. */
-function jobRow(overrides: Partial<DashboardJob> = {}): DashboardJob {
-    return {
-        id: 'job-1',
-        title: 'Family Nurse Practitioner, Primary Care',
-        isPublished: true,
-        isFeatured: false,
-        viewCount: 12,
-        applyClickCount: 3,
-        applicantCount: 1,
-        createdAt: '2026-10-21T12:00:00.000Z',
-        expiresAt: EXPIRED_ON,
-        archivedAt: null,
-        editToken: 'edit-token-1',
-        paymentStatus: 'paid',
-        pricingTier: 'pro',
-        renewalPrice: config.renewalPrice,
-        slug: 'family-nurse-practitioner-primary-care',
-        ...overrides,
-    };
-}
-
-/** A post bought at the posting price: it renews for the pro price. */
-const BOUGHT_AT_POSTING_PRICE: Partial<DashboardJob> = { paymentStatus: 'paid', pricingTier: 'pro', renewalPrice: config.proRenewalPrice };
-
-interface DashboardState {
-    jobs: DashboardJob[];
-    /** GET /api/create-checkout/availability; null until it answers. */
-    paidPostingAvailable: boolean | null;
-    /** The employer's own next new-post price; null when unknown. */
-    nextPostPrice?: number | null;
-    /** The row whose Renew or Post Again modal is open. */
-    renewModalFor?: DashboardJob;
-    jobFilter?: 'active' | 'archived';
-}
-
+/** The seeds and props come from tests/support/employer-surface-state.ts (one useState order for both suites). */
 function renderDashboard(state: DashboardState): string {
-    // The component's useState calls, in order: renewingJobId, showRenewModal,
-    // selectedJob, togglingJobId, archivingJobId, jobFilter, archiveTarget,
-    // unpublishTarget, unpublishReason, unpublishNote, localJobs,
-    // showSignupBanner, activeTab, mounted, paidPostingAvailable,
-    // nextPostPrice, resumingJobId. The two sidebar cards render after it and
-    // keep their own initial state.
-    const seeds: unknown[] = [
-        null,
-        state.renewModalFor !== undefined,
-        state.renewModalFor ?? null,
-        null,
-        null,
-        state.jobFilter ?? 'active',
-        null,
-        null,
-        '',
-        '',
-        state.jobs,
-        false,
-        'jobs',
-        true,
-        state.paidPostingAvailable,
-        state.nextPostPrice ?? null,
-        null,
-    ];
-    return renderWith(
-        EmployerDashboardClient,
-        { employerEmail: 'hiring@clinic.example', employerName: 'Clinic Co', jobs: state.jobs },
-        seeds,
-    );
+    return renderWith(EmployerDashboardClient, dashboardProps(state), dashboardSeeds(state));
 }
 
 /** The tooltip on each row's disabled Pause or Unpause button, in row order. */
@@ -411,7 +324,7 @@ describe('employer dashboard: the renewal modal', () => {
     ])('once the promo has ended: the saving for %s, and no free repost', (_label, nextPostPrice) => {
         vi.setSystemTime(LADDER_START);
         const html = open(nextPostPrice);
-        const saving = renewalSavingsLine({ purchasable: true, nextPostPrice, now: LADDER_START });
+        const saving = renewalSavingsLine({ purchasable: true, nextPostPrice, renewalPrice: config.renewalPrice, now: LADDER_START });
 
         expect(saving).toMatch(SAVINGS_CLAIM);
         expect(html).toContain(`>${saving}</p>`);
@@ -419,71 +332,6 @@ describe('employer dashboard: the renewal modal', () => {
         expect(html).not.toContain('Or post this role again');
         expect(html).not.toContain('<a href="/post-job">Post a new job</a>');
         expect(promoOfferIn(html)).toBeNull();
-    });
-});
-
-describe('employer dashboard: the renewal modal of a post bought at the posting price', () => {
-    const post = jobRow(BOUGHT_AT_POSTING_PRICE);
-    const open = (nextPostPrice: number | null, jobs: DashboardJob[] = [post]): string =>
-        renderDashboard({ jobs, paidPostingAvailable: true, nextPostPrice, renewModalFor: post });
-
-    it("prints the pro price, not the base one", () => {
-        for (const now of [LAST_PROMO_INSTANT, LADDER_START]) {
-            vi.setSystemTime(now);
-            const html = open(config.postingPrice);
-
-            expect(html, now.toISOString()).toContain('>Renew Job Posting</h3>');
-            expect(html, now.toISOString()).toContain(`>$${config.proRenewalPrice}</span>`);
-            expect(html, now.toISOString()).not.toContain(`>$${config.renewalPrice}</span>`);
-        }
-    });
-
-    it('once the promo has ended: the saving is measured from the pro price', () => {
-        vi.setSystemTime(LADDER_START);
-        const saving = renewalSavingsLine({ purchasable: true, nextPostPrice: config.postingPrice, renewalPrice: config.proRenewalPrice, now: LADDER_START });
-
-        expect(saving).toBe(`Save 28% vs. your next new post at $${config.postingPrice}`);
-        expect(open(config.postingPrice)).toContain(`>${saving}</p>`);
-        expect(open(null)).toContain(`>Save 28% vs. the $${config.postingPrice} post price</p>`);
-    });
-
-    it('claims no saving against a next post that costs the same as the renewal, or against a free one', () => {
-        vi.setSystemTime(LADDER_START);
-
-        for (const nextPostPrice of [config.introPrice, 0]) {
-            const html = open(nextPostPrice);
-
-            expect(html, String(nextPostPrice)).toContain(`>$${config.proRenewalPrice}</span>`);
-            expect(html, String(nextPostPrice)).not.toMatch(SAVINGS_CLAIM);
-        }
-    });
-
-    it('during the promo: no saving is claimed, and the free repost is still offered', () => {
-        vi.setSystemTime(LAST_PROMO_INSTANT);
-        const html = open(config.postingPrice);
-
-        expect(html).not.toMatch(SAVINGS_CLAIM);
-        expect(html).toContain(`${OR_POST_AGAIN_FREE} <a href="/post-job">Post a new job</a>`);
-    });
-
-    it('prints the price of the row that was opened, whatever the other rows pay', () => {
-        vi.setSystemTime(LADDER_START);
-        const promoPost = jobRow({ id: 'job-promo', paymentStatus: 'promo' });
-
-        const html = open(config.postingPrice, [promoPost, post]);
-
-        expect(html).toContain(`>$${config.proRenewalPrice}</span>`);
-        expect(html).not.toContain(`>$${config.renewalPrice}</span>`);
-    });
-
-    it('a row that arrives without a price falls back to the base renewal, never to "$undefined"', () => {
-        vi.setSystemTime(LADDER_START);
-        const noPrice = jobRow({ renewalPrice: undefined });
-
-        const html = renderDashboard({ jobs: [noPrice], paidPostingAvailable: true, renewModalFor: noPrice });
-
-        expect(html).toContain(`>$${config.renewalPrice}</span>`);
-        expect(html).not.toContain('$undefined');
     });
 });
 
@@ -560,55 +408,8 @@ describe('employer dashboard: an archived post is restored before it is renewed'
 
 /* ════════════════════════════ The edit page ════════════════════════════ */
 
-interface EditPageState {
-    /** EmployerJob.paymentStatus of the post being edited. */
-    paymentStatus?: string;
-    /** What the post pays to renew, in dollars: the edit API's answer. The base price unless set; null leaves it out of the answer. */
-    renewalPrice?: number | null;
-    expiresAt?: string;
-    archivedAt?: string | null;
-    /** GET /api/create-checkout/availability; null until it answers. */
-    paidPostingAvailable: boolean | null;
-    showRenewModal?: boolean;
-}
-
 function renderEditPage(state: EditPageState): string {
-    const job = {
-        id: 'job-1',
-        title: 'Family Nurse Practitioner, Primary Care',
-        isPublished: !state.archivedAt,
-        expiresAt: state.expiresAt ?? EXPIRED_ON,
-        archivedAt: state.archivedAt ?? null,
-    };
-    const employerJob = {
-        id: 'employer-job-1',
-        employerName: 'Clinic Co',
-        contactEmail: 'hiring@clinic.example',
-        companyWebsite: null,
-        paymentStatus: state.paymentStatus ?? 'paid',
-        ...(state.renewalPrice === null ? {} : { renewalPrice: state.renewalPrice ?? config.renewalPrice }),
-    };
-    // The page's useState calls, in order: token, job, employerJob, loading,
-    // error, updateSuccess, showUnpublishConfirm, unpublishing,
-    // showRenewModal, renewingTier, paidPostingAvailable, isApplyOnPlatform,
-    // currentStep, completedSteps.
-    const seeds: unknown[] = [
-        'edit-token-1',
-        job,
-        employerJob,
-        false,
-        null,
-        false,
-        false,
-        false,
-        state.showRenewModal ?? false,
-        null,
-        state.paidPostingAvailable,
-        false,
-        1,
-        new Set<number>(),
-    ];
-    return renderWith(EditJobPage, { params: Promise.resolve({ token: 'edit-token-1' }) }, seeds);
+    return renderWith(EditJobPage, editPageProps(), editPageSeeds(state));
 }
 
 const FREE_REPOST_BANNER = ` Every job post is free through ${LABEL}, so you can post this role again as a fresh listing at no charge.</p>`;
@@ -678,7 +479,7 @@ describe('job edit page: the renewal modal', () => {
         const html = open();
         // This page does not know the employer's quota domain, so the claim
         // names the standard post price.
-        const saving = renewalSavingsLine({ purchasable: true, now: LADDER_START });
+        const saving = renewalSavingsLine({ purchasable: true, renewalPrice: config.renewalPrice, now: LADDER_START });
 
         expect(saving).toBe(`Save 42% vs. the $${config.postingPrice} post price`);
         expect(html).toContain(`>${saving}</p>`);
@@ -686,46 +487,6 @@ describe('job edit page: the renewal modal', () => {
         expect(html).not.toContain('Or post this role again');
         expect(html).not.toContain('<a href="/post-job">');
         expect(promoOfferIn(html)).toBeNull();
-    });
-});
-
-describe('job edit page: the renewal modal of a post bought at the posting price', () => {
-    const open = (): string => renderEditPage({ paidPostingAvailable: true, showRenewModal: true, renewalPrice: config.proRenewalPrice });
-
-    it('prints the pro price, not the base one, in both phases', () => {
-        for (const now of [LAST_PROMO_INSTANT, LADDER_START]) {
-            vi.setSystemTime(now);
-            const html = open();
-
-            expect(html, now.toISOString()).toContain('>Renew Job Posting</h3>');
-            expect(html, now.toISOString()).toContain(`>$${config.proRenewalPrice}</span>`);
-            expect(html, now.toISOString()).not.toContain(`>$${config.renewalPrice}</span>`);
-        }
-    });
-
-    it('once the promo has ended: the saving against the standard post price is measured from the pro price', () => {
-        vi.setSystemTime(LADDER_START);
-        const saving = renewalSavingsLine({ purchasable: true, renewalPrice: config.proRenewalPrice, now: LADDER_START });
-
-        expect(saving).toBe(`Save 28% vs. the $${config.postingPrice} post price`);
-        expect(open()).toContain(`>${saving}</p>`);
-    });
-
-    it('during the promo: no saving is claimed, and the free repost is still offered', () => {
-        vi.setSystemTime(LAST_PROMO_INSTANT);
-        const html = open();
-
-        expect(html).not.toMatch(SAVINGS_CLAIM);
-        expect(html).toContain(`${OR_POST_AGAIN_FREE} <a href="/post-job">Post a new job</a>`);
-    });
-
-    it('an answer without a price falls back to the base renewal', () => {
-        vi.setSystemTime(LADDER_START);
-        // The edit API always sends renewalPrice; the page still never prints $undefined.
-        const html = renderEditPage({ paidPostingAvailable: true, showRenewModal: true, renewalPrice: null });
-
-        expect(html).toContain(`>$${config.renewalPrice}</span>`);
-        expect(html).not.toContain('$undefined');
     });
 });
 

@@ -1,10 +1,10 @@
 # NP Hiring Pricing System — Architecture & Operations
 
-**Last verified:** 2026-10-24 (the 2027 re-price, Phase 1: $249 first post and $349 after, a renewal priced by the post it renews, and the Employer plan retired from every surface: §1, §2d, §2g, §3, §5, §8 to §12); 2026-10-02 (the plan checkout and its account linking in §2e, the activation order in §2c, the schema blocks in §4, the open loopholes in §8, the checklist and monitors in §9 and the test map in §10, re-checked against the code; `tests/regressions/docs-pricing-system-matches-code.test.ts` now holds them to it); 2026-10-01 (the copy switch at the promo end: §1d, §2g and §3); 2026-09-27 (plan post lifecycle, renewal effects and the promo end instant)
-**Source of truth:** [lib/config.ts](../lib/config.ts) + [lib/pricing.ts](../lib/pricing.ts) + [lib/renewal-price.ts](../lib/renewal-price.ts) + [prisma/schema.prisma](../prisma/schema.prisma); the dormant plan code is [lib/employer-plan.ts](../lib/employer-plan.ts); the words every surface prints come from [lib/pricing-copy.ts](../lib/pricing-copy.ts) and the per-page builders in §3a
+**Last verified:** 2026-10-25 (the 2027 re-price, Phase 2 backend: the 5-post pack, built and kept dark, and the plan taken out of posting: §1b to §1d, §2a to §2d, §2g, the new §2h, §3a, §3b, §4a, §4f, §5 to §12 and the glossary); 2026-10-24 (the 2027 re-price, Phase 1: $249 first post and $349 after, a renewal priced by the post it renews, and the Employer plan retired from every surface: §1, §2d, §2g, §3, §5, §8 to §12); 2026-10-02 (the plan checkout and its account linking in §2e, the activation order in §2c, the schema blocks in §4, the open loopholes in §8, the checklist and monitors in §9 and the test map in §10, re-checked against the code; `tests/regressions/docs-pricing-system-matches-code.test.ts` now holds them to it); 2026-10-01 (the copy switch at the promo end: §1d, §2g and §3); 2026-09-27 (plan post lifecycle, renewal effects and the promo end instant)
+**Source of truth:** [lib/config.ts](../lib/config.ts) + [lib/pricing.ts](../lib/pricing.ts) + [lib/renewal-price.ts](../lib/renewal-price.ts) + [lib/post-packs.ts](../lib/post-packs.ts) + [prisma/schema.prisma](../prisma/schema.prisma); the dormant plan code is [lib/employer-plan.ts](../lib/employer-plan.ts); the words every surface prints come from [lib/pricing-copy.ts](../lib/pricing-copy.ts) and the per-page builders in §3a
 **Companion doc:** [pricing-audit.md](./archive/pricing-audit.md) (the April 2026 audit and its change log; archived and no longer maintained. Open items live in [PENDING_WORK.md](./PENDING_WORK.md))
 
-This document describes the live state of the pricing system after the 2026-09-12 re-price (launch promo → 2027 ladder) and the 2026-10-24 re-price ($249 intro post, $349 every later post, a renewal of $199 or $249, and the Employer plan retired by the owner). It's the ground-truth reference; the audit doc is the changelog of how we got here. The 2026-04-30 / 05-01 audit work (idempotency, JobCharge ledger, quotaDomain anchor) is unchanged and still described below.
+This document describes the live state of the pricing system after the 2026-09-12 re-price (launch promo → 2027 ladder) and the 2026-10-24 re-price ($249 intro post, $349 every later post, a renewal of $199 or $249, and the Employer plan retired by the owner). Phase 2 (2026-10-25) built the backend of the one-time 5-post pack ($1,245 for 5 posts, §2h) and kept it dark: the sale is closed until `config.promoEndsAt` and no page links it yet. It's the ground-truth reference; the audit doc is the changelog of how we got here. The 2026-04-30 / 05-01 audit work (idempotency, JobCharge ledger, quotaDomain anchor) is unchanged and still described below.
 
 ---
 
@@ -31,13 +31,14 @@ Promo rows are written with `paymentStatus='promo'`, `pricingTier='pro'`.
 |---|---|---|---|---|
 | Intro post | $249 (`config.introPrice` / `stripeIntroPriceInCents` 24900) | 60 days; the FIRST **PAID** post per company domain | `'intro'` | `'paid'` |
 | Featured post | $349 (`config.postingPrice` / `stripePriceInCents` 34900) | 60 days; every later paid post | `'pro'` | `'paid'` |
-| Renewal | $199 (`config.renewalPrice` / `stripeRenewalPriceInCents` 19900) for a promo, intro or legacy post; $249 (`config.proRenewalPrice` / `stripeProRenewalPriceInCents` 24900) for a post bought at $349 (`pricingTier='pro'` with a `'new'` JobCharge). lib/renewal-price.ts decides which; `config.renewalPriceCentsFor(rung)` / `renewalPriceDollarsFor(rung)` map it | +60 days on a promo / intro / featured post (never a plan post), capped at `config.renewalCapDays` = 365 days after the post was created; does NOT reset unlocks or InMails | unchanged | `'paid'` |
+| 5-post pack | $1,245 (`config.packPrice` / `stripePackPriceInCents` 124500) for `config.packPosts` = 5 posts, $249 a post | One time. Each credit publishes one 60-day post with the full package; the credits are usable for `config.packValidityMonths` = 12 months from purchase and belong to the buying account only. Sold only after the promo, while paid posting is on and the webhook is configured, and never to a free-email signup. A paid Stripe pack uses up the domain's intro price. No refunds (§2h). Built 2026-10-25, not yet linked from any page | `'pack'` (the post) | `'pack'` (the post) |
+| Renewal | $199 (`config.renewalPrice` / `stripeRenewalPriceInCents` 19900) for a promo, intro, pack or legacy post; $249 (`config.proRenewalPrice` / `stripeProRenewalPriceInCents` 24900) for a post bought at $349 (`pricingTier='pro'` with a `'new'` JobCharge). lib/renewal-price.ts decides which; `config.renewalPriceCentsFor(rung)` / `renewalPriceDollarsFor(rung)` map it | +60 days on a promo / pack / intro / featured post (never a plan post), capped at `config.renewalCapDays` = 365 days after the post was created; does NOT reset unlocks or InMails | unchanged (a pack post keeps `'pack'`) | `'paid'` |
 
 **Employer plan: retired 2026-10-24 (owner decision).** It was $399 / month for 5 active job slots. No page, email, FAQ, FAQPage JSON-LD, comparison page, calculator or checkout rail offers it, and it is not for sale: `STRIPE_PLAN_PAYMENT_LINK` is never set. Production had no plan row, no plan post and no charge of any kind on 2026-10-24. `config.planPrice` (399), `config.planSlots` (5), `config.planGraceDays` (3) and the `'plan'` tier stay only because the dormant plan code (§2e, §2f) still reads them; no copy may read them, and they go when that code is deleted.
 
 Every SKU includes exactly the same package: Featured badge, pinned above aggregated jobs, applications straight to the employer (Easy Apply or the employer's own application link), screening questions, analytics, `config.limits.candidateUnlocksPerPosting` = 25 unlocks and `config.limits.inmailsPerPosting` = 25 InMails. `config.isFeatured` is always `true`; `config.getTierLimits()` returns the same limits for every tier. The 25 / 25 are per posting for its whole life: unlocks are counted by `ProfileView.employerJobId`, InMails by conversations on the job since `EmployerJob.createdAt` (lib/tier-limits.ts), and a renewal changes neither, so no surface may say a renewal "refreshes" them.
 
-**Which renewal price a post pays.** `pricingTier` and `paymentStatus` cannot decide it: promo rows are written `('promo','pro')`, and the renewal webhook rewrites a renewed promo post to `('paid','pro')`, exactly what a post bought at $349 reads as. The ledger tells them apart: only a post bought through Checkout has a JobCharge of type `'new'` (`NEW_POST_CHARGE_SELECT` in lib/pricing.ts loads it). So `renewalRungFor` answers `'pro'` ($249) only for `pricingTier='pro'` with a `'new'` charge, and `'base'` ($199) for every other renewable row: promo posts (renewed or not), intro posts, legacy paid rows with no charge and the legacy `free_renewed` / `free_upgraded` rows. If the best-effort `'new'` charge write ever failed, the rule falls back to the lower price.
+**Which renewal price a post pays.** `pricingTier` and `paymentStatus` cannot decide it: promo rows are written `('promo','pro')`, and the renewal webhook rewrites a renewed promo post to `('paid','pro')`, exactly what a post bought at $349 reads as. The ledger tells them apart: only a post bought through Checkout has a JobCharge of type `'new'` (`NEW_POST_CHARGE_SELECT` in lib/pricing.ts loads it). So `renewalRungFor` answers `'pro'` ($249) only for `pricingTier='pro'` with a `'new'` charge, and `'base'` ($199) for every other renewable row: promo posts (renewed or not), pack posts (`pricingTier='pack'`, renewed or not: a renewal keeps the tier, `asRenewalTier` in lib/pricing.ts), intro posts, legacy paid rows with no charge and the legacy `free_renewed` / `free_upgraded` rows. The `'new'` charge write is no longer best effort: a failure other than a duplicate rethrows, the webhook answers 500, and Stripe's retry, which finds the post already claimed, backfills the charge (`resolveLostClaim` in activate-paid-job.ts). A row loaded without its charges is never guessed at: `renewalRungForRow` throws, and the renewal checkout answers a logged 500 before any Stripe call.
 
 **Plan post lifecycle (dormant code only).** A plan post runs `config.durationDays` like every post (`POST /api/jobs/post-free` writes the same `expiresAt`), is never renewed (`/api/create-renewal-checkout` answers 409 for `paymentStatus='plan'`), and `pausePlanPosts` unpublishes live plan posts when the plan lapses. Only an admin grant (`/admin/employer-plans`) can create a plan now.
 
@@ -46,15 +47,20 @@ Every SKU includes exactly the same package: Featured badge, pinned above aggreg
 | Helper | Returns |
 |---|---|
 | `config.isPromoActive(now?)` | `now < promoEndsAt` |
-| `config.priceCentsForTier(tier)` | 24900 / 34900 / 0 (the dormant plan was billed by Stripe Billing, never per-post Checkout) |
-| `config.priceDollarsForTier(tier)` | 249 / 349 / 0 |
+| `config.priceCentsForTier(tier)` | 24900 / 34900 for `'intro'` / `'pro'`; 0 for `'pack'` (the post was paid for with its pack) and `'plan'` (the dormant plan was billed by Stripe Billing, never per-post Checkout) |
+| `config.priceDollarsForTier(tier)` | 249 / 349 / 0 / 0 |
+| `config.formatDollars(amount)` | A dollar amount as copy prints it: `$1,245` (thousands grouped, cents only when there are any); `config.formatPrice` prints `$1245` |
 | `config.renewalPriceCentsFor(rung)` | 19900 for `'base'`, 24900 for `'pro'` (the only mapping from a renewal rung to a Stripe amount) |
 | `config.renewalPriceDollarsFor(rung)` | 199 / 249 |
 | `renewalRungFor({ pricingTier, hasNewPostCharge })`, `renewalRungForRow(row)` ([lib/renewal-price.ts](../lib/renewal-price.ts), client-safe) | `'pro'` only for `pricingTier='pro'` with a `'new'` JobCharge, else `'base'`; `renewalRungForRow` reads a row loaded with `NEW_POST_CHARGE_SELECT` ([lib/pricing.ts](../lib/pricing.ts)); `asRenewalRung(value)` narrows `metadata.renewalRung` (anything but `'pro'` is `'base'`) |
-| `config.getTierLabel(tier)` | `'Intro'` / `'Pro'` / `'Plan'` (legacy/unknown → `'Pro'`) |
-| `getNextPaidTier(quotaDomain)` ([lib/pricing.ts](../lib/pricing.ts)) | `'intro'` while the domain has zero `paid` rows, else `'pro'` |
-| `resolvePostingMode({ quotaDomain, hasPlanSlot })` | `PricingQuote { mode, tier, price, priceCents, willBeFree, durationDays }` — order: promo → plan (dormant) → intro → paid |
-| `getPlanSlotStatus(userId)` ([lib/employer-plan.ts](../lib/employer-plan.ts), dormant) | `{ plan, entitled, slots, used, remaining, canPost }` |
+| `config.getTierLabel(tier)` | `'Intro'` / `'Pro'` / `'Pack'` / `'Plan'` (legacy/unknown → `'Pro'`) |
+| `getNextPaidTier(quotaDomain)` ([lib/pricing.ts](../lib/pricing.ts)) | `'intro'` while the domain has zero `paid` rows bought as a post and no paid Stripe pack (`paidPackWhere` in lib/post-packs.ts), else `'pro'` |
+| `resolvePostingMode({ quotaDomain, hasPackCredit, now?, db? })` | `PricingQuote { mode, tier, price, priceCents, willBeFree, durationDays }`, order: promo → pack → intro → paid. The caller reads `hasPackCredit` from `getPackCreditStatus`; the promo wins over a credit, which stays unspent. The plan mode went in phase 2 |
+| `asRenewalTier(value)` ([lib/pricing.ts](../lib/pricing.ts)) | The tier a renewal carries and writes back: `'intro'` and `'pack'` stay, anything else is `'pro'` (`asPaidTier`, for a new post, still narrows to `'intro'` / `'pro'`) |
+| `getPackCreditStatus(userId, now?, db?)` ([lib/post-packs.ts](../lib/post-packs.ts), server only) | `{ usable, remaining, total, expiresAt }` over the account's packs that are `'paid'`, unexpired and have a credit left: `remaining` summed, `total` = sold less revoked, `expiresAt` of the pack spent from next (the one that expires first) |
+| `packExpiresAt(purchasedAt)` ([lib/post-packs.ts](../lib/post-packs.ts)) | `config.packValidityMonths` calendar months later in UTC, same time of day, clamped to the month's last day |
+| `isPackSaleOpen(now?)` ([lib/post-pack-sale.ts](../lib/post-pack-sale.ts)) | Paid posting available (flag and key), `STRIPE_WEBHOOK_SECRET` set, and the promo over; an environment that will not parse reads as closed |
+| `getPlanSlotStatus(userId)` ([lib/employer-plan.ts](../lib/employer-plan.ts), dormant) | `{ plan, entitled, slots, used, remaining, canPost }`; no posting route reads it since 2026-10-25 |
 
 **Removed 2026-09-12:** `config.freePostsPerEmail`, `config.freeDurationDays`. There is no "free first post" and no shorter free duration any more; every reference was replaced by the promo / ladder copy. `config.legacyInvoiceFallbackCents` (19900) stays frozen for pre-ledger invoices only and is deliberately decoupled from the live ladder.
 
@@ -82,7 +88,7 @@ Retired 2026-09-27 because the code never did them: "live while you're subscribe
 
 Never claim audience numbers (subscribers, visitors, applicants) on any surface.
 
-**Not in scope today** (deferred, see §11): boost SKU, tax, PO/invoice, per-org verification. A one-time 5-post pack replaces the plan in later phases (owner decisions D36 to D42 in [PENDING_WORK.md](./PENDING_WORK.md)); nothing of it is built yet.
+**Not in scope today** (deferred, see §11): boost SKU, tax, PO/invoice, per-org verification. The one-time 5-post pack that replaces the plan (owner decisions D36 to D42 in [PENDING_WORK.md](./PENDING_WORK.md)) has its backend built and kept dark since 2026-10-25 (§2h); no page sells it or prints its copy yet.
 
 ### 1d. What happens at 2027-01-01T10:00:00Z (`config.promoEndsAt`)
 
@@ -90,7 +96,7 @@ There is no flag to flip and no deploy. Every phase-dependent decision calls `co
 
 **Switches on its own:**
 
-- **Posting.** `POST /api/jobs/post-free` stops writing `'promo'` rows and answers `403 requiresPayment`, which sends the wizard to checkout (the dormant plan path still posts as `'plan'` for an employer with an entitled plan, which only an admin grant can create). `/api/create-checkout` stops answering `409 PROMO_ACTIVE`. `GET /api/employer/free-quota-status` quotes `intro` or `paid` (or the dormant `plan`). No plan sale opens: `isPlanSaleOpen(now)` (lib/employer-plan-link.ts) needs a valid `STRIPE_PLAN_PAYMENT_LINK`, which is never set.
+- **Posting.** `POST /api/jobs/post-free` stops writing `'promo'` rows: an employer with a usable 5-post pack credit posts as `'pack'` (§2h), and everyone else gets `403 requiresPayment`, which sends the wizard to checkout. (The plan mode is gone from posting since 2026-10-25, so not even an admin-granted plan posts as `'plan'`.) `/api/create-checkout` stops answering `409 PROMO_ACTIVE`, and answers `409 PACK_CREDIT_AVAILABLE` for a new post while a pack credit is left. `GET /api/employer/free-quota-status` quotes `pack`, `intro` or `paid`. The pack sale opens (`isPackSaleOpen(now)`, lib/post-pack-sale.ts), once paid posting is available and `STRIPE_WEBHOOK_SECRET` is set. No plan sale opens: `isPlanSaleOpen(now)` (lib/employer-plan-link.ts) needs a valid `STRIPE_PLAN_PAYMENT_LINK`, which is never set.
 - **Copy, on every phase-aware surface** (§3c says how each decides). ISR pages decide on each render and regenerate at most once per window (`revalidate = 3600`; 60 seconds on the homepage). The window is not a hard bound, because regeneration is stale-while-revalidate: a render cached before the switch is served until its window runs out, the first request after that is still answered with that render and only triggers the regeneration, and every later request gets the ladder. A page that is rarely requested therefore shows its promo render to one more visitor or crawler, however long after the switch. Nothing purges these pages at the instant (no `revalidatePath` call; §11). Metadata follows the page: /pricing, /for-employers, the comparison pages and the /post-job layout build theirs in `generateMetadata`. Client pages decide on each render in the browser, and those that show a fetched quote drop a `'promo'` quote fetched before the switch (`currentQuote`, lib/next-post-quote.ts). Emails decide at send time, the admin outreach page per request. The ladder-phase sentences (§1c) replace the promo ones.
 - **The comparison table** (`employerComparisonRows(now)`, /pricing and /for-employers): the "Free Posting Through ..." row drops, and the flat-pricing row states the prices without a date. The comparison pages (lib/compare-data.ts) state our ladder as the current price; competitor prices stay dated to their review.
 - **The cost-per-hire calculator:** `flatFeeModeOptions('ladder')` offers per post only (no promo mode and no start date; the plan mode was retired with the plan), `defaultInputs('ladder')` opens on per post, a calculator that was already open with the promo selected falls back to per post (`offeredFlatFeeMode`), and the method notes, the FAQ (with its FAQPage JSON-LD) and the post-a-role card state the ladder.
@@ -101,7 +107,7 @@ There is no flag to flip and no deploy. Every phase-dependent decision calls `co
 **Does not happen on its own** (owner steps: docs/LAUNCH_RUNBOOK.md §8, checklist in §9b):
 
 - **Stripe live mode:** the live account and the live webhook. There is no plan Product, Price, Payment Link or Customer Portal to set up: the plan is retired.
-- **`ENABLE_PAID_POSTING=true` with a live `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.** Until the flag is `'true'`, `/api/create-checkout` and `/api/create-renewal-checkout` answer 503 `PAID_POSTING_DISABLED`. With the flag on but `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET` missing, both routes answer 503 `STRIPE_NOT_CONFIGURED` and `/api/create-checkout/availability` reports `{ available: false, code: 'STRIPE_NOT_CONFIGURED' }`: the webhook answers 503 without either and could not record the payment. Set the key and the webhook secret before the flag, or in the same deploy: until both are set, no checkout opens. Until checkout is available, nobody can post once the promo has ended (only a plan an admin granted through the dormant plan code would still post).
+- **`ENABLE_PAID_POSTING=true` with a live `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.** Until the flag is `'true'`, `/api/create-checkout` and `/api/create-renewal-checkout` answer 503 `PAID_POSTING_DISABLED`. With the flag on but `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET` missing, both routes answer 503 `STRIPE_NOT_CONFIGURED` and `/api/create-checkout/availability` reports `{ available: false, code: 'STRIPE_NOT_CONFIGURED' }`: the webhook answers 503 without either and could not record the payment. Set the key and the webhook secret before the flag, or in the same deploy: until both are set, no checkout opens. Until checkout is available, nobody can buy a post or a pack once the promo has ended; only a pack credit already on an account would still post, and since no pack is sold during the promo, that could only be one an admin granted.
 - **`STRIPE_PLAN_PAYMENT_LINK`:** never set it. The Employer plan is retired; while the variable is unset (or not a `https://buy.stripe.com/` link) `isPlanSaleOpen` (lib/employer-plan-link.ts) stays false, so the dormant plan routes sell nothing. The variable goes when the plan code does.
 - **/terms** is static and changes only with a deploy. It states the launch promotion and the schedule from `config.ladderStartsLabel` with their dates, which stay true afterwards.
 - **Promo posts already live** keep running their 60 days (§1a). Retiring the promo code paths is a later cleanup (§11).
@@ -123,42 +129,39 @@ Employer signs up → /post-job → /post-job/preview → POST /api/jobs/post-fr
   │    │    └─ else 403 { error, promoCapReached: true }
   │    ├─ Job.create (isPublished=true, expiresAt=now+config.durationDays)
   │    ├─ Job.update (slug)
-  │    └─ EmployerJob.create (quotaDomain, paymentStatus='promo', pricingTier='pro', userId)
+  │    ├─ EmployerJob.create (quotaDomain, paymentStatus='promo', pricingTier='pro', userId)
+  │    └─ a serialization conflict (Prisma P2034) → 409 { error, retry: true }, nothing written
+  │  (a 5-post pack credit is not read while the promo runs, and stays unspent)
   ├─ sendConfirmationEmail(..., config.durationDays, 'promo')  ← "free during our launch promo"
   ├─ Cleanup JobDrafts · pingSearchEnginesForJobPage (prod only; Google only when the page carries a JobPosting)
   └─ 200 { ..., mode: 'promo' } → frontend redirects to /success?mode=promo (?free=true still works)
 ```
 
-### 2b. Plan post (promo over, employer holds an entitled plan with a free slot): dormant
+### 2b. Plan post: removed from posting (2026-10-25)
 
-The plan is retired (2026-10-24), so only a plan an admin granted reaches this path; it stays until the plan code is deleted.
+Phase 2 of the re-price took the plan mode out of `POST /api/jobs/post-free`, `resolvePostingMode` and `GET /api/employer/free-quota-status`: no new `'plan'` row is written, and an employer an admin granted a plan is quoted and charged like anyone else. `'plan'` rows already written (production had none on 2026-10-24) keep their dormant handling: toggle-publish's `republishPlanPost`, the expiry cron's plan offer (§2g), the 409 on renewal and the lapse job (§2f). The no-charge path a post can take after the promo is a 5-post pack credit (§2h).
 
-```
-POST /api/jobs/post-free (same path — "post without a charge")
-  ├─ getPlanSlotStatus(userId).canPost
-  │    └─ re-checked INSIDE the txn → 403 { error, planSlotsFull: true } if full
-  ├─ Job.create (isPublished=true, expiresAt=now+config.durationDays)
-  ├─ EmployerJob.create (quotaDomain, paymentStatus='plan', pricingTier='plan', userId)
-  ├─ sendConfirmationEmail(..., config.durationDays, 'plan')  ← "posted under your Employer plan"
-  └─ 200 { ..., mode: 'plan' } → /success?mode=plan
-```
-
-If neither promo nor plan applies, post-free answers `403 { error, requiresPayment: true, mode: 'intro'|'paid', tier, price, priceCents }` and the wizard redirects to checkout exactly as before.
+If neither the promo nor a pack credit applies, post-free answers `403 { error, requiresPayment: true, mode: 'intro'|'paid', tier, price, priceCents }` and the wizard redirects to checkout exactly as before.
 
 ### 2c. Intro / Featured checkout (from `config.ladderStartsLabel`)
 
 ```
 GET /api/employer/free-quota-status  (path unchanged — the wizard already calls it)
   └─ { eligible, reason?, mode, tier, willBeFree, price, priceCents, durationDays, paidDurationDays,
-       promoActive, promoEndsAt, promoEndsLabel, ladderStartsLabel, plan?: {slots, used, remaining},
+       promoActive, promoEndsAt, promoEndsLabel, ladderStartsLabel, pack?: {remaining, total, expiresAt},
        remaining, limit }
-     Gate in the wizard is unchanged: nextPostRequiresPayment = eligible && !willBeFree.
+     pack is there while the account holds a usable credit (read in every phase); in mode 'pack',
+     remaining / limit are the credits left / held. Gate in the wizard is unchanged:
+     nextPostRequiresPayment = eligible && !willBeFree.
 
 Frontend → /post-job/checkout → POST /api/create-checkout
   ├─ Lazy Stripe client (503 if STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET missing / ENABLE_PAID_POSTING=false)
   ├─ config.isPromoActive() → 409 PROMO_ACTIVE, before the body is read, so the resume path
   │    is covered too: nothing is sold per post while every post is free
+  ├─ a new post while the account holds a usable 5-post pack credit → 409 PACK_CREDIT_AVAILABLE
+  │    (the post goes through post-free with the credit; the resume path stays open)
   ├─ tier = getNextPaidTier(quotaDomain)          ← 'intro' until the domain has ONE 'paid' row
+  │                                                 bought as a post, or one paid Stripe pack
   ├─ Atomic txn: Job.create (isPublished=false) · slug · EmployerJob.create (paymentStatus='pending', pricingTier=tier, quotaDomain)
   ├─ Stripe Checkout Session: unit_amount = config.priceCentsForTier(tier),
   │    name `${config.getTierLabel(tier)} job post — ${title}`, metadata.pricing = tier
@@ -180,14 +183,15 @@ Stripe → POST /api/webhooks/stripe (checkout.session.completed or checkout.ses
 Stripe redirect → /success?session_id=cs_... → GET /api/verify-checkout-session (unchanged; 202 retry on webhook lag)
 ```
 
-The intro allowance = zero rows with `quotaDomain = domain AND paymentStatus = 'paid'` that were bought **as a post** (`lib/pricing.ts#paidPostWhere`: a `'new'` JobCharge, or no charge at all for legacy paid rows). Promo, plan, legacy free and abandoned `pending` rows never consume it — and neither does a promo post that was later renewed (the renewal webhook flips it to `'paid'`, but its only charge is `type='renewal'`; a renewal is not a post).
+The intro allowance = zero rows with `quotaDomain = domain AND paymentStatus = 'paid'` that were bought **as a post** (`lib/pricing.ts#paidPostWhere`: a `'new'` JobCharge, or no charge at all for legacy paid rows), and no paid 5-post pack bought through Stripe at the domain (`lib/post-packs.ts#paidPackWhere`: `status='paid'`, `source='stripe'`; owner decision: the pack is the company's paid purchase, so the single posts after it are $349). Promo, pack, plan, legacy free and abandoned `pending` rows never consume it, nor do a refunded, disputed or admin-granted pack, nor a promo or pack post that was later renewed (the renewal webhook flips it to `'paid'`, but its only charge is `type='renewal'`; a renewal is not a post).
 
 ### 2d. Renewal ($199 or $249, +60 days)
 
 ```
 Employer dashboard / jobs/edit/[token] → renewal modal
-  ├─ paymentStatus 'promo' | 'paid'   → the row's own price ($199, or $249 for a post bought at $349: the dashboard
-  │                                      page and the edit API send renewalPrice per row) → POST /api/create-renewal-checkout
+  ├─ paymentStatus 'promo' | 'pack' | 'paid' → the row's own price ($199, or $249 for a post bought at $349; a pack
+  │                                      post pays $199: the dashboard page and the edit API send renewalPrice per row)
+  │                                      → POST /api/create-renewal-checkout
   ├─ paymentStatus 'plan'             → "Plan slot" badge, no Renew (409 server-side, dormant:
   │                                      a plan post runs 60 days and is never renewed; post again from a plan slot)
   ├─ paymentStatus 'pending'/'expired'/'refunded'/'disputed' → 409 (apply-renewal also refuses
@@ -206,10 +210,12 @@ One payable renewal per post (backlog 2.5, lib/renewal-checkout-sessions.ts), ch
   └─ either check cannot be confirmed (Stripe or the ledger unreachable) → 503 + Retry-After, nothing handed out
 
 The price, decided after every refusal above from the stored row (loaded with NEW_POST_CHARGE_SELECT):
-  renewalRung = renewalRungForRow(employerJob)   ← 'pro' only for pricingTier='pro' with a 'new' JobCharge (§1b)
+  renewalRung = renewalRungForRow(employerJob)   ← 'pro' only for pricingTier='pro' with a 'new' JobCharge (§1b);
+                                                   a row loaded without its charges throws: a logged 500, no Stripe call
   unit_amount = config.renewalPriceCentsFor(renewalRung)   ← 24900 ($249) for 'pro', 19900 ($199) for 'base'
-  metadata.renewalRung = renewalRung; the idempotency key's parameter fingerprint includes the amount, so a
-  post whose price changes inside a window gets a session of its own
+  metadata.renewalRung = renewalRung; metadata.tier = asRenewalTier(pricingTier) ('intro', 'pack' or 'pro'), which
+  the webhook writes back, so a pack post stays 'pack'; the idempotency key's parameter fingerprint includes the
+  amount, so a post whose price changes inside a window gets a session of its own
 
 Webhook (type='renewal', app/api/webhooks/stripe/apply-renewal.ts):
   expiresAt = min(MAX(existingExpiresAt, now) + config.durationDays, Job.createdAt + config.renewalCapDays)
@@ -326,14 +332,16 @@ Cron /api/cron/expiry-warnings → sendExpiryWarningEmail (from 5 days before ex
      lib/renewal-offer.ts#resolveRenewalOffer (client-safe, so the dashboard and the edit page
      share the rule; lib/pricing.ts re-exports it, and the cron reads the employer's own
      next-post price from lib/pricing.ts#nextNewPostPrice):
-       renew        : a promo or paid row AND getPaidPostingStatus().available. The email
-                      names the row's own renewal price ($199, or $249 for a post bought at
-                      $349: the cron loads each row with NEW_POST_CHARGE_SELECT). A saving is
-                      named only after the promo, measured from that price against the
-                      employer's own next new-post price ($249 intro, $349, or $0 with a free
-                      plan slot), or "vs. the $349 post price" when that is unknown, and never
-                      when renewal is not cheaper (a $249 renewal saves nothing against a
-                      $249 intro post).
+       renew        : a promo, pack or paid row AND getPaidPostingStatus().available. The
+                      email names the row's own renewal price ($199, or $249 for a post bought
+                      at $349: the cron loads each row with NEW_POST_CHARGE_SELECT). An offer
+                      that can be bought must carry that price (renewalPrice is required by
+                      the types, and resolveRenewalOffer throws without it), so no row is
+                      ever quoted a guessed one. A saving is named only after the promo,
+                      measured from that price against the employer's own next new-post
+                      price ($249 intro, $349, or $0 with a usable 5-post pack credit), or
+                      "vs. the $349 post price" when that is unknown, and never when renewal
+                      is not cheaper (a $249 renewal saves nothing against a $249 intro post).
        promo_repost : no renewal on sale during the promo, so the email says every post is
                       free through config.promoEndsLabel.
        paid_repost  : no renewal on sale for this row after the promo (the legacy free rows)
@@ -347,7 +355,7 @@ Cron /api/cron/expiry-warnings → sendExpiryWarningEmail (from 5 days before ex
      repost while the promo runs, a paid repost at ladderLine(now) while paid posting is
      available, otherwise no offer.
 
-Employer republish (toggle-publish): 'paid', 'free' and 'promo' come back directly;
+Employer republish (toggle-publish): 'paid', 'free', 'promo' and 'pack' come back directly;
 'plan' only through republishPlanPost (plan entitled and a free slot, checked in one
 Serializable transaction with the write: 403 planInactive, 409 planSlotsFull, 409 retry
 on a serialization conflict). Archive and edit-token soft delete set
@@ -355,6 +363,70 @@ isManuallyUnpublished, as a pause does, so resumePlanPosts never revives them.
 
 Posting reaches expiresAt: excluded from getEmployerActivePostings; no NEW unlocks / InMails;
 previously-unlocked candidates stay accessible (hasFullAccess via existingView); replies stay free.
+```
+
+### 2h. 5-post pack (backend built 2026-10-25, kept dark)
+
+$1,245 once (`config.packPrice`, `stripePackPriceInCents` 124500) for `config.packPosts` = 5 credits, $249 a post. A credit publishes one ordinary post with the full package for `config.durationDays`; the credits are usable for `config.packValidityMonths` = 12 months from purchase (`packExpiresAt`) and only by the buying account. No refunds (owner decision 2026-10-25): a refund the owner issues by hand in Stripe, or a chargeback, is still honoured (below). No email reminds the buyer before the credits expire (owner decision). Nothing links the purchase route yet, and the sale is closed until `config.promoEndsAt`.
+
+```
+Buy: POST /api/create-pack-checkout (app/api/create-pack-checkout/route.ts)
+  ├─ 503 PAID_POSTING_DISABLED · 503 STRIPE_NOT_CONFIGURED (the key or STRIPE_WEBHOOK_SECRET missing) ·
+  │    409 PROMO_ACTIVE: isPackSaleOpen's conditions, each with its own code, before anything else is read
+  ├─ 401 signed out · 403 not an employer account · 400 a free-email signup (post-free refuses its posts)
+  ├─ the body goes through lib/request-body.ts and no field of it is used: the price, the posts and the
+  │    buyer are the server's
+  ├─ Stripe Checkout Session, mode 'payment': unit_amount config.stripePackPriceInCents, customer_email and
+  │    client_reference_id = the account, invoice_creation, metadata { type: 'post_pack', sku: 'post-pack-5',
+  │    userId, quotaDomain, posts }, the GA ids of a consenting visitor; expires_at inside the hour from the
+  │    renewal checkout's window helpers, so a double click in one ten-minute window replays one session
+  │    (idempotency key post-pack-v1-<account>-<window>-<parameter digest>)
+  └─ 200 { sessionId, url }; success_url /employer/post-pack?session_id=…
+
+Record: app/api/webhooks/stripe/post-pack-checkout.ts#fulfilPostPackCheckout, run by three callers:
+  the webhook (checkout.session.completed or async_payment_succeeded with metadata.type 'post_pack', routed
+  before the "Missing job ID" 400), GET /api/verify-pack-session (self-heal) and the daily payment
+  reconciliation sweep (lib/inngest/functions/payment-reconciliation.ts, arm 6)
+  ├─ payment_status must be 'paid': unpaid is deferred to async_payment_succeeded; 'no_payment_required' is
+  │    alerted and nothing is written
+  ├─ EmployerPostPack.create keyed on the unique stripeSessionId: a session already recorded, or a P2002 from
+  │    a path that got there first, is 'already_fulfilled' and runs no side effect
+  ├─ creditsTotal = creditsRemaining = config.packPosts, amountCents = session.amount_total (what Stripe
+  │    charged), expiresAt = packExpiresAt(now), quotaDomain from metadata, the invoice fields from the session
+  ├─ the money is always recorded: bought while the sale was closed, by an account that is not an employer,
+  │    or with no account reference → recorded, and alertWebhookFailure('... refund it in Stripe')
+  ├─ sendPostPackPurchasedEmail to an employer buyer (claimed through EmailSend, released on a failed send)
+  └─ trackServerPurchase: item post-pack-5 ('Job Posting Pack'), priced as charged
+  invoice.paid with no matching JobCharge → refreshPackInvoice (the pack's invoice links)
+  A failure answers 500 and rolls the dedupe row back, so Stripe retries.
+
+Verify: GET /api/verify-pack-session?session_id=cs_… (401 signed out, 403 another account's session)
+  → { status: 'paid' | 'processing' | 'unpaid', pack: { creditsTotal, creditsRemaining, expiresAt } | null }
+
+Post: POST /api/jobs/post-free, after the promo
+  ├─ getPackCreditStatus(userId).usable → resolvePostingMode quotes mode 'pack' (promo → pack → intro → paid)
+  ├─ inside the Serializable transaction, before the post is written: spendPackCredit, a conditional
+  │    decrement on the account's pack that expires first (updateMany where id, userId, status 'paid',
+  │    expiresAt > now, creditsRemaining > 0); nothing matched → 409 { error, packCreditUnavailable: true };
+  │    a serialization conflict → 409 { error, retry: true }; nothing is written in either case
+  ├─ EmployerJob.create (quotaDomain, paymentStatus='pack', pricingTier='pack', postPackId, userId)
+  └─ 200 { ..., mode: 'pack', pack: { remaining, total, expiresAt } }, read inside the same transaction
+  A pack post is never invoiced or receipted on its own (400: the pack's invoice covers it), comes back
+  directly through toggle-publish, renews at $199 keeping pricingTier 'pack', and locks its domain against
+  an email change like a paid post.
+
+Refund and chargeback: app/api/webhooks/stripe/post-pack-refunds.ts, when no JobCharge matches the payment
+  ├─ charge.refunded in full → status 'refunded', the unused credits moved to creditsRevoked (a compare-and-set
+  │    on the counter, so a credit spent at the same moment is never lost), and the pack's standing posts
+  │    ('pack' rows) → 'refunded' and unpublished; a renewed pack post has its own payment and stays up
+  ├─ charge.refunded in part → the amount recorded on the pack and alerted; credits and posts unchanged
+  ├─ charge.dispute.created → the pack frozen ('disputed': never usable, credits kept counted), its standing
+  │    posts → 'disputed' and unpublished
+  ├─ charge.dispute.closed, won → 'paid' again unless a refund came first; the posts the dispute took down
+  │    (no charge of their own) back to 'pack', republished while inside their run, not archived, not paused
+  └─ charge.dispute.closed, lost → the frozen credits revoked for good, refundReason 'dispute_lost'
+  Every one alerts staff (alertWebhookFailure). Each step reads the state it changes, so a redelivery
+  changes nothing twice; an error answers 500 and Stripe retries.
 ```
 
 ---
@@ -366,17 +438,19 @@ previously-unlocked candidates stay accessible (hasFullAccess via existingView);
 | Concern | File |
 |---|---|
 | Pricing values + helper functions, and the promo clock every phase-dependent surface reads (`config.isPromoActive(now)`, `config.promoEndsAt`) | [lib/config.ts](../lib/config.ts) |
-| Posting-mode resolution, intro allowance, free-email list, the employer's own next-post price (`nextNewPostPrice`), and `NEW_POST_CHARGE_SELECT` (the query fragment that loads a row's `'new'` JobCharge for the renewal price) | [lib/pricing.ts](../lib/pricing.ts) |
+| Posting-mode resolution (promo → pack → intro → paid), the intro allowance (paid posts and paid Stripe packs), free-email list, the employer's own next-post price (`nextNewPostPrice`), the tier a renewal keeps (`asRenewalTier`), and `NEW_POST_CHARGE_SELECT` (the query fragment that loads a row's `'new'` JobCharge for the renewal price) | [lib/pricing.ts](../lib/pricing.ts) |
+| The 5-post pack's credits (§2h, server only): what an account can spend (`getPackCreditStatus`), the spend inside post-free's transaction (`spendPackCredit`, `PackCreditUnavailableError`), the expiry (`packExpiresAt`), the intro rule's count (`paidPackWhere`, `countPaidPacksForDomain`), and the refund and dispute steps (`revokeUnusedPackCredits`, `freezePack`, `unfreezePack`, `takeDownPackPosts`, `restorePackPosts`) | [lib/post-packs.ts](../lib/post-packs.ts) |
+| Whether the pack can be sold now (`isPackSaleOpen(now)`) and the identifiers its checkout, webhook, sweep and GA event share (`POST_PACK_CHECKOUT_TYPE` = `'post_pack'`, `POST_PACK_SKU` = `'post-pack-5'`) | [lib/post-pack-sale.ts](../lib/post-pack-sale.ts) |
 | Which renewal price a post pays (`renewalRungFor`, `renewalRungForRow`, `asRenewalRung`; §1b). Client-safe (imports only lib/config) | [lib/renewal-price.ts](../lib/renewal-price.ts) |
 | Renewal offer rule: the price the offer names (the row's own, passed as `renewalPrice`) and whether a renewal may be pitched as a saving, in which words (`renewalSavings`, `resolveRenewalOffer`, `renewalSavingsLabel`, `renewalSavingsLine`). Client-safe (imports only lib/config), so the dashboard and the edit page apply the same rule as the emails and the cron; lib/pricing.ts re-exports the first three and their types | [lib/renewal-offer.ts](../lib/renewal-offer.ts) |
 | Whether a next-post quote the browser already holds is still true (`currentQuote(quote, now)`: a `'promo'` quote reads as no quote once the promo has ended). Client-safe; used by /post-job/preview, /post-job/checkout and the dashboard usage widget | [lib/next-post-quote.ts](../lib/next-post-quote.ts) |
 | Employer plan entitlement, slots, pause/resume (dormant: the plan is retired) | [lib/employer-plan.ts](../lib/employer-plan.ts) |
 | Whether the plan can be sold now (`isPlanSaleOpen(now)`: a valid Payment Link, `ENABLE_PAID_POSTING` on, the Stripe key and the webhook secret set, promo over) and the buyer's link (dormant: false while `STRIPE_PLAN_PAYMENT_LINK` is unset, which it always is now) | [lib/employer-plan-link.ts](../lib/employer-plan-link.ts) |
 | Quota / unlock / InMail gates | [lib/tier-limits.ts](../lib/tier-limits.ts) |
-| Email-change policy (helper, not yet wired) | [lib/auth/email-change-policy.ts](../lib/auth/email-change-policy.ts) |
+| Email-change policy (helper, not yet wired; a `'pack'` post and a paid pack lock the domain like a paid post) | [lib/auth/email-change-policy.ts](../lib/auth/email-change-policy.ts) |
 | Email templates (pricing sentences from lib/pricing-copy.ts, chosen at send time) | [lib/email-service.ts](../lib/email-service.ts) (uses [lib/email-templates-v2.ts](../lib/email-templates-v2.ts)) |
 | Client-side analytics events | [lib/analytics.ts](../lib/analytics.ts) |
-| Server-side purchase events | [lib/analytics-server.ts](../lib/analytics-server.ts) |
+| Server-side purchase events (a new post, a renewal, or a pack: item `post-pack-5`, 'Job Posting Pack') | [lib/analytics-server.ts](../lib/analytics-server.ts) |
 
 **The date-driven copy switch.** Every sentence that states a price or the promo is chosen from `config.isPromoActive(now)` when it is rendered, sent or requested, never at module load (§1d). These modules hold the words; each page calls its builder with `now` on every render (a Next.js page may export only Next's own names, so a page's builder sits in a sibling file):
 
@@ -398,19 +472,21 @@ previously-unlocked candidates stay accessible (hasFullAccess via existingView);
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/api/employer/free-quota-status` | GET | Quote for the employer's NEXT post (mode/tier/price + promo fields, and the dormant plan fields) |
-| `/api/jobs/post-free` | POST | Post without a charge: promo → plan (dormant) → 403 requiresPayment; atomic; sets quotaDomain |
-| `/api/create-checkout` | POST | Intro / Featured post → Stripe Checkout (tier from `getNextPaidTier`); 503 while `ENABLE_PAID_POSTING` is off or Stripe is unconfigured, 409 `PROMO_ACTIVE` while the promo runs |
-| `/api/create-renewal-checkout` | POST | Renewal → Stripe Checkout at the row's own price (`config.renewalPriceCentsFor(renewalRungForRow(row))`: $199, or $249 for a post bought at $349; §2d) (blocks pending / expired / refunded / disputed / plan / legacy free / archived posts, and a renewal payment already in flight; one payable renewal session per post) |
+| `/api/employer/free-quota-status` | GET | Quote for the employer's NEXT post (mode/tier/price + promo fields, and `pack` { remaining, total, expiresAt } while a credit is usable) |
+| `/api/jobs/post-free` | POST | Post without a charge: promo → pack credit (spent inside the transaction) → 403 requiresPayment; atomic; sets quotaDomain; 409 `packCreditUnavailable` for a credit spent first, 409 `retry` on a serialization conflict |
+| `/api/create-checkout` | POST | Intro / Featured post → Stripe Checkout (tier from `getNextPaidTier`); 503 while `ENABLE_PAID_POSTING` is off or Stripe is unconfigured, 409 `PROMO_ACTIVE` while the promo runs, 409 `PACK_CREDIT_AVAILABLE` for a new post while a pack credit is left |
+| `/api/create-pack-checkout` | POST | 5-post pack → Stripe Checkout at `config.stripePackPriceInCents`, sold to the signed-in account (§2h); 503 while paid posting is off or the Stripe key or webhook secret is missing, 409 `PROMO_ACTIVE` while the promo runs, 403 for an account that is not an employer, 400 for a free-email signup. Nothing links it yet |
+| `/api/create-renewal-checkout` | POST | Renewal → Stripe Checkout at the row's own price (`config.renewalPriceCentsFor(renewalRungForRow(row))`: $199, or $249 for a post bought at $349; a pack post pays $199; §2d) (blocks pending / expired / refunded / disputed / plan / legacy free / archived posts, and a renewal payment already in flight; one payable renewal session per post) |
 | `/api/verify-checkout-session` | GET | Server-side Stripe verification for `/success` page |
 | `/api/verify-renewal-session` | GET | Server-side verification for `/employer/renewal-success` |
-| `/api/webhooks/stripe` | POST | Stripe → publish job, write JobCharge, plan subscription lifecycle, emails, purchase event |
+| `/api/verify-pack-session` | GET | Server-side verification of a pack checkout for its own account (401 / 403 otherwise); self-heals a paid session with no pack row |
+| `/api/webhooks/stripe` | POST | Stripe → publish job, write JobCharge, record a 5-post pack and apply its refunds and disputes, plan subscription lifecycle, emails, purchase event |
 | `/api/employer/plan` | GET | Dormant (no page reads it since 2026-10-24): plan status + slots + payment-link URL |
 | `/api/employer/plan/subscribe` | GET | Dormant (no page links it since 2026-10-24; it was the /pricing plan CTA): redirects a signed-in employer without a plan to their Stripe Payment Link (with `client_reference_id`, the only key the webhook attaches a plan by) while `isPlanSaleOpen()`, which stays false; otherwise back to /pricing, to /login, or to the dashboard for an employer who already has an entitled or pending plan |
 | `/api/employer/billing-portal` | POST | Dormant (no page opens it since 2026-10-24; it was the usage strip's "Manage billing"): opens a Stripe Customer Portal session for the employer's own plan |
 | `/api/outreach` | GET/POST | Admin only (`requireApiAdmin`): employer leads and the cold-outreach templates. `render-template` validates the name against `OUTREACH_TEMPLATE_NAMES` (400) and answers 409 `{ success: false, error }` with the service's reason for a template that is not on offer (`freeOffer` once the promo has ended) |
 | `/api/admin/employer-plans`, `/api/admin/employer-plans/[id]` | GET/POST/PATCH | Admin list / grant / attach / edit plans (kept until the plan code is deleted; the only way a plan can still be created) |
-| `/api/employer/invoice` | GET | PDF invoice from JobCharge ledger (audit #2) |
+| `/api/employer/invoice` | GET | PDF invoice from JobCharge ledger (audit #2); 400 for a pack post, whose pack's own Stripe invoice covers it (so does `/api/employer/receipt`) |
 | `/api/employer/usage` | GET | Per-posting credit usage for dashboard |
 | `/api/jobs/update` | POST/DELETE | Job edit / unpublish (contactEmail edits allowed — quotaDomain anchor handles it) |
 
@@ -453,13 +529,15 @@ model EmployerJob {
   jobId           String    @unique
   editToken       String    @unique
   dashboardToken  String    @unique @default(cuid())
-  paymentStatus   String    // 'promo' | 'pending' | 'paid' | 'plan' | 'refunded' | 'disputed' | 'expired'
-                            // ('disputed': a chargeback is open or was lost; 'expired': an abandoned checkout the sweep retired)
+  paymentStatus   String    // 'promo' | 'pack' | 'pending' | 'paid' | 'plan' | 'refunded' | 'disputed' | 'expired'
+                            // ('pack': published with a 5-post pack credit; 'disputed': a chargeback is open or was lost;
+                            // 'expired': an abandoned checkout the sweep retired)
                             // | legacy 'free' / 'free_renewed' / 'free_upgraded' (existing rows only; never written again)
-  pricingTier     String    @default("pro")  // 'intro' | 'pro' | 'plan'; promo + legacy rows carry 'pro'
+  pricingTier     String    @default("pro")  // 'intro' | 'pro' | 'pack' | 'plan'; promo + legacy rows carry 'pro'
   userId          String?   // Supabase auth id; nullable on account deletion
   quotaDomain     String?   // ★ Immutable signup-domain snapshot — set ONLY at row creation, on EVERY path
   stripeCheckoutSessionId String?  // the latest Checkout Session for the post; the resume path retires it before minting another
+  postPackId      String?   // the pack whose credit published the post ('pack' rows only); FK ON DELETE SET NULL
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   ...
@@ -472,8 +550,9 @@ model EmployerJob {
 ```
 
 **Key invariants:**
-- `quotaDomain` is written exactly once, at creation, by every creating path (promo, plan, checkout). No update path may write it.
-- Intro allowance = `COUNT WHERE quotaDomain = domain AND paymentStatus = 'paid' AND (has a 'new' JobCharge OR has no JobCharge)` = 0. Nothing else consumes it — a renewal-only `'paid'` row (renewed promo post) does not.
+- `quotaDomain` is written exactly once, at creation, by every creating path (promo, pack, plan, checkout). No update path may write it.
+- `postPackId` is written only on a `'pack'` row, at creation, with the credit that row spent; nothing moves it.
+- Intro allowance = `COUNT WHERE quotaDomain = domain AND paymentStatus = 'paid' AND (has a 'new' JobCharge OR has no JobCharge)` = 0, AND no `employer_post_packs` row with that `quota_domain`, `status = 'paid'` and `source = 'stripe'`. Nothing else consumes it — a renewal-only `'paid'` row (a renewed promo or pack post) does not.
 - Promo cap = `COUNT WHERE quotaDomain = domain AND paymentStatus = 'promo' AND job live` < `config.promoMaxActivePostsPerDomain`.
 
 ### 4b. EmployerPlan (dormant since the plan was retired on 2026-10-24; migration `20260912000000_add_employer_plans`)
@@ -547,7 +626,45 @@ One row per per-post Stripe checkout. Invoices are generated from this ledger so
 
 - `Job.expiresAt DateTime?` — drives "active posting" definition; plan posts (dormant) are additionally paused (`isPublished=false`) by the lapse job
 - `Job.isFeatured Boolean @default(false)` — every post writes `false`; placement + badge come from the EmployerJob relation. Exception: the renewal webhook writes `true` (`config.isFeaturedTier` is always true), which sorts a renewed post above un-renewed employer posts on the `best` order; lib/utils/job-sort.ts still documents the flag as unused
-- `Job.isPublished Boolean @default(false)` — true immediately for promo/plan; flipped by the webhook for paid
+- `Job.isPublished Boolean @default(false)` — true immediately for promo, pack and plan posts; flipped by the webhook for paid
+
+### 4f. EmployerPostPack (the 5-post pack; migration `20261025000000_add_employer_post_packs`)
+
+```prisma
+model EmployerPostPack {
+  id                    String    @id @default(uuid())
+  userId                String?   // loose Supabase auth id (no FK, the employer_plans precedent); the credits belong to this account only
+  email                 String
+  quotaDomain           String?   // signup-domain snapshot at purchase: the intro rule counts a paid Stripe pack here
+  status                String    @default("paid")     // 'paid' | 'refunded' | 'disputed'
+  source                String    @default("stripe")   // 'stripe' | 'admin'
+  creditsTotal          Int
+  creditsRemaining      Int
+  creditsRevoked        Int       @default(0)
+  amountCents           Int       // what Stripe charged: 124500 at list price
+  currency              String    @default("usd")
+  purchasedAt           DateTime  @default(now())
+  expiresAt             DateTime  // packExpiresAt(purchasedAt): 12 calendar months, UTC, clamped to the month's last day
+  stripeSessionId       String?   @unique   // the key every fulfilment path creates the pack by
+  stripePaymentIntentId String?   @unique   // how a refund or a dispute finds the pack
+  stripeInvoiceId       String?
+  invoicePdfUrl         String?   // refreshed by invoice.paid when no JobCharge matches the invoice
+  hostedInvoiceUrl      String?
+  invoiceNumber         String?
+  refundedAt            DateTime?
+  refundedAmountCents   Int?      // Stripe's cumulative refunded amount, or the amount of a lost dispute
+  refundReason          String?   // Stripe's reason, or 'dispute_lost'
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  posts                 EmployerJob[]
+  @@index([userId, status, expiresAt])
+  @@index([quotaDomain, status])
+  @@index([stripeInvoiceId])
+  @@map("employer_post_packs")
+}
+```
+
+A credit is usable while `status = 'paid'`, `expiresAt > now` and `creditsRemaining > 0`. Used = `creditsTotal − creditsRemaining − creditsRevoked`: a counter, not a count of posts, so a hard-deleted post never hands a credit back. The migration adds what Prisma cannot express, `CHECK (credits_remaining >= 0 AND credits_revoked >= 0 AND credits_remaining + credits_revoked <= credits_total)`, the last line of defence behind the conditional decrement (§2h), and enables row level security with no policies (service role only, like `employer_plans`). `tests/regressions/post-pack-migration.test.ts` pins the SQL: additive only, the CHECK, the RLS, the unique session key and the `ON DELETE SET NULL` link.
 
 ---
 
@@ -561,15 +678,17 @@ One row per per-post Stripe checkout. Invoices are generated from this ledger so
 | Post a job from a plan slot (dormant) | An entitled Employer plan with a free slot; the plan is retired, so only an admin grant creates one |
 | Post a job at the intro price, $249 | First paid post per company domain (from Jan 1, 2027) |
 | Post a job at the featured price, $349 | Every later paid post |
+| Buy a 5-post pack, $1,245 ($249 a post) | After the promo, while paid posting is on, for an employer account with a company signup email; built 2026-10-25 and not yet linked from any page |
+| Post a job with a pack credit | A credit left on a `'paid'` pack of the account that has not expired (12 months from purchase) |
 | 60-day listing | Every post |
 | Featured badge + top placement | Every post |
 | 25 candidate unlocks / 25 InMails | Per active posting, every tier |
 | Reply to existing conversations | Always free |
 | View previously-unlocked candidates' contact info | After the posting expires, while the candidate's profile stays visible and open to offers (audit #21; the candidate route only returns such profiles) |
-| Renew posting at $199, or $249 for a post bought at $349 | promo + paid posts, +60 days capped at `config.renewalCapDays` after creation, no new unlocks / InMails; plan posts (dormant) are never renewed; legacy free posts must repost |
+| Renew posting at $199, or $249 for a post bought at $349 | promo + pack + paid posts (a pack post at $199), +60 days capped at `config.renewalCapDays` after creation, no new unlocks / InMails; plan posts (dormant) are never renewed; legacy free posts must repost |
 | Edit posting | Anytime |
 | Analytics (per-job + time-series) | Active posting required (audit #M2 gate) |
-| Invoice PDF | Per JobCharge |
+| Invoice PDF | Per JobCharge; a pack post has none (the pack's own Stripe invoice covers it) |
 
 ### 5b. System features (what we built)
 
@@ -578,12 +697,13 @@ One row per per-post Stripe checkout. Invoices are generated from this ledger so
 | Webhook idempotency | `ProcessedStripeEvent` + INSERT-then-process (payments AND subscriptions) |
 | Per-charge invoice ledger | `JobCharge` writes on every per-post webhook payment |
 | Plan entitlement + pause/resume (dormant) | `lib/employer-plan.ts` + `plan-lapse` Inngest cron |
+| 5-post pack credits | `EmployerPostPack` rows, spent by a conditional decrement inside post-free's transaction (`lib/post-packs.ts`), with the migration's credit CHECK behind it; recorded once per Checkout Session by the webhook, the verify route or the sweep |
 | Renewal priced by the post it renews | `lib/renewal-price.ts` + `NEW_POST_CHARGE_SELECT` (lib/pricing.ts) + `config.renewalPriceCentsFor` |
 | Server-side purchase tracking | GA4 Measurement Protocol (`lib/analytics-server.ts`) |
 | Client-side funnel events | `view_post_job_page`, `begin_checkout`, `submit_free_post`, `free_post_limit_hit` (now: promo cap / plan slots full) |
 | Atomic post creation | `prisma.$transaction({ isolationLevel: 'Serializable' })` on every path |
 | Lazy Stripe client | All checkout routes — graceful 503 if keys missing |
-| Stripe session verification | `/api/verify-checkout-session` + `/api/verify-renewal-session` |
+| Stripe session verification | `/api/verify-checkout-session` + `/api/verify-renewal-session` + `/api/verify-pack-session` |
 | Quota anchor | Immutable `EmployerJob.quotaDomain` field |
 
 ---
@@ -626,8 +746,9 @@ Lifetime once unlocked (audit #21).
 | Unlock new candidate | `canUnlockCandidate(userId, tier)` | 25 per active posting |
 | Start new conversation (InMail) | `canSendInMail(senderId, employerId, tier)` | 25 per active posting |
 | Promo post creation | `countActivePromoPostsForDomain` inside `/api/jobs/post-free` txn | `config.promoMaxActivePostsPerDomain` live per `quotaDomain` |
-| Plan post creation (dormant) | `getPlanSlotStatus(userId).canPost`, re-checked inside the txn | `plan.slots` live `'plan'` posts |
-| Intro price | `getNextPaidTier(quotaDomain)` | one `'paid'` row per `quotaDomain`, lifetime |
+| Pack post creation | `spendPackCredit` inside the `/api/jobs/post-free` txn (a conditional decrement) | one credit per post, while the pack is `'paid'` and unexpired |
+| Plan post creation (dormant) | none since 2026-10-25: no posting route reads `getPlanSlotStatus` | no new `'plan'` post |
+| Intro price | `getNextPaidTier(quotaDomain)` | one `'paid'` row bought as a post, or one paid Stripe pack, per `quotaDomain`, lifetime |
 
 ---
 
@@ -638,14 +759,14 @@ Lifetime once unlocked (audit #21).
 | #1 | `/success` page didn't verify Stripe — fake URL = fake success message | Server-side `verify-checkout-session` route + retry on webhook lag |
 | #2 | Invoice always showed $199 (even for $179 renewals) | `JobCharge` ledger; invoice reads actual amount from charge row |
 | #3 | Webhook had no idempotency — Stripe retries = duplicate emails + state writes | `ProcessedStripeEvent` table + INSERT-then-process |
-| #6 | Free-post gate had race condition (parallel submissions both passed) | Serializable transaction + re-check inside (promo cap + plan slots today) |
+| #6 | Free-post gate had race condition (parallel submissions both passed) | Serializable transaction + re-check inside (the promo cap, and the pack credit's conditional decrement, today) |
 | #7 | Job + slug + EmployerJob inserts not atomic — partial failure = orphan rows | All wrapped in `prisma.$transaction` |
 | #8 | Renewal webhook silently half-completed when EmployerJob missing | Returns 500 loudly with logging |
 | #11 | Renewal flow accepted free / pending posts → snuck past free quota | 409 block; UI also branches via popup (#24); plan rows now 409 too |
 | #12 | Hardcoded prices in 7+ surfaces would lie if config changed | All config-driven via `config.*` references (re-audited 2026-09-12) |
 | #13 | `canUnlockCandidate` counted views from expired postings against current cap | Filter to active postings + legacy null only |
 | #15 | Dead upgrade routes + page lingering from old tier model | All deleted |
-| #17 | `PricingTier = 'starter' \| 'growth' \| 'premium'` was a fiction | Narrowed to `'pro'` (2026-04-30); widened to `'intro' \| 'pro' \| 'plan'` for the real ladder (2026-09-12) |
+| #17 | `PricingTier = 'starter' \| 'growth' \| 'premium'` was a fiction | Narrowed to `'pro'` (2026-04-30); widened to `'intro' \| 'pro' \| 'plan'` for the real ladder (2026-09-12), and to `'pack'` for the 5-post pack (2026-10-25) |
 | #21 | Layer 4 strip — already-unlocked candidates lost metadata after expiry | All unlock-only fields gate on `hasFullAccess`, not `tier` |
 | #22 | Early renewals lost the days remaining on the original posting | Webhook now extends from MAX(existingExpiresAt, now) |
 | #23 | Editable `contactEmail` shifted the freebie count | Quota anchored on immutable `quotaDomain`, not contactEmail |
@@ -663,7 +784,7 @@ Lifetime once unlocked (audit #21).
 | **#25 Admin hard-delete** | `/api/admin/jobs/[id]` cascade-deletes EmployerJob → intro allowance count drops | Internal-only attack vector; admins are trusted; audit logs mitigate | Audit #25 tracks soft-delete remediation |
 | **#27 Email-domain change** | Authenticated user changes their email domain → future intro allowance attributes to new domain | No user-facing email-change endpoint exists today | `evaluateEmailChange` helper at [lib/auth/email-change-policy.ts](../lib/auth/email-change-policy.ts); whoever adds the endpoint MUST call it |
 | **Unattached plan checkout** (dormant: no plan is sold since 2026-10-24) | A plan bought without the account reference: the raw Payment Link opened outside `/api/employer/plan/subscribe` and the dashboard widget, so the session carries no `client_reference_id` | The checkout email is typed by the buyer and proves nothing, so an email match never attaches a plan (attaching by email would hand a paid plan to whoever's address was typed) | The plan is stored unattached, the buyer gets `sendPlanLinkPendingEmail`, the webhook alerts (`alertWebhookFailure`, saying whether the email matches an employer account), and the admin attaches it at /admin/employer-plans |
-| **Concurrent first checkouts** | Two people at one domain open their first paid checkout at the same moment; both sessions are priced `'intro'` because neither is `'paid'` yet, so the $100 discount is granted twice | Counting in-flight `'pending'` intro rows would make an honest employer who abandons a $249 checkout see $349 on retry, worse than a rare $100 leak | `activate-paid-job.ts#detectIntroDoubleCharge` logs a Sentry-forwarded error when an intro activation finds another paid post at the domain. No refund is due: the domain paid $100 less than the ladder asks, not more (the log line's "refund the difference" points the wrong way). docs/PENDING_WORK.md D3 decides whether to block a second open intro checkout or accept the leak |
+| **Concurrent first checkouts** | Two people at one domain open their first paid checkout at the same moment; both sessions are priced `'intro'` because neither is `'paid'` yet, so the $100 discount is granted twice | Counting in-flight `'pending'` intro rows would make an honest employer who abandons a $249 checkout see $349 on retry, worse than a rare $100 leak | `activate-paid-job.ts#detectIntroDoubleCharge` logs a Sentry-forwarded error when an intro activation finds another paid post, or a paid Stripe pack (an intro checkout opened before the pack was bought), at the domain. No refund is due: the domain paid $100 less than the ladder asks, not more (the log line's "refund the difference" points the wrong way). docs/PENDING_WORK.md D3 decides whether to block a second open intro checkout or accept the leak |
 
 ### Loopholes considered and confirmed NOT loopholes
 
@@ -675,7 +796,10 @@ Lifetime once unlocked (audit #21).
 | Edit `contactEmail` after posting | Count anchored on `quotaDomain` not `contactEmail`. |
 | Attempt to mutate `paymentStatus` directly | No customer-facing path writes this field. Webhook, `post-free` and the lapse job are the only writers. |
 | Cancel the plan right after posting 5 jobs (dormant: no plan is sold) | A cancelled plan is entitled only through `currentPeriodEnd` (no grace), and each post only through its own 60 days; the lapse job pauses them. |
-| A renewed promo post reads `('paid','pro')`, exactly like a post bought at $349, so it could be charged the $249 renewal | The renewal price comes from the ledger, not the tier: only a `'new'` JobCharge makes a post pay $249 (§1b), and a renewed promo post has only `'renewal'` charges, so it keeps paying $199. A lost `'new'` write could only undercharge, never overcharge. |
+| A renewed promo post reads `('paid','pro')`, exactly like a post bought at $349, so it could be charged the $249 renewal | The renewal price comes from the ledger, not the tier: only a `'new'` JobCharge makes a post pay $249 (§1b), and a renewed promo post has only `'renewal'` charges, so it keeps paying $199. A failed `'new'` write is retried by Stripe now (§1b) rather than lost. |
+| Two posts at once on a pack's last credit | Each post spends its credit by a conditional decrement inside its own Serializable transaction: one wins, the other answers 409 (`packCreditUnavailable`, or `retry` on a serialization conflict) and writes nothing. The migration's CHECK refuses a negative count even if a writer skipped the guard. |
+| A pack refunded or charged back after its posts went up | A full refund revokes the unused credits and takes the pack's standing posts down, and a dispute does the same until it is decided (§2h). Only a pack post renewed since, which has its own payment, stays up. |
+| A pack bought on one account and spent by a colleague at the same company | Credits belong to the buying account (`userId`): post-free spends only the signed-in account's own packs, and the quote reads no other account's. |
 
 ---
 
@@ -696,6 +820,7 @@ Lifetime once unlocked (audit #21).
 | `20260912000000_add_employer_plans` | Added `employer_plans` table (Employer plan) |
 | `20260913000000_stripe_integration_hardening` | `employer_jobs.stripe_checkout_session_id`, `processed_stripe_events.status/claimed_at` (two-phase webhook dedupe), `employer_plans.last_stripe_event_at` (out-of-order event guard) |
 | `20260913000001_employer_plans_rls` | Row level security on `employer_plans` with no policies: service role only, like `job_charges` and `processed_stripe_events` |
+| `20261025000000_add_employer_post_packs` | Added the `employer_post_packs` table (the 5-post pack, §4f) with its credit CHECK and row level security, and the nullable `employer_jobs.post_pack_id` with its index and an `ON DELETE SET NULL` foreign key. Additive, no backfill: the code before it never reads either |
 
 Applied via the deploy build (`prisma migrate deploy`) — never run migrations by hand against production from a dev shell.
 
@@ -711,7 +836,7 @@ The promo needs NOTHING from Stripe. Everything below must be live **before Janu
   - Invoices: Read (retrieve, for invoice and receipt links)
   - Customer portal: Write (create a portal session; only the dormant billing-portal route calls it, and no page links that route)
   - Nothing for the webhook: `webhooks.constructEvent` checks the signature locally against `STRIPE_WEBHOOK_SECRET`.
-  Create the key in a sandbox first, run one per post checkout and one renewal at each renewal price, then read the key's request logs (API keys, the key's menu, View request logs) for any 403 and add what it names. Stripe's guide: https://docs.stripe.com/keys/restricted-api-keys
+  Create the key in a sandbox first, run one per post checkout, one renewal at each renewal price and one 5-post pack, then read the key's request logs (API keys, the key's menu, View request logs) for any 403 and add what it names. Stripe's guide: https://docs.stripe.com/keys/restricted-api-keys
 - [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` registered; event filter includes `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` (the list in `.env.example`; `processEvent` in app/api/webhooks/stripe/route.ts handles every one except `customer.subscription.created`, a deliberate no-op)
 - [ ] Dashboard → Settings → Payment methods: choose the methods offered on per-post Checkout (the sessions no longer pin `card`; delayed methods are safe — fulfilment waits for `payment_status: 'paid'`)
 - [ ] Stripe Tax decision (head office address, registrations, product tax code) — open owner decision, see docs/PENDING_WORK.md B113
@@ -728,16 +853,20 @@ Nothing for the retired Employer plan: no plan Product, Price or Payment Link, a
 | `job_charges` rows where `amount_cents ∉ {19900, 24900, 34900}` | Coupon used or manual price override — sanity check |
 | `job_charges` renewal rows at 24900 on a post with no `'new'` charge | Should never happen: the $249 renewal is only for a post bought at $349 (§1b, §2d). A row like this means the price rule broke |
 | `employer_plans` rows with `user_id IS NULL` | Dormant: no plan is sold since 2026-10-24, so this should stay empty. A row is a plan checkout that carried no account reference (attach it in /admin/employer-plans), or a second subscription stored detached beside an employer's live plan (cancel or refund one) |
-| Sentry error "Intro price charged twice for one domain" | Two concurrent first checkouts both got the $249 rung (§8): the domain paid $100 less than the ladder asks. Nothing is refunded; docs/PENDING_WORK.md D3 decides what to do about it |
+| Sentry error "Intro price charged twice for one domain" | Two concurrent first checkouts both got the $249 rung, or an intro checkout opened before the domain bought a pack was paid after it (§8): the domain paid $100 less than the ladder asks. Nothing is refunded; docs/PENDING_WORK.md D3 decides what to do about it |
+| `employer_post_packs` rows with no `user_id`, or a Discord alert that ends "refund it in Stripe" | A pack paid for with no account reference, by an account that is not an employer, or while pack sales were closed (§2h). The money is recorded; refund it in Stripe, and the refund revokes the pack |
+| `employer_post_packs` rows where `amount_cents` is not 124500 | Coupon used or manual price override — sanity check |
+| Payment reconciliation alert lines "5-post pack recovered" | A paid pack whose webhook never landed, recorded by the daily sweep: webhook delivery may be broken |
 | 5xx error rate on `/api/webhooks/stripe` | Should be ~0 with idempotency |
-| post-free 403 rate (`promoCapReached` / `planSlotsFull` / `requiresPayment`) | Abuse signal during the promo; demand signal for the ladder after |
+| post-free 403 rate (`promoCapReached` / `requiresPayment`) and 409 rate (`packCreditUnavailable` / `retry`) | Abuse signal during the promo; demand signal for the ladder after; a steady 409 rate means parallel posts on one account |
 | `plan-lapse` Inngest run log | Dormant: it runs daily and should pause nothing now that no plan is sold |
 | `processed_stripe_events` table size after 12+ months | Will grow unbounded; plan partition or quarterly cleanup |
 
 ### 9d. Operational rules cheat-sheet
 
 - Promo: every post free through 2026-12-31 in every US zone (ends 2027-01-01T10:00Z, midnight Pacific/Honolulu); `config.isPromoActive()` is the only switch — no flag to flip. What switches on its own at that instant, and what stays an owner step (Stripe live mode, `ENABLE_PAID_POSTING`), is in §1d.
-- Ladder: intro $249 = first `'paid'` row per `quotaDomain`; featured $349 after; renewal $199 on promo, intro and legacy rows and $249 on a post bought at $349 (lib/renewal-price.ts). The Employer plan is retired.
+- Ladder: intro $249 = first `'paid'` row bought as a post per `quotaDomain`, unless the domain has bought a pack; featured $349 after; renewal $199 on promo, pack, intro and legacy rows and $249 on a post bought at $349 (lib/renewal-price.ts). The Employer plan is retired.
+- 5-post pack: $1,245 for 5 credits, usable for 12 months by the buying account only, sold only after the promo and never to a free-email signup. No refunds; a refund issued by hand in Stripe, or a chargeback, revokes or freezes what is left and takes the pack's standing posts down (§2h).
 - Renewal extends from `MAX(existingExpiresAt, now)` — early renewers don't lose days — up to `config.renewalCapDays` after creation; it never resets unlocks or InMails.
 - (Dormant) Plan posts are never renewed; each runs 60 days, frees its slot when it ends or is closed, and is paused by the lapse job when the plan lapses (grace = `config.planGraceDays` for past_due, none for cancelled).
 - Legacy `'free'` posts cannot be renewed (unchanged message). Pending, expired, refunded and disputed posts cannot be renewed, and neither can an archived post until it is restored.
@@ -769,20 +898,21 @@ Every path that takes money or grants a paid entitlement has a Vitest suite. All
 
 | Path | Suites |
 |---|---|
-| `POST /api/jobs/post-free`: the promo cap and the plan slot, both re-counted inside the transaction; paid modes handed to checkout | `tests/api/post-free-modes.test.ts`, `tests/lib/pricing.test.ts` |
-| `POST /api/create-checkout`: intro then pro, the resume path, delayed payments, 409 `PROMO_ACTIVE` | `tests/api/create-checkout-tier.test.ts` |
+| `POST /api/jobs/post-free`: the promo cap re-counted and the pack credit spent inside the transaction, 409 for a credit spent first or a serialization conflict; the intro rule counting paid packs; paid modes handed to checkout | `tests/api/post-free-modes.test.ts`, `tests/lib/pricing.test.ts` |
+| `POST /api/create-checkout`: intro then pro, the resume path, delayed payments, 409 `PROMO_ACTIVE`, 409 `PACK_CREDIT_AVAILABLE` | `tests/api/create-checkout-tier.test.ts` |
+| The 5-post pack (§2h): the credits, their spend order and expiry, the sale gate and config, the purchase route, the webhook's fulfilment (idempotency, the payment gate, money recorded and alerted when it should not have been taken, the email, the GA event, invoice.paid), the verify route's ownership and self-heal, refunds and disputes, the quote, the invoice / receipt / billing branches for a pack post, the purchase email, and the migration's SQL | `tests/lib/post-packs.test.ts`, `tests/lib/post-pack-sale.test.ts`, `tests/lib/config-pricing.test.ts`, `tests/api/create-pack-checkout.test.ts`, `tests/api/webhooks-stripe-post-pack.test.ts`, `tests/api/webhooks-stripe-post-pack-refund-dispute.test.ts`, `tests/api/verify-pack-session.test.ts`, `tests/api/employer-free-quota-status-pack.test.ts`, `tests/api/employer-billing-pack-posts.test.ts`, `tests/lib/post-pack-purchased-email.test.ts`, `tests/regressions/post-pack-migration.test.ts`, `tests/regressions/ga-measurement-protocol.test.ts` |
 | `POST /api/create-renewal-checkout`: the status and archive refusals; the renewal cap (409 `RENEWAL_CAP_REACHED` before any Stripe call for a post at or past `config.renewalCapDays`, and Checkout quoting the days a renewal near the cap really adds); the price by the post it renews ($249 only for a post bought at $349, $199 for every other renewable row) and `metadata.renewalRung`; one payable session per post; a reused idempotency key that replays a session this route had already expired, and the parameter fingerprint in that key | `tests/api/create-renewal-checkout-status.test.ts`, `tests/api/create-renewal-checkout-cap.test.ts`, `tests/api/create-renewal-checkout-tiered-price.test.ts`, `tests/api/create-renewal-checkout-single-payable.test.ts`, `tests/api/create-renewal-checkout-replayed-session.test.ts`, `tests/lib/renewal-checkout-sessions.test.ts` |
-| Which renewal price a post pays (§1b), and the row price the dashboard and the edit API hand the renewal modals | `tests/lib/renewal-price.test.ts`, `tests/api/employer-dashboard-renewal-price.test.ts`, `tests/api/jobs-edit-token-renewal-price.test.ts` |
-| The webhook: idempotency and the two-phase claim, the `payment_status` gate, a second payment for one post, the `JobCharge` ledger, the intro race detector | `tests/api/webhooks-stripe-c2.test.ts`, `tests/api/activate-paid-job-intro-race.test.ts` |
+| Which renewal price a post pays (§1b), a row loaded without its charges refused rather than guessed, and the row price the dashboard, the edit API and the expiry offers hand on | `tests/lib/renewal-price.test.ts`, `tests/lib/renewal-offer.test.ts`, `tests/api/employer-dashboard-renewal-price.test.ts`, `tests/api/jobs-edit-token-renewal-price.test.ts` |
+| The webhook: idempotency and the two-phase claim, the `payment_status` gate, a second payment for one post, the `JobCharge` ledger (a failed `'new'` write rethrown and backfilled on Stripe's retry), the intro race detector (paid packs included) | `tests/api/webhooks-stripe-c2.test.ts`, `tests/api/activate-paid-job-intro-race.test.ts` |
 | Renewals applied: the amount on the ledger, in the GA purchase event and in the confirmation email (what Stripe charged, else the price of `metadata.renewalRung`, else the base price for an older session), archived posts, sibling sessions, a payment that lands at or past the renewal cap (recorded on the ledger and alerted for a refund with its payment intent, while the expiry, the status and `isPublished` stay untouched and no confirmation email is sent) or just short of it (applied with the days that are left, the shortfall logged), the verify page's self-heal and cookie binding | `tests/api/apply-renewal-amount.test.ts`, `tests/api/webhooks-stripe-archived-post.test.ts`, `tests/api/apply-renewal-sibling-sessions.test.ts`, `tests/api/apply-renewal-cap.test.ts`, `tests/api/verify-renewal-session-self-heal.test.ts`, `tests/api/verify-renewal-session-sec3.test.ts` |
-| Refunds and disputes | `tests/api/webhooks-stripe-refund-dispute.test.ts` |
+| Refunds and disputes (a pack's, and the JobCharge ledger matched first) | `tests/api/webhooks-stripe-refund-dispute.test.ts`, `tests/api/webhooks-stripe-post-pack-refund-dispute.test.ts` |
 | Plan checkout, subscription events, entitlement, slots, the buyer's link, the plan sale gate (open only while the webhook is configured) and the admin grant (dormant code; these suites go when it is deleted) | `tests/api/webhooks-stripe-subscription.test.ts`, `tests/api/webhooks-stripe-subscription-live-read.test.ts`, `tests/lib/employer-plan.test.ts`, `tests/lib/employer-plan-stale-write.test.ts`, `tests/lib/employer-plan-link.test.ts`, `tests/regressions/plan-sale-requires-stripe-webhook.test.ts`, `tests/api/employer-plan-billing.test.ts`, `tests/api/admin-employer-plans-grant.test.ts` |
-| The daily sweeps: plan lapse, plan reconciliation, payment reconciliation, and what the payment sweep reports: an alert that says a recovered post was left archived (so nobody reads it as live) and a renewal arm that looks back as far as the create route refuses on (`RENEWAL_SETTLEMENT_LOOKBACK_MS`) | `tests/inngest/plan-lapse.test.ts`, `tests/inngest/plan-reconciliation.test.ts`, `tests/inngest/payment-reconciliation-guards.test.ts`, `tests/inngest/payment-reconciliation-renewals.test.ts`, `tests/inngest/payment-reconciliation-left-archived.test.ts` |
-| `evaluateEmailChange` (§8, #27) | `tests/lib/email-change-policy.test.ts` |
+| The daily sweeps: plan lapse, plan reconciliation, payment reconciliation, and what the payment sweep reports: an alert that says a recovered post was left archived (so nobody reads it as live), a renewal arm that looks back as far as the create route refuses on (`RENEWAL_SETTLEMENT_LOOKBACK_MS`), and a 5-post pack arm that records a paid pack whose webhook was lost | `tests/inngest/plan-lapse.test.ts`, `tests/inngest/plan-reconciliation.test.ts`, `tests/inngest/payment-reconciliation-guards.test.ts`, `tests/inngest/payment-reconciliation-renewals.test.ts`, `tests/inngest/payment-reconciliation-left-archived.test.ts`, `tests/inngest/payment-reconciliation-post-packs.test.ts` |
+| `evaluateEmailChange` (§8, #27), a `'pack'` post and a paid pack included | `tests/lib/email-change-policy.test.ts` |
 
 `tests/regressions/docs-pricing-system-matches-code.test.ts` checks this document against the code: the links and paths it gives, the status map, the response shape and the schema blocks it prints, and this table against the suites on disk.
 
-Still missing: nothing runs against a real database or Stripe test mode. The Serializable transactions, the conditional writes (the `'pending'` claim, the `lastStripeEventAt` compare-and-set) and Stripe's own behaviour are asserted against mocks only, and the Playwright journeys stop at the checkout gate and never pay. Both wait for a non-production database (docs/PENDING_WORK.md 1.8).
+Still missing: nothing runs against a real database or Stripe test mode. The Serializable transactions, the conditional writes (the `'pending'` claim, the pack credit's decrement and its revocation, the `lastStripeEventAt` compare-and-set), the migration's credit CHECK and Stripe's own behaviour are asserted against mocks (or, for the CHECK, the SQL text) only, and the Playwright journeys stop at the checkout gate and never pay. Both wait for a non-production database (docs/PENDING_WORK.md 1.8).
 
 ---
 
@@ -792,7 +922,7 @@ Still missing: nothing runs against a real database or Stripe test mode. The Ser
 |---|---|---|
 | #14 | Stripe Product / Price catalog (proper Price IDs) instead of ad-hoc `unit_amount` | When adding Stripe Tax or coupons |
 | Plan code removal | The Employer plan was retired on 2026-10-24. Its dormant code (plan checkout and subscription handlers, plan-lapse and plan reconciliation, the plan, subscribe and billing-portal routes, the plan emails, the admin plan page, `planPrice` / `planSlots` / `planGraceDays` and the `'plan'` tier) is deleted once the 5-post pack is live and the owner confirms there is no plan row. The `employer_plans` table is kept, deprecated | After the pack ships |
-| 5-post pack | One-time, $1,245 for 5 posts ($249 a post), used within 12 months, credits on the buying account (register D36 to D42). Replaces the plan; nothing of it is built yet | Phases 2 and 3 of the re-price, before 2027-01-01 |
+| 5-post pack | One-time, $1,245 for 5 posts ($249 a post), used within 12 months, credits on the buying account (register D36 to D42). Replaces the plan. The backend is built and kept dark (2026-10-25, §2h); what sells it and shows its credits (the purchase page, the pricing card, the wizard and dashboard copy, /terms, an admin view) is not | Before 2027-01-01 |
 | Promo switch purge | The pages that switch at the promo end regenerate stale-while-revalidate, so each can serve its cached promo render to one more request after its window (§1d). A cron that calls `revalidatePath` on its first run after `config.promoEndsAt` (`revalidatePublicPaths` in app/api/admin/_lib/public-revalidation.ts) for every path in `PROMO_SWITCH_PATHS` with each template page, plus `/`, `/testimonials` and `/post-job`, would make the next request to each render the ladder | Before 2027-01-01 |
 | Promo end-of-life | Retire `'promo'` writes after 2027-01-01 and remove the promo branches (the wizard's, the promo halves of lib/pricing-copy.ts and the §3a builders, the outreach `freeOffer` template). A page taken out of `PROMO_SWITCH_PATHS` then needs a `PAGE_CONTENT_DATES` entry no earlier than the switch, or its sitemap lastmod falls back to its older copy date | 60 days after the promo ends (last promo posts have expired) |
 | P4 | Boost / Spotlight upsell SKU | Adds an upsell vector beyond the ladder |
@@ -809,26 +939,41 @@ Still missing: nothing runs against a real database or Stripe test mode. The Ser
 ### Post a job
 ```
 GET /api/employer/free-quota-status → mode
-   promo                  plan (dormant)          intro / paid
+   promo                  pack                       intro / paid
      ↓                      ↓                          ↓
 POST /api/jobs/post-free  POST /api/jobs/post-free   POST /api/create-checkout (tier = getNextPaidTier)
-  promo cap check           slot re-check in txn        Stripe Checkout (unit_amount = priceCentsForTier)
-  paymentStatus='promo'     paymentStatus='plan'         ↓ pay
+  promo cap check           spendPackCredit in txn     Stripe Checkout (unit_amount = priceCentsForTier)
+  paymentStatus='promo'     paymentStatus='pack'         ↓ pay
   isPublished=true          isPublished=true           webhook → JobCharge, paymentStatus='paid', pricingTier=tier
      ↓                      ↓                          ↓
-/success?mode=promo       /success?mode=plan         /success?session_id=… → verify-checkout-session
+/success?mode=promo       200 { mode:'pack', pack }  /success?session_id=… → verify-checkout-session
 ```
 
 ### Renew a job
 ```
 employer dashboard "Renew" button
   ↓
-promo / paid post?  → modal: the post's own price ($199, or $249 for a post bought at $349)
+promo / pack / paid → modal: the post's own price ($199, or $249 for a post bought at $349; a pack post $199)
                       → /api/create-renewal-checkout (unit_amount = config.renewalPriceCentsFor(renewalRung))
                       → Stripe → webhook (type='renewal')
                         expiresAt = MAX(existing, now) + 60d · JobCharge = what Stripe charged · email with that amount
 plan post?          → (dormant) "Plan slot" badge, no Renew (runs 60 days; post again into the freed slot)
 legacy free post?   → popup: "can't renew, post new" → /post-job
+```
+
+### Buy a 5-post pack
+
+Built 2026-10-25 and kept dark: no page links it, and the sale is closed until `config.promoEndsAt` (§2h).
+
+```
+POST /api/create-pack-checkout → Stripe Checkout ($1,245 = config.stripePackPriceInCents, metadata.type='post_pack')
+  ↓ pay
+webhook checkout.session.completed → fulfilPostPackCheckout → EmployerPostPack (5 credits, 12 months)
+  → purchase email · GA purchase (post-pack-5)     (also run by /api/verify-pack-session and the daily sweep)
+  ↓ each post
+POST /api/jobs/post-free → spendPackCredit in txn → paymentStatus='pack', pricingTier='pack', postPackId
+  ↓ full refund / dispute
+unused credits revoked / frozen, standing pack posts taken down    (a won dispute puts them back)
 ```
 
 ### Employer plan
@@ -854,14 +999,15 @@ daily plan-lapse job pauses whatever is still live once entitlement has ended
 | Term | Meaning in this codebase |
 |---|---|
 | **Active posting** | `Job.isPublished=true AND (expiresAt IS NULL OR expiresAt > now)` AND linked via EmployerJob to a userId |
-| **Posting mode** | What the employer's NEXT post will be: `'promo' \| 'plan' \| 'intro' \| 'paid'` (lib/pricing.ts; `'plan'` is dormant) |
+| **Posting mode** | What the employer's NEXT post will be: `'promo' \| 'pack' \| 'intro' \| 'paid'` (`PostingMode` in lib/config.ts, resolved in that order by lib/pricing.ts; the plan mode went on 2026-10-25) |
 | **quotaDomain** | Immutable per-row snapshot of the signup email's domain at posting time. Anchor for the intro allowance and the promo cap. |
-| **Intro allowance** | The domain has zero `paymentStatus='paid'` rows that were bought as a post (a `'new'` JobCharge, or none at all for a pre-ledger row) → next paid post is `'intro'` at $249. |
-| **Renewal rung** | Which renewal price a post pays (lib/renewal-price.ts): `'pro'` ($249) only for `pricingTier='pro'` with a `'new'` JobCharge, `'base'` ($199) for every other renewable row. |
+| **Intro allowance** | The domain has zero `paymentStatus='paid'` rows that were bought as a post (a `'new'` JobCharge, or none at all for a pre-ledger row) and no paid 5-post pack bought through Stripe → next paid post is `'intro'` at $249. |
+| **Pack credit** | One post a 5-post pack pays for. Usable while the pack is `'paid'`, `expiresAt > now` and `creditsRemaining > 0`, by the buying account only; spent by a conditional decrement inside post-free's transaction; revoked for good (`creditsRevoked`) on a full refund or a lost dispute. |
+| **Renewal rung** | Which renewal price a post pays (lib/renewal-price.ts): `'pro'` ($249) only for `pricingTier='pro'` with a `'new'` JobCharge, `'base'` ($199) for every other renewable row, a pack post included. |
 | **Entitled plan** (dormant) | `status IN ('active','past_due') AND currentPeriodEnd + planGraceDays > now`, or `status = 'cancelled' AND currentPeriodEnd > now` (no grace). `'pending'` is never entitled. |
 | **hasFullAccess** | Per-candidate gate: `isAdmin OR existingView OR hasActiveFeaturedPost(employerId)`. Lifetime once granted. |
 | **hasActivePosting** | Employer-level gate: at least one currently-active posting exists. State, not plan. |
-| **`paymentStatus`** | `'promo'` / `'pending'` / `'paid'` / `'plan'` / `'refunded'` / `'disputed'` / `'expired'` / legacy `'free'`, `'free_renewed'`, `'free_upgraded'`. Drives invoice eligibility, renewal eligibility, the intro allowance and the promo cap. |
-| **`pricingTier`** | `'intro' \| 'pro' \| 'plan'` — the ladder rung a row was sold at. Promo and legacy rows carry `'pro'`. |
+| **`paymentStatus`** | `'promo'` / `'pack'` / `'pending'` / `'paid'` / `'plan'` / `'refunded'` / `'disputed'` / `'expired'` / legacy `'free'`, `'free_renewed'`, `'free_upgraded'`. Drives invoice eligibility, renewal eligibility, the intro allowance and the promo cap. |
+| **`pricingTier`** | `'intro' \| 'pro' \| 'pack' \| 'plan'` — the ladder rung a row was sold at. Promo and legacy rows carry `'pro'`; a pack post keeps `'pack'`, renewed or not. |
 | **JobCharge** | One row per per-post Stripe checkout (new or renewal). Source of truth for invoices, and the `'new'` row is what sets a post's renewal rung. The dormant plan was billed outside it, by Stripe Billing. |
 | **ProcessedStripeEvent** | Idempotency log with a two-phase claim (§4c). Insert-then-process; UNIQUE violation = already-handled, unless the earlier delivery died mid-flight and its claim has gone stale. |

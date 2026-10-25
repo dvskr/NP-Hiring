@@ -33,6 +33,7 @@ import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { asPaidTier, paidPostWhere, type PaidTier } from '@/lib/pricing';
+import { paidPackWhere } from '@/lib/post-packs';
 import { logger } from '@/lib/logger';
 import { sendConfirmationEmail } from '@/lib/email-service';
 import { pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
@@ -187,10 +188,12 @@ async function ensureJobChargeRecorded(
  */
 /**
  * Log (never throw) when an 'intro'-priced activation finds another paid
- * post already ledgered at the same domain — the only way that happens is
- * the concurrent-checkout race described at the call site. Exported for
- * the unit test; the count uses the SAME predicate the intro decision uses
- * (lib/pricing.ts#paidPostWhere) minus this row.
+ * purchase already on the books at the same domain: another paid post, or
+ * a paid 5-post pack bought through Stripe (the pack is the company's paid
+ * purchase, lib/pricing.ts#getNextPaidTier). The only way that happens is
+ * the concurrent-checkout race described at the call site. Exported for the
+ * unit test; the counts use the SAME predicates the intro decision uses
+ * (lib/pricing.ts#paidPostWhere minus this row, lib/post-packs.ts#paidPackWhere).
  */
 export async function detectIntroDoubleCharge(
   employerJobId: string,
@@ -201,10 +204,11 @@ export async function detectIntroDoubleCharge(
 ): Promise<boolean> {
   if (paidTier !== 'intro' || !quotaDomain) return false;
   try {
-    const others = await prisma.employerJob.count({
-      where: { ...paidPostWhere(quotaDomain), id: { not: employerJobId } },
-    });
-    if (others === 0) return false;
+    const [others, paidPacks] = await Promise.all([
+      prisma.employerJob.count({ where: { ...paidPostWhere(quotaDomain), id: { not: employerJobId } } }),
+      prisma.employerPostPack.count({ where: paidPackWhere(quotaDomain) }),
+    ]);
+    if (others === 0 && paidPacks === 0) return false;
     logger.error('Intro price charged twice for one domain (concurrent first checkouts) — refund the difference', undefined, {
       jobId,
       employerJobId,
@@ -212,6 +216,7 @@ export async function detectIntroDoubleCharge(
       sessionId: session.id,
       amountCents: session.amount_total ?? undefined,
       otherPaidPosts: others,
+      paidPacks,
     });
     return true;
   } catch (err) {
@@ -342,9 +347,15 @@ export async function activatePaidJobCheckout(
       },
     });
   } catch (chargeErr) {
-    // Idempotency on stripeSessionId — duplicate webhooks shouldn't fail the flow.
+    // A duplicate (P2002 on stripeSessionId) is this charge already on the
+    // ledger. Anything else must not be swallowed (review 2.28 M2): this row
+    // sets the post's renewal price (lib/renewal-price.ts) and is what a
+    // refund or dispute is matched by. The webhook answers 500 and rolls its
+    // dedupe row back; Stripe's retry loses the claim (the row is 'paid' now)
+    // and resolveLostClaim backfills the charge.
     if (prismaErrorCode(chargeErr) !== 'P2002') {
-      logger.error('Failed to record JobCharge for new post', chargeErr, { jobId });
+      logger.error('Failed to record JobCharge for new post; rethrowing so the payment is retried onto the ledger', chargeErr, { jobId });
+      throw chargeErr;
     }
   }
 
@@ -352,10 +363,10 @@ export async function activatePaidJobCheckout(
   // creation from the domain's paid-post count; two checkouts opened at the
   // same time for one domain can both be sold at 'intro' before either is
   // paid. Blocking that at creation would make an honest employer who
-  // abandons a $199 checkout see $299 on retry, so the race is accepted and
+  // abandons a $249 checkout see $349 on retry, so the race is accepted and
   // surfaced here instead: once THIS charge is in the ledger, any OTHER paid
-  // post at the domain means the intro price was charged twice. Logged as an
-  // error (forwarded to Sentry) so the owner can refund the difference.
+  // post (or a paid pack) at the domain means the intro price was charged
+  // twice. Logged as an error (forwarded to Sentry).
   await detectIntroDoubleCharge(employerJob.id, employerJob.quotaDomain, paidTier, jobId, session);
 
   // Send confirmation email. It says the listing is live, so a post left

@@ -207,7 +207,10 @@ export async function PATCH(
  *          whole company domain.
  * 'promo' and 'plan' rows are not anchors (the promo cap and plan slots
  * count LIVE posts only, and soft-delete already unpublishes), so admins
- * can still hard-delete those.
+ * can still hard-delete those. Nor are 'pack' rows: a 5-post pack's
+ * credits are a counter on the pack's own row (lib/post-packs.ts), so a
+ * deleted post hands no credit back, and the intro rule counts the pack,
+ * not its posts.
  */
 const HARD_DELETE_PROTECTED_STATUSES = ['free', 'paid'] as const;
 

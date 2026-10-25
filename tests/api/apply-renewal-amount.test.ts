@@ -211,3 +211,35 @@ describe('a renewal that is only ledgered records the same amount', () => {
     expect(trackServerPurchase).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The tier the renewal writes back (2027 re-price, phase 2): a 5-post pack
+ * post keeps pricingTier 'pack' once renewed (owner decision), an intro post
+ * keeps 'intro', and anything the checkout did not write narrows to 'pro',
+ * so a tampered metadata value is never stored on the row.
+ */
+describe('the tier a renewal writes back is the row tier the checkout carried, narrowed', () => {
+  const writtenTier = (): unknown => {
+    const call = vi.mocked(prisma.employerJob.updateMany).mock.calls.find(([args]) => (args as { data: { paymentStatus?: string } }).data.paymentStatus === 'paid');
+    return (call?.[0] as { data: { pricingTier: unknown } } | undefined)?.data.pricingTier;
+  };
+
+  it.each([
+    ['pack', 'pack'],
+    ['intro', 'intro'],
+    ['pro', 'pro'],
+    ['plan', 'pro'],
+    ['starter', 'pro'],
+    ['', 'pro'],
+  ])("metadata.tier '%s' is written as '%s'", async (tier, written) => {
+    await renew(renewalSession({ metadata: { jobId: 'job1', type: 'renewal', tier, renewalRung: 'base' } }));
+
+    expect(writtenTier()).toBe(written);
+  });
+
+  it("a session with no tier at all is written 'pro'", async () => {
+    await renew(renewalSession({ metadata: { jobId: 'job1', type: 'renewal', renewalRung: 'base' } }));
+
+    expect(writtenTier()).toBe('pro');
+  });
+});

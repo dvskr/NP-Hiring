@@ -341,8 +341,14 @@ model EmployerJob {
   // resume paths). The resume path expires the previous session before
   // minting a new one so two payable sessions never exist for one posting.
   stripeCheckoutSessionId String?      @map("stripe_checkout_session_id")
+  // The 5-post pack whose credit published this post (paymentStatus 'pack',
+  // pricingTier 'pack'); null on every other row. Set once, at creation, by
+  // /api/jobs/post-free. ON DELETE SET NULL: deleting a pack never deletes a
+  // post, and the row keeps its status.
+  postPackId          String?          @map("post_pack_id")
   job                 Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
   user                UserProfile?     @relation(fields: [userId], references: [supabaseId])
+  postPack            EmployerPostPack? @relation(fields: [postPackId], references: [id], onDelete: SetNull)
   profileViews        ProfileView[]
   savedCandidates     SavedCandidate[]
   jobCharges          JobCharge[]
@@ -352,6 +358,7 @@ model EmployerJob {
   @@index([contactEmail])
   @@index([dashboardToken])
   @@index([quotaDomain, paymentStatus])
+  @@index([postPackId])
   @@map("employer_jobs")
 }
 
@@ -448,6 +455,60 @@ model EmployerPlan {
   @@index([email])
   @@index([status, currentPeriodEnd])
   @@map("employer_plans")
+}
+
+/// 5-post pack (2027 re-price, phase 2): a one-time purchase of
+/// config.packPosts post credits for config.packPrice, used within
+/// config.packValidityMonths of purchase (lib/post-packs.ts). Each credit
+/// publishes one ordinary post (EmployerJob paymentStatus 'pack', pricingTier
+/// 'pack', postPackId set).
+///
+/// Written by the Stripe webhook's pack fulfilment
+/// (app/api/webhooks/stripe/post-pack-checkout.ts), which the verify route
+/// and the reconciliation sweep share; stripeSessionId is the idempotency key
+/// all three create by. `userId` is the Supabase auth id held loosely (no FK),
+/// the employer_plans precedent: account deletion must not cascade away the
+/// billing trail. Credits belong to that account only.
+///
+/// A credit is usable while status = 'paid', expiresAt > now and
+/// creditsRemaining > 0. Used = creditsTotal - creditsRemaining -
+/// creditsRevoked: a counter, so a hard-deleted post never hands a credit
+/// back. The migration adds the CHECK Prisma cannot express:
+/// credits_remaining >= 0, credits_revoked >= 0 and
+/// credits_remaining + credits_revoked <= credits_total.
+model EmployerPostPack {
+  id                    String        @id @default(uuid())
+  userId                String?       @map("user_id")
+  email                 String
+  // Signup-domain snapshot at purchase: the intro rule counts a paid Stripe
+  // pack at this domain as the company's paid purchase.
+  quotaDomain           String?       @map("quota_domain")
+  status                String        @default("paid") // 'paid' | 'refunded' | 'disputed'
+  source                String        @default("stripe") // 'stripe' | 'admin'
+  creditsTotal          Int           @map("credits_total")
+  creditsRemaining      Int           @map("credits_remaining")
+  creditsRevoked        Int           @default(0) @map("credits_revoked")
+  amountCents           Int           @map("amount_cents")
+  currency              String        @default("usd")
+  purchasedAt           DateTime      @default(now()) @map("purchased_at")
+  expiresAt             DateTime      @map("expires_at")
+  stripeSessionId       String?       @unique @map("stripe_session_id")
+  stripePaymentIntentId String?       @unique @map("stripe_payment_intent_id")
+  stripeInvoiceId       String?       @map("stripe_invoice_id")
+  invoicePdfUrl         String?       @map("invoice_pdf_url")
+  hostedInvoiceUrl      String?       @map("hosted_invoice_url")
+  invoiceNumber         String?       @map("invoice_number")
+  refundedAt            DateTime?     @map("refunded_at")
+  refundedAmountCents   Int?          @map("refunded_amount_cents")
+  refundReason          String?       @map("refund_reason") // Stripe's reason, or 'dispute_lost'
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  posts                 EmployerJob[]
+
+  @@index([userId, status, expiresAt])
+  @@index([quotaDomain, status])
+  @@index([stripeInvoiceId])
+  @@map("employer_post_packs")
 }
 
 model SiteStat {

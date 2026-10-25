@@ -208,6 +208,37 @@ describe('trackServerPurchase: the parameters GA4 needs to show the event', () =
 
     expect(sentPayload(fetchMock).timestamp_micros).toBeUndefined();
   });
+
+  it('records a 5-post pack as its own item, priced as charged, with the session as the transaction', async () => {
+    configure();
+    const fetchMock = mockFetchOk();
+
+    await trackServerPurchase({
+      clientId: 'pack-row-uuid',
+      sessionId: 'cs_pack',
+      amountCents: 124500,
+      currency: 'usd',
+      type: 'pack',
+      tier: 'pack',
+      itemId: 'post-pack-5',
+    });
+
+    const params = sentEventParams(fetchMock);
+    expect(params.transaction_id).toBe('cs_pack');
+    expect(params.checkout_type).toBe('pack');
+    expect(params.value).toBe(1245);
+    expect(params.items).toEqual([{ item_id: 'post-pack-5', item_name: 'Job Posting Pack', item_category: 'pack', price: 1245, quantity: 1 }]);
+    expect(params).not.toHaveProperty('job_id');
+  });
+
+  it('a job post keeps its job id as the item id when no item id is passed', async () => {
+    configure();
+    const fetchMock = mockFetchOk();
+
+    await trackServerPurchase(BASE_PARAMS);
+
+    expect(sentEventParams(fetchMock).items[0]).toMatchObject({ item_id: JOB_UUID, item_name: 'Job Posting', item_category: 'new' });
+  });
 });
 
 /**

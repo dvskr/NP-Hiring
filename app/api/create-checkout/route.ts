@@ -16,6 +16,11 @@
  * a dashboard "Complete payment" must never charge for a post that should
  * be free. The unit tests exercise the paid funnel by stubbing
  * config.isPromoActive; nothing a request carries can bypass the check.
+ *
+ * While the employer holds a usable 5-post pack credit, a new post answers
+ * 409 PACK_CREDIT_AVAILABLE: the credit pays for it through
+ * /api/jobs/post-free. A paid Stripe pack also uses up the domain's intro
+ * price (getNextPaidTier).
  */
 import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
@@ -26,6 +31,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { config, PricingTier } from '@/lib/config';
 import { expiresFromNow } from '@/lib/expires-at';
 import { domainOf, getNextPaidTier, asPaidTier, type PaidTier } from '@/lib/pricing';
+import { getPackCreditStatus } from '@/lib/post-packs';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { gaCheckoutMetadata, idempotencyKeyWithGaIds } from '@/lib/analytics-server';
@@ -190,6 +196,16 @@ export async function POST(request: NextRequest) {
     // { resumeJobId } for a row stuck 'pending' (or swept to 'expired').
     if (typeof rawBody.resumeJobId === 'string' && rawBody.resumeJobId.trim()) {
       return resumeAbandonedCheckout(stripe, rawBody.resumeJobId.trim(), userId, confirmedEmail, gaMetadata);
+    }
+
+    // A usable 5-post pack credit already pays for a new post (published
+    // through /api/jobs/post-free), so nothing is sold here while one is
+    // left. The resume path above completes an older checkout and stays open.
+    if ((await getPackCreditStatus(userId, new Date())).usable) {
+      return NextResponse.json(
+        { error: `You have a post left in your ${config.packPosts}-post pack. Go back to the preview to publish this job with it.`, code: 'PACK_CREDIT_AVAILABLE' },
+        { status: 409 }
+      );
     }
 
     // Sanitize core fields
@@ -664,8 +680,9 @@ async function resumeAbandonedCheckout(
 
   // Re-price from the rung persisted at creation: the row was quoted
   // 'intro' or 'pro' then and the employer is completing THAT checkout.
-  // 'plan' can never be pending (plan posts publish without Checkout), so
-  // asPaidTier's 'pro' fallback only ever catches legacy/unknown values.
+  // 'plan' and 'pack' can never be pending (those posts publish without
+  // Checkout), so asPaidTier's 'pro' fallback only ever catches
+  // legacy/unknown values.
   const pricing: PaidTier = asPaidTier(employerJob.pricingTier as PricingTier);
   const tierLabel = config.getTierLabel(pricing);
   const baseUrl = getBaseUrl();

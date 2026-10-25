@@ -41,13 +41,15 @@
  *   A purchase only joins the browser funnel when it carries both real
  *   browser ids: the `_ga` client id and the `_ga_<stream>` session id. The
  *   webhook has no visitor request, so the ids travel in three steps:
- *     1. CAPTURE   /api/create-checkout and /api/create-renewal-checkout call
- *                  gaCheckoutMetadata(request) below and spread the result
- *                  into the Stripe checkout session metadata. It is empty
- *                  unless the visitor granted analytics consent.
- *     2. HAND-OFF  app/api/webhooks/stripe/activate-paid-job.ts and
- *                  apply-renewal.ts read `gaClientId` / `gaSessionId` back off
- *                  the session and pass them to trackServerPurchase.
+ *     1. CAPTURE   /api/create-checkout, /api/create-renewal-checkout and
+ *                  /api/create-pack-checkout call gaCheckoutMetadata(request)
+ *                  below and spread the result into the Stripe checkout
+ *                  session metadata. It is empty unless the visitor granted
+ *                  analytics consent.
+ *     2. HAND-OFF  app/api/webhooks/stripe/activate-paid-job.ts,
+ *                  apply-renewal.ts and post-pack-checkout.ts read
+ *                  `gaClientId` / `gaSessionId` back off the session and pass
+ *                  them to trackServerPurchase.
  *     3. DELIVERY  sendPurchaseEvent in activate-paid-job.ts keeps the
  *                  function alive until the POST leaves.
  *   A buyer who did not grant analytics consent still produces a purchase,
@@ -181,12 +183,17 @@ export interface PurchaseParams {
   /** Total amount paid. */
   amountCents: number;
   currency: string;
-  /** 'new' job post or 'renewal'. */
-  type: 'new' | 'renewal';
+  /** 'new' job post, 'renewal', or a 5-post 'pack' (app/api/webhooks/stripe/post-pack-checkout.ts). */
+  type: 'new' | 'renewal' | 'pack';
   /** Optional: pricing tier carried in Stripe metadata. */
   tier?: string;
   /** Optional: jobId for funnel attribution. */
   jobId?: string;
+  /**
+   * Optional: the item id GA records. A job post defaults to its jobId
+   * (else 'job-post'); the pack passes its SKU (lib/post-pack-sale.ts).
+   */
+  itemId?: string;
   /**
    * Optional: when the payment actually happened, in epoch milliseconds.
    * Worth passing from the reconciliation and self heal paths, which can run
@@ -424,6 +431,13 @@ function toCurrencyAmount(amountCents: number): number {
   return Math.round(amountCents) / 100;
 }
 
+/** The GA item name of each purchase type. */
+const ITEM_NAMES: Readonly<Record<PurchaseParams['type'], string>> = {
+  new: 'Job Posting',
+  renewal: 'Job Posting Renewal',
+  pack: 'Job Posting Pack',
+};
+
 /**
  * Send the `purchase` event.
  *
@@ -580,8 +594,8 @@ async function sendPurchase(params: PurchaseParams): Promise<TrackServerPurchase
           ...(params.jobId ? { job_id: params.jobId } : {}),
           items: [
             {
-              item_id: params.jobId ?? 'job-post',
-              item_name: params.type === 'renewal' ? 'Job Posting Renewal' : 'Job Posting',
+              item_id: params.itemId ?? params.jobId ?? 'job-post',
+              item_name: ITEM_NAMES[params.type],
               item_category: params.type,
               price: toCurrencyAmount(params.amountCents),
               quantity: 1,

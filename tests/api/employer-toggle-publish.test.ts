@@ -6,7 +6,8 @@
  *   - 'promo' posts (every post during the launch promo) republish exactly
  *     like legacy 'free' and 'paid' posts. Before this, the gate allowed only
  *     'paid' | 'free', so every promo post an employer paused (or archived and
- *     restored) could never come back.
+ *     restored) could never come back. A 5-post pack post ('pack', paid for
+ *     by its pack) republishes on the same terms.
  *   - 'plan' posts republish only through lib/employer-plan.ts
  *     republishPlanPost (plan entitled AND a free slot, checked in the same
  *     Serializable transaction as the write). A refusal says why in plain
@@ -75,7 +76,7 @@ beforeEach(() => {
 });
 
 describe('republish of a paused post by paymentStatus', () => {
-    it.each(['promo', 'free', 'paid'])("republishes a paused '%s' post directly", async (status) => {
+    it.each(['promo', 'free', 'paid', 'pack'])("republishes a paused '%s' post directly", async (status) => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow(status) as never);
 
         const res = await toggle();
@@ -130,7 +131,7 @@ describe('republish of a paused post by paymentStatus', () => {
         expect(mocks.republishPlanPost).not.toHaveBeenCalled();
     });
 
-    it.each(['promo', 'free', 'paid', 'plan'])("refuses to republish an archived '%s' post until it is restored", async (status) => {
+    it.each(['promo', 'free', 'paid', 'pack', 'plan'])("refuses to republish an archived '%s' post until it is restored", async (status) => {
         // Archive unpublishes in the same write; republishing without a
         // restore would leave the post archived and live at once, and a plan
         // post would take back the slot the employer freed by archiving it.

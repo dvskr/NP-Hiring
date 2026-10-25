@@ -121,6 +121,9 @@ beforeEach(() => {
     vi.mocked(prisma.job.update).mockResolvedValue({ id: 'job-1', slug: 'slug-job-1' } as never);
     vi.mocked(prisma.employerJob.create).mockResolvedValue({ id: 'ej-1', dashboardToken: 'dash-1' } as never);
     sessionsCreate.mockResolvedValue({ id: 'cs_1', url: 'https://checkout.stripe.test/cs_1' });
+    // No 5-post pack unless a test says so (tests/setup.ts defaults, restored after any test that set one).
+    vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.employerPostPack.count).mockResolvedValue(0 as never);
 });
 
 describe('fresh post — rung from the signup domain', () => {
@@ -491,6 +494,69 @@ describe('B78 resume path: only the posting owner can resume it (CHK-1)', () => 
 
         expect(res.status).toBe(200);
         expect(sessionsCreate).toHaveBeenCalledOnce();
+    });
+});
+
+describe('5-post pack (2027 re-price, phase 2)', () => {
+    const PACK = { creditsRemaining: 3, creditsTotal: config.packPosts, creditsRevoked: 0, expiresAt: new Date('2027-12-31T00:00:00.000Z') };
+
+    beforeEach(() => {
+        vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([] as never);
+        vi.mocked(prisma.employerPostPack.count).mockResolvedValue(0 as never);
+    });
+
+    it('refuses a new paid post with 409 PACK_CREDIT_AVAILABLE while the employer holds a usable credit', async () => {
+        vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([PACK] as never);
+
+        const { res, json } = await post(BODY);
+
+        expect(res.status).toBe(409);
+        expect(json.code).toBe('PACK_CREDIT_AVAILABLE');
+        expect(json.error).not.toMatch(/[–—]| - /);
+        // Nothing is sold at a price while a post is already paid for.
+        expect(prisma.job.create).not.toHaveBeenCalled();
+        expect(prisma.employerJob.create).not.toHaveBeenCalled();
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(res.headers.get('set-cookie')).toBeNull();
+        // The credit is read for the signed-in account.
+        expect(prisma.employerPostPack.findMany).toHaveBeenCalledWith(expect.objectContaining({
+            where: expect.objectContaining({ userId: 'user-1', status: 'paid', creditsRemaining: { gt: 0 } }),
+        }));
+    });
+
+    it('sells the post as before once no credit is usable', async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(1 as never);
+
+        const { res, json } = await post(BODY);
+
+        expect(res.status).toBe(200);
+        expect(json).toMatchObject({ tier: 'pro', price: config.postingPrice });
+    });
+
+    it('leaves the resume path alone: an unpaid row is completed whatever credits the employer holds', async () => {
+        vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([PACK] as never);
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+            id: 'ej-9', jobId: 'job-9', paymentStatus: 'pending', pricingTier: 'intro', userId: 'user-1',
+            contactEmail: 'x@y.example', dashboardToken: 'd',
+            job: { id: 'job-9', title: 't', employer: 'e', location: 'l', archivedAt: null },
+        } as never);
+
+        const { res, json } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(200);
+        expect(json).toMatchObject({ tier: 'intro' });
+        expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
+    });
+
+    it("prices the first paid post 'pro' once the domain bought a pack through Stripe", async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.employerPostPack.count).mockResolvedValue(1 as never);
+
+        const { json } = await post(BODY);
+
+        expect(json).toMatchObject({ tier: 'pro', price: config.postingPrice });
+        expect(stripeSessionArg().line_items[0].price_data.unit_amount).toBe(config.stripePriceInCents);
+        expect(prisma.employerPostPack.count).toHaveBeenCalledWith({ where: { quotaDomain: SIGNUP_DOMAIN, status: 'paid', source: 'stripe' } });
     });
 });
 

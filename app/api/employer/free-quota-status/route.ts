@@ -7,19 +7,22 @@
  * /api/jobs/post-free via lib/pricing.ts#resolvePostingMode:
  *
  *   promo → free through config.promoEndsLabel   ('promo' rows)
- *   plan  → free, uses an Employer plan slot      ('plan' rows)
- *   intro → config.introPrice, first PAID post for this company domain
+ *   pack  → free, spends a 5-post pack credit     ('pack' rows)
+ *   intro → config.introPrice, first PAID purchase for this company domain
  *   paid  → config.postingPrice
  *
  * Response shape (the wizard reads `eligible` + `willBeFree`, the preview
- * banner reads `mode` / `price` / `tier`, UsageWidget reads `plan`):
+ * banner reads `mode` / `price` / `tier`):
  *   { eligible, reason?, mode, tier, willBeFree, price, priceCents,
  *     durationDays, paidDurationDays, promoActive, promoEndsAt,
- *     promoEndsLabel, ladderStartsLabel, plan?: { slots, used, remaining },
- *     remaining, limit }
- * `remaining` / `limit` are legacy fields kept so old callers keep
- * compiling: promo → promo cap headroom / cap; plan → slots remaining /
- * slots; paid modes → 0 / 0.
+ *     promoEndsLabel, ladderStartsLabel,
+ *     pack?: { remaining, total, expiresAt }, remaining, limit }
+ * `pack` is sent whenever the account holds a usable credit, in either
+ * phase (lib/post-packs.ts#getPackCreditStatus; expiresAt is the expiry of
+ * the pack a post spends next). It replaced the retired Employer plan's
+ * `plan` field. `remaining` / `limit` are legacy fields kept so old callers
+ * keep compiling: promo → promo cap headroom / cap; pack → credits left /
+ * held; paid modes → 0 / 0.
  */
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -32,7 +35,7 @@ import {
   countActivePromoPostsForDomain,
   resolvePostingMode,
 } from '@/lib/pricing';
-import { getPlanSlotStatus } from '@/lib/employer-plan';
+import { getPackCreditStatus } from '@/lib/post-packs';
 
 export async function GET() {
   try {
@@ -65,8 +68,8 @@ export async function GET() {
     }
 
     const now = new Date();
-    const planSlot = await getPlanSlotStatus(user.id, now);
-    const quote = await resolvePostingMode({ quotaDomain: signupDomain, hasPlanSlot: planSlot.canPost, now });
+    const packCredit = await getPackCreditStatus(user.id, now);
+    const quote = await resolvePostingMode({ quotaDomain: signupDomain, hasPackCredit: packCredit.usable, now });
 
     // Legacy remaining/limit semantics — see file header.
     let remaining = 0;
@@ -75,9 +78,9 @@ export async function GET() {
       const activePromo = await countActivePromoPostsForDomain(signupDomain, prisma, now);
       limit = config.promoMaxActivePostsPerDomain;
       remaining = Math.max(0, limit - activePromo);
-    } else if (quote.mode === 'plan') {
-      limit = planSlot.slots;
-      remaining = planSlot.remaining;
+    } else if (quote.mode === 'pack') {
+      limit = packCredit.total;
+      remaining = packCredit.remaining;
     }
 
     return NextResponse.json({
@@ -93,8 +96,8 @@ export async function GET() {
       promoEndsAt: config.promoEndsAt,
       promoEndsLabel: config.promoEndsLabel,
       ladderStartsLabel: config.ladderStartsLabel,
-      ...(planSlot.entitled && {
-        plan: { slots: planSlot.slots, used: planSlot.used, remaining: planSlot.remaining },
+      ...(packCredit.usable && {
+        pack: { remaining: packCredit.remaining, total: packCredit.total, expiresAt: packCredit.expiresAt?.toISOString() ?? null },
       }),
       remaining,
       limit,

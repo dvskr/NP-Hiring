@@ -10,12 +10,13 @@ import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * paymentStatus values whose paused posts the owner may republish directly:
- * a paid post, a legacy free post, and a launch promo post (the promo row
- * replaced 'free' and is republished on exactly the same terms). A 'plan'
- * post is republished only through the Employer plan gate below. Anything
- * else ('pending', 'refunded', 'expired', unknown) is refused with 402.
+ * a paid post, a legacy free post, a launch promo post (the promo row
+ * replaced 'free' and is republished on exactly the same terms) and a 5-post
+ * pack post (paid for by its pack). A 'plan' post is republished only
+ * through the Employer plan gate below. Anything else ('pending',
+ * 'refunded', 'disputed', 'expired', unknown) is refused with 402.
  */
-const DIRECTLY_REPUBLISHABLE_STATUSES: ReadonlySet<string> = new Set(['paid', 'free', 'promo']);
+const DIRECTLY_REPUBLISHABLE_STATUSES: ReadonlySet<string> = new Set(['paid', 'free', 'promo', 'pack']);
 
 /** Prisma's code for a Serializable transaction that lost a concurrent-write race. */
 const SERIALIZATION_FAILURE_CODE = 'P2034';

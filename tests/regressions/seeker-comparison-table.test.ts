@@ -268,10 +268,12 @@ describe('D25: each brand cell stays tied to the code it rests on', () => {
         expect(read('config/brand.ts')).toMatch(/plus the APRN cohort/i);
     });
 
-    it('row 2: every Stripe Checkout session the code opens sells an employer post or a renewal', () => {
+    it('row 2: every Stripe Checkout session the code opens sells an employer post, a renewal or a 5-post pack', () => {
         // A new checkout fails here until someone confirms it charges an
         // employer and not a job seeker, and adds it to this list. (The
         // employer plan is a Payment Link behind /api/employer/plan/subscribe.)
+        // The 5-post pack (2026-10-25): /api/create-pack-checkout sells only to
+        // the signed-in employer account, 403 for any other role.
         const CALL = '.checkout.sessions.create(';
         const sellers = [...sourceFiles('app'), ...sourceFiles('lib')]
             .filter((rel) => {
@@ -279,7 +281,9 @@ describe('D25: each brand cell stays tied to the code it rests on', () => {
                 return src.includes(CALL) && code(src).includes(CALL);
             })
             .sort();
-        expect(sellers).toEqual(['app/api/create-checkout/route.ts', 'app/api/create-renewal-checkout/route.ts']);
+        expect(sellers).toEqual(['app/api/create-checkout/route.ts', 'app/api/create-pack-checkout/route.ts', 'app/api/create-renewal-checkout/route.ts']);
+        // ...and the pack's checkout refuses any account that is not an employer before Stripe is asked.
+        expect(code(read('app/api/create-pack-checkout/route.ts'))).toMatch(/profile\?\.role !== 'employer'\) \{\s*return NextResponse\.json\([^;]*\{ status: 403 \}\);/);
     }, 60_000);
 
     it('row 3: the guide series is published, one guide for each of the 50 states and DC', () => {

@@ -166,6 +166,8 @@ beforeEach(() => {
     contactEmail: 'owner@clinic.example',
     paymentStatus: 'paid',
     pricingTier: 'pro',
+    // As NEW_POST_CHARGE_SELECT loads it: no 'new' charge, so the base renewal price.
+    jobCharges: [],
     job: { id: 'job-1', title: 'Nurse Practitioner', employer: 'Clinic Co', location: 'Remote', expiresAt: null, createdAt: new Date(NOW_MS - 30 * DAY_MS) },
   } as never);
   stripeMocks.list.mockImplementation(() => asyncList([]));

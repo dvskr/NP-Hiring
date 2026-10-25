@@ -25,8 +25,11 @@
  *
  * 2027 re-price: a renewal has two prices (lib/renewal-price.ts), so the
  * offer takes the renewal price of the row being renewed, `renewalPrice`, and
- * both the price it names and the saving it claims use it. Left out, it is
- * config.renewalPrice, the base price. The saving rounds down: $199 against
+ * both the price it names and the saving it claims use it. An offer that can
+ * be bought must be given it (review 2.28 M1): leaving it out is a type
+ * error, and throws rather than name the base price for a row that may pay
+ * more. An offer that cannot be bought names config.renewalPrice when it is
+ * left out, and prints nothing from it. The saving rounds down: $199 against
  * the $249 intro price is 20.08%, against the $349 post price 42.98%; $249
  * against $349 is 28.65%, and against the $249 intro price nothing.
  */
@@ -43,12 +46,15 @@ import {
     renewalSavingsLabel,
     renewalSavingsLine,
     resolveRenewalOffer,
+    type RenewalOfferInputs,
 } from '@/lib/renewal-offer';
 
 const DURING_PROMO = new Date('2026-11-21T12:00:00.000Z');
 const LAST_PROMO_INSTANT = new Date(Date.parse(config.promoEndsAt) - 1);
 const AFTER_PROMO = new Date('2027-03-01T12:00:00.000Z');
 const DOMAIN = 'clinic.example';
+/** The base renewal: what a purchasable offer for a promo, intro or legacy row is told. */
+const BASE = config.renewalPrice;
 const ROOT = process.cwd();
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
@@ -96,10 +102,25 @@ describe('renewalSavings: only a real, rounded-down saving', () => {
 describe("resolveRenewalOffer: the renewal price of the row being renewed", () => {
     const PRO = config.proRenewalPrice;
 
-    it('names config.renewalPrice when the caller passes none (the base renewal)', () => {
-        const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
+    it('names the base price, and measures the saving from it, for a row that pays the base renewal', () => {
+        const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, renewalPrice: BASE, now: AFTER_PROMO });
         expect(offer.price).toBe(config.renewalPrice);
         expect(offer.savings).toMatchObject({ dollars: config.postingPrice - config.renewalPrice, percent: 42 });
+    });
+
+    it('refuses a purchasable offer that was not told the price, instead of naming the base one', () => {
+        // @ts-expect-error a purchasable offer requires the price of the row being renewed
+        expect(() => resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO })).toThrow(/renewalPrice/);
+        // A cast past the type is refused at run time as well.
+        for (const renewalPrice of [undefined, Number.NaN, null]) {
+            expect(() => resolveRenewalOffer({ purchasable: true, renewalPrice: renewalPrice as never, now: AFTER_PROMO })).toThrow(/renewalPrice/);
+            expect(() => renewalSavingsLine({ purchasable: true, renewalPrice: renewalPrice as never, now: AFTER_PROMO })).toThrow(/renewalPrice/);
+        }
+    });
+
+    it('an offer that cannot be bought may leave the price out: it names the base price and claims nothing', () => {
+        expect(resolveRenewalOffer({ purchasable: false, now: AFTER_PROMO })).toEqual({ purchasable: false, promoActive: false, price: config.renewalPrice, savings: null });
+        expect(renewalSavingsLine({ purchasable: false, now: AFTER_PROMO })).toBeNull();
     });
 
     it("names the row's own price, and measures the saving from it", () => {
@@ -137,7 +158,7 @@ describe("resolveRenewalOffer: the renewal price of the row being renewed", () =
 describe('resolveRenewalOffer: when a saving may be claimed', () => {
     it('during the promo: no saving, even when a renewal can be bought', () => {
         for (const now of [DURING_PROMO, LAST_PROMO_INSTANT]) {
-            const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, now });
+            const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, renewalPrice: BASE, now });
             expect(offer).toEqual({ purchasable: true, promoActive: true, price: config.renewalPrice, savings: null });
         }
     });
@@ -149,20 +170,20 @@ describe('resolveRenewalOffer: when a saving may be claimed', () => {
     });
 
     it("after the promo: measured against the reader's own next new post", () => {
-        const intro = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.introPrice, now: AFTER_PROMO });
+        const intro = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.introPrice, renewalPrice: BASE, now: AFTER_PROMO });
         expect(intro.promoActive).toBe(false);
         expect(intro.savings).toMatchObject({ basis: 'next-post', comparedWith: config.introPrice });
-        const pro = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
+        const pro = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, renewalPrice: BASE, now: AFTER_PROMO });
         expect(pro.savings).toMatchObject({ basis: 'next-post', comparedWith: config.postingPrice });
     });
 
-    it('a free plan slot (next post costs 0) gets no saving', () => {
-        expect(resolveRenewalOffer({ purchasable: true, nextPostPrice: 0, now: AFTER_PROMO }).savings).toBeNull();
+    it('a free next post (a pack credit) gets no saving', () => {
+        expect(resolveRenewalOffer({ purchasable: true, nextPostPrice: 0, renewalPrice: BASE, now: AFTER_PROMO }).savings).toBeNull();
     });
 
     it('an unknown next-post price compares with the standard post price and says so', () => {
         for (const nextPostPrice of [null, undefined]) {
-            const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice, now: AFTER_PROMO });
+            const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice, renewalPrice: BASE, now: AFTER_PROMO });
             expect(offer.savings).toMatchObject({ basis: 'list-price', comparedWith: config.postingPrice });
         }
     });
@@ -192,16 +213,16 @@ describe('renewalSavingsLine: the claim the pages print, or nothing', () => {
     it('during the promo: no line, whatever the next post costs', () => {
         for (const now of [DURING_PROMO, LAST_PROMO_INSTANT]) {
             for (const nextPostPrice of [null, config.introPrice, config.postingPrice]) {
-                expect(renewalSavingsLine({ purchasable: true, nextPostPrice, now })).toBeNull();
+                expect(renewalSavingsLine({ purchasable: true, nextPostPrice, renewalPrice: BASE, now })).toBeNull();
             }
         }
     });
 
     it('after the promo: the label for the reader, naming the price it is measured against', () => {
         const ladderStart = new Date(config.promoEndsAt);
-        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: config.introPrice, now: ladderStart }))
+        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: config.introPrice, renewalPrice: BASE, now: ladderStart }))
             .toBe(`Save 20% vs. your next new post at $${config.introPrice}`);
-        expect(renewalSavingsLine({ purchasable: true, now: AFTER_PROMO }))
+        expect(renewalSavingsLine({ purchasable: true, renewalPrice: BASE, now: AFTER_PROMO }))
             .toBe(`Save 42% vs. the $${config.postingPrice} post price`);
     });
 
@@ -222,22 +243,27 @@ describe('renewalSavingsLine: the claim the pages print, or nothing', () => {
         }
     });
 
-    it('no line beside a renewal that cannot be bought, nor for a free plan slot', () => {
+    it('no line beside a renewal that cannot be bought, nor for a free next post', () => {
         expect(renewalSavingsLine({ purchasable: false, nextPostPrice: config.postingPrice, now: AFTER_PROMO })).toBeNull();
-        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: 0, now: AFTER_PROMO })).toBeNull();
+        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: 0, renewalPrice: BASE, now: AFTER_PROMO })).toBeNull();
     });
 
     it('is exactly resolveRenewalOffer in renewalSavingsLabel words', () => {
+        // A purchasable offer is always told its price; one that cannot be bought may leave it out.
+        const inputs: RenewalOfferInputs[] = [];
         for (const now of [DURING_PROMO, LAST_PROMO_INSTANT, AFTER_PROMO]) {
             for (const nextPostPrice of [null, 0, config.introPrice, config.postingPrice]) {
-                for (const purchasable of [true, false]) {
-                    for (const renewalPrice of [undefined, config.renewalPrice, config.proRenewalPrice]) {
-                        const offer = resolveRenewalOffer({ purchasable, nextPostPrice, renewalPrice, now });
-                        expect(renewalSavingsLine({ purchasable, nextPostPrice, renewalPrice, now }))
-                            .toBe(offer.savings ? renewalSavingsLabel(offer.savings) : null);
-                    }
+                for (const renewalPrice of [config.renewalPrice, config.proRenewalPrice]) {
+                    inputs.push({ purchasable: true, nextPostPrice, renewalPrice, now });
+                }
+                for (const renewalPrice of [undefined, config.renewalPrice, config.proRenewalPrice]) {
+                    inputs.push({ purchasable: false, nextPostPrice, renewalPrice, now });
                 }
             }
+        }
+        for (const input of inputs) {
+            const offer = resolveRenewalOffer(input);
+            expect(renewalSavingsLine(input)).toBe(offer.savings ? renewalSavingsLabel(offer.savings) : null);
         }
     });
 });
@@ -300,22 +326,22 @@ describe('one rule for server and client', () => {
 
 describe('nextNewPostPrice: the reader-specific comparison price', () => {
     it('is unknown without a quota domain, and reads nothing', async () => {
-        expect(await nextNewPostPrice({ quotaDomain: null, hasPlanSlot: false, now: AFTER_PROMO })).toBeNull();
-        expect(await nextNewPostPrice({ quotaDomain: undefined, hasPlanSlot: false, now: AFTER_PROMO })).toBeNull();
+        expect(await nextNewPostPrice({ quotaDomain: null, hasPackCredit: false, now: AFTER_PROMO })).toBeNull();
+        expect(await nextNewPostPrice({ quotaDomain: undefined, hasPackCredit: false, now: AFTER_PROMO })).toBeNull();
         expect(prisma.employerJob.count).not.toHaveBeenCalled();
     });
 
-    it('is 0 during the promo and with a free plan slot, without a DB read', async () => {
-        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPlanSlot: false, now: DURING_PROMO })).toBe(0);
-        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPlanSlot: true, now: AFTER_PROMO })).toBe(0);
+    it('is 0 during the promo and with a usable pack credit, without a DB read', async () => {
+        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPackCredit: false, now: DURING_PROMO })).toBe(0);
+        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPackCredit: true, now: AFTER_PROMO })).toBe(0);
         expect(prisma.employerJob.count).not.toHaveBeenCalled();
     });
 
     it("is the intro price for a domain's first paid post, the post price after that", async () => {
         vi.mocked(prisma.employerJob.count).mockResolvedValueOnce(0 as never);
-        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPlanSlot: false, now: AFTER_PROMO })).toBe(config.introPrice);
+        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPackCredit: false, now: AFTER_PROMO })).toBe(config.introPrice);
         vi.mocked(prisma.employerJob.count).mockResolvedValueOnce(2 as never);
-        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPlanSlot: false, now: AFTER_PROMO })).toBe(config.postingPrice);
+        expect(await nextNewPostPrice({ quotaDomain: DOMAIN, hasPackCredit: false, now: AFTER_PROMO })).toBe(config.postingPrice);
     });
 });
 
@@ -351,9 +377,9 @@ describe('client surfaces use the shared rule', () => {
         const prices: (number | null)[] = [null, 0, config.renewalPrice - 1, config.renewalPrice, config.renewalPrice + 1, config.introPrice, config.postingPrice];
         for (const now of DATES) {
             for (const nextPostPrice of prices) {
-                const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice, now });
+                const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice, renewalPrice: BASE, now });
                 const expected = offer.savings ? renewalSavingsLabel(offer.savings) : null;
-                const line = renewalSavingsLine({ purchasable: true, nextPostPrice, now });
+                const line = renewalSavingsLine({ purchasable: true, nextPostPrice, renewalPrice: BASE, now });
                 expect(line, `${now.toISOString()} / ${nextPostPrice}`).toBe(expected);
                 expect(line, `${now.toISOString()} / ${nextPostPrice}`).toBe(dashboardLineBeforeTheMove(nextPostPrice, now));
             }
@@ -362,10 +388,10 @@ describe('client surfaces use the shared rule', () => {
 
     it('the edit page line (no quota domain) is unchanged: the named post price, never during the promo', () => {
         for (const now of DATES) {
-            expect(renewalSavingsLine({ purchasable: true, now }), now.toISOString()).toBe(editPageLineBeforeTheMove(now));
+            expect(renewalSavingsLine({ purchasable: true, renewalPrice: BASE, now }), now.toISOString()).toBe(editPageLineBeforeTheMove(now));
         }
-        expect(renewalSavingsLine({ purchasable: true, now: DURING_PROMO })).toBeNull();
-        expect(renewalSavingsLine({ purchasable: true, now: AFTER_PROMO })).toBe(`Save 42% vs. the $${config.postingPrice} post price`);
+        expect(renewalSavingsLine({ purchasable: true, renewalPrice: BASE, now: DURING_PROMO })).toBeNull();
+        expect(renewalSavingsLine({ purchasable: true, renewalPrice: BASE, now: AFTER_PROMO })).toBe(`Save 42% vs. the $${config.postingPrice} post price`);
     });
 
     it('both pages call the shared rule and keep no copy of it', () => {

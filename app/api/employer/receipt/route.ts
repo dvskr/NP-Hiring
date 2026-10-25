@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
+import { config } from '@/lib/config';
 
 /**
  * GET /api/employer/receipt?jobId=...&[chargeId=...]&[token=...]
@@ -62,11 +63,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Receipt not found or access denied' }, { status: 404 });
     }
     // No charge → no receipt. Mirrors the invoice route: launch-promo
-    // posts, Employer-plan posts (billed per period by Stripe Billing) and
-    // the legacy free-quota statuses never produced a per-post payment.
+    // posts, 5-post pack posts (the pack was the payment), Employer-plan
+    // posts (billed per period by Stripe Billing) and the legacy free-quota
+    // statuses never produced a per-post payment.
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
         { error: 'Receipts are not available for Employer plan postings. Stripe sends your plan receipts each billing period.' },
+        { status: 400 },
+      );
+    }
+    if (employerJob.paymentStatus === 'pack') {
+      return NextResponse.json(
+        { error: `Receipts are not available for posts made with a ${config.packPosts}-post pack. The receipt for the pack covers this post.` },
         { status: 400 },
       );
     }

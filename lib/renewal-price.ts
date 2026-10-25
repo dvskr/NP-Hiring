@@ -16,8 +16,15 @@
  *            posts, legacy paid rows with no charge, legacy free_renewed and
  *            free_upgraded rows
  *
- * If the best-effort 'new' charge write (activate-paid-job.ts) ever failed,
- * the rule falls back to the lower price.
+ * If the 'new' charge write (activate-paid-job.ts) ever failed, the rule
+ * falls back to the lower price; the webhook now answers 500 on that failure,
+ * so Stripe's retry records the charge.
+ *
+ * A row loaded WITHOUT NEW_POST_CHARGE_SELECT is not that case: its price
+ * cannot be told, and guessing the lower one undercharged every post bought
+ * at the posting price (review 2.28 M1). RenewalPriceRow requires
+ * jobCharges, so such a query fails type-check, and renewalRungForRow throws
+ * at run time instead of guessing.
  *
  * Client-safe: it imports only lib/config, so the dashboard and the edit page
  * can share the rung type; tests/lib/renewal-price.test.ts fails if that
@@ -42,20 +49,28 @@ export function renewalRungFor({ pricingTier, hasNewPostCharge }: RenewalRungInp
 /** An EmployerJob loaded with lib/pricing.ts#NEW_POST_CHARGE_SELECT. */
 export interface RenewalPriceRow {
   pricingTier?: string | null;
-  /** At most one 'new' charge; missing when the row was loaded without it. */
-  jobCharges?: readonly unknown[] | null;
+  /**
+   * At most one 'new' charge. Required: a row loaded without the select
+   * cannot be priced, so leaving it out fails type-check.
+   */
+  jobCharges: readonly unknown[];
 }
 
 /**
  * The rung of a row loaded with NEW_POST_CHARGE_SELECT. The stored tier is
  * read as it is, never narrowed first (lib/pricing.ts#asPaidTier turns every
  * unknown tier into 'pro' to avoid under-charging a new post, which would
- * price a legacy row at the pro renewal here).
+ * price a legacy row at the pro renewal here). Throws for a row whose
+ * charges were not loaded (a cast past the type): the renewal checkout
+ * answers a logged 500 and sells nothing at a guessed price.
  */
 export function renewalRungForRow(row: RenewalPriceRow): RenewalRung {
+  if (!Array.isArray(row.jobCharges)) {
+    throw new Error('renewalRungForRow: the row was loaded without NEW_POST_CHARGE_SELECT, so its renewal price is unknown');
+  }
   return renewalRungFor({
     pricingTier: row.pricingTier,
-    hasNewPostCharge: (row.jobCharges?.length ?? 0) > 0,
+    hasNewPostCharge: row.jobCharges.length > 0,
   });
 }
 

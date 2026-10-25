@@ -127,8 +127,12 @@ function pricingCopyForNow(now: Date = new Date()): { label: string; headline: s
     : { label: 'Pricing', headline: LADDER_HEADLINE, body: ladderLine(now) };
 }
 
-/** How a post was placed — drives the confirmation email's wording. */
-export type ConfirmationMode = 'promo' | 'plan' | 'paid';
+/**
+ * How a post was placed — drives the confirmation email's wording. 'pack'
+ * (a 5-post pack credit) prints the paid wording, with no invoice block: the
+ * pack itself was invoiced when it was bought.
+ */
+export type ConfirmationMode = 'promo' | 'pack' | 'plan' | 'paid';
 
 // Canonical EmailType union — every value the platform sends should be in this list.
 // Drives MARKETING_EMAIL_TYPES below and is the type for `sendAndLog`'s emailType param,
@@ -163,7 +167,9 @@ export type EmailType =
   | 'plan_activated'
   | 'plan_paused'
   | 'plan_payment_failed'
-  | 'plan_link_pending';
+  | 'plan_link_pending'
+  // 5-post pack bought (Stripe webhook, app/api/webhooks/stripe/post-pack-checkout.ts).
+  | 'post_pack_purchased';
 
 // Marketing email types — these use the marketing sender address
 const MARKETING_EMAIL_TYPES = new Set<EmailType>([
@@ -514,7 +520,7 @@ export interface InvoiceLinks {
  *   'promo' → free during our launch period through config.promoEndsLabel
  *   'plan'  → posted under your Employer plan: runs `durationDays`, then its
  *             slot is free for another post at no extra charge
- *   'paid' / undefined → today's wording, with `durationDays`
+ *   'pack' / 'paid' / undefined → today's wording, with `durationDays`
  *
  * Positional compatibility: slot 7 has always been `invoice` (the paid
  * webhook passes InvoiceLinks there), so `mode` is the true trailing slot 8.
@@ -713,7 +719,7 @@ export async function sendRenewalConfirmationEmail(
 // 6. EXPIRY WARNING EMAIL
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export interface ExpiryWarningOptions {
+interface ExpiryWarningContext {
   /**
    * EmployerJob.paymentStatus of the expiring row. The renewal checkout
    * refuses 'plan' rows (each plan post runs config.durationDays and frees
@@ -722,19 +728,11 @@ export interface ExpiryWarningOptions {
    */
   paymentStatus?: string;
   /**
-   * True only when a renewal can be bought right now: paid posting enabled
-   * and Stripe configured (lib/env#getPaidPostingStatus, the check behind
-   * /api/create-checkout/availability). Omitted means false, so the email
-   * never offers a renewal nobody confirmed can be bought: the checkout
-   * answers 503 while paid posting is off.
-   */
-  renewalPurchasable?: boolean;
-  /**
    * True only when a NEW post can be bought right now: the same paid-posting
    * check, before the row's own renewability narrows it to
    * renewalPurchasable. Once the promo is over, a row that cannot be renewed
    * (a legacy free row) is offered a paid repost at the ladder price instead
-   * of no offer at all. Omitted means false, for the same reason as above.
+   * of no offer at all. Omitted means false, for the same reason as below.
    */
   postingPurchasable?: boolean;
   /**
@@ -743,16 +741,27 @@ export interface ExpiryWarningOptions {
    * compares the renewal with config.postingPrice and says so.
    */
   nextPostPrice?: number | null;
-  /**
-   * What the expiring row pays to renew, in dollars (lib/renewal-price.ts): a
-   * post bought at the posting price renews for more than the others. Both
-   * the price the email names and the saving it claims use it. Omitted means
-   * config.renewalPrice.
-   */
-  renewalPrice?: number;
   /** Send time; decides whether the launch promo is running. */
   now?: Date;
 }
+
+/**
+ * `renewalPurchasable` is true only when a renewal can be bought right now:
+ * paid posting enabled and Stripe configured (lib/env#getPaidPostingStatus,
+ * the check behind /api/create-checkout/availability). Omitted means false,
+ * so the email never offers a renewal nobody confirmed can be bought: the
+ * checkout answers 503 while paid posting is off.
+ *
+ * `renewalPrice` is what the expiring row pays to renew, in dollars
+ * (lib/renewal-price.ts): a post bought at the posting price renews for more
+ * than the others, and both the price the email names and the saving it
+ * claims use it. It is required whenever the renewal can be bought (review
+ * 2.28 M1), so no warning names the base price for a row that pays more.
+ */
+export type ExpiryWarningOptions = ExpiryWarningContext & (
+  | { renewalPurchasable: true; renewalPrice: number }
+  | { renewalPurchasable?: false; renewalPrice?: number }
+);
 
 /** Statuses the renewal checkout refuses (app/api/create-renewal-checkout). */
 const NOT_RENEWABLE_STATUSES = new Set(['plan', 'free', 'pending', 'refunded', 'disputed']);
@@ -893,12 +902,10 @@ function expiryWarningCopy(jobTitle: string, expiryDateStr: string, days: number
     now,
   };
   if (options.paymentStatus === 'plan') return planExpiryCopy(context);
-  const offer = resolveRenewalOffer({
-    purchasable: !NOT_RENEWABLE_STATUSES.has(options.paymentStatus ?? '') && options.renewalPurchasable === true,
-    nextPostPrice: options.nextPostPrice,
-    renewalPrice: options.renewalPrice,
-    now,
-  });
+  const renewable = !NOT_RENEWABLE_STATUSES.has(options.paymentStatus ?? '');
+  const offer = renewable && options.renewalPurchasable === true
+    ? resolveRenewalOffer({ purchasable: true, renewalPrice: options.renewalPrice, nextPostPrice: options.nextPostPrice, now })
+    : resolveRenewalOffer({ purchasable: false, renewalPrice: options.renewalPrice, nextPostPrice: options.nextPostPrice, now });
   if (offer.purchasable) return renewExpiryCopy(context, offer);
   if (offer.promoActive) return promoRepostExpiryCopy(context);
   return options.postingPurchasable === true ? paidRepostExpiryCopy(context) : noOfferExpiryCopy(context);
@@ -1029,6 +1036,66 @@ export async function sendRefundConfirmationEmail(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send refund email',
+    };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 6b2. 5-POST PACK PURCHASED (Stripe webhook)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface PostPackPurchasedEmailOptions {
+  /** Credits the pack carries (config.packPosts when it was sold). */
+  posts: number;
+  /** When its unused credits expire (lib/post-packs.ts#packExpiresAt). */
+  expiresAt: Date;
+  hostedInvoiceUrl?: string | null;
+  invoiceNumber?: string | null;
+}
+
+/**
+ * The notice a 5-post pack purchase sends once the webhook has recorded it:
+ * how many posts, and the date to use them by. No price: Stripe's receipt
+ * and invoice carry the amount charged. Transactional, like the confirmation
+ * and renewal emails: it ignores marketing suppression and mints a real
+ * unsubscribe token for the footer and the List-Unsubscribe header. Minimal
+ * on purpose while the pack ships dark. The date is the UTC calendar date,
+ * the one packExpiresAt clamps to the end of a month.
+ */
+export async function sendPostPackPurchasedEmail(to: string, opts: PostPackPurchasedEmailOptions): Promise<EmailResult> {
+  try {
+    const useBy = opts.expiresAt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+    const invoiceLine = opts.hostedInvoiceUrl
+      ? `${spacerV2(12)}${bodyTextV2(`${opts.invoiceNumber ? `Invoice #${escapeHtml(opts.invoiceNumber)} · ` : ''}<a href="${opts.hostedInvoiceUrl}" style="color:${V2.teal};text-decoration:underline;">View your invoice</a>`)}`
+      : '';
+    const unsubToken = await getOrCreateUnsubToken(to);
+    const html = emailShellV2(`
+      ${headerBlockV2(`Your ${opts.posts}-Post Pack Is Ready`, '')}
+      ${spacerV2(12)}
+      ${bodyTextV2(`You have ${opts.posts} job posts to use by ${useBy}.`)}${invoiceLine}
+      ${spacerV2(28)}
+      <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
+        ${primaryButtonV2('Post a Job', `${BASE_URL}/post-job`)}
+      </td></tr>
+      ${spacerV2(48)}
+      ${closeContentV2()}`,
+      unsubscribeFooterV2(unsubToken),
+      `You have ${opts.posts} job posts to use by ${useBy}.`,
+    );
+
+    await sendAndLog(
+      { from: EMAIL_FROM, to, subject: `Your ${opts.posts}-post pack is ready`, html },
+      'post_pack_purchased',
+      { posts: opts.posts, expiresAt: opts.expiresAt.toISOString() },
+      `${BASE_URL}/unsubscribe?token=${unsubToken}`,
+    );
+    logger.info('5-post pack purchase email sent', { email: to, posts: opts.posts });
+    return { success: true };
+  } catch (error) {
+    logger.error('Error sending 5-post pack purchase email', error, { email: to });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send the 5-post pack purchase email',
     };
   }
 }

@@ -116,7 +116,7 @@ describe('expiry warning: during the launch promo', () => {
     });
 
     it('with paid posting on: the renewal is offered with no saving claimed, plus the free repost', async () => {
-        const sent = await sendWarning({ paymentStatus: 'promo', renewalPurchasable: true, nextPostPrice: config.postingPrice, now: DURING_PROMO });
+        const sent = await sendWarning({ paymentStatus: 'promo', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: config.postingPrice, now: DURING_PROMO });
         expect(sent.text).toContain(`Renew for ${RENEWAL}`);
         for (const part of parts(sent)) expect(part).not.toMatch(/save \d+%/i);
         expect(sent.text).toContain(`Or post this role again as a fresh listing, free through ${config.promoEndsLabel}.`);
@@ -124,7 +124,7 @@ describe('expiry warning: during the launch promo', () => {
     });
 
     it('describes a renewal as apply-renewal.ts performs it: days only, within the cap', async () => {
-        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, now: DURING_PROMO });
+        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, renewalPrice: config.renewalPrice, now: DURING_PROMO });
         expect(sent.text).toContain(`Adds ${config.durationDays} days to your current expiration, so renewing early doesn't lose any remaining days. It does not add unlocks or InMails.`);
         expect(sent.text).toContain(`Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`);
         expect(sent.text).not.toMatch(/expiration plus a fresh/);
@@ -137,30 +137,30 @@ describe('expiry warning: after the promo, paid posting on', () => {
     // Percents round DOWN (lib/renewal-offer.ts): $199 against the $249 intro
     // price is 20.08%, against the $349 post price 42.98%.
     it("names the saving against the employer's own next post: the intro price", async () => {
-        const sent = await sendWarning({ paymentStatus: 'promo', renewalPurchasable: true, nextPostPrice: config.introPrice, now: AFTER_PROMO });
+        const sent = await sendWarning({ paymentStatus: 'promo', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: config.introPrice, now: AFTER_PROMO });
         expect(sent.html).toContain(`Renew for ${RENEWAL} (Save 20% vs. your next new post at $${config.introPrice})`);
         expect(sent.html).toContain(`Renew for ${RENEWAL} and save 20% vs. your next new post at $${config.introPrice}.`);
         expect(sent.html).not.toContain('42%');
     });
 
     it('against the post price for a domain that already bought a post', async () => {
-        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
+        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
         expect(sent.html).toContain(`(Save 42% vs. your next new post at $${config.postingPrice})`);
     });
 
     it('against the named standard post price when the next price is unknown', async () => {
-        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, nextPostPrice: null, now: AFTER_PROMO });
+        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: null, now: AFTER_PROMO });
         expect(sent.html).toContain(`(Save 42% vs. the $${config.postingPrice} post price)`);
     });
 
-    it('claims no saving when the next post is free (an open plan slot)', async () => {
-        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, nextPostPrice: 0, now: AFTER_PROMO });
+    it('claims no saving when the next post is free (a pack credit)', async () => {
+        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: 0, now: AFTER_PROMO });
         expect(sent.text).toContain(`Renew for ${RENEWAL}`);
         for (const part of parts(sent)) expect(part).not.toMatch(/save \d+%/i);
     });
 
     it('never offers a renewal to a legacy free row, which the renewal checkout refuses', async () => {
-        const sent = await sendWarning({ paymentStatus: 'free', renewalPurchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
+        const sent = await sendWarning({ paymentStatus: 'free', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
         expect(sent.text).not.toContain(RENEWAL);
         expect(loggedMetadata()).toMatchObject({ offer: 'none' });
     });
@@ -214,10 +214,18 @@ describe("expiry warning: a post bought at the posting price renews for its own 
         for (const part of parts(sent)) expect(part).not.toMatch(/save \d+%/i);
     });
 
-    it("an email sent without the row's price offers the base renewal", async () => {
-        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, now: AFTER_PROMO });
-        expect(sent.text).toContain(`Renew for ${RENEWAL}`);
-        expect(sent.text).not.toContain(PRO_RENEWAL);
+    it("a renewal offered without the row's price is not sent at the base price (review 2.28 M1)", async () => {
+        // The base price would misquote a post bought at the posting price.
+        // The type requires the price; a send that bypasses it fails, so the
+        // cron reports the row and leaves it unstamped for its next run.
+        const { sendExpiryWarningEmail } = await import('@/lib/email-service');
+        const expiresAt = new Date(AFTER_PROMO.getTime() + 5 * DAY_MS);
+        // @ts-expect-error a purchasable renewal requires the row's renewalPrice
+        const result = await sendExpiryWarningEmail('employer@clinic.example', TITLE, expiresAt, 120, 8, 'dash-token', null, { paymentStatus: 'paid', renewalPurchasable: true, now: AFTER_PROMO });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/renewalPrice/);
+        expect(resendSendMock).not.toHaveBeenCalled();
     });
 });
 
@@ -235,7 +243,7 @@ describe('expiry warning: after the promo, paid posting off', () => {
 
 describe('expiry warning: after the promo, a row the renewal checkout refuses', () => {
     it('is offered a paid repost at the ladder price while new posts can be bought', async () => {
-        const sent = await sendWarning({ paymentStatus: 'free', renewalPurchasable: true, postingPurchasable: true, now: AFTER_PROMO });
+        const sent = await sendWarning({ paymentStatus: 'free', renewalPurchasable: true, renewalPrice: config.renewalPrice, postingPurchasable: true, now: AFTER_PROMO });
         expect(sent.text).toContain(`You can post this role again as a fresh listing. It runs ${config.durationDays} days with a fresh ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. ${LADDER_PRICES}`);
         expect(sent.html).toContain('/post-job');
         expect(sent.html).toMatch(/>\s*Post a New Job\s*</);
@@ -274,7 +282,7 @@ describe('expiry warning: the free wording stops exactly at config.promoEndsAt',
     });
 
     it('paid posting on: the renewal drops its free alternative at the same instant', async () => {
-        const options = { paymentStatus: 'promo', renewalPurchasable: true, postingPurchasable: true, nextPostPrice: config.introPrice };
+        const options = { paymentStatus: 'promo', renewalPurchasable: true, renewalPrice: config.renewalPrice, postingPurchasable: true, nextPostPrice: config.introPrice };
         const last = await sendWarning({ ...options, now: LAST_PROMO_SECOND });
         expect(last.text).toContain(`Or post this role again as a fresh listing, free through ${config.promoEndsLabel}.`);
 
@@ -288,7 +296,7 @@ describe('expiry warning: the free wording stops exactly at config.promoEndsAt',
 describe('expiry warning: plan posts', () => {
     it('each plan post runs its days; when it ends, post again into the free slot', async () => {
         for (const now of [DURING_PROMO, AFTER_PROMO]) {
-            const sent = await sendWarning({ paymentStatus: 'plan', renewalPurchasable: true, now });
+            const sent = await sendWarning({ paymentStatus: 'plan', renewalPurchasable: true, renewalPrice: config.renewalPrice, now });
             expect(sent.text).not.toContain(RENEWAL);
             expect(sent.text).toContain(`Each plan post runs ${config.durationDays} days. When this one ends, post a new job into its slot at no extra charge while you're subscribed`);
             expect(sent.text).not.toMatch(/stays? live while/i);
@@ -300,8 +308,8 @@ describe('expiry warning: plan posts', () => {
 describe('expiry warning: every variant renders and keeps house style', () => {
     const variants: [string, ExpiryWarningOptions][] = [
         ['promo repost', { paymentStatus: 'promo', renewalPurchasable: false, now: DURING_PROMO }],
-        ['renew in promo', { paymentStatus: 'promo', renewalPurchasable: true, now: DURING_PROMO }],
-        ['renew after promo', { paymentStatus: 'paid', renewalPurchasable: true, nextPostPrice: config.introPrice, now: AFTER_PROMO }],
+        ['renew in promo', { paymentStatus: 'promo', renewalPurchasable: true, renewalPrice: config.renewalPrice, now: DURING_PROMO }],
+        ['renew after promo', { paymentStatus: 'paid', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: config.introPrice, now: AFTER_PROMO }],
         ['no offer', { paymentStatus: 'paid', renewalPurchasable: false, now: AFTER_PROMO }],
         ['paid repost', { paymentStatus: 'free', renewalPurchasable: false, postingPurchasable: true, now: AFTER_PROMO }],
         ['plan', { paymentStatus: 'plan', now: AFTER_PROMO }],

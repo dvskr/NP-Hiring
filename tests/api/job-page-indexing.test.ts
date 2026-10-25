@@ -40,8 +40,6 @@ vi.mock('@/lib/sanitize', () => ({
     normalizeContentWhitespace: vi.fn().mockImplementation((s: string) => s),
 }));
 vi.mock('@/lib/inngest/client', () => ({ inngest: { send: vi.fn().mockResolvedValue(undefined) } }));
-const planSlotMock = vi.fn();
-vi.mock('@/lib/employer-plan', () => ({ getPlanSlotStatus: planSlotMock }));
 
 import { JOB_POSTING_ELIGIBILITY_SELECT, pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
 import type { JobPostingFactsInput } from '@/app/jobs/[slug]/job-posting-facts';
@@ -160,7 +158,6 @@ describe('POST /api/jobs/post-free sends Google only an eligible job page', () =
         process.env.VERCEL_ENV = 'production';
         getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email: 'owner@clinic.example' } }, error: null });
         vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'user-1', role: 'employer', email: 'owner@clinic.example' } as never);
-        planSlotMock.mockResolvedValue({ plan: null, entitled: false, slots: 0, used: 0, remaining: 0, canPost: false });
         vi.mocked(prisma.$transaction).mockImplementation(((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
         vi.mocked(prisma.job.create).mockResolvedValue({ id: 'job-1' } as never);
         vi.mocked(prisma.employerJob.create).mockResolvedValue({ id: 'ej-1' } as never);

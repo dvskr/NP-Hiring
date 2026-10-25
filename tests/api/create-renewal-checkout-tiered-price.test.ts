@@ -18,7 +18,9 @@
  *     narrowing that goes into metadata.tier;
  *   - the idempotency key carries a fingerprint of the parameters, price
  *     included, so a row whose price changes inside a window gets a session of
- *     its own instead of an idempotency error.
+ *     its own instead of an idempotency error;
+ *   - a row loaded without its charges is never sold at a guessed price: the
+ *     checkout answers a logged 500 before any Stripe call (review 2.28 M1).
  *
  * tests/lib/renewal-price.test.ts pins the rule itself.
  */
@@ -26,6 +28,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config, type RenewalRung } from '@/lib/config';
+import { logger } from '@/lib/logger';
 import { NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
 
 const sessionsCreate = vi.fn();
@@ -188,6 +191,19 @@ describe('the renewal price follows what the post cost', () => {
         expect(createdParams().metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'intro', renewalRung: 'base' });
     });
 
+    it("keeps 'pack' for a 5-post pack post, renewed or not, at the base price (owner decision 2026-10-24)", async () => {
+        for (const paymentStatus of ['pack', 'paid']) {
+            sessionsCreate.mockClear();
+            row({ paymentStatus, pricingTier: 'pack' });
+
+            const { res } = await post();
+
+            expect(res.status, paymentStatus).toBe(200);
+            expect(createdParams().metadata, paymentStatus).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pack', renewalRung: 'base' });
+            expect(unitAmount(), paymentStatus).toBe(config.stripeRenewalPriceInCents);
+        }
+    });
+
     it('reads the STORED tier: an unknown tier with a new charge is the base price, though metadata.tier narrows it to pro', async () => {
         // asPaidTier turns every unknown tier into 'pro' so a new post is never
         // under-charged. A renewal must not borrow that narrowing: this row was
@@ -200,13 +216,22 @@ describe('the renewal price follows what the post cost', () => {
         expect(unitAmount()).toBe(config.stripeRenewalPriceInCents);
     });
 
-    it('a row loaded without its charges is charged the lower price', async () => {
+    it('a row loaded without its charges is refused with a logged 500, never charged the lower price', async () => {
+        const logged = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
         row({ paymentStatus: 'paid', pricingTier: 'pro', withoutCharges: true });
 
-        await post();
+        const { res, json } = await post();
 
-        expect(unitAmount()).toBe(config.stripeRenewalPriceInCents);
-        expect(createdParams().metadata.renewalRung).toBe('base');
+        expect(res.status).toBe(500);
+        expect(json).toEqual({ error: 'Failed to create checkout session' });
+        expect(logged).toHaveBeenCalledWith(
+            'Error creating renewal checkout session',
+            expect.objectContaining({ message: expect.stringMatching(/NEW_POST_CHARGE_SELECT/) }),
+        );
+        // Refused before Stripe is asked anything.
+        expect(sessionsList).not.toHaveBeenCalled();
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        logged.mockRestore();
     });
 
     it('the price is not part of the product text the employer reads on Checkout', async () => {

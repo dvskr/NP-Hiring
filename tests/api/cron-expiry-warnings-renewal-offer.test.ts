@@ -9,10 +9,12 @@
  *     /api/create-checkout/availability says one can be bought (read once;
  *     unreadable counts as not purchasable);
  *   - after the promo, the saving is measured against each employer's own
- *     next new-post price (intro vs. post price, 0 with a free plan slot),
- *     looked up once per (quota domain, employer);
+ *     next new-post price (intro vs. post price, 0 with a usable 5-post pack
+ *     credit), looked up once per (quota domain, employer);
  *   - plan rows are never offered a renewal: each runs config.durationDays
  *     and its slot is free when it ends;
+ *   - (2027 re-price, phase 2) a 5-post pack post ('pack' row) is renewed and
+ *     warned like any paid post, at the base renewal price;
  *   - (backlog 2.1) every free-posting line is judged at the run's own clock,
  *     so it stops at config.promoEndsAt with no deploy; after that a row the
  *     renewal checkout refuses is offered a paid repost at the ladder price,
@@ -40,8 +42,13 @@ const getPaidPostingStatus = vi.fn();
 // The webhook secret is set unless a test says otherwise.
 const getEnv = vi.fn(() => ({ STRIPE_WEBHOOK_SECRET: 'whsec_x' as string | undefined }));
 vi.mock('@/lib/env', () => ({ getPaidPostingStatus, getEnv }));
-const getPlanSlotStatus = vi.fn();
-vi.mock('@/lib/employer-plan', () => ({ getPlanSlotStatus }));
+// Hoisted: lib/pricing (imported above) loads lib/post-packs before this file's own consts exist.
+const { getPackCreditStatus } = vi.hoisted(() => ({ getPackCreditStatus: vi.fn() }));
+vi.mock('@/lib/post-packs', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/lib/post-packs')>()),
+    getPackCreditStatus,
+}));
+const NO_PACK_CREDIT = { usable: false, remaining: 0, total: 0, expiresAt: null };
 vi.mock('@/lib/auth/verify-cron-or-admin', () => ({ verifyCronOrAdmin: vi.fn().mockResolvedValue(null) }));
 vi.mock('@/lib/discord-notifier', () => ({ sendCronFailureAlert: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
@@ -134,7 +141,7 @@ beforeEach(() => {
     sendAndLog.mockResolvedValue({ data: { id: 'x' } });
     vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
     vi.mocked(prisma.emailSend.findFirst).mockResolvedValue(null as never);
-    getPlanSlotStatus.mockResolvedValue({ canPost: false });
+    getPackCreditStatus.mockResolvedValue(NO_PACK_CREDIT);
     // Paid posts already bought per domain (lib/pricing#getNextPaidTier).
     vi.mocked(prisma.employerJob.count).mockImplementation((async (args: { where: { quotaDomain?: string } }) =>
         (args.where.quotaDomain === DOMAIN_WITH_PAID_POST ? 1 : 0)) as never);
@@ -156,7 +163,7 @@ describe('during the launch promo with paid posting off (production today)', () 
         for (const id of ['a', 'b']) {
             expect(warningOptionsFor(id)).toMatchObject({ renewalPurchasable: false, postingPurchasable: false, nextPostPrice: null, now: DURING_PROMO });
         }
-        expect(getPlanSlotStatus).not.toHaveBeenCalled();
+        expect(getPackCreditStatus).not.toHaveBeenCalled();
         expect(prisma.employerJob.count).not.toHaveBeenCalled();
     });
 
@@ -214,12 +221,12 @@ describe('after the promo with paid posting on', () => {
         expect(warningOptionsFor('plan')).toMatchObject({ paymentStatus: 'plan', renewalPurchasable: false, nextPostPrice: null });
         // No quota domain: unknown, so the email names the standard post price.
         expect(warningOptionsFor('nodomain')).toMatchObject({ renewalPurchasable: true, nextPostPrice: null });
-        // One plan-slot lookup per employer: repeat (cached for its second post) and first.
-        expect(getPlanSlotStatus.mock.calls.map((c) => c[0]).sort()).toEqual(['user-f', 'user-r']);
+        // One pack-credit lookup per employer: repeat (cached for its second post) and first.
+        expect(getPackCreditStatus.mock.calls.map((c) => c[0]).sort()).toEqual(['user-f', 'user-r']);
     });
 
-    it('an open plan slot makes the next post free, so no saving is claimed', async () => {
-        getPlanSlotStatus.mockResolvedValue({ canPost: true });
+    it('a usable pack credit makes the next post free, so no saving is claimed', async () => {
+        getPackCreditStatus.mockResolvedValue({ usable: true, remaining: 3, total: config.packPosts, expiresAt: new Date('2027-12-31T00:00:00.000Z') });
         seed([], [row('gone', { status: 'paid', domain: DOMAIN_WITH_PAID_POST, expiresInDays: -1 })]);
 
         await runCron();
@@ -227,6 +234,22 @@ describe('after the promo with paid posting on', () => {
         const html = postExpiryHtml('gone');
         expect(html).toContain(`Renew for $${config.renewalPrice} to relist it`);
         expect(html).not.toMatch(/save \d+%/i);
+        expect(getPackCreditStatus).toHaveBeenCalledWith('user-1', AFTER_PROMO);
+    });
+
+    it("a 5-post pack post is renewed and warned like a paid post, at the base renewal", async () => {
+        seed(
+            [row('pack-live', { status: 'pack', pricingTier: 'pack', domain: DOMAIN_WITH_PAID_POST, userId: 'user-r', expiresInDays: 3 })],
+            [row('pack-gone', { status: 'pack', pricingTier: 'pack', domain: DOMAIN_WITH_PAID_POST, userId: 'user-r', expiresInDays: -1 })],
+        );
+
+        await runCron();
+
+        expect(warningOptionsFor('pack-live')).toMatchObject({ paymentStatus: 'pack', renewalPurchasable: true, renewalPrice: config.renewalPrice, nextPostPrice: config.postingPrice });
+        expect(postExpiryHtml('pack-gone')).toContain(`Renew for $${config.renewalPrice} (Save 42% vs. your next new post at $${config.postingPrice})`);
+        // The post-expiry pass selects 'pack' rows among the notifiable statuses.
+        const where = vi.mocked(prisma.job.findMany).mock.calls[1][0]?.where as { employerJobs: { paymentStatus: { in: string[] } } };
+        expect(where.employerJobs.paymentStatus.in).toContain('pack');
     });
 
     it('the post-expiry email names the saving against the next post price', async () => {
@@ -246,7 +269,7 @@ describe('after the promo with paid posting on', () => {
     });
 
     it('a failed price lookup falls back to the named standard post price', async () => {
-        getPlanSlotStatus.mockRejectedValue(new Error('db down'));
+        getPackCreditStatus.mockRejectedValue(new Error('db down'));
         seed([], [row('gone', { status: 'paid', expiresInDays: -1 })]);
 
         await runCron();
@@ -304,14 +327,19 @@ describe("each email names its own row's renewal price (a post bought at the pos
         expect(warningOptionsFor('legacy')).toMatchObject({ renewalPrice: config.renewalPrice });
     });
 
-    it('a row loaded without its charges is priced at the base renewal', async () => {
+    it('a row loaded without its charges is reported and left unwarned, never quoted the base renewal', async () => {
+        // Its price cannot be told (review 2.28 M1). The row is not stamped,
+        // so the next run warns it once the query loads the charges again.
         const noCharges = row('bare', { ...BOUGHT, expiresInDays: 3 });
         delete (noCharges.employerJobs as { jobCharges?: unknown }).jobCharges;
         seed([noCharges]);
 
-        await runCron();
+        const body = await runCron();
 
-        expect(warningOptionsFor('bare')).toMatchObject({ renewalPrice: config.renewalPrice });
+        expect(body.warningsSent).toBe(0);
+        expect(body.errors).toEqual([expect.stringMatching(/^Job bare: .*NEW_POST_CHARGE_SELECT/)]);
+        expect(sendExpiryWarningEmail).not.toHaveBeenCalled();
+        expect(prisma.employerJob.update).not.toHaveBeenCalled();
     });
 
     it('also hands the price over during the promo, where the renewal is offered with no saving', async () => {
@@ -350,7 +378,7 @@ describe("each email names its own row's renewal price (a post bought at the pos
     });
 
     it('a failed price lookup falls back to the named post price, measured from the row\'s own renewal price', async () => {
-        getPlanSlotStatus.mockRejectedValue(new Error('db down'));
+        getPackCreditStatus.mockRejectedValue(new Error('db down'));
         seed([], [row('bought', { ...BOUGHT, expiresInDays: -1 })]);
 
         await runCron();

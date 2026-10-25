@@ -455,7 +455,7 @@ describe('section 4: the schema blocks and the status lists', () => {
     const schemaModel = (model: string): string => between(schema, `model ${model} {`, '\n}');
     const docModel = (model: string): string => between(section4, `model ${model} {`, '\n}');
 
-    it.each(['EmployerPlan', 'ProcessedStripeEvent', 'JobCharge'])('%s: the block shows every column of the model, and no other', (model) => {
+    it.each(['EmployerPlan', 'ProcessedStripeEvent', 'JobCharge', 'EmployerPostPack'])('%s: the block shows every column of the model, and no other', (model) => {
         expect(scalarFields(docModel(model)).sort()).toEqual(scalarFields(schemaModel(model)).sort());
     });
 
@@ -535,7 +535,7 @@ describe('sections 8 and 9: what an operator is told to do', () => {
     });
 
     it('9a lists every migration that touches a pricing or Stripe table', () => {
-        const pricing = /pricing_tier|processed_stripe|job_charges|quota_domain|employer_plans|stripe_/;
+        const pricing = /pricing_tier|processed_stripe|job_charges|quota_domain|employer_plans|post_packs|stripe_/;
         const migrations = walk('prisma/migrations', (name) => name === 'migration.sql')
             .map((file) => file.split('/')[2])
             .filter((name) => pricing.test(name));

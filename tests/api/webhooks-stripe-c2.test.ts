@@ -322,3 +322,69 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
         expect(sendDiscordMessage).not.toHaveBeenCalled();
     });
 });
+
+/**
+ * Review 2.28 M2: the 'new' JobCharge is what sets a post's renewal price
+ * (lib/renewal-price.ts) and what refunds and disputes are matched by. A
+ * failed write used to be logged and swallowed, so the post sold at the
+ * posting price lost its ledger row for good and renewed at the lower price.
+ * Now any failure but a duplicate answers 500 with the dedupe row rolled
+ * back; Stripe's retry loses the claim (the row is already 'paid') and
+ * resolveLostClaim backfills the charge.
+ */
+describe('Stripe webhook: the new-post ledger write', () => {
+    const PAID_SESSION = { id: 'cs_ledger', payment_status: 'paid', metadata: { jobId: 'jobL', pricing: 'pro' }, payment_intent: 'pi_ledger', amount_total: 34900, currency: 'usd' };
+    const delivery = (id: string) => makeRequest({ id, type: 'checkout.session.completed', data: { object: PAID_SESSION } });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        process.env.STRIPE_SECRET_KEY = 'sk_test_x';
+        process.env.STRIPE_WEBHOOK_SECRET = 'whsec_x';
+        vi.mocked(prisma.processedStripeEvent.create).mockResolvedValue({} as never);
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejL', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: null } as never);
+        vi.mocked(prisma.job.update).mockResolvedValue({ id: 'jobL', title: 't', slug: null } as never);
+        vi.mocked(prisma.jobDraft.deleteMany).mockResolvedValue({ count: 0 } as never);
+    });
+
+    it('a failed write answers 500 and rolls the dedupe row back, so Stripe retries', async () => {
+        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
+        vi.mocked(prisma.jobCharge.create).mockRejectedValue(new Error('connection reset'));
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(delivery('evt_ledger_fail') as never);
+
+        expect(res.status).toBe(500);
+        expect(prisma.processedStripeEvent.delete).toHaveBeenCalledWith({ where: { eventId: 'evt_ledger_fail' } });
+        expect(JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls)).toContain('New-post activation failed');
+    });
+
+    it('a duplicate write (P2002) means the charge is already recorded: 200, nothing rolled back', async () => {
+        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
+        vi.mocked(prisma.jobCharge.create).mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(delivery('evt_ledger_dup') as never);
+
+        expect(res.status).toBe(200);
+        expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+    });
+
+    it("Stripe's retry backfills the charge the failed write lost, and answers 200", async () => {
+        // The first delivery claimed the row ('paid') and published it before the write failed.
+        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
+        vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
+        vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
+        vi.mocked(prisma.jobCharge.create).mockResolvedValue({} as never);
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(delivery('evt_ledger_retry') as never);
+
+        expect(res.status).toBe(200);
+        expect(prisma.jobCharge.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({ employerJobId: 'ejL', stripeSessionId: 'cs_ledger', stripePaymentIntentId: 'pi_ledger', amountCents: 34900, type: 'new' }),
+        });
+        expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+        expect(sendDiscordMessage).not.toHaveBeenCalled();
+    });
+});

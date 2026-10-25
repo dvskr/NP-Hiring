@@ -15,6 +15,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
+import { logger } from '@/lib/logger';
 import { NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
 
 vi.mock('@/lib/rate-limit', () => ({
@@ -74,7 +75,6 @@ describe('employerJob.renewalPrice follows what the post cost', () => {
         ['a post bought at the posting price', { paymentStatus: 'paid', pricingTier: 'pro', bought: true }, config.proRenewalPrice],
         ['a legacy paid row with no charge', { paymentStatus: 'paid', pricingTier: 'pro' }, config.renewalPrice],
         ['a legacy free_renewed row', { paymentStatus: 'free_renewed', pricingTier: 'pro' }, config.renewalPrice],
-        ['a row loaded without its charges', { paymentStatus: 'paid', pricingTier: 'pro', withoutCharges: true }, config.renewalPrice],
     ] satisfies Array<[string, RowOptions, number]>)('%s renews for its own price', async (_name, options, price) => {
         row(options);
 
@@ -82,6 +82,19 @@ describe('employerJob.renewalPrice follows what the post cost', () => {
 
         expect(res.status).toBe(200);
         expect(json.employerJob.renewalPrice).toBe(price);
+    });
+
+    it('a row loaded without its charges answers a logged 500, never the base price (review 2.28 M1)', async () => {
+        row({ paymentStatus: 'paid', pricingTier: 'pro', withoutCharges: true });
+
+        const { res, json } = await get();
+
+        expect(res.status).toBe(500);
+        expect(json).toEqual({ error: 'Failed to fetch job' });
+        expect(logger.error).toHaveBeenCalledWith(
+            'Error fetching job for edit',
+            expect.objectContaining({ message: expect.stringMatching(/NEW_POST_CHARGE_SELECT/) }),
+        );
     });
 
     it('answers whole dollars, the unit the edit page prints', async () => {

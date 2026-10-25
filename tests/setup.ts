@@ -199,6 +199,19 @@ vi.mock('@/lib/prisma', () => {
                 updateMany: vi.fn().mockResolvedValue({ count: 1 }),
                 count: vi.fn(),
             },
+            // 5-post pack rows (2027 re-price, phase 2): lib/post-packs.ts and
+            // app/api/webhooks/stripe/post-pack-checkout.ts. The table is empty
+            // unless a test says otherwise: reads find nothing, counts are 0 and
+            // a conditional write matches no row.
+            employerPostPack: {
+                findUnique: vi.fn().mockResolvedValue(null),
+                findFirst: vi.fn().mockResolvedValue(null),
+                findMany: vi.fn().mockResolvedValue([]),
+                count: vi.fn().mockResolvedValue(0),
+                create: vi.fn(),
+                update: vi.fn(),
+                updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+            },
             $queryRaw: vi.fn(),
             // Batch form only (array of PrismaPromises). Test files that need
             // the interactive callback form define their own module mock.
@@ -243,6 +256,8 @@ vi.mock('@/lib/email-service', () => {
         sendPlanPausedEmail: vi.fn().mockResolvedValue({ success: true }),
         sendPlanPaymentFailedEmail: vi.fn().mockResolvedValue({ success: true }),
         sendPlanLinkPendingEmail: vi.fn().mockResolvedValue({ success: true }),
+        // 5-post pack purchase notice (2027 re-price, phase 2): the pack webhook.
+        sendPostPackPurchasedEmail: vi.fn().mockResolvedValue({ success: true }),
     };
 });
 

@@ -900,13 +900,17 @@ describe('cost per hire — the promo and the intro price are stated from one st
   });
 
   it('is the same rule the checkout prices against', () => {
-    // lib/pricing.ts counts ONLY paid POSTS per quotaDomain (status 'paid'
-    // bought through Checkout — a renewed promo post is 'paid' too but carries
-    // only a 'renewal' charge, and a renewal is not a post); create-checkout
+    // lib/pricing.ts counts paid POSTS per quotaDomain (status 'paid' bought
+    // through Checkout — a renewed promo post is 'paid' too but carries only a
+    // 'renewal' charge, and a renewal is not a post), and, since the 2027
+    // re-price, a paid 5-post pack bought through Stripe at the domain (owner
+    // decision: the pack is the company's paid purchase). create-checkout
     // asks it for the rung; post-free snapshots the immutable domain anchor.
     const pricing = read('lib/pricing.ts');
     expect(pricing).toMatch(/quotaDomain,\s*paymentStatus:\s*'paid',\s*OR:\s*\[\s*\{\s*jobCharges:\s*\{\s*some:\s*\{\s*type:\s*'new'\s*\}\s*\}\s*\},\s*\{\s*jobCharges:\s*\{\s*none:\s*\{\}\s*\}\s*\},?\s*\]/);
     expect(pricing).toMatch(/where:\s*paidPostWhere\(quotaDomain\)/);
+    expect(pricing).toMatch(/countPaidPostsForDomain\(quotaDomain, db\)\)\s*\|\|\s*\(await countPaidPacksForDomain\(quotaDomain, db\)\)/);
+    expect(read('lib/post-packs.ts')).toMatch(/return \{ quotaDomain, status: 'paid', source: 'stripe' \};/);
     expect(pricing).toMatch(/paid === 0 \? 'intro' : 'pro'/);
     expect(read('app/api/create-checkout/route.ts')).toContain('getNextPaidTier(quotaDomain)');
     expect(read('app/api/jobs/post-free/route.ts')).toMatch(/quotaDomain:\s*quotaDomain/);

@@ -130,6 +130,8 @@ function employerJobRow(changed: { title?: string; employer?: string; contactEma
     contactEmail: changed.contactEmail ?? 'owner@clinic.example',
     paymentStatus: 'paid',
     pricingTier: 'pro',
+    // As NEW_POST_CHARGE_SELECT loads it: no 'new' charge, so the base renewal price.
+    jobCharges: [],
     job: {
       id: 'job-1',
       title: changed.title ?? 'Nurse Practitioner',

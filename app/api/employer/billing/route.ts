@@ -83,10 +83,11 @@ export async function GET(req: NextRequest) {
         chargesByJob.set(c.employerJobId, arr);
     }
 
-    // Rows that never produced a charge: launch-promo posts, Employer-plan
-    // posts (billed by Stripe Billing, not per post) and the legacy
-    // free-quota statuses. The dashboard hides invoice links for these.
-    const NO_CHARGE_STATUSES = new Set(['promo', 'plan', 'free', 'free_renewed', 'free_upgraded']);
+    // Rows that never produced a charge: launch-promo posts, 5-post pack posts
+    // (the pack was invoiced when it was bought), Employer-plan posts (billed
+    // by Stripe Billing, not per post) and the legacy free-quota statuses. The
+    // dashboard hides invoice links for these.
+    const NO_CHARGE_STATUSES = new Set(['promo', 'pack', 'plan', 'free', 'free_renewed', 'free_upgraded']);
     const isFreeStatus = (status: string) => NO_CHARGE_STATUSES.has(status);
 
     const payments = employerJobs.map((ej) => {

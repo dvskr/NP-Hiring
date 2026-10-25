@@ -68,6 +68,8 @@ function post({ createdAt, expiresAt, paymentStatus = 'paid', archivedAt = null 
     contactEmail: 'owner@clinic.example',
     paymentStatus,
     pricingTier: 'pro',
+    // As NEW_POST_CHARGE_SELECT loads it: no 'new' charge, so the base renewal price.
+    jobCharges: [],
     job: { id: 'job-1', title: 'Nurse Practitioner', employer: 'Clinic Co', location: 'Remote', expiresAt, createdAt, archivedAt },
   } as never);
 }

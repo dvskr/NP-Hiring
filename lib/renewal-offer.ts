@@ -6,12 +6,15 @@
  * at the posting price, the pro price (config.proRenewalPrice); which one is
  * lib/renewal-price.ts. The caller passes the price of the post being
  * renewed as `renewalPrice`, and both the price the offer names and the
- * saving it claims use it. Left out, it is config.renewalPrice.
+ * saving it claims use it. An offer that can be bought must be given it
+ * (review 2.28 M1): leaving it out is a type error, and resolveRenewalOffer
+ * throws rather than name the base price for a post that may renew for more.
+ * An offer that cannot be bought prints no price, so it may leave it out.
  *
  * A renewal is only worth pitching as a saving when it is cheaper than the
  * new post the SAME reader would otherwise buy. That is never true during
- * the launch promo (a new post is free) or for an employer with a free
- * Employer plan slot, and a domain whose next post is the intro price saves
+ * the launch promo (a new post is free) or for an employer with a usable
+ * 5-post pack credit, and a domain whose next post is the intro price saves
  * far less than the list prices suggest (a pro renewal saves nothing against
  * the intro price). This module is the one place the claim is decided, for
  * every surface: the expiry emails and the cron phrase it through
@@ -57,18 +60,22 @@ export interface RenewalOffer {
   savings: RenewalSavings | null;
 }
 
-/** The inputs that decide one reader's renewal offer (see resolveRenewalOffer). */
-export interface RenewalOfferInputs {
-  purchasable: boolean;
+interface RenewalOfferContext {
   nextPostPrice?: number | null;
-  /**
-   * What the post being renewed pays to renew, in dollars
-   * (config.renewalPriceDollarsFor of its rung); config.renewalPrice when
-   * omitted.
-   */
-  renewalPrice?: number;
   now?: Date;
 }
+
+/**
+ * The inputs that decide one reader's renewal offer (see resolveRenewalOffer).
+ * `renewalPrice` is what the post being renewed pays to renew, in dollars
+ * (config.renewalPriceDollarsFor of its rung). It is required when the
+ * renewal can be bought, and may be left out when it cannot (nothing names
+ * it then; it reads as config.renewalPrice).
+ */
+export type RenewalOfferInputs = RenewalOfferContext & (
+  | { purchasable: true; renewalPrice: number }
+  | { purchasable: false; renewalPrice?: number }
+);
 
 /** Savings of `renewalPrice` against `comparedWith`, or null when the renewal is not cheaper by at least 1%. */
 export function renewalSavings(
@@ -95,12 +102,17 @@ export function renewalSavings(
  *                  null/undefined when unknown; unknown compares with
  *                  config.postingPrice and says so
  *   renewalPrice — what the post being renewed pays, in dollars; both the
- *                  price the offer names and the saving use it
+ *                  price the offer names and the saving use it. Required
+ *                  while purchasable; one missing then (a cast past the
+ *                  type) throws instead of naming the base price
  *
  * A saving is claimed only when the renewal can be bought, the promo is over
  * and the renewal is actually cheaper than the price it is compared with.
  */
 export function resolveRenewalOffer(opts: RenewalOfferInputs): RenewalOffer {
+  if (opts.purchasable && !Number.isFinite(opts.renewalPrice)) {
+    throw new Error('resolveRenewalOffer: a renewal that can be bought needs the renewalPrice of the post being renewed');
+  }
   const promoActive = config.isPromoActive(opts.now ?? new Date());
   const price = opts.renewalPrice ?? config.renewalPrice;
   const known = typeof opts.nextPostPrice === 'number' && Number.isFinite(opts.nextPostPrice);

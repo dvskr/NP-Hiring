@@ -361,6 +361,8 @@ describe('CAPTURE: /api/create-renewal-checkout', () => {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
       id: 'ej-1', jobId: 'job-1', editToken: 'edit-1', contactEmail: 'owner@clinic.example',
       paymentStatus: 'paid', pricingTier: 'pro',
+      // As NEW_POST_CHARGE_SELECT loads it: no 'new' charge.
+      jobCharges: [],
       job: { id: 'job-1', title: 'T', employer: 'Clinic Co', location: 'Remote', expiresAt: null, createdAt: new Date(Date.now() - 20 * 86_400_000) },
     } as never);
     // No other renewal session for the post (the top-level default), and a

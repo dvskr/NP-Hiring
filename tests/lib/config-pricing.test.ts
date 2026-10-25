@@ -142,6 +142,11 @@ describe('config.priceCentsForTier — Stripe unit_amount per rung', () => {
         expect(config.priceCentsForTier('plan')).toBe(0);
     });
 
+    it("'pack' is never charged per post: the pack itself was the payment", () => {
+        expect(config.priceCentsForTier('pack')).toBe(0);
+        expect(config.priceDollarsForTier('pack')).toBe(0);
+    });
+
     it('never under-charges an unknown, legacy or tampered tier (falls back to the featured price)', () => {
         for (const tier of [undefined, null, '', 'starter', 'growth', 'premium', 'INTRO', 'free']) {
             expect(config.priceCentsForTier(tier)).toBe(config.stripePriceInCents);
@@ -149,7 +154,7 @@ describe('config.priceCentsForTier — Stripe unit_amount per rung', () => {
     });
 
     it('agrees with priceDollarsForTier on every rung', () => {
-        for (const tier of ['intro', 'pro', 'plan', undefined] as const) {
+        for (const tier of ['intro', 'pro', 'pack', 'plan', undefined] as const) {
             expect(config.priceCentsForTier(tier)).toBe(config.priceDollarsForTier(tier) * 100);
         }
     });
@@ -218,10 +223,48 @@ describe('config.renewalPriceCentsFor / renewalPriceDollarsFor: a renewal has tw
     });
 });
 
+describe('the 5-post pack: the owner prices, declared as a dollar/cent pair (2027 re-price, phase 2)', () => {
+    it('is 5 posts for $1,245, one time, used within 12 months', () => {
+        expect(config.packPosts).toBe(5);
+        expect(config.packPrice).toBe(1245);
+        expect(config.stripePackPriceInCents).toBe(124500);
+        expect(config.stripePackPriceInCents).toBe(config.packPrice * 100);
+        expect(config.packValidityMonths).toBe(12);
+    });
+
+    it('is $249 a post, a whole number of dollars, and costs less than the same posts bought one at a time at $349', () => {
+        expect(config.packPrice / config.packPosts).toBe(249);
+        expect(Number.isInteger(config.packPrice / config.packPosts)).toBe(true);
+        // "Bought one at a time at $349, five posts cost $1,745."
+        expect(config.packPosts * config.postingPrice).toBe(1745);
+        expect(config.packPrice).toBeLessThan(config.packPosts * config.postingPrice);
+    });
+});
+
+describe('config.formatDollars: a dollar amount as copy prints it', () => {
+    it.each([
+        [1245, '$1,245'],
+        [1745, '$1,745'],
+        [349, '$349'],
+        [249, '$249'],
+        [0, '$0'],
+        [12450, '$12,450'],
+        [19.5, '$19.50'],
+    ])('%d prints %s', (amount, printed) => {
+        expect(config.formatDollars(amount)).toBe(printed);
+    });
+
+    it('groups thousands, which formatPrice does not', () => {
+        expect(config.formatPrice(config.packPrice)).toBe('$1245');
+        expect(config.formatDollars(config.packPrice)).toBe('$1,245');
+    });
+});
+
 describe('config.getTierLabel', () => {
     it.each([
         ['intro', 'Intro'],
         ['pro', 'Pro'],
+        ['pack', 'Pack'],
         ['plan', 'Plan'],
     ])("labels '%s' as %s", (tier, label) => {
         expect(config.getTierLabel(tier)).toBe(label);
@@ -235,7 +278,7 @@ describe('config.getTierLabel', () => {
 
 describe('ladder invariants the copy surfaces depend on', () => {
     it('every post runs the same duration, whatever it cost', () => {
-        for (const tier of ['intro', 'pro', 'plan', undefined]) {
+        for (const tier of ['intro', 'pro', 'pack', 'plan', undefined]) {
             expect(config.getDurationDays(tier)).toBe(config.durationDays);
             expect(config.isFeaturedTier(tier)).toBe(true);
             expect(config.getTierLimits(tier)).toBe(config.limits);

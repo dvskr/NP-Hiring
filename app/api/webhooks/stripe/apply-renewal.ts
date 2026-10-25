@@ -65,6 +65,7 @@ import { prisma } from '@/lib/prisma';
 import { config, type PricingTier } from '@/lib/config';
 import { logger } from '@/lib/logger';
 import { sendRenewalConfirmationEmail } from '@/lib/email-service';
+import { asRenewalTier } from '@/lib/pricing';
 import { asRenewalRung } from '@/lib/renewal-price';
 import { JOB_POSTING_ELIGIBILITY_SELECT, pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
 import {
@@ -150,7 +151,9 @@ export async function applyRenewalCheckout(
   if (session.payment_status !== 'paid') {
     throw new Error(`applyRenewalCheckout called for unpaid session ${session.id}`);
   }
-  const renewalTier = (session.metadata?.tier || 'pro') as PricingTier;
+  // The row's own rung, as the checkout carried it: 'intro' and 'pack' stay,
+  // anything else (missing, tampered, legacy) is written as 'pro'.
+  const renewalTier: PricingTier = asRenewalTier(session.metadata?.tier);
 
   // Audit #8: a missing EmployerJob row surfaces loudly (the webhook 500s so
   // Stripe redelivers) instead of silently extending the job.

@@ -7,7 +7,8 @@
  * domain freely after posting, they could start over at the new domain with
  * a fresh promo cap and a fresh intro price. This helper enforces that domain
  * changes are only allowed when no entitlement-carrying row (legacy 'free',
- * 'promo', 'paid', 'plan') exists at the old domain or under this user.
+ * 'promo', 'paid', 'plan', 'pack') and no paid 5-post pack exists at the old
+ * domain or under this user.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -73,8 +74,8 @@ describe('evaluateEmailChange', () => {
     });
 
     it('locks on every entitlement-carrying status and never on abandoned or refunded rows', () => {
-        expect([...DOMAIN_LOCKING_STATUSES].sort()).toEqual(['free', 'paid', 'plan', 'promo']);
-        for (const status of ['pending', 'expired', 'refunded']) {
+        expect([...DOMAIN_LOCKING_STATUSES].sort()).toEqual(['free', 'pack', 'paid', 'plan', 'promo']);
+        for (const status of ['pending', 'expired', 'refunded', 'disputed']) {
             expect(DOMAIN_LOCKING_STATUSES).not.toContain(status);
         }
     });
@@ -87,9 +88,28 @@ describe('evaluateEmailChange', () => {
         expect(prisma.employerJob.count).toHaveBeenCalledOnce();
         const callArg = vi.mocked(prisma.employerJob.count).mock.calls[0][0]!;
         expect(callArg.where).toEqual({
-            paymentStatus: { in: ['free', 'promo', 'paid', 'plan'] },
+            paymentStatus: { in: ['free', 'promo', 'paid', 'plan', 'pack'] },
             OR: [{ userId: USER_ID }, { quotaDomain: 'acme.com' }],
         });
+    });
+
+    it('a paid 5-post pack locks the domain too, with no post yet: it used the intro price up at that domain', async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.employerPostPack.count).mockResolvedValueOnce(1 as never);
+
+        const result = await evaluateEmailChange(USER_ID, 'bob@acme.com', 'bob@example.com');
+
+        expect(result).toMatchObject({ allowed: false, lockedDomain: 'acme.com' });
+        expect(prisma.employerPostPack.count).toHaveBeenCalledWith({
+            where: { status: 'paid', OR: [{ userId: USER_ID }, { quotaDomain: 'acme.com' }] },
+        });
+    });
+
+    it('a refunded or disputed pack does not lock it (only paid packs are counted)', async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.employerPostPack.count).mockResolvedValueOnce(0 as never);
+
+        expect((await evaluateEmailChange(USER_ID, 'bob@acme.com', 'bob@example.com')).allowed).toBe(true);
     });
 
     it('handles empty old email (e.g., user with no prior email) by allowing if newEmail valid', async () => {

@@ -5,32 +5,55 @@
  * /api/create-checkout and the post-job UI):
  *
  *   promo   — config.isPromoActive(): every post is free ('promo' rows)
- *   plan    — employer holds an active Employer plan with a free slot ('plan' rows)
- *   intro   — first PAID post for this company domain: config.introPrice
+ *   pack    — the employer holds a usable 5-post pack credit ('pack' rows;
+ *             lib/post-packs.ts)
+ *   intro   — first PAID purchase for this company domain: config.introPrice
  *   paid    — every later paid post: config.postingPrice
  *
  * The intro allowance is anchored on EmployerJob.quotaDomain (the immutable
- * signup-domain snapshot) and counts ONLY rows that were actually bought AS
- * A POST (paymentStatus 'paid' with a 'new' JobCharge, or a legacy paid row
- * that predates the ledger). Promo posts, legacy free posts, plan posts and
- * abandoned 'pending' checkouts never consume it — and neither does a promo
- * post that was later renewed: the renewal webhook flips it to 'paid', but
- * its only ledger entry is a 'renewal' charge and a renewal is not a post.
+ * signup-domain snapshot) and is used up by a row that was actually bought
+ * AS A POST (paymentStatus 'paid' with a 'new' JobCharge, or a legacy paid
+ * row that predates the ledger), or by a paid 5-post pack bought through
+ * Stripe at the domain (owner decision 2026-10-24: the pack is the company's
+ * paid purchase). Promo posts, pack posts, legacy free posts, plan posts,
+ * abandoned 'pending' checkouts, refunded, disputed or admin-comped packs
+ * never consume it, and neither does a promo post that was later renewed:
+ * the renewal webhook flips it to 'paid', but its only ledger entry is a
+ * 'renewal' charge and a renewal is not a post.
+ *
+ * The Employer plan mode went in phase 2 of the 2027 re-price (no plan row
+ * exists in production); the dormant plan code no longer reaches posting.
  */
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { config, type PostingMode, type PricingTier } from '@/lib/config';
+import { countPaidPacksForDomain } from '@/lib/post-packs';
 
 export type PaidTier = Extract<PricingTier, 'intro' | 'pro'>;
 
 /**
  * Narrow an untrusted value (Stripe session metadata, request body) to a
  * per-post ladder rung. Anything else — including 'plan', which is billed
- * by Stripe Billing and never through per-post Checkout — falls back to
- * 'pro' so a tampered or legacy metadata value can never under-charge.
+ * by Stripe Billing and never through per-post Checkout, and 'pack', whose
+ * posts are paid for by the pack — falls back to 'pro' so a tampered or
+ * legacy metadata value can never under-charge.
  */
 export function asPaidTier(value: unknown): PaidTier {
   return value === 'intro' ? 'intro' : 'pro';
+}
+
+/** The tier a renewal carries and writes back: the row's own rung, a pack post included. */
+export type RenewalTier = Extract<PricingTier, 'intro' | 'pro' | 'pack'>;
+
+/**
+ * Narrow a row's pricingTier, or a renewal session's metadata.tier, to the
+ * tier a renewal keeps: 'intro' and 'pack' stay (a 5-post pack post keeps
+ * 'pack' once renewed, owner decision 2026-10-24), anything else is 'pro',
+ * so a tampered or legacy value is never written to the row. The renewal
+ * price is not decided here (lib/renewal-price.ts).
+ */
+export function asRenewalTier(value: unknown): RenewalTier {
+  return value === 'intro' || value === 'pack' ? value : 'pro';
 }
 
 /** Signup-email domains that can never post without a company email. Shared by every posting gate. */
@@ -90,9 +113,12 @@ export async function countPaidPostsForDomain(quotaDomain: string, db: Db = pris
   });
 }
 
-/** 'intro' until the domain has one paid post, 'pro' afterwards. */
+/**
+ * 'intro' until the domain has one paid post or one paid Stripe pack, 'pro'
+ * afterwards. The pack count is read only while no paid post decides it.
+ */
 export async function getNextPaidTier(quotaDomain: string, db: Db = prisma): Promise<PaidTier> {
-  const paid = await countPaidPostsForDomain(quotaDomain, db);
+  const paid = (await countPaidPostsForDomain(quotaDomain, db)) || (await countPaidPacksForDomain(quotaDomain, db));
   return paid === 0 ? 'intro' : 'pro';
 }
 
@@ -107,27 +133,11 @@ export async function countActivePromoPostsForDomain(quotaDomain: string, db: Db
   });
 }
 
-/**
- * Live 'plan' posts for an employer, counted through the caller's client so
- * /api/jobs/post-free can re-check the slot inside its Serializable
- * transaction (lib/employer-plan.ts#countActivePlanPosts reads through the
- * global client and would not be covered by the transaction's snapshot).
- */
-export async function countActivePlanPostsForUser(userId: string, db: Db = prisma, now: Date = new Date()): Promise<number> {
-  return db.employerJob.count({
-    where: {
-      userId,
-      paymentStatus: 'plan',
-      job: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
-    },
-  });
-}
-
 export interface PricingQuote {
   mode: PostingMode;
   /** Ladder rung the row will be written with. */
   tier: PricingTier;
-  /** Dollars the employer pays now (0 for promo/plan). */
+  /** Dollars the employer pays now (0 for promo and pack). */
   price: number;
   priceCents: number;
   /** True when no Stripe checkout is needed. */
@@ -139,8 +149,8 @@ export function quoteForMode(mode: PostingMode): PricingQuote {
   switch (mode) {
     case 'promo':
       return { mode, tier: 'pro', price: 0, priceCents: 0, willBeFree: true, durationDays: config.durationDays };
-    case 'plan':
-      return { mode, tier: 'plan', price: 0, priceCents: 0, willBeFree: true, durationDays: config.durationDays };
+    case 'pack':
+      return { mode, tier: 'pack', price: 0, priceCents: 0, willBeFree: true, durationDays: config.durationDays };
     case 'intro':
       return { mode, tier: 'intro', price: config.introPrice, priceCents: config.stripeIntroPriceInCents, willBeFree: false, durationDays: config.durationDays };
     case 'paid':
@@ -150,19 +160,20 @@ export function quoteForMode(mode: PostingMode): PricingQuote {
 }
 
 /**
- * Resolve the employer's next-post mode. `hasPlanSlot` is supplied by the
- * caller (lib/employer-plan.ts#getPlanSlotStatus) so this module stays free
- * of plan-table knowledge and is trivially unit-testable.
+ * Resolve the employer's next-post mode: promo, then a usable pack credit,
+ * then intro, then paid. `hasPackCredit` is supplied by the caller
+ * (lib/post-packs.ts#getPackCreditStatus) so this module stays trivially
+ * unit-testable; the promo wins over a credit, which stays unspent.
  */
 export async function resolvePostingMode(opts: {
   quotaDomain: string;
-  hasPlanSlot: boolean;
+  hasPackCredit: boolean;
   now?: Date;
   db?: Db;
 }): Promise<PricingQuote> {
   const now = opts.now ?? new Date();
   if (config.isPromoActive(now)) return quoteForMode('promo');
-  if (opts.hasPlanSlot) return quoteForMode('plan');
+  if (opts.hasPackCredit) return quoteForMode('pack');
   const tier = await getNextPaidTier(opts.quotaDomain, opts.db ?? prisma);
   return quoteForMode(tier === 'intro' ? 'intro' : 'paid');
 }
@@ -187,20 +198,20 @@ export {
 
 /**
  * The reader's next new-post price in dollars, for comparing with a renewal:
- * resolvePostingMode's price (0 during the promo or with a free plan slot,
- * config.introPrice for a domain's first paid post, config.postingPrice
- * after that). Null when the row carries no quota domain.
+ * resolvePostingMode's price (0 during the promo or with a usable pack
+ * credit, config.introPrice for a domain's first paid purchase,
+ * config.postingPrice after that). Null when the row carries no quota domain.
  */
 export async function nextNewPostPrice(opts: {
   quotaDomain: string | null | undefined;
-  hasPlanSlot: boolean;
+  hasPackCredit: boolean;
   now?: Date;
   db?: Db;
 }): Promise<number | null> {
   if (!opts.quotaDomain) return null;
   const quote = await resolvePostingMode({
     quotaDomain: opts.quotaDomain,
-    hasPlanSlot: opts.hasPlanSlot,
+    hasPackCredit: opts.hasPackCredit,
     now: opts.now,
     db: opts.db,
   });

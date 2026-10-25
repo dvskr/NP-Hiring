@@ -17,6 +17,12 @@
  * If the best-effort 'new' charge write ever failed, the rule falls back to
  * the lower price.
  *
+ * A row loaded WITHOUT the charges is a different case (review 2.28 M1): its
+ * price cannot be told, and guessing the lower one undercharged every post
+ * bought at the posting price. RenewalPriceRow requires jobCharges, so such a
+ * query fails type-check, and renewalRungForRow throws at run time rather
+ * than guess (the renewal checkout then answers a logged 500).
+ *
  * The module is client-safe (it imports only lib/config); the select that
  * loads the 'new' charge lives in Prisma-backed lib/pricing.ts.
  */
@@ -86,10 +92,13 @@ describe('renewalRungForRow: the rung of a row loaded with NEW_POST_CHARGE_SELEC
         expect(renewalRungForRow({ pricingTier: 'pro', jobCharges: [] })).toBe('base');
     });
 
-    it('is base for a row that was loaded without the charges (the lower price is the fallback)', () => {
-        expect(renewalRungForRow({ pricingTier: 'pro' })).toBe('base');
-        expect(renewalRungForRow({ pricingTier: 'pro', jobCharges: undefined })).toBe('base');
-        expect(renewalRungForRow({ pricingTier: 'pro', jobCharges: null })).toBe('base');
+    it('refuses a row that was loaded without the charges instead of guessing the lower price', () => {
+        // @ts-expect-error jobCharges is required: a query without NEW_POST_CHARGE_SELECT fails type-check.
+        expect(() => renewalRungForRow({ pricingTier: 'pro' })).toThrow(/NEW_POST_CHARGE_SELECT/);
+        // A cast past the type is refused at run time as well.
+        expect(() => renewalRungForRow({ pricingTier: 'pro', jobCharges: undefined as never })).toThrow(/NEW_POST_CHARGE_SELECT/);
+        expect(() => renewalRungForRow({ pricingTier: 'pro', jobCharges: null as never })).toThrow(/NEW_POST_CHARGE_SELECT/);
+        expect(() => renewalRungForRow({ pricingTier: 'intro', jobCharges: { id: 'jc-1' } as never })).toThrow(/NEW_POST_CHARGE_SELECT/);
     });
 
     it('reads the STORED tier: an unknown tier with a new charge is base, not the pro price asPaidTier would narrow it to', () => {

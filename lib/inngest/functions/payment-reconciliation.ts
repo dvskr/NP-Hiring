@@ -32,6 +32,13 @@
  *      JobCharge-first transaction prevents a double extension) and reported
  *      in the same alert as "renewal recovered". The arm looks back as far
  *      as a renewal payment can still be settling (RENEWAL_LOOKBACK_MS).
+ *   6. 5-POST PACKS: a pack is bought with no EmployerJob row behind it, so
+ *      it too is invisible to steps 1–4. Every paid `metadata.type ===
+ *      'post_pack'` session older than 2h with no EmployerPostPack for its
+ *      session id is recorded through the webhook's shared
+ *      fulfilPostPackCheckout (one create keyed on the unique session id, so
+ *      never twice) and reported as "5-post pack recovered", over the same
+ *      lookback as the renewals.
  *
  * A post archived while its checkout was open is paid for but not put live
  * (leftArchived on both fulfilments). The alert says so, so "recovered" is
@@ -42,8 +49,8 @@
  * Without STRIPE_SECRET_KEY (paid posting not launched) nothing can be
  * reconciled, so the sweep logs a skip and returns instead of failing every
  * day with retries; pending rows are left untouched. With a key it always
- * scans Stripe, even when no row is pending, because the renewal arm (5)
- * has no database trace to look for first.
+ * scans Stripe, even when no row is pending, because the renewal and pack
+ * arms (5, 6) have no database trace to look for first.
  *
  * Runs on Inngest (NOT vercel.json cron — per audit constraints) and is
  * registered in app/api/inngest/route.ts.
@@ -57,8 +64,10 @@ import { captureException } from '@/lib/sentry';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
 import { sanitizeForDiscord } from '@/lib/sanitize-for-discord';
 import { RENEWAL_SETTLEMENT_LOOKBACK_MS } from '@/lib/renewal-checkout-sessions';
+import { POST_PACK_CHECKOUT_TYPE } from '@/lib/post-pack-sale';
 import { activatePaidJobCheckout } from '@/app/api/webhooks/stripe/activate-paid-job';
 import { applyRenewalCheckout } from '@/app/api/webhooks/stripe/apply-renewal';
+import { fulfilPostPackCheckout } from '@/app/api/webhooks/stripe/post-pack-checkout';
 
 const PENDING_MIN_AGE_MS = 2 * 60 * 60 * 1000;   // ignore rows younger than 2h — webhook may still be in flight
 const ABANDON_AFTER_MS = 24 * 60 * 60 * 1000;    // Stripe checkout sessions hard-expire 24h after creation
@@ -75,7 +84,10 @@ const RENEWAL_LOOKBACK_MS = RENEWAL_SETTLEMENT_LOOKBACK_MS;
 const LEFT_ARCHIVED_NOTE = ' (left archived: employer must restore)';
 const MAX_ROWS_PER_SWEEP = 100;
 const MAX_RENEWALS_PER_SWEEP = 100;
+const MAX_PACKS_PER_SWEEP = 100;
 const MAX_SESSIONS_SCANNED = 2000;
+/** What fulfilPostPackCheckout logs as the path (its ctx.eventId) for a pack this sweep records. */
+const RECONCILIATION_EVENT_ID = 'payment-reconciliation';
 const SESSION_LIST_MARGIN_SECONDS = 3600;        // list from 1h before the oldest pending row
 
 interface SessionMatch {
@@ -89,6 +101,31 @@ interface SessionScan {
     byJobId: Record<string, SessionMatch>;
     /** Paid renewal sessions old enough that the webhook should have landed. */
     paidRenewals: Array<{ sessionId: string; jobId: string }>;
+    /** Paid 5-post pack sessions old enough that the webhook should have landed; userId as the session names it. */
+    paidPacks: Array<{ sessionId: string; userId: string | null }>;
+}
+
+/** One line of the alert: what was recovered (or failed), named as "job <id>" or "5-post pack for account <id>". */
+interface RecoveredEntry {
+    subject: string;
+    sessionId: string;
+    activation: string;
+    leftArchived?: true;
+}
+
+interface FailedEntry {
+    subject: string;
+    sessionId?: string;
+    error: string;
+}
+
+interface PackStepResult {
+    outcome: 'fulfilled' | 'already_fulfilled' | 'has-pack' | 'skipped-unpaid' | 'error';
+    error?: string;
+}
+
+function packSubject(userId: string | null): string {
+    return userId ? `5-post pack for account ${userId}` : '5-post pack with no account';
 }
 
 interface ActivationStepResult {
@@ -186,6 +223,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
             const oldestMs = stalePending.length > 0 ? Math.min(stalePending[0].createdAtMs, renewalFromMs) : renewalFromMs;
             const byJobId: Record<string, SessionMatch> = {};
             const paidRenewals: SessionScan['paidRenewals'] = [];
+            const paidPacks: SessionScan['paidPacks'] = [];
             const renewalCutoffMs = Date.now() - PENDING_MIN_AGE_MS;
             let scanned = 0;
 
@@ -196,7 +234,13 @@ export const paymentReconciliationSweep = inngest.createFunction(
                 scanned += 1;
                 const matchedJobId = s.metadata?.jobId;
                 const sessionType = s.metadata?.type;
-                if (matchedJobId && sessionType === 'renewal') {
+                if (sessionType === POST_PACK_CHECKOUT_TYPE) {
+                    // Checked first: a pack session must never feed the
+                    // per-post paths, whatever else its metadata carries.
+                    if (s.payment_status === 'paid' && s.created * 1000 < renewalCutoffMs) {
+                        paidPacks.push({ sessionId: s.id, userId: s.metadata?.userId || s.client_reference_id || null });
+                    }
+                } else if (matchedJobId && sessionType === 'renewal') {
                     if (s.payment_status === 'paid' && s.created * 1000 < renewalCutoffMs) {
                         paidRenewals.push({ sessionId: s.id, jobId: matchedJobId });
                     }
@@ -227,13 +271,18 @@ export const paymentReconciliationSweep = inngest.createFunction(
                 matched: Object.keys(byJobId).length,
                 pendingRows: stalePending.length,
                 paidRenewals: paidRenewals.length,
+                paidPacks: paidPacks.length,
             });
-            return { byJobId, paidRenewals: paidRenewals.slice(0, MAX_RENEWALS_PER_SWEEP) };
+            return {
+                byJobId,
+                paidRenewals: paidRenewals.slice(0, MAX_RENEWALS_PER_SWEEP),
+                paidPacks: paidPacks.slice(0, MAX_PACKS_PER_SWEEP),
+            };
         });
 
         const sessionsByJobId = scan.byJobId;
-        const recovered: Array<{ jobId: string; sessionId: string; activation: string; leftArchived?: true }> = [];
-        const failures: Array<{ jobId: string; sessionId?: string; error: string }> = [];
+        const recovered: RecoveredEntry[] = [];
+        const failures: FailedEntry[] = [];
         let expired = 0;
         let settling = 0;
 
@@ -269,10 +318,10 @@ export const paymentReconciliationSweep = inngest.createFunction(
                 });
 
                 if (result.outcome === 'error') {
-                    failures.push({ jobId: row.jobId, sessionId: match.sessionId, error: result.error ?? 'unknown' });
+                    failures.push({ subject: `job ${row.jobId}`, sessionId: match.sessionId, error: result.error ?? 'unknown' });
                 } else if (result.outcome !== 'skipped-unpaid') {
                     recovered.push({
-                        jobId: row.jobId,
+                        subject: `job ${row.jobId}`,
                         sessionId: match.sessionId,
                         activation: result.outcome,
                         ...(result.leftArchived && { leftArchived: true as const }),
@@ -333,15 +382,45 @@ export const paymentReconciliationSweep = inngest.createFunction(
             });
 
             if (result.outcome === 'error') {
-                failures.push({ jobId: renewal.jobId, sessionId: renewal.sessionId, error: `RENEWAL ${result.error ?? 'unknown'}` });
+                failures.push({ subject: `job ${renewal.jobId}`, sessionId: renewal.sessionId, error: `RENEWAL ${result.error ?? 'unknown'}` });
             } else if (result.outcome !== 'has-charge' && result.outcome !== 'skipped-unpaid') {
                 const label = result.outcome === 'applied' ? 'renewal recovered' : `renewal ${result.outcome}`;
                 recovered.push({
-                    jobId: renewal.jobId,
+                    subject: `job ${renewal.jobId}`,
                     sessionId: renewal.sessionId,
                     activation: label,
                     ...(result.leftArchived && { leftArchived: true as const }),
                 });
+            }
+        }
+
+        // 5-post pack arm: paid pack sessions with no pack recorded.
+        for (const pack of scan.paidPacks) {
+            const result = await step.run(`post-pack-${pack.sessionId}`, async (): Promise<PackStepResult> => {
+                try {
+                    const recorded = await prisma.employerPostPack.findUnique({
+                        where: { stripeSessionId: pack.sessionId },
+                        select: { id: true },
+                    });
+                    if (recorded) return { outcome: 'has-pack' };
+                    const stripe = requireStripe();
+                    const session = await stripe.checkout.sessions.retrieve(pack.sessionId);
+                    if (session.payment_status !== 'paid') return { outcome: 'skipped-unpaid' };
+                    const fulfilled = await fulfilPostPackCheckout(stripe, session, { eventId: RECONCILIATION_EVENT_ID });
+                    return { outcome: fulfilled.outcome };
+                } catch (err) {
+                    const context = { sessionId: pack.sessionId, userId: pack.userId ?? undefined };
+                    logger.error('[PaymentReconciliation] 5-post pack recovery failed', err, context);
+                    captureException(err, { tags: { area: 'payment-reconciliation' }, extra: { ...context, kind: 'post_pack' } });
+                    return { outcome: 'error', error: err instanceof Error ? err.message : String(err) };
+                }
+            });
+
+            if (result.outcome === 'error') {
+                failures.push({ subject: packSubject(pack.userId), sessionId: pack.sessionId, error: `POST PACK ${result.error ?? 'unknown'}` });
+            } else if (result.outcome !== 'has-pack' && result.outcome !== 'skipped-unpaid') {
+                const label = result.outcome === 'fulfilled' ? '5-post pack recovered' : `5-post pack ${result.outcome}`;
+                recovered.push({ subject: packSubject(pack.userId), sessionId: pack.sessionId, activation: label });
             }
         }
 
@@ -351,9 +430,9 @@ export const paymentReconciliationSweep = inngest.createFunction(
             await step.run('alert-paid-but-pending', async () => {
                 const lines = [
                     ...recovered.map((r) =>
-                        `job ${r.jobId} · session ${r.sessionId} · ${r.activation === 'activated' ? 'recovered (activated now)' : r.activation}${r.leftArchived ? LEFT_ARCHIVED_NOTE : ''}`),
+                        `${r.subject} · session ${r.sessionId} · ${r.activation === 'activated' ? 'recovered (activated now)' : r.activation}${r.leftArchived ? LEFT_ARCHIVED_NOTE : ''}`),
                     ...failures.map((f) =>
-                        `job ${f.jobId}${f.sessionId ? ` · session ${f.sessionId}` : ''} · ACTIVATION FAILED: ${f.error}`),
+                        `${f.subject}${f.sessionId ? ` · session ${f.sessionId}` : ''} · ACTIVATION FAILED: ${f.error}`),
                 ];
                 await sendDiscordMessage('', [{
                     title: `🚨 Paid-but-pending checkouts (${recovered.length + failures.length}) — Stripe webhook delivery may be broken`,

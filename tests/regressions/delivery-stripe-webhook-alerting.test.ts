@@ -17,7 +17,7 @@ describe('Stripe webhook failure alerting', () => {
   // The helper lives in webhook-support.ts (shared with the plan / renewal
   // modules the webhook delegates to); call sites span the webhook directory.
   const src = read('app/api/webhooks/stripe/webhook-support.ts');
-  const WEBHOOK_MODULES = ['route.ts', 'plan-checkout.ts', 'plan-subscription.ts'];
+  const WEBHOOK_MODULES = ['route.ts', 'plan-checkout.ts', 'plan-subscription.ts', 'post-pack-checkout.ts', 'post-pack-refunds.ts'];
   const allSrc = WEBHOOK_MODULES.map((f) => read(`app/api/webhooks/stripe/${f}`)).join('\n');
 
   it('imports both alert channels', () => {
@@ -43,6 +43,21 @@ describe('Stripe webhook failure alerting', () => {
   it('the dedupe-rollback failure (silently-dropped-retry case) alerts', () => {
     const idx = read('app/api/webhooks/stripe/route.ts').indexOf('Dedupe rollback failed');
     expect(idx).toBeGreaterThan(-1);
+  });
+
+  it('the 5-post pack modules alert through the same helper, on every money event', () => {
+    const purchase = read('app/api/webhooks/stripe/post-pack-checkout.ts');
+    const refunds = read('app/api/webhooks/stripe/post-pack-refunds.ts');
+    for (const mod of [purchase, refunds]) {
+      expect(mod).toMatch(/alertWebhookFailure[\s\S]*from '\.\/webhook-support'/);
+    }
+    // Money the sale should not have taken is recorded, and a human told to refund it.
+    expect(purchase.match(/alertWebhookFailure\('5-post pack [^']*refund it in Stripe'/g) ?? []).toHaveLength(3);
+    for (const event of ['refunded in full', 'partly refunded', 'disputed', 'dispute won', 'dispute lost']) {
+      expect(refunds).toContain(`'5-post pack ${event}`);
+    }
+    // A failed pack fulfilment rolls the dedupe row back like every other path.
+    expect(read('app/api/webhooks/stripe/route.ts')).toMatch(/failAndRetry\(cleanupDedupe, '5-post pack fulfilment failed'/);
   });
 
   it('alerting is best-effort — the helper swallows its own errors', () => {

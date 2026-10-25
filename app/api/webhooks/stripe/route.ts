@@ -8,10 +8,13 @@ import {
   getOrCreateUnsubToken,
 } from '@/lib/email-service';
 import { logger } from '@/lib/logger';
+import { POST_PACK_CHECKOUT_TYPE } from '@/lib/post-pack-sale';
 import { activatePaidJobCheckout } from './activate-paid-job';
 import { applyRenewalCheckout } from './apply-renewal';
 import { handlePlanAsyncPaymentFailed, handlePlanCheckout } from './plan-checkout';
 import { applySubscriptionEvent, handlePlanInvoicePaymentFailed, type SubscriptionEventType } from './plan-subscription';
+import { fulfilPostPackCheckout, refreshPackInvoice } from './post-pack-checkout';
+import { applyPackDisputeClosed, applyPackDisputeCreated, applyPackRefund } from './post-pack-refunds';
 import {
   alertWebhookFailure,
   claimEmailSend,
@@ -22,11 +25,13 @@ import {
 /**
  * Stripe webhook. Event handling lives in sibling modules so the verify-page
  * self-heals and the Inngest sweeps can run the exact same code:
- *   activate-paid-job.ts — new paid posts
- *   apply-renewal.ts     — renewals
- *   plan-checkout.ts     — Employer plan checkout
- *   plan-subscription.ts — Employer plan subscription lifecycle + dunning
- *   webhook-support.ts   — alerting (Sentry + Discord), email claims, helpers
+ *   activate-paid-job.ts  — new paid posts
+ *   apply-renewal.ts      — renewals
+ *   post-pack-checkout.ts — 5-post pack purchases (and their invoice.paid)
+ *   post-pack-refunds.ts  — 5-post pack refunds and chargebacks
+ *   plan-checkout.ts      — Employer plan checkout
+ *   plan-subscription.ts  — Employer plan subscription lifecycle + dunning
+ *   webhook-support.ts    — alerting (Sentry + Discord), email claims, helpers
  *
  * Required endpoint events (tmp/stripe-bootstrap.js EVENTS, .env.example):
  *   checkout.session.completed, checkout.session.async_payment_succeeded,
@@ -230,6 +235,12 @@ async function handleCheckoutSessionPaid(
     }
   }
 
+  // 5-post pack: carries no jobId either, so it is routed before the
+  // "Missing job ID" 400 and never reaches the per-post paths.
+  if (session.metadata?.type === POST_PACK_CHECKOUT_TYPE) {
+    return handlePostPackPaid(stripe, event, session, cleanupDedupe);
+  }
+
   const jobId = session.metadata?.jobId;
   if (!jobId) {
     logger.error('No job ID in session metadata', null, { sessionId: session.id });
@@ -291,6 +302,36 @@ async function handleCheckoutSessionPaid(
     return failAndRetry(cleanupDedupe, 'New-post activation failed', activationErr, { eventId: event.id, jobId, sessionId: session.id }, 'Failed to update job');
   }
   return NextResponse.json({ received: true });
+}
+
+/**
+ * A 5-post pack checkout. The same money gate as the per-post paths: an
+ * unsettled delayed payment is deferred to async_payment_succeeded (a
+ * different event id, which the dedupe keeps apart). The fulfilment records
+ * the money even when the sale should not have taken it, and alerts.
+ */
+async function handlePostPackPaid(
+  stripe: Stripe,
+  event: Stripe.Event,
+  session: Stripe.Checkout.Session,
+  cleanupDedupe: CleanupDedupe,
+): Promise<NextResponse> {
+  if (session.payment_status !== 'paid') {
+    logger.info('[Stripe] 5-post pack checkout completed but payment not settled; deferring fulfilment', {
+      sessionId: session.id, paymentStatus: session.payment_status,
+    });
+    if (session.payment_status === 'no_payment_required') {
+      await alertWebhookFailure('5-post pack checkout completed with no payment required: not fulfilled', null, { eventId: event.id, sessionId: session.id });
+    }
+    return NextResponse.json({ received: true, deferred: true });
+  }
+  try {
+    const result = await fulfilPostPackCheckout(stripe, session, { eventId: event.id });
+    return NextResponse.json({ received: true, pack: result.outcome });
+  } catch (packErr) {
+    logger.error('[Stripe] 5-post pack fulfilment failed', packErr, { sessionId: session.id });
+    return failAndRetry(cleanupDedupe, '5-post pack fulfilment failed', packErr, { eventId: event.id, sessionId: session.id }, 'Failed to record the 5-post pack');
+  }
 }
 
 async function handleRenewalPaid(
@@ -401,7 +442,11 @@ async function handleInvoicePaid(event: Stripe.Event, invoice: Stripe.Invoice, c
     }
     const jobCharge = await prisma.jobCharge.findFirst({ where: { stripeInvoiceId: invoiceId }, select: { id: true } });
     if (!jobCharge) {
-      // Not all invoices belong to a JobCharge (plan invoices, one-offs).
+      // A 5-post pack's invoice, or one with no row of ours (plan invoices, one-offs).
+      if (await refreshPackInvoice(invoice)) {
+        logger.info('5-post pack invoice URLs refreshed after invoice.paid', { invoiceId });
+        return NextResponse.json({ received: true });
+      }
       logger.info('invoice.paid: no matching JobCharge — skipping', { invoiceId });
       return NextResponse.json({ received: true });
     }
@@ -491,8 +536,10 @@ async function handleChargeRefunded(event: Stripe.Event, charge: Stripe.Charge, 
 
     const jobCharge = await prisma.jobCharge.findUnique({ where: { stripePaymentIntentId: paymentIntentId } });
     if (!jobCharge) {
-      // Pre-audit-#28 charges don't have payment_intent persisted, OR the
-      // refund is for a charge that originated outside our flow.
+      // A 5-post pack's payment (post-pack-refunds.ts), else a pre-audit-#28
+      // charge with no payment_intent persisted, or one from outside our flow.
+      const pack = await applyPackRefund(charge, paymentIntentId, { eventId: event.id });
+      if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
       logger.warn('charge.refunded: no matching JobCharge — pre-#28 row or external charge', { paymentIntentId, chargeId: charge.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -576,6 +623,8 @@ async function handleDisputeCreated(event: Stripe.Event, dispute: Stripe.Dispute
     }
     const jobCharge = await prisma.jobCharge.findUnique({ where: { stripePaymentIntentId: paymentIntentId } });
     if (!jobCharge) {
+      const pack = await applyPackDisputeCreated(dispute, paymentIntentId, { eventId: event.id });
+      if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
       logger.warn('charge.dispute.created: no matching JobCharge', { paymentIntentId, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -608,6 +657,8 @@ async function handleDisputeClosed(event: Stripe.Event, dispute: Stripe.Dispute,
       ? await prisma.jobCharge.findUnique({ where: { stripePaymentIntentId: paymentIntentId } })
       : null;
     if (!jobCharge) {
+      const pack = paymentIntentId ? await applyPackDisputeClosed(dispute, paymentIntentId, { eventId: event.id }) : null;
+      if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
       logger.warn('charge.dispute.closed: no matching JobCharge', { paymentIntentId: paymentIntentId ?? undefined, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }

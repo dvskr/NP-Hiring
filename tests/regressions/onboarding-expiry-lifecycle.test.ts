@@ -42,19 +42,20 @@ describe('B87 — post-expiry notification pass', () => {
     // Never-published checkouts and refunded rows are excluded. The status
     // list is a named constant (the pre- and post-expiry passes share it)
     // and, since the 2026-09-12 pricing change, covers launch-promo and
-    // Employer-plan rows alongside paid + legacy free.
+    // Employer-plan rows alongside paid + legacy free, and since the 2027
+    // re-price (phase 2) the 5-post pack's 'pack' rows.
     expect(src).toMatch(/paymentStatus:\s*\{\s*in:\s*NOTIFIABLE_STATUSES\s*\}/);
     const notifiable = src.match(/const NOTIFIABLE_STATUSES = \[([^\]]*)\]/)?.[1] ?? '';
-    for (const status of ['free', 'free_renewed', 'free_upgraded', 'promo', 'plan', 'paid']) {
+    for (const status of ['free', 'free_renewed', 'free_upgraded', 'promo', 'pack', 'plan', 'paid']) {
       expect(notifiable, `NOTIFIABLE_STATUSES includes '${status}'`).toContain(`'${status}'`);
     }
     for (const status of ['pending', 'refunded', 'expired']) {
       expect(notifiable, `NOTIFIABLE_STATUSES excludes '${status}'`).not.toContain(`'${status}'`);
     }
     // The renewal CTA is offered only where a renewal can actually be bought:
-    // promo + paid rows renew; plan rows re-post from a slot (the renewal
-    // checkout 409s them).
-    expect(src).toMatch(/const RENEWABLE_STATUSES = new Set\(\['promo',\s*'paid'\]\)/);
+    // promo, pack and paid rows renew; plan rows re-post from a slot (the
+    // renewal checkout 409s them).
+    expect(src).toMatch(/const RENEWABLE_STATUSES = new Set\(\['promo',\s*'pack',\s*'paid'\]\)/);
   });
 
   it('dedupes per job via EmailSend metadata and ignores failed sends', () => {

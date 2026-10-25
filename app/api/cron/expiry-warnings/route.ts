@@ -13,7 +13,7 @@ import { config } from '@/lib/config'
 import { brand } from '@/config/brand'
 import { getEnv, getPaidPostingStatus } from '@/lib/env'
 import { logger } from '@/lib/logger'
-import { getPlanSlotStatus } from '@/lib/employer-plan'
+import { getPackCreditStatus } from '@/lib/post-packs'
 import { NEW_POST_CHARGE_SELECT, nextNewPostPrice, renewalSavingsLabel, resolveRenewalOffer, type RenewalOffer } from '@/lib/pricing'
 import { renewalRungForRow, type RenewalPriceRow } from '@/lib/renewal-price'
 import { ladderLine } from '@/lib/pricing-copy'
@@ -30,16 +30,17 @@ const POST_EXPIRY_LOOKBACK_DAYS = 3
 // Rows that can buy the per-post renewal (config.renewalPrice, or
 // config.proRenewalPrice for a post bought at the posting price: see
 // renewalInputsFor), and only while paid posting is on (see RenewalContext).
+// A 5-post pack post ('pack') renews at the base price like a promo post.
 // 'plan' rows are deliberately excluded: each plan post runs
 // config.durationDays and its slot frees when it ends, so the employer posts
 // again into that slot instead of renewing (the renewal checkout 409s them).
 // Legacy free-quota rows re-enter via the dashboard's own path (unchanged).
-const RENEWABLE_STATUSES = new Set(['promo', 'paid'])
+const RENEWABLE_STATUSES = new Set(['promo', 'pack', 'paid'])
 
 // Statuses whose expiry is worth an email at all — everything that was
 // actually published. Never-published checkouts ('pending'/'expired') have
-// nothing to mourn; refunded rows were pulled deliberately.
-const NOTIFIABLE_STATUSES = ['free', 'free_renewed', 'free_upgraded', 'promo', 'plan', 'paid']
+// nothing to mourn; refunded and disputed rows were pulled deliberately.
+const NOTIFIABLE_STATUSES = ['free', 'free_renewed', 'free_upgraded', 'promo', 'pack', 'plan', 'paid']
 
 /**
  * What one cron run knows about selling renewals. `purchasable` is read once
@@ -73,20 +74,20 @@ function readRenewalPurchasable(): boolean {
 }
 
 /**
- * The employer's own next new-post price (0 with a free plan slot), so the
- * savings claim is measured against what this reader would actually pay.
- * Null (the email then compares with the standard post price and says so)
- * when the row has no quota domain or the lookup fails.
+ * The employer's own next new-post price (0 with a usable 5-post pack
+ * credit), so the savings claim is measured against what this reader would
+ * actually pay. Null (the email then compares with the standard post price
+ * and says so) when the row has no quota domain or the lookup fails.
  */
 async function nextPostPriceFor(employerJob: EmployerJob, ctx: RenewalContext): Promise<number | null> {
   const key = `${employerJob.quotaDomain ?? ''}|${employerJob.userId ?? ''}`
   if (ctx.nextPostPrices.has(key)) return ctx.nextPostPrices.get(key) ?? null
   let price: number | null = null
   try {
-    const hasPlanSlot = employerJob.userId
-      ? (await getPlanSlotStatus(employerJob.userId, ctx.now)).canPost
+    const hasPackCredit = employerJob.userId
+      ? (await getPackCreditStatus(employerJob.userId, ctx.now)).usable
       : false
-    price = await nextNewPostPrice({ quotaDomain: employerJob.quotaDomain, hasPlanSlot, now: ctx.now })
+    price = await nextNewPostPrice({ quotaDomain: employerJob.quotaDomain, hasPackCredit, now: ctx.now })
   } catch (error) {
     logger.warn('expiry-warnings: next post price lookup failed, comparing with the standard post price', {
       employerJobId: employerJob.id,

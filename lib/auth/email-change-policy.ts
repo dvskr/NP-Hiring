@@ -20,9 +20,13 @@
  *     by this user) → allowed
  *   - Domain changes when ANY EmployerJob row exists at the old domain (or
  *     is owned by this user) with a paymentStatus that carries an
- *     entitlement — legacy 'free', 'promo', 'paid', 'plan' → BLOCKED.
- *     Abandoned 'pending' / 'expired' checkouts and 'refunded' rows never
- *     lock a domain.
+ *     entitlement — legacy 'free', 'promo', 'paid', 'plan', 'pack' →
+ *     BLOCKED. Abandoned 'pending' / 'expired' checkouts and 'refunded' or
+ *     'disputed' rows never lock a domain.
+ *   - Domain changes when a PAID 5-post pack exists at the old domain (or
+ *     was bought by this user), even before any post: the pack used the
+ *     domain's intro price up (lib/pricing.ts#getNextPaidTier) → BLOCKED.
+ *     Refunded or disputed packs never lock it.
  *
  * **Where to call this:**
  * Anywhere we accept an email-change request — `/api/auth/change-email`,
@@ -48,7 +52,7 @@ interface EmailChangeDecision {
  * 'free' rows are included because they still exist in the table; they are
  * never written again.
  */
-export const DOMAIN_LOCKING_STATUSES: readonly string[] = ['free', 'promo', 'paid', 'plan'];
+export const DOMAIN_LOCKING_STATUSES: readonly string[] = ['free', 'promo', 'paid', 'plan', 'pack'];
 
 function emailDomain(email: string): string | null {
     const parts = email.toLowerCase().trim().split('@');
@@ -88,17 +92,22 @@ export async function evaluateEmailChange(
     //   2. Rows this user personally posted (userId match), in case
     //      quotaDomain is null on a legacy row or userId got nulled by a
     //      prior account deletion + re-creation flow.
-    const lockingRows = await prisma.employerJob.count({
-        where: {
-            paymentStatus: { in: [...DOMAIN_LOCKING_STATUSES] },
-            OR: [
-                { userId },
-                ...(oldDomain ? [{ quotaDomain: oldDomain }] : []),
-            ],
-        },
-    });
+    const owner = [
+        { userId },
+        ...(oldDomain ? [{ quotaDomain: oldDomain }] : []),
+    ];
+    const [lockingRows, lockingPacks] = await Promise.all([
+        prisma.employerJob.count({
+            where: {
+                paymentStatus: { in: [...DOMAIN_LOCKING_STATUSES] },
+                OR: owner,
+            },
+        }),
+        // A paid pack carries credits and the domain's spent intro price.
+        prisma.employerPostPack.count({ where: { status: 'paid', OR: owner } }),
+    ]);
 
-    if (lockingRows > 0) {
+    if (lockingRows + lockingPacks > 0) {
         const domainLabel = oldDomain ?? 'your current domain';
         return {
             allowed: false,

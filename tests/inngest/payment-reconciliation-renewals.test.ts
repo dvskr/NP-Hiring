@@ -31,6 +31,7 @@ vi.mock('stripe', () => ({
 const activationMocks = vi.hoisted(() => ({ activatePaidJobCheckout: vi.fn(), applyRenewalCheckout: vi.fn() }));
 vi.mock('@/app/api/webhooks/stripe/activate-paid-job', () => ({ activatePaidJobCheckout: activationMocks.activatePaidJobCheckout }));
 vi.mock('@/app/api/webhooks/stripe/apply-renewal', () => ({ applyRenewalCheckout: activationMocks.applyRenewalCheckout }));
+vi.mock('@/app/api/webhooks/stripe/post-pack-checkout', () => ({ fulfilPostPackCheckout: vi.fn() }));
 
 const discordMocks = vi.hoisted(() => ({ sendDiscordMessage: vi.fn().mockResolvedValue(true) }));
 vi.mock('@/lib/discord-notifier', () => discordMocks);

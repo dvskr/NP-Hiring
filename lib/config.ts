@@ -21,6 +21,13 @@
  *                 lib/renewal-price.ts decides which a post pays;
  *                 `renewalPriceCentsFor` / `renewalPriceDollarsFor` are the
  *                 only mapping code should use.
+ *   5-post pack  $1,245 one time (`packPrice`) for `packPosts` = 5 posts,
+ *                 $249 a post, used within `packValidityMonths` = 12
+ *                 months of purchase (lib/post-packs.ts). Each credit
+ *                 publishes one ordinary post ('pack' rows), which renews
+ *                 at the base renewal. Sold only while
+ *                 lib/post-pack-sale.ts#isPackSaleOpen: after the promo,
+ *                 with paid posting and the Stripe webhook configured.
  *   Employer plan — RETIRED (owner decision, 2026-10-24). No page, email,
  *                 FAQ, checkout rail or calculator offers it, and plan
  *                 posts stay non-renewable (create-renewal-checkout 409s
@@ -39,16 +46,22 @@
  *     for-employers / faq / terms / emails). Change a number here and
  *     revisit the copy surfaces listed in docs/pricing-system.md.
  *   - EmployerJob.pricingTier records which ladder rung a row was sold at:
- *     'intro' | 'pro' | 'plan'. Legacy rows carry 'pro'.
- *   - EmployerJob.paymentStatus: 'promo' (launch-free) | 'pending' | 'paid'
- *     | 'plan' (posted under an active Employer plan) | 'refunded' |
- *     'expired' | legacy 'free' / 'free_renewed' / 'free_upgraded'.
+ *     'intro' | 'pro' | 'pack' | 'plan'. Legacy rows carry 'pro'.
+ *   - EmployerJob.paymentStatus: 'promo' (launch-free) | 'pack' (a 5-post
+ *     pack credit) | 'pending' | 'paid' | 'plan' (posted under an active
+ *     Employer plan) | 'refunded' | 'disputed' | 'expired' | legacy 'free' /
+ *     'free_renewed' / 'free_upgraded'.
  */
 
-export type PricingTier = 'intro' | 'pro' | 'plan';
+export type PricingTier = 'intro' | 'pro' | 'pack' | 'plan';
 
-/** What the employer's NEXT post will be, as reported by /api/employer/free-quota-status. */
-export type PostingMode = 'promo' | 'plan' | 'intro' | 'paid';
+/**
+ * What the employer's NEXT post will be, as reported by
+ * /api/employer/free-quota-status: free during the promo, free from a usable
+ * 5-post pack credit, else the intro or the posting price. (The Employer
+ * plan mode went with the plan posting path in phase 2 of the 2027 re-price.)
+ */
+export type PostingMode = 'promo' | 'pack' | 'intro' | 'paid';
 
 /**
  * Which of the two renewal prices a post pays: 'base' (`renewalPrice`) or
@@ -97,7 +110,7 @@ export const config = {
   stripeRenewalPriceInCents: 19900,
   proRenewalPrice: 249,       // dollars — a post bought at the posting price
   stripeProRenewalPriceInCents: 24900,
-  /** Listing duration for EVERY post (promo, intro, pro, plan) and every renewal. */
+  /** Listing duration for EVERY post (promo, pack, intro, pro, plan) and every renewal. */
   durationDays: 60,
   /**
    * A renewal never pushes a post's expiry past this many days after the post
@@ -107,6 +120,12 @@ export const config = {
    * tests/lib/config-pricing.test.ts fails if the two ever disagree.
    */
   renewalCapDays: 365,
+
+  // ─── 5-post pack (on sale from January 1, 2027: lib/post-pack-sale.ts) ───
+  packPosts: 5,               // post credits in one pack
+  packPrice: 1245,            // dollars, one time: $249 a post
+  stripePackPriceInCents: 124500,
+  packValidityMonths: 12,     // calendar months from purchase (lib/post-packs.ts#packExpiresAt)
 
   // ─── Employer plan (effective January 1, 2027) ───
   planPrice: 399,             // dollars per month
@@ -139,6 +158,15 @@ export const config = {
   },
 
   /**
+   * A dollar amount as copy prints it: thousands grouped ($1,245), cents
+   * only when there are any ($19.50). formatPrice prints $1245.
+   */
+  formatDollars: (amount: number): string => {
+    const digits = Number.isInteger(amount) ? 0 : 2;
+    return `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount)}`;
+  },
+
+  /**
    * True while the launch promo is running (every post free). Pass `now`
    * explicitly in tests; production callers use the default.
    */
@@ -146,21 +174,24 @@ export const config = {
 
   /**
    * Stripe unit_amount for a ladder rung. 'plan' is billed by Stripe
-   * Billing (subscription), never through per-post Checkout, so it maps to 0.
+   * Billing (subscription), never through per-post Checkout, and a 'pack'
+   * post was paid for by its pack, so both map to 0.
    */
   priceCentsForTier: (tier: PricingTier | string | null | undefined): number => {
     switch (tier) {
       case 'intro': return config.stripeIntroPriceInCents;
+      case 'pack':
       case 'plan': return 0;
       case 'pro':
       default: return config.stripePriceInCents;
     }
   },
 
-  /** Dollar price for a ladder rung (0 for 'plan'). */
+  /** Dollar price for a ladder rung (0 for 'pack' and 'plan'). */
   priceDollarsForTier: (tier: PricingTier | string | null | undefined): number => {
     switch (tier) {
       case 'intro': return config.introPrice;
+      case 'pack':
       case 'plan': return 0;
       case 'pro':
       default: return config.postingPrice;
@@ -183,6 +214,7 @@ export const config = {
   getTierLabel: (tier?: PricingTier | string): string => {
     switch (tier) {
       case 'intro': return 'Intro';
+      case 'pack': return 'Pack';
       case 'plan': return 'Plan';
       default: return 'Pro';
     }

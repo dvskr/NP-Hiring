@@ -12,12 +12,16 @@
  *   - the count uses the exact intro predicate (lib/pricing.ts#paidPostWhere)
  *     minus the row being activated, so it cannot drift from the decision;
  *   - a 'pro' activation, a legacy row without quotaDomain, and a clean
- *     first intro never log; a failing count never throws.
+ *     first intro never log; a failing count never throws;
+ *   - (2027 re-price, phase 2) a paid Stripe pack at the domain is the
+ *     company's paid purchase too, so an intro sale that raced a pack
+ *     purchase is logged the same way, counted with paidPackWhere.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { paidPostWhere } from '@/lib/pricing';
+import { paidPackWhere } from '@/lib/post-packs';
 import { detectIntroDoubleCharge } from '@/app/api/webhooks/stripe/activate-paid-job';
 
 vi.mock('@/lib/email-service', () => ({
@@ -34,6 +38,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(logger, 'error').mockImplementation(() => undefined);
     vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    vi.mocked(prisma.employerPostPack.count).mockResolvedValue(0 as never);
 });
 
 describe('detectIntroDoubleCharge', () => {
@@ -79,6 +84,26 @@ describe('detectIntroDoubleCharge', () => {
 
         await expect(detectIntroDoubleCharge('ej-5', DOMAIN, 'intro', 'job-5', SESSION)).resolves.toBe(false);
         expect(logger.warn).toHaveBeenCalledTimes(1);
+        expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('logs an error when an intro activation finds a paid Stripe pack at the domain, with no other paid post', async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.employerPostPack.count).mockResolvedValue(1 as never);
+
+        const flagged = await detectIntroDoubleCharge('ej-6', DOMAIN, 'intro', 'job-6', SESSION);
+
+        expect(flagged).toBe(true);
+        expect(prisma.employerPostPack.count).toHaveBeenCalledWith({ where: paidPackWhere(DOMAIN) });
+        const [message, , context] = vi.mocked(logger.error).mock.calls[0];
+        expect(message).toMatch(/Intro price charged twice/);
+        expect(context).toMatchObject({ quotaDomain: DOMAIN, otherPaidPosts: 0, paidPacks: 1 });
+    });
+
+    it('stays silent while the domain has neither another paid post nor a paid pack', async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+
+        expect(await detectIntroDoubleCharge('ej-7', DOMAIN, 'intro', 'job-7', SESSION)).toBe(false);
         expect(logger.error).not.toHaveBeenCalled();
     });
 });

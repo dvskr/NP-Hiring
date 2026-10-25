@@ -9,24 +9,30 @@
  *           config.promoEndsLabel. Row: paymentStatus 'promo', pricingTier
  *           'pro'. Guarded by config.promoMaxActivePostsPerDomain (an abuse
  *           cap on concurrently-live promo posts per signup domain — never
- *           marketed) → 403 { promoCapReached: true }.
- *   plan  — the employer holds an entitled Employer plan with a free slot
- *           (lib/employer-plan.ts#getPlanSlotStatus). Row: paymentStatus
- *           'plan', pricingTier 'plan'. Slot re-checked inside the
- *           transaction → 403 { planSlotsFull: true } when a parallel
- *           submit took the last one.
+ *           marketed) → 403 { promoCapReached: true }. A 5-post pack credit
+ *           is not read and stays unspent.
+ *   pack  — after the promo, the employer holds a usable 5-post pack credit
+ *           (lib/post-packs.ts#getPackCreditStatus). One credit is spent
+ *           inside the transaction (spendPackCredit: a conditional
+ *           decrement). Row: paymentStatus 'pack', pricingTier 'pack',
+ *           postPackId. A credit a parallel post spent first → 409
+ *           { packCreditUnavailable: true }.
+ * (The Employer plan mode went in phase 2 of the 2027 re-price.)
  *
  * Anything else is a paid post → 403 { requiresPayment: true, mode, tier,
  * price, priceCents } and the wizard redirects to /api/create-checkout,
  * which prices the intro/pro rung itself.
  *
  * Both gate checks + all writes run in ONE Serializable transaction (audit
- * #6 + #7) so two parallel submitters can't both slip past the cap / slot,
- * and a failed slug update or EmployerJob insert can't orphan a Job row.
- * Every row snapshots the SIGNUP email domain into EmployerJob.quotaDomain
- * — the immutable anchor for the promo cap and the per-domain intro price.
+ * #6 + #7) so two parallel submitters can't both slip past the cap or spend
+ * one credit twice, and a failed slug update or EmployerJob insert can't
+ * orphan a Job row (nor spend a credit for no post). A serialization
+ * conflict answers 409 { retry: true }, never 500. Every row snapshots the
+ * SIGNUP email domain into EmployerJob.quotaDomain — the immutable anchor
+ * for the promo cap and the per-domain intro price.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import type { Job } from '@prisma/client';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
@@ -50,10 +56,14 @@ import {
   isFreeEmailDomain,
   domainOf,
   countActivePromoPostsForDomain,
-  countActivePlanPostsForUser,
   resolvePostingMode,
 } from '@/lib/pricing';
-import { getPlanSlotStatus } from '@/lib/employer-plan';
+import {
+  PackCreditUnavailableError,
+  getPackCreditStatus,
+  spendPackCredit,
+  type PackCreditStatus,
+} from '@/lib/post-packs';
 // Typed-field validation + deterministic classification shared with the
 // paid path, so the two posting routes can never drift on shape rules.
 import {
@@ -67,7 +77,14 @@ import {
 } from './_lib/job-attributes';
 
 /** Modes this route can fulfil without a charge. Paid modes 403 to checkout. */
-type NoChargeMode = Extract<PostingMode, 'promo' | 'plan'>;
+type NoChargeMode = Extract<PostingMode, 'promo' | 'pack'>;
+
+/** Prisma's code for a Serializable transaction that lost a concurrent-write race. */
+const SERIALIZATION_FAILURE_CODE = 'P2034';
+
+function isSerializationFailure(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === SERIALIZATION_FAILURE_CODE;
+}
 
 class PromoCapReachedError extends Error {
   constructor(public readonly activeCount: number) {
@@ -76,11 +93,9 @@ class PromoCapReachedError extends Error {
   }
 }
 
-class PlanSlotsFullError extends Error {
-  constructor(public readonly used: number, public readonly slots: number) {
-    super('Employer plan slots full');
-    this.name = 'PlanSlotsFullError';
-  }
+/** The credits left after a pack post, as the response carries them. */
+function packCreditsJson(status: PackCreditStatus) {
+  return { remaining: status.remaining, total: status.total, expiresAt: status.expiresAt?.toISOString() ?? null };
 }
 
 export async function POST(request: NextRequest) {
@@ -242,11 +257,12 @@ export async function POST(request: NextRequest) {
     const quotaDomain = signupDomain;
 
     // ── Which rung does this post land on? ──────────────────────────────
-    // Plan entitlement is read once here (time-based, cheap); the slot
-    // COUNT is re-read inside the transaction below.
+    // A pack credit matters only once the promo is over (the promo wins and
+    // the credit stays unspent), so it is read only then. This read decides
+    // the mode; the credit itself is spent inside the transaction below.
     const now = new Date();
-    const planSlot = await getPlanSlotStatus(userId, now);
-    const quote = await resolvePostingMode({ quotaDomain, hasPlanSlot: planSlot.canPost, now });
+    const packCredit = config.isPromoActive(now) ? null : await getPackCreditStatus(userId, now);
+    const quote = await resolvePostingMode({ quotaDomain, hasPackCredit: packCredit?.usable ?? false, now });
 
     if (!quote.willBeFree) {
       logger.info('Post requires payment — redirecting to checkout', {
@@ -268,7 +284,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const postingMode: NoChargeMode = quote.mode === 'plan' ? 'plan' : 'promo';
+    const postingMode: NoChargeMode = quote.mode === 'pack' ? 'pack' : 'promo';
     const paymentStatus = postingMode;
     const pricingTier: PricingTier = quote.tier;
 
@@ -284,7 +300,7 @@ export async function POST(request: NextRequest) {
     const editToken = crypto.randomBytes(32).toString('hex');
     const dashboardToken = crypto.randomBytes(32).toString('hex');
 
-    // Every post — promo, plan, intro, pro — runs config.durationDays.
+    // Every post — promo, pack, intro, pro — runs config.durationDays.
     // UTC math via expiresFromNow — setDate() drifted across DST boundaries.
     const expiresAt = expiresFromNow(config.durationDays, now);
 
@@ -360,9 +376,11 @@ export async function POST(request: NextRequest) {
     // transaction. Postgres aborts the second transaction if two requests
     // race past the count check. Atomicity also fixes the orphan-row risk
     // when the slug update or employerJob insert fails after the job insert.
-    let job;
+    let job: Job;
+    let packAfter: PackCreditStatus | null;
     try {
-      job = await prisma.$transaction(async (tx) => {
+      const written = await prisma.$transaction(async (tx) => {
+        let postPackId: string | null = null;
         if (postingMode === 'promo') {
           // Promo abuse cap — live promo posts per signup domain, counted
           // from the immutable quotaDomain snapshot. Re-checked inside the
@@ -373,12 +391,9 @@ export async function POST(request: NextRequest) {
             throw new PromoCapReachedError(activePromo);
           }
         } else {
-          // Plan slot — re-counted through the transaction client so a
-          // parallel submit from the same employer can't over-fill the plan.
-          const used = await countActivePlanPostsForUser(userId, tx, now);
-          if (used >= planSlot.slots) {
-            throw new PlanSlotsFullError(used, planSlot.slots);
-          }
+          // Pack credit, spent in the same transaction as the post: no post
+          // without a credit, and no credit spent for a post that rolled back.
+          ({ packId: postPackId } = await spendPackCredit(tx, userId, now));
         }
 
         const created = await tx.job.create({
@@ -455,11 +470,17 @@ export async function POST(request: NextRequest) {
             userId: userId,
             // Immutable quota anchor — never written by any update path
             quotaDomain: quotaDomain,
+            ...(postPackId && { postPackId }),
           },
         });
 
-        return updated;
+        // The credits left once this post spent one, read through the same
+        // snapshot so a parallel post cannot make the count stale.
+        const remaining = postPackId ? await getPackCreditStatus(userId, now, tx) : null;
+        return { job: updated, packAfter: remaining };
       }, { isolationLevel: 'Serializable' });
+      job = written.job;
+      packAfter = written.packAfter;
     } catch (txErr) {
       if (txErr instanceof PromoCapReachedError) {
         logger.warn('Promo post cap reached for domain', {
@@ -476,19 +497,28 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
-      if (txErr instanceof PlanSlotsFullError) {
-        logger.info('Employer plan slots full', {
-          domain: quotaDomain,
-          userId,
-          used: txErr.used,
-          slots: txErr.slots,
-        });
+      if (txErr instanceof PackCreditUnavailableError) {
+        // The credit the quote saw was spent (or expired) before this
+        // transaction: nothing was written. The next quote prices the post.
+        logger.info('5-post pack credit gone before the post was written', { domain: quotaDomain, userId });
         return NextResponse.json(
           {
-            error: `All ${txErr.slots} of your Employer plan slots are in use. Close or archive an active post to free a slot.`,
-            planSlotsFull: true,
+            error: `Your ${config.packPosts}-post pack has no posts left. Refresh the page to see the price of this post.`,
+            packCreditUnavailable: true,
           },
-          { status: 403 }
+          { status: 409 }
+        );
+      }
+      if (isSerializationFailure(txErr)) {
+        // Another post from the same account (or domain) committed first;
+        // nothing was written, and a retry decides afresh.
+        logger.info('Post-free transaction lost a concurrent write; asking for a retry', { domain: quotaDomain, userId, mode: postingMode });
+        return NextResponse.json(
+          {
+            error: 'Another post from your account was saved at the same moment. Please try again.',
+            retry: true,
+          },
+          { status: 409 }
         );
       }
       throw txErr;
@@ -525,7 +555,7 @@ export async function POST(request: NextRequest) {
     // Send confirmation email with dashboard token + the listing duration so
     // the email's "N-day listing" line matches the actual expiresAt written
     // to the DB (audit #30), plus the mode so the template can say "free
-    // during our launch promo" / "posted under your Employer plan".
+    // during our launch promo", or name the pack a pack post was made with.
     try {
       await sendConfirmationEmail(
         sanitized.contactEmail,
@@ -534,7 +564,7 @@ export async function POST(request: NextRequest) {
         dashboardToken,
         undefined, // unsubscribeToken — looked up by email
         config.durationDays,
-        undefined, // invoice — no charge on promo / plan posts
+        undefined, // invoice — no charge on a promo or pack post
         postingMode,
       );
     } catch (emailError) {
@@ -582,13 +612,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Return success response. `mode` lets the preview redirect to
-    // /success?mode=promo | ?mode=plan (the legacy ?free=true still works).
+    // /success?mode=promo | ?mode=pack (the legacy ?free=true still works);
+    // a pack post also carries the credits it left.
     return NextResponse.json({
       success: true,
       jobId: job.id,
       editToken,
       dashboardToken,
       mode: postingMode,
+      ...(packAfter && { pack: packCreditsJson(packAfter) }),
     });
   } catch (error) {
     logger.error('Posting error (no-charge path)', error);

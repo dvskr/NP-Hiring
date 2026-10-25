@@ -130,14 +130,14 @@ describe('each dashboard row carries the price it renews for', () => {
         expect(jobs.map((job) => job.renewalPrice)).toEqual([199, 249]);
     });
 
-    it('a row loaded without its charges is priced at the base renewal', async () => {
+    it('a row loaded without its charges fails the page instead of quoting the base renewal', async () => {
+        // Its price cannot be told, and the base price would misquote a post
+        // bought at the posting price (review 2.28 M1).
         vi.mocked(prisma.employerJob.findMany).mockResolvedValue([
             record({ id: 'bare', paymentStatus: 'paid', pricingTier: 'pro', withoutCharges: true }),
         ] as never);
 
-        const [job] = await renderedJobs();
-
-        expect(job.renewalPrice).toBe(config.renewalPrice);
+        await expect(renderedJobs()).rejects.toThrow(/NEW_POST_CHARGE_SELECT/);
     });
 
     it('keeps the fields the client already read, and sends no ledger rows', async () => {

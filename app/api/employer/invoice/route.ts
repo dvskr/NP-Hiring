@@ -92,12 +92,22 @@ export async function GET(request: NextRequest) {
 
     // Block invoice generation for rows that never produced a charge:
     // launch-promo posts, Employer-plan posts (the plan itself is invoiced by
-    // Stripe Billing, not per post) and the legacy free-quota statuses.
+    // Stripe Billing, not per post), 5-post pack posts (the pack was invoiced
+    // when it was bought) and the legacy free-quota statuses.
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
         {
           error: 'Invoices are not available for Employer plan postings.',
           message: 'This job was posted under your Employer plan. No per-post payment was made. Stripe sends your plan invoices each billing period.'
+        },
+        { status: 400 }
+      );
+    }
+    if (employerJob.paymentStatus === 'pack') {
+      return NextResponse.json(
+        {
+          error: `Invoices are not available for posts made with a ${config.packPosts}-post pack.`,
+          message: `This job used a post from your ${config.packPosts}-post pack, so no payment was made for it. The invoice for the pack covers it.`
         },
         { status: 400 }
       );

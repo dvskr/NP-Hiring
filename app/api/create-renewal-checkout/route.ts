@@ -3,8 +3,9 @@
  * post, for config.renewalPrice, or config.proRenewalPrice when the post was
  * bought at the posting price (lib/renewal-price.ts).
  *
- * Eligible rows: 'promo' (launch-free post, renewable at the normal price)
- * and 'paid' (intro / pro). Blocked with 409:
+ * Eligible rows: 'promo' (launch-free post, renewable at the normal price),
+ * 'pack' (a 5-post pack post, renewable at the base price and keeping its
+ * 'pack' tier) and 'paid' (intro / pro). Blocked with 409:
  *   'pending'  — checkout never completed; resume the original instead
  *   'expired'  — an abandoned checkout the reconciliation sweep retired: the
  *                post was never paid for, and a renewal would publish it at
@@ -42,7 +43,7 @@ import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config, PricingTier, type RenewalRung } from '@/lib/config';
-import { asPaidTier, NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
+import { asRenewalTier, NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
 import { renewalRungForRow } from '@/lib/renewal-price';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { readJsonObject, stringField } from '@/lib/request-body';
@@ -261,8 +262,8 @@ export async function POST(request: NextRequest) {
 
     // Carry the row's own rung through metadata so the renewal webhook
     // (which writes pricingTier = metadata.tier) doesn't rewrite an 'intro'
-    // row as 'pro'. Never 'plan' — blocked above.
-    const tier: PricingTier = asPaidTier(employerJob.pricingTier);
+    // row, or a 5-post pack post, as 'pro'. Never 'plan' — blocked above.
+    const tier: PricingTier = asRenewalTier(employerJob.pricingTier);
 
     // The renewal cap: what this renewal would add, computed exactly as the
     // webhook computes it when it applies one. Nothing to add, nothing to
@@ -279,7 +280,10 @@ export async function POST(request: NextRequest) {
     // What this post pays to renew: config.proRenewalPrice for a post bought at
     // the posting price, config.renewalPrice for every other one
     // (lib/renewal-price.ts). Decided here, after every refusal above, from
-    // the stored row; the webhook records what Stripe charged.
+    // the stored row; the webhook records what Stripe charged. A row whose
+    // charges did not load (jobCharges not an array) throws here, before any
+    // Stripe call: the catch below logs it and answers 500 rather than sell
+    // the renewal at a guessed price (review 2.28 M1).
     const renewalRung = renewalRungForRow(employerJob);
 
     // GA attribution for the renewal purchase event the webhook sends later;
