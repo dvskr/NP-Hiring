@@ -151,7 +151,7 @@ const FOLLOW_UPS_PAGES: readonly string[] = [
  * constant and these entries together if the release ships on a later day.
  * COMPARE_REVIEW_DATE stays, because no competitor claim was re-checked.
  */
-const PRICING_RELEASE_DAY = '2026-10-24';
+const PRICING_RELEASE_DAY = '2026-10-25';
 const PRICING_RELEASE_PAGES: readonly string[] = [
     '/pricing',
     '/for-employers',
