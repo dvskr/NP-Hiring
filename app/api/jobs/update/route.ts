@@ -4,6 +4,7 @@ import { sanitizeJobPosting, sanitizeUrl, sanitizeEmail, sanitizeText, normalize
 import { summarizeForMeta } from '@/lib/description-cleaner';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { readJsonObject, stringField } from '@/lib/request-body';
 import { inngest } from '@/lib/inngest/client';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
@@ -49,19 +50,31 @@ interface UpdateJobData {
   screeningQuestions?: ScreeningQuestionInput[];
 }
 
-interface UpdateRequestBody {
-  token: string;
-  jobData: UpdateJobData;
-}
-
 export async function POST(request: NextRequest) {
     // Rate limiting
     const rateLimitResult = await rateLimit(request, 'jobs-update', RATE_LIMITS.general);
     if (rateLimitResult) return rateLimitResult;
 
   try {
-    const body: UpdateRequestBody = await request.json();
-    const { token, jobData: rawJobData } = body;
+    // The edit token is the only thing that authorizes this edit, so it must
+    // be a plain string before it reaches findFirst: an object there is a
+    // Prisma filter ({ not: '' } matched every post). lib/request-body.ts.
+    const body = await readJsonObject(request);
+    const token = stringField(body?.token);
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Token is required' },
+        { status: 400 }
+      );
+    }
+    const jobDataInput = body?.jobData;
+    if (!jobDataInput || typeof jobDataInput !== 'object' || Array.isArray(jobDataInput)) {
+      return NextResponse.json(
+        { error: 'Job details are required' },
+        { status: 400 }
+      );
+    }
+    const rawJobData = jobDataInput as UpdateJobData;
 
     // Sanitize job data. Description is whitespace-normalized first so Quill-
     // emitted &nbsp; / U+00A0 between words doesn't make the body line-break
@@ -87,13 +100,6 @@ export async function POST(request: NextRequest) {
       contactEmail: rawJobData.contactEmail ? sanitizeEmail(rawJobData.contactEmail) : undefined,
       companyWebsite: rawJobData.companyWebsite ? sanitizeUrl(rawJobData.companyWebsite) : undefined,
     };
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token is required' },
-        { status: 400 }
-      );
-    }
 
     // Verify token
     const employerJob = await prisma.employerJob.findFirst({

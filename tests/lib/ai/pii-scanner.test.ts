@@ -37,4 +37,22 @@ describe('PII scanner', () => {
         const violations = __testing.findViolations('test.json', 'system', 'Score the candidate based on certifications and license states.');
         expect(violations).toEqual([]);
     });
+
+    it('skips a field the prompt declares in its allow list, and only that field', () => {
+        const allow = new Set(['race']);
+        const violations = __testing.findViolations('test.json', 'system', 'Do NOT extract or infer race or religion.', allow);
+        expect(violations.some((v) => v.pattern === 'field:race')).toBe(false);
+        expect(violations.some((v) => v.pattern === 'field:religion')).toBe(true);
+    });
+});
+
+// The CI step (npm run lint:pii-prompts, .github/workflows/ai-gates.yml) runs
+// this same scan; running it here too means a prompt that trips it fails the
+// local suite, not only CI. It failed every CI run from May to October 2026 on
+// the resume parser's own "do not extract" list before the allow list named it.
+describe('every registered prompt passes the PII scan', () => {
+    it('finds no violation in lib/ai/prompts', async () => {
+        const violations = await __testing.scanPrompts();
+        expect(violations).toEqual([]);
+    });
 });

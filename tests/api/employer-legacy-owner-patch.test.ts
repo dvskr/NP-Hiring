@@ -8,6 +8,12 @@
  * unconfirmed email matched a legacy posting could change its applicants'
  * statuses and switch off its owner's alerts. Both now ask isEmployerJobOwner.
  *
+ * Also here: PATCH /api/employer/applicants reads the application id as a plain
+ * string. It is the only key of the jobApplication.findUnique that decides
+ * ownership and of the update after it, and the route had no try/catch, so a
+ * JSON body that carried an object there answered an unhandled 500. It now
+ * answers 400 before any query (lib/request-body.ts).
+ *
  * Supabase and the database are mocked; nothing here reaches either.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -114,5 +120,52 @@ describe('the legacy owner of a posting is a confirmed email', () => {
             expect(src, file).toContain('isEmployerJobOwner(');
             expect(src, file).not.toMatch(/contactEmail === user\.email/);
         }
+    });
+});
+
+const BAD_APPLICATION_IDS: Array<[string, unknown]> = [
+    ['a not filter', { not: '' }],
+    ['a startsWith filter', { startsWith: 'app' }],
+    ['an array', ['app-1']],
+    ['a number', 12345],
+    ['a boolean', true],
+    ['null', null],
+    ['no value', undefined],
+    ['an empty string', ''],
+    ['an overlong string', 'a'.repeat(201)],
+];
+
+describe('PATCH /api/employer/applicants: the application id is a plain string', () => {
+    beforeEach(() => {
+        h.getUser.mockResolvedValue({ data: { user: CONFIRMED }, error: null });
+    });
+
+    it.each(BAD_APPLICATION_IDS)('refuses %s as the application id with 400 and no query', async (_label, applicationId) => {
+        const res = await patchApplication(patch('/api/employer/applicants', { applicationId, notes: 'Strong fit' }));
+
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ error: 'applicationId is required' });
+        expect(h.applicationFindUnique).not.toHaveBeenCalled();
+        expect(h.applicationUpdate).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['a null body', null],
+        ['an array body', [{ applicationId: 'app-1', notes: 'Strong fit' }]],
+        ['a string body', 'app-1'],
+    ])('refuses %s with 400 and no query', async (_label, body) => {
+        const res = await patchApplication(patch('/api/employer/applicants', body));
+
+        expect(res.status).toBe(400);
+        expect(h.applicationFindUnique).not.toHaveBeenCalled();
+        expect(h.applicationUpdate).not.toHaveBeenCalled();
+    });
+
+    it('still looks a string application id up by equality and updates that row', async () => {
+        const res = await patchApplication(patch('/api/employer/applicants', { applicationId: 'app-1', notes: 'Strong fit' }));
+
+        expect(res.status).toBe(200);
+        expect(h.applicationFindUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'app-1' } }));
+        expect(h.applicationUpdate).toHaveBeenCalledWith({ where: { id: 'app-1' }, data: { notes: 'Strong fit' } });
     });
 });

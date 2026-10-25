@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { stringField } from '@/lib/request-body';
 
 const VALID_REASONS = ['expired', 'wrong_salary', 'scam', 'duplicate', 'wrong_info', 'other'];
 const AUTO_UNPUBLISH_THRESHOLD = 3;
@@ -61,7 +62,11 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { jobId, reason, details } = body;
+        // jobId is the lookup key of the queries below, so it must be a plain
+        // string: an object there answered 500. A null body reads as no fields.
+        // lib/request-body.ts
+        const { reason, details } = body ?? {};
+        const jobId = stringField(body?.jobId);
 
         if (!jobId || !reason) {
             return NextResponse.json(

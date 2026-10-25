@@ -1,12 +1,9 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { ctDayBounds } from '@/lib/format-ct';
 import { parsePagingParam } from '@/app/api/admin/jobs/_lib/job-input';
 
-// Not exported: a 'use server' module may export async functions only.
 const DEFAULT_DAYS = 30;
 const MAX_DAYS = 365;
 

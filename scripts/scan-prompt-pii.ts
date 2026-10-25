@@ -83,13 +83,9 @@ function findViolations(
     return found;
 }
 
-async function main(): Promise<void> {
+/** Every violation across every registered prompt version (what the CLI reports). */
+async function scanPrompts(): Promise<Violation[]> {
     const prompts = await listPrompts();
-    if (prompts.length === 0) {
-        console.log('[pii-scan] No prompts registered. Skipping.');
-        process.exit(0);
-    }
-
     let total: Violation[] = [];
     for (const entry of prompts) {
         for (const v of entry.versions) {
@@ -109,7 +105,17 @@ async function main(): Promise<void> {
             total = total.concat(findViolations(file, 'user_template', loaded.rawUserTemplate,   allow));
         }
     }
+    return total;
+}
 
+async function main(): Promise<void> {
+    const prompts = await listPrompts();
+    if (prompts.length === 0) {
+        console.log('[pii-scan] No prompts registered. Skipping.');
+        process.exit(0);
+    }
+
+    const total = await scanPrompts();
     if (total.length === 0) {
         console.log(`[pii-scan] PASS — ${prompts.reduce((a, b) => a + b.versions.length, 0)} prompt files scanned, no violations.`);
         process.exit(0);
@@ -138,6 +144,7 @@ if (typeof require !== 'undefined' && require.main === module) {
 export const __testing = {
     findViolations: (file: string, where: 'system' | 'user_template', text: string, allow: ReadonlySet<string> = new Set()) =>
         findViolations(file, where, text, allow),
+    scanPrompts,
     FORBIDDEN_FIELD_REFS,
     PII_VALUE_PATTERNS,
 };

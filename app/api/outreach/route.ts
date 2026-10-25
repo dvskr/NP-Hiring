@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { sanitizeText, sanitizeEmail, sanitizeUrl } from '@/lib/sanitize';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
+import { stringField } from '@/lib/request-body';
 import {
   suggestTargetCompanies,
   getLeadsByStatus,
@@ -114,7 +115,11 @@ export async function POST(request: NextRequest) {
 
     // Update lead status
     if (action === 'update') {
-      const { id, status, notes } = body;
+      const { status, notes } = body;
+      // The lead id is the only key of the findUnique and the update in
+      // updateLeadStatus, so it must be a plain string: an object or a number
+      // made Prisma throw and answered 500. lib/request-body.ts
+      const id = stringField(body.id);
       const sanitizedNotes = notes ? sanitizeText(notes, 5000) : undefined;
 
       if (!id || !status) {

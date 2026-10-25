@@ -6,6 +6,12 @@
  * was stored and emailed to that account. It is refused with the answer an
  * unreachable employer already gets, the rule the employer side applies to a
  * deleted recipient (POST /api/employer/messages, the reply route).
+ *
+ * Also here: the body values (jobId, subject, body) must be plain strings. The
+ * job id is the lookup key of job.findUnique, and subject.trim() and
+ * messageBody.trim() threw on anything else, which answered 500. A request
+ * whose body is not a JSON object, or whose values are not strings, now
+ * answers 400 before the job is looked up (lib/request-body.ts).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -97,6 +103,99 @@ describe('POST /api/candidate/messages: the employer behind the posting', () => 
         expect(vi.mocked(prisma.userProfile.findFirst)).toHaveBeenCalledWith(
             expect.objectContaining({ where: { email: 'hiring@clinic.example', role: 'employer' } }),
         );
+    });
+});
+
+const VALID_MESSAGE = { jobId: 'job-1', subject: 'Question', body: 'Is the role hybrid?' };
+
+function sendJson(body: string): NextRequest {
+    return new NextRequest('https://nphiring.com/api/candidate/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body,
+    });
+}
+
+/** Values a JSON body can carry that are not a string, or an empty one. */
+const NOT_A_STRING: Array<[string, unknown]> = [
+    ['a not filter', { not: '' }],
+    ['a startsWith filter', { startsWith: 'a' }],
+    ['an array', ['a']],
+    ['a number', 12345],
+    ['a boolean', true],
+    ['null', null],
+    ['no value', undefined],
+    ['an empty string', ''],
+];
+/** A string with nothing in it once trimmed: refused for the subject and the body, which are trimmed. */
+const BLANK_STRING: [string, unknown] = ['a blank string', '   '];
+
+function expectNothingLookedUpOrStored(): void {
+    expect(extra.jobFindUnique).not.toHaveBeenCalled();
+    expect(extra.conversationCreate).not.toHaveBeenCalled();
+    expect(extra.messageCreate).not.toHaveBeenCalled();
+    expect(vi.mocked(sendCandidateInquiryNotification)).not.toHaveBeenCalled();
+}
+
+describe('POST /api/candidate/messages: the body values are plain strings', () => {
+    beforeEach(() => employerIs(null));
+
+    it.each([...NOT_A_STRING, ['an overlong string', 'a'.repeat(201)]])(
+        'refuses %s as the job id with 400 and no job lookup',
+        async (_label, jobId) => {
+            const res = await POST(sendJson(JSON.stringify({ ...VALID_MESSAGE, jobId })));
+            expect(res.status).toBe(400);
+            expect(await res.json()).toEqual({ error: 'jobId is required' });
+            expectNothingLookedUpOrStored();
+        },
+    );
+
+    it.each([...NOT_A_STRING, BLANK_STRING])('refuses %s as the subject with 400 and no job lookup', async (_label, subject) => {
+        const res = await POST(sendJson(JSON.stringify({ ...VALID_MESSAGE, subject })));
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ error: 'Subject is required' });
+        expectNothingLookedUpOrStored();
+    });
+
+    it.each([...NOT_A_STRING, BLANK_STRING])('refuses %s as the message body with 400 and no job lookup', async (_label, body) => {
+        const res = await POST(sendJson(JSON.stringify({ ...VALID_MESSAGE, body })));
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ error: 'Message body is required' });
+        expectNothingLookedUpOrStored();
+    });
+
+    it.each([
+        ['malformed JSON', '{"jobId":'],
+        ['an empty body', ''],
+        ['a null body', 'null'],
+        ['an array body', JSON.stringify([VALID_MESSAGE])],
+        ['a string body', '"job-1"'],
+    ])('refuses %s with 400 and no job lookup', async (_label, body) => {
+        const res = await POST(sendJson(body));
+        expect(res.status).toBe(400);
+        expectNothingLookedUpOrStored();
+    });
+
+    it('still looks a string job id up by equality and stores the message', async () => {
+        const res = await POST(sendJson(JSON.stringify(VALID_MESSAGE)));
+        expect(res.status).toBe(201);
+        expect(extra.jobFindUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'job-1' } }));
+        expect(extra.messageCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('still refuses a message over 2000 characters with its own answer', async () => {
+        const res = await POST(sendJson(JSON.stringify({ ...VALID_MESSAGE, body: 'b'.repeat(2001) })));
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ error: 'Message must be under 2000 characters' });
+        expectNothingLookedUpOrStored();
+    });
+
+    it('still cuts a long subject to 200 characters instead of refusing it', async () => {
+        const res = await POST(sendJson(JSON.stringify({ ...VALID_MESSAGE, subject: 'S'.repeat(300) })));
+        expect(res.status).toBe(201);
+        expect(extra.messageCreate).toHaveBeenCalledWith({
+            data: expect.objectContaining({ subject: 'S'.repeat(200) }),
+        });
     });
 });
 

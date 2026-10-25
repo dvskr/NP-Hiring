@@ -20,7 +20,17 @@ jobs:
   typecheck-and-test:
     name: tsc --noEmit + vitest run
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The full suite is about 590 files and takes 6 to 7 minutes on a laptop;
+    # 10 left no headroom on a shared runner.
+    timeout-minutes: 30
+    env:
+      # npm ci runs `prisma generate` as a postinstall, which loads
+      # prisma.config.ts, and that throws when DIRECT_URL is unset (the cause
+      # ai-gates.yml documents); the October 2026 runs failed at "Install
+      # dependencies". Codegen never connects, and tests/setup.ts mocks Prisma, so these
+      # placeholders never reach a database.
+      DIRECT_URL: postgresql://prisma-codegen-only@localhost:5432/postgres
+      DATABASE_URL: postgresql://test:test@localhost:5432/test
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +51,5 @@ jobs:
         run: npx tsc --noEmit --pretty false
 
       - name: Run Vitest suite
+        # Vitest setup file mocks Prisma; no real DB needed (job env above).
         run: npx vitest run --reporter=default
-        env:
-          # Vitest setup file mocks Prisma; no real DB needed.
-          DATABASE_URL: postgresql://test:test@localhost:5432/test

@@ -166,8 +166,13 @@ export async function PATCH(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     const apiKey = process.env.BLOG_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'BLOG_API_KEY not configured' }, { status: 500 });
-    const providedKey = authHeader?.replace('Bearer ', '');
-    if (!providedKey || providedKey !== apiKey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Constant time compare, as POST does. The length test counts bytes, not
+    // characters: timingSafeEqual throws on buffers of unequal byte length, and
+    // a header can hold a two byte character where the key has a one byte one.
+    const providedKey = Buffer.from(authHeader?.replace('Bearer ', '') || '');
+    const expectedKey = Buffer.from(apiKey);
+    const keysMatch = providedKey.length === expectedKey.length && timingSafeEqual(providedKey, expectedKey);
+    if (!keysMatch) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
         const body = await request.json();

@@ -5,6 +5,11 @@
  *
  * The fix de-dups per (jobId, reporterEmail) and measures the threshold in
  * DISTINCT reporters. These tests lock that in.
+ *
+ * Also: the job id in the body must be a plain string. It is the lookup key of
+ * job.findUnique and the where of the report queries after it, and a JSON
+ * body can carry an object there (an unvalidated value reached Prisma and
+ * answered 500). The route answers 400 before any query (lib/request-body.ts).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
@@ -87,5 +92,77 @@ describe('POST /api/jobs/report — abuse-resistant threshold', () => {
     expect(prisma.job.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'job1' }, data: { isPublished: false } }),
     );
+  });
+});
+
+let nextReporterIp = 0;
+
+/**
+ * A report request from a fresh IP. The route keeps a module-level count of
+ * 5 reports per hour per IP, and this file's other requests share one.
+ */
+function reportFromNewIp(body: string): Request {
+  nextReporterIp += 1;
+  return new Request('https://example.com/api/jobs/report', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': `203.0.113.${nextReporterIp}` },
+    body,
+  });
+}
+
+const BAD_JOB_IDS: Array<[string, unknown]> = [
+  ['a not filter', { not: '' }],
+  ['a startsWith filter', { startsWith: 'job' }],
+  ['an array', ['job1']],
+  ['a number', 12345],
+  ['a boolean', true],
+  ['null', null],
+  ['no value', undefined],
+  ['an empty string', ''],
+  ['an overlong string', 'a'.repeat(201)],
+];
+
+describe('POST /api/jobs/report: the job id is a plain string', () => {
+  it.each(BAD_JOB_IDS)('refuses %s as the job id with 400 and no query', async (_label, jobId) => {
+    const { POST } = await import('@/app/api/jobs/report/route');
+    const res = await POST(reportFromNewIp(JSON.stringify({ jobId, reason: 'scam' })) as never);
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'jobId and reason are required' });
+    expect(prisma.job.findUnique).not.toHaveBeenCalled();
+    expect(prisma.jobReport.findFirst).not.toHaveBeenCalled();
+    expect(prisma.jobReport.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a null body', 'null'],
+    ['an array body', JSON.stringify([{ jobId: 'job1', reason: 'scam' }])],
+    ['a string body', '"job1"'],
+  ])('refuses %s with 400 and no query', async (_label, body) => {
+    const { POST } = await import('@/app/api/jobs/report/route');
+    const res = await POST(reportFromNewIp(body) as never);
+
+    expect(res.status).toBe(400);
+    expect(prisma.job.findUnique).not.toHaveBeenCalled();
+    expect(prisma.jobReport.create).not.toHaveBeenCalled();
+  });
+
+  it('still refuses a reason that is not one of the listed reasons', async () => {
+    const { POST } = await import('@/app/api/jobs/report/route');
+    const res = await POST(reportFromNewIp(JSON.stringify({ jobId: 'job1', reason: { not: '' } })) as never);
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/^Invalid reason/);
+    expect(prisma.job.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('still looks a string job id up by equality', async () => {
+    vi.mocked(prisma.job.findUnique).mockResolvedValue(null as never);
+
+    const { POST } = await import('@/app/api/jobs/report/route');
+    const res = await POST(reportFromNewIp(JSON.stringify({ jobId: 'job1', reason: 'scam' })) as never);
+
+    expect(res.status).toBe(404);
+    expect(prisma.job.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'job1' } }));
   });
 });

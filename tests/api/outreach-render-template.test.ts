@@ -14,9 +14,15 @@
  *   - every other failure        → still the logged 500;
  *   - template names are validated against the service's own list
  *     (OUTREACH_TEMPLATE_NAMES), and the admin gate runs first, unchanged.
+ *
+ * Also here: the 'update' action reads the lead id as a plain string. The id is
+ * the lookup key of the findUnique and the update in updateLeadStatus, and a
+ * JSON body can carry an object or a number there, which Prisma rejects (500).
+ * The route answers 400 before any query (lib/request-body.ts). Admin only.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 const adminMocks = vi.hoisted(() => ({ requireApiAdmin: vi.fn() }));
 vi.mock('@/lib/auth/require-api-admin', () => adminMocks);
@@ -148,5 +154,59 @@ describe('every other outcome is unchanged', () => {
         expect(json).toEqual({ error: 'Admin access required' });
         expect(adminMocks.requireApiAdmin).toHaveBeenCalledTimes(1);
         expect(serviceMocks.renderTemplate).not.toHaveBeenCalled();
+    });
+});
+
+/** Lead ids a JSON body can carry that are not a plain non-empty string. */
+const BAD_LEAD_IDS: Array<[string, unknown]> = [
+    ['a not filter', { not: '' }],
+    ['a startsWith filter', { startsWith: 'lead' }],
+    ['an array', ['lead-1']],
+    ['a number', 12345],
+    ['a boolean', true],
+    ['null', null],
+    ['no value', undefined],
+    ['an empty string', ''],
+    ['an overlong string', 'a'.repeat(201)],
+];
+
+describe("the 'update' action reads the lead id as a plain string", () => {
+    it.each(BAD_LEAD_IDS)('refuses %s as the lead id with 400 and no query', async (_label, id) => {
+        const res = await POST(request({ action: 'update', id, status: 'contacted', notes: 'Called the clinic' }));
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ success: false, error: 'Missing required fields: id and status' });
+        expect(prisma.employerLead.findUnique).not.toHaveBeenCalled();
+        expect(prisma.employerLead.update).not.toHaveBeenCalled();
+    });
+
+    it('still updates the lead by equality on a string id', async () => {
+        const res = await POST(request({ action: 'update', id: 'lead-1', status: 'contacted' }));
+        expect(res.status).toBe(200);
+        expect(prisma.employerLead.update).toHaveBeenCalledWith({
+            where: { id: 'lead-1' },
+            data: { status: 'contacted', contactedAt: expect.any(Date) },
+        });
+    });
+
+    it('still reads the stored notes by equality before it appends one', async () => {
+        vi.mocked(prisma.employerLead.findUnique).mockResolvedValue({ notes: 'First call' } as never);
+        const res = await POST(request({ action: 'update', id: 'lead-1', status: 'replied', notes: 'Asked for pricing' }));
+        expect(res.status).toBe(200);
+        expect(prisma.employerLead.findUnique).toHaveBeenCalledWith({ where: { id: 'lead-1' }, select: { notes: true } });
+        expect(prisma.employerLead.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'lead-1' } }));
+    });
+
+    it('still requires a status', async () => {
+        const res = await POST(request({ action: 'update', id: 'lead-1' }));
+        expect(res.status).toBe(400);
+        expect(prisma.employerLead.update).not.toHaveBeenCalled();
+    });
+
+    it('the admin gate runs first: a non-admin gets its answer and nothing is queried', async () => {
+        adminMocks.requireApiAdmin.mockResolvedValue(NextResponse.json({ error: 'Admin access required' }, { status: 403 }));
+        const res = await POST(request({ action: 'update', id: { not: '' }, status: 'contacted' }));
+        expect(res.status).toBe(403);
+        expect(prisma.employerLead.findUnique).not.toHaveBeenCalled();
+        expect(prisma.employerLead.update).not.toHaveBeenCalled();
     });
 });

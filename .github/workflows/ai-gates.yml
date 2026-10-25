@@ -19,6 +19,11 @@ name: AI quality gates
 #
 # Override: set EVAL_LIVE=1 as a repo secret to force live mode on PRs too
 # (useful when iterating on prompt changes locally — every PR validates).
+#
+# LIVE needs the OPENAI_API_KEY repository secret. Without it every eval step
+# runs dry and the run posts a notice instead of failing (owner choice
+# 2026-10-25: the key lives in Vercel only, and the live site runs its own
+# daily eval, lib/inngest/functions/eval-drift.ts).
 
 on:
   pull_request:
@@ -50,6 +55,10 @@ jobs:
     # suites adds up. Previous 15-min cap was canceling jobs mid-bias-
     # suite. 30 min gives comfortable headroom; nightly cron is fine.
     timeout-minutes: 30
+    env:
+      # 'true' or 'false'. Secrets cannot be read in a step `if`, so the eval
+      # steps read this instead.
+      HAS_OPENAI_KEY: ${{ secrets.OPENAI_API_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,6 +89,10 @@ jobs:
       - name: PII scanner
         run: npm run lint:pii-prompts
 
+      - name: Live evals skipped without the OpenAI key
+        if: env.HAS_OPENAI_KEY != 'true'
+        run: echo "::notice title=Live evals skipped::The OPENAI_API_KEY repository secret is not set, so every eval step below runs dry (no model calls). Add the secret to run them live."
+
       # PRs run dry (validates wiring, free). Pushes to main + nightly cron
       # run live (catches regressions, costs ~$1/run). Force live on PRs by
       # setting EVAL_LIVE=1 as a repo secret.
@@ -96,7 +109,7 @@ jobs:
       # as gates blocks every push to main even though prod is healthy.
       - name: Eval — gating suites (live on push to main / nightly / dispatch)
         env:
-          EVAL_DRY_RUN: ${{ (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || secrets.EVAL_LIVE == '1') && '0' || '1' }}
+          EVAL_DRY_RUN: ${{ env.HAS_OPENAI_KEY == 'true' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || secrets.EVAL_LIVE == '1') && '0' || '1' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/test' }}
           DIRECT_URL:   ${{ secrets.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/test' }}
@@ -104,7 +117,7 @@ jobs:
 
       - name: Eval — bias pair sets
         env:
-          EVAL_DRY_RUN: ${{ (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || secrets.EVAL_LIVE == '1') && '0' || '1' }}
+          EVAL_DRY_RUN: ${{ env.HAS_OPENAI_KEY == 'true' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || secrets.EVAL_LIVE == '1') && '0' || '1' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/test' }}
           DIRECT_URL:   ${{ secrets.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/test' }}
@@ -116,7 +129,7 @@ jobs:
       - name: Eval — advisory SEED_ONLY suites (informational)
         continue-on-error: true
         env:
-          EVAL_DRY_RUN: ${{ (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || secrets.EVAL_LIVE == '1') && '0' || '1' }}
+          EVAL_DRY_RUN: ${{ env.HAS_OPENAI_KEY == 'true' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || secrets.EVAL_LIVE == '1') && '0' || '1' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/test' }}
           DIRECT_URL:   ${{ secrets.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/test' }}
