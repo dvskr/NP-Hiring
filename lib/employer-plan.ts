@@ -16,12 +16,9 @@
  * userId = null and `email` set so an admin can attach it.
  */
 import type { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma, type Db } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { logger } from '@/lib/logger';
-
-/** The global client or an interactive transaction client (slot re-checks run inside one). */
-type Db = Prisma.TransactionClient | typeof prisma;
 
 /**
  *   active    — paid and current

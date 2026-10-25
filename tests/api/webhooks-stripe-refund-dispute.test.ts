@@ -298,6 +298,28 @@ describe('Stripe webhook — charge.dispute.closed', () => {
         expect(prisma.job.update).not.toHaveBeenCalled();
     });
 
+    it("WARNING_CLOSED (an inquiry that never became a chargeback): restored and re-published like a won dispute", async () => {
+        vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ id: 'ej1', jobId: 'job1' } as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
+        vi.mocked(prisma.job.findUnique).mockResolvedValue({ expiresAt: new Date(Date.now() + 86_400_000), archivedAt: null } as never);
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(makeRequest({
+            id: 'evt_inquiry_closed', type: 'charge.dispute.closed',
+            data: { object: { id: 'dp1', payment_intent: 'pi1', amount: AMOUNT, status: 'warning_closed' } },
+        }) as never);
+
+        expect(res.status).toBe(200);
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({
+            where: { id: 'ej1', paymentStatus: 'disputed' },
+            data: { paymentStatus: 'paid' },
+        });
+        expect(prisma.job.update).toHaveBeenCalledWith({
+            where: { id: 'job1' },
+            data: { isPublished: true, contentChangedAt: expect.any(Date) },
+        });
+    });
+
     it('WON: a posting that is no longer disputed (e.g. refunded since) is left alone', async () => {
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ id: 'ej1', jobId: 'job1' } as never);
         vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);

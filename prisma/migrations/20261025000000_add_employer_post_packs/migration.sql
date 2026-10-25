@@ -18,16 +18,26 @@
 -- below zero, and never more are used plus revoked than were sold.
 -- tests/regressions/post-pack-migration.test.ts pins this file.
 
+-- Wait at most 5 seconds for a lock (the foreign key below locks
+-- employer_jobs): a deploy that would queue behind a long transaction fails
+-- and is retried, instead of stalling every write queued behind it. SET
+-- LOCAL, for this migration's transaction only: a session-level SET would
+-- outlive it on a pooled connection.
+SET LOCAL lock_timeout = '5s';
+
 CREATE TABLE "employer_post_packs" (
     "id" TEXT NOT NULL,
     "user_id" TEXT,
     "email" TEXT NOT NULL,
     "quota_domain" TEXT,
     -- 'paid' | 'refunded' | 'disputed'. Text rather than an enum, as for
-    -- employer_plans.status, so a future state needs no migration.
-    "status" TEXT NOT NULL DEFAULT 'paid',
+    -- employer_plans.status, so a future state needs no migration. No
+    -- default, here or on source: the one create site
+    -- (app/api/webhooks/stripe/post-pack-checkout.ts) sets both, and a write
+    -- that forgot one fails instead of recording a pack as paid.
+    "status" TEXT NOT NULL,
     -- 'stripe' | 'admin'
-    "source" TEXT NOT NULL DEFAULT 'stripe',
+    "source" TEXT NOT NULL,
     "credits_total" INTEGER NOT NULL,
     "credits_remaining" INTEGER NOT NULL,
     "credits_revoked" INTEGER NOT NULL DEFAULT 0,

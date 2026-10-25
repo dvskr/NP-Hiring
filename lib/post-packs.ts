@@ -28,13 +28,14 @@
  * The migration's CHECK (credits never below zero, never more used plus
  * revoked than sold) is the last line of defence behind spendPackCredit's
  * conditional decrement.
+ *
+ * Every query on an account's packs refuses a missing account id
+ * (requireAccountId): Prisma reads `userId: undefined` as no filter at all,
+ * so a caller that lost the id would read, or spend, every account's credits.
  */
 import type { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma, type Db } from '@/lib/prisma';
 import { config } from '@/lib/config';
-
-/** The global client or an interactive transaction client. */
-type Db = Prisma.TransactionClient | typeof prisma;
 
 /** EmployerPostPack.status. */
 export type PostPackStatus = 'paid' | 'refunded' | 'disputed';
@@ -64,9 +65,20 @@ export function packExpiresAt(purchasedAt: Date, months: number = config.packVal
   ));
 }
 
+/**
+ * The account id a query on its packs filters by. Throws on a missing one
+ * (security review L2): `userId: undefined` would match every account's packs.
+ */
+function requireAccountId(userId: string): string {
+  if (typeof userId !== 'string' || userId === '') {
+    throw new Error('A 5-post pack query needs the account id');
+  }
+  return userId;
+}
+
 /** The packs whose credits `userId` can spend at `now`. */
 export function usablePackWhere(userId: string, now: Date): Prisma.EmployerPostPackWhereInput {
-  return { userId, status: 'paid', expiresAt: { gt: now }, creditsRemaining: { gt: 0 } };
+  return { userId: requireAccountId(userId), status: 'paid', expiresAt: { gt: now }, creditsRemaining: { gt: 0 } };
 }
 
 /**
@@ -75,7 +87,7 @@ export function usablePackWhere(userId: string, now: Date): Prisma.EmployerPostP
  * totals ("5 of 5 used") until it expires.
  */
 export function currentPackWhere(userId: string, now: Date): Prisma.EmployerPostPackWhereInput {
-  return { userId, status: 'paid', expiresAt: { gt: now } };
+  return { userId: requireAccountId(userId), status: 'paid', expiresAt: { gt: now } };
 }
 
 /** The order credits are spent in: the pack that expires first, then the oldest. */
@@ -146,17 +158,18 @@ export class PackCreditUnavailableError extends Error {
  * the last credit between the read and the write) nothing is written and
  * PackCreditUnavailableError is thrown; the caller answers 409. A
  * serialization conflict surfaces as Prisma P2034, which the caller answers
- * the same way.
+ * the same way. A missing account id throws before anything is read.
  */
 export async function spendPackCredit(tx: Prisma.TransactionClient, userId: string, now: Date): Promise<{ packId: string }> {
+  const accountId = requireAccountId(userId);
   const pack = await tx.employerPostPack.findFirst({
-    where: usablePackWhere(userId, now),
+    where: usablePackWhere(accountId, now),
     orderBy: SPEND_ORDER,
     select: { id: true },
   });
   if (!pack) throw new PackCreditUnavailableError();
   const { count } = await tx.employerPostPack.updateMany({
-    where: { id: pack.id, userId, status: 'paid', expiresAt: { gt: now }, creditsRemaining: { gt: 0 } },
+    where: { id: pack.id, userId: accountId, status: 'paid', expiresAt: { gt: now }, creditsRemaining: { gt: 0 } },
     data: { creditsRemaining: { decrement: 1 } },
   });
   if (count !== 1) throw new PackCreditUnavailableError();
@@ -219,19 +232,25 @@ export async function unfreezePack(packId: string, db: Db = prisma): Promise<boo
 /**
  * Take down the posts that still stand on a pack (paymentStatus 'pack'): set
  * them to `status` and unpublish them, as a full refund of a post does. A
- * renewed pack post is 'paid', with its own renewal payment, and stays up;
- * the unpublish matches only rows this call moved, so a post renewed in
- * between keeps its listing. Returns the job ids taken down.
+ * renewed pack post is 'paid', with its own renewal payment, and stays up:
+ * both writes match only rows still 'pack', so a post renewed in between
+ * keeps its listing. Returns the job ids taken down.
+ *
+ * Two writes, ordered so that a failure between them is finished by the
+ * redelivered event (code review M1): the unpublish goes first, and the
+ * status flips last. A failed flip leaves the rows 'pack', which the retry
+ * selects and takes down again; flipped first, a failed unpublish left
+ * 'refunded' posts live that no retry selected any more.
  */
 export async function takeDownPackPosts(packId: string, status: 'refunded' | 'disputed', db: Db = prisma): Promise<string[]> {
   const rows = await db.employerJob.findMany({ where: { postPackId: packId, paymentStatus: 'pack' }, select: { id: true, jobId: true } });
   if (rows.length === 0) return [];
-  await db.employerJob.updateMany({ where: { id: { in: rows.map((row) => row.id) }, paymentStatus: 'pack' }, data: { paymentStatus: status } });
   const jobIds = rows.map((row) => row.jobId);
   await db.job.updateMany({
-    where: { id: { in: jobIds }, employerJobs: { postPackId: packId, paymentStatus: status } },
+    where: { id: { in: jobIds }, employerJobs: { postPackId: packId, paymentStatus: 'pack' } },
     data: { isPublished: false },
   });
+  await db.employerJob.updateMany({ where: { id: { in: rows.map((row) => row.id) }, paymentStatus: 'pack' }, data: { paymentStatus: status } });
   return jobIds;
 }
 
@@ -242,6 +261,10 @@ export async function takeDownPackPosts(packId: string, status: 'refunded' | 'di
  * own renewal charge carries that charge and is left to the JobCharge path.
  * Each goes back to 'pack', and is republished while inside its run, not
  * archived and not paused by the employer.
+ *
+ * As in takeDownPackPosts, the listing is written first, matched on the
+ * status the rows still hold ('disputed'), and the status flips last, so the
+ * redelivered event finishes whichever write failed (code review M1).
  */
 export async function restorePackPosts(
   packId: string,
@@ -253,17 +276,20 @@ export async function restorePackPosts(
     select: { id: true, jobId: true, job: { select: { expiresAt: true, archivedAt: true, isManuallyUnpublished: true } } },
   });
   if (rows.length === 0) return { restored: 0, republished: [] };
-  const { count } = await db.employerJob.updateMany({
-    where: { id: { in: rows.map((row) => row.id) }, paymentStatus: 'disputed' },
-    data: { paymentStatus: 'pack' },
-  });
   const republished = rows
     .filter(({ job }) => !job.archivedAt && !job.isManuallyUnpublished && !!job.expiresAt && job.expiresAt.getTime() > now.getTime())
     .map((row) => row.jobId);
   if (republished.length > 0) {
     // A revival: each post is public again, so its content counts as changed
     // now (sitemap lastmod, "Last updated"; indexing audit fixSoon 5).
-    await db.job.updateMany({ where: { id: { in: republished }, archivedAt: null }, data: { isPublished: true, contentChangedAt: now } });
+    await db.job.updateMany({
+      where: { id: { in: republished }, archivedAt: null, employerJobs: { postPackId: packId, paymentStatus: 'disputed' } },
+      data: { isPublished: true, contentChangedAt: now },
+    });
   }
+  const { count } = await db.employerJob.updateMany({
+    where: { id: { in: rows.map((row) => row.id) }, paymentStatus: 'disputed' },
+    data: { paymentStatus: 'pack' },
+  });
   return { restored: count, republished };
 }

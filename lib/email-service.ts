@@ -1134,10 +1134,12 @@ export async function sendPostPackPurchasedEmail(to: string, opts: PostPackPurch
       { posts: opts.posts, expiresAt: opts.expiresAt.toISOString() },
       `${BASE_URL}/unsubscribe?token=${unsubToken}`,
     );
-    logger.info('5-post pack purchase email sent', { email: to, posts: opts.posts });
+    // No address in these log lines (security review L9): the webhook logs
+    // the Checkout Session the email belongs to.
+    logger.info('5-post pack purchase email sent', { posts: opts.posts });
     return { success: true };
   } catch (error) {
-    logger.error('Error sending 5-post pack purchase email', error, { email: to });
+    logger.error('Error sending 5-post pack purchase email', error, { posts: opts.posts });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send the 5-post pack purchase email',

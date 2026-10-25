@@ -27,6 +27,17 @@
  *
  * Plus the signup-domain rules that never change: a free-mail signup is 400
  * even during the promo, and the form contactEmail can never shift the domain.
+ *
+ * Fix pass of the code review:
+ *   - M5: the transaction gets its own client, as Prisma's is, and every
+ *     write that belongs inside it is asserted on that client, with the
+ *     global client seeing none. The fake transaction commits only when its
+ *     callback resolves; a throw rolls all of it back, as Postgres would. (A
+ *     real concurrency test needs a throwaway database: docs/pricing-system.md
+ *     section 10b lists it as missing.)
+ *   - M4: the screening questions are written inside that transaction, so a
+ *     failed question write leaves no post and no spent credit, and a
+ *     resubmit spends one credit, not two.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -89,20 +100,67 @@ function signedInEmployer(email = `owner@${SIGNUP_DOMAIN}`) {
     vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'user-1', role: 'employer', email } as never);
 }
 
+/**
+ * The transaction's own client (code review M5): what the route writes inside
+ * the Serializable transaction goes here, never to the global client.
+ */
+const tx = {
+    job: { create: vi.fn(), update: vi.fn() },
+    employerJob: { create: vi.fn(), count: vi.fn() },
+    employerPostPack: { findFirst: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
+    jobScreeningQuestion: { createMany: vi.fn() },
+};
+
+/** Commits counted as Postgres would: only a callback that resolves commits; a throw rolls back everything it wrote. */
+const transactions = { committed: 0, rolledBack: 0 };
+
+function wireWrites() {
+    transactions.committed = 0;
+    transactions.rolledBack = 0;
+    vi.mocked(prisma.$transaction).mockImplementation((async (fn: (client: typeof tx) => Promise<unknown>) => {
+        try {
+            const result = await fn(tx);
+            transactions.committed += 1;
+            return result;
+        } catch (err) {
+            transactions.rolledBack += 1;
+            throw err;
+        }
+    }) as never);
+    tx.job.create.mockReset().mockResolvedValue({ id: 'job-1' });
+    tx.job.update.mockReset().mockResolvedValue({ id: 'job-1', slug: 'pmhnp-telepsychiatry-job-1' });
+    tx.employerJob.create.mockReset().mockResolvedValue({ id: 'ej-1' });
+    tx.employerJob.count.mockReset().mockResolvedValue(0);
+    tx.employerPostPack.findFirst.mockReset().mockResolvedValue(null);
+    tx.employerPostPack.findMany.mockReset().mockResolvedValue([]);
+    tx.employerPostPack.updateMany.mockReset().mockResolvedValue({ count: 0 });
+    tx.jobScreeningQuestion.createMany.mockReset().mockResolvedValue({ count: 0 });
+    vi.mocked(prisma.jobScreeningQuestion.create).mockReset().mockResolvedValue({} as never);
+    vi.mocked(prisma.jobDraft.deleteMany).mockResolvedValue({ count: 0 } as never);
+}
+
+/** No write that belongs in the transaction reached the global client. */
+function expectNoWriteOutsideTheTransaction() {
+    expect(prisma.job.create).not.toHaveBeenCalled();
+    expect(prisma.job.update).not.toHaveBeenCalled();
+    expect(prisma.employerJob.create).not.toHaveBeenCalled();
+    expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
+    expect(prisma.jobScreeningQuestion.create).not.toHaveBeenCalled();
+}
+
 const PACK_EXPIRES = new Date('2027-12-15T00:00:00.000Z');
 
 /**
  * The account's current pack, as getPackCreditStatus reads it (paid and
- * unexpired, with or without a credit left): before the post, then after its
- * credit is spent.
+ * unexpired, with or without a credit left): read on the global client to
+ * decide the mode, then spent and read again through the transaction.
  */
 function packCredits(before: number, after: number = before - 1) {
     const current = (remaining: number) => [{ creditsRemaining: remaining, creditsTotal: config.packPosts, creditsRevoked: 0, expiresAt: PACK_EXPIRES }];
-    vi.mocked(prisma.employerPostPack.findMany)
-        .mockResolvedValueOnce(current(before) as never)
-        .mockResolvedValueOnce(current(after) as never);
-    vi.mocked(prisma.employerPostPack.findFirst).mockResolvedValue({ id: 'pack-1' } as never);
-    vi.mocked(prisma.employerPostPack.updateMany).mockResolvedValue({ count: 1 } as never);
+    vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue(current(before) as never);
+    tx.employerPostPack.findMany.mockResolvedValue(current(after));
+    tx.employerPostPack.findFirst.mockResolvedValue({ id: 'pack-1' });
+    tx.employerPostPack.updateMany.mockResolvedValue({ count: 1 });
 }
 
 /** No pack: the table as tests/setup.ts leaves it, with any queued answer from an earlier test dropped. */
@@ -110,14 +168,6 @@ function noPack() {
     vi.mocked(prisma.employerPostPack.findMany).mockReset().mockResolvedValue([] as never);
     vi.mocked(prisma.employerPostPack.findFirst).mockReset().mockResolvedValue(null as never);
     vi.mocked(prisma.employerPostPack.updateMany).mockReset().mockResolvedValue({ count: 0 } as never);
-}
-
-function wireWrites() {
-    vi.mocked(prisma.$transaction).mockImplementation(((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
-    vi.mocked(prisma.job.create).mockResolvedValue({ id: 'job-1' } as never);
-    vi.mocked(prisma.job.update).mockResolvedValue({ id: 'job-1', slug: 'pmhnp-telepsychiatry-job-1' } as never);
-    vi.mocked(prisma.employerJob.create).mockResolvedValue({ id: 'ej-1' } as never);
-    vi.mocked(prisma.jobDraft.deleteMany).mockResolvedValue({ count: 0 } as never);
 }
 
 async function post(body: object = BODY) {
@@ -150,7 +200,7 @@ describe('launch promo — every post is free', () => {
     });
 
     it("publishes a 'promo' row for the full duration and reports mode 'promo'", async () => {
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(2 as never); // live promo posts at the domain
+        tx.employerJob.count.mockResolvedValue(2); // live promo posts at the domain
 
         const { res, json } = await post();
 
@@ -159,7 +209,7 @@ describe('launch promo — every post is free', () => {
         expect(json.editToken).toMatch(/^[0-9a-f]{64}$/);
         expect(json.dashboardToken).toMatch(/^[0-9a-f]{64}$/);
 
-        const row = vi.mocked(prisma.employerJob.create).mock.calls[0][0].data;
+        const row = tx.employerJob.create.mock.calls[0][0].data;
         expect(row).toMatchObject({
             paymentStatus: 'promo',
             pricingTier: 'pro',
@@ -168,27 +218,31 @@ describe('launch promo — every post is free', () => {
             contactEmail: BODY.contactEmail,
         });
 
-        const job = vi.mocked(prisma.job.create).mock.calls[0][0].data as { expiresAt: Date; isPublished: boolean; isFeatured: boolean };
+        const job = tx.job.create.mock.calls[0][0].data as { expiresAt: Date; isPublished: boolean; isFeatured: boolean };
         expect(job.isPublished).toBe(true);
         expect(job.isFeatured).toBe(false); // top placement comes from the EmployerJob relation
         expect(Math.round((job.expiresAt.getTime() - DURING_PROMO.getTime()) / DAY_MS)).toBe(config.durationDays);
         expect(config.durationDays).toBe(60);
+        expect(transactions.committed).toBe(1);
+        expectNoWriteOutsideTheTransaction();
     });
 
     it('re-counts the live promo posts through the transaction client with the immutable domain anchor', async () => {
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
-        await post();
-        expect(prisma.employerJob.count).toHaveBeenCalledWith({
+        const promoCount = {
             where: {
                 quotaDomain: SIGNUP_DOMAIN,
                 paymentStatus: 'promo',
                 job: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: DURING_PROMO } }] },
             },
-        });
+        };
+
+        await post();
+
+        expect(tx.employerJob.count).toHaveBeenCalledWith(promoCount);
+        expect(prisma.employerJob.count).not.toHaveBeenCalledWith(promoCount);
     });
 
     it('sends the confirmation email with the real listing duration and the promo mode', async () => {
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
         await post();
         expect(sendConfirmationEmail).toHaveBeenCalledOnce();
         const args = vi.mocked(sendConfirmationEmail).mock.calls[0];
@@ -200,7 +254,7 @@ describe('launch promo — every post is free', () => {
     });
 
     it('403s with promoCapReached at the per-domain cap, writing nothing', async () => {
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(config.promoMaxActivePostsPerDomain as never);
+        tx.employerJob.count.mockResolvedValue(config.promoMaxActivePostsPerDomain);
 
         const { res, json } = await post();
 
@@ -208,13 +262,14 @@ describe('launch promo — every post is free', () => {
         expect(json.promoCapReached).toBe(true);
         expect(json.requiresPayment).toBeUndefined();
         expect(json.error).toContain(SIGNUP_DOMAIN);
-        expect(prisma.job.create).not.toHaveBeenCalled();
-        expect(prisma.employerJob.create).not.toHaveBeenCalled();
+        expect(tx.job.create).not.toHaveBeenCalled();
+        expect(tx.employerJob.create).not.toHaveBeenCalled();
+        expect(transactions.committed).toBe(0);
         expect(sendConfirmationEmail).not.toHaveBeenCalled();
+        expectNoWriteOutsideTheTransaction();
     });
 
     it('never asks for payment during the promo — the paid-post count is not even consulted', async () => {
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
         const { res, json } = await post();
         expect(res.status).toBe(200);
         expect(json.mode).toBe('promo');
@@ -223,17 +278,18 @@ describe('launch promo — every post is free', () => {
 
     it('ignores a 5-post pack: the promo wins, and the credit is neither read nor spent', async () => {
         packCredits(5);
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
 
         const { res, json } = await post();
 
         expect(res.status).toBe(200);
         expect(json.mode).toBe('promo');
         expect(json).not.toHaveProperty('pack');
-        expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).toMatchObject({ paymentStatus: 'promo', pricingTier: 'pro' });
-        expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).not.toHaveProperty('postPackId');
+        expect(tx.employerJob.create.mock.calls[0][0].data).toMatchObject({ paymentStatus: 'promo', pricingTier: 'pro' });
+        expect(tx.employerJob.create.mock.calls[0][0].data).not.toHaveProperty('postPackId');
         expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
-        expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
+        expect(tx.employerPostPack.findFirst).not.toHaveBeenCalled();
+        expect(tx.employerPostPack.updateMany).not.toHaveBeenCalled();
+        expectNoWriteOutsideTheTransaction();
     });
 });
 
@@ -255,18 +311,20 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
             mode: 'pack',
             pack: { remaining: 4, used: 1, total: config.packPosts, expiresAt: PACK_EXPIRES.toISOString() },
         });
-        expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).toMatchObject({
+        expect(tx.employerJob.create.mock.calls[0][0].data).toMatchObject({
             paymentStatus: 'pack',
             pricingTier: 'pack',
             postPackId: 'pack-1',
             userId: 'user-1',
             quotaDomain: SIGNUP_DOMAIN,
         });
-        const job = vi.mocked(prisma.job.create).mock.calls[0][0].data as { expiresAt: Date; isPublished: boolean };
+        const job = tx.job.create.mock.calls[0][0].data as { expiresAt: Date; isPublished: boolean };
         expect(job.isPublished).toBe(true);
         expect(Math.round((job.expiresAt.getTime() - AFTER_PROMO.getTime()) / DAY_MS)).toBe(config.durationDays);
         // A pack post is never priced: the paid-post count is not consulted.
         expect(prisma.employerJob.count).not.toHaveBeenCalledWith({ where: paidPostWhere(SIGNUP_DOMAIN) });
+        expect(transactions.committed).toBe(1);
+        expectNoWriteOutsideTheTransaction();
     });
 
     it('reads the credit for the account, then spends it inside the Serializable transaction, before the post is created', async () => {
@@ -274,15 +332,17 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
 
         await post();
 
-        expect(prisma.employerPostPack.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: currentPackWhere('user-1', AFTER_PROMO) }));
+        expect(prisma.employerPostPack.findMany).toHaveBeenCalledTimes(1);
+        expect(prisma.employerPostPack.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: currentPackWhere('user-1', AFTER_PROMO) }));
         expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'Serializable' });
-        expect(prisma.employerPostPack.updateMany).toHaveBeenCalledWith({
+        expect(tx.employerPostPack.updateMany).toHaveBeenCalledWith({
             where: { id: 'pack-1', userId: 'user-1', status: 'paid', expiresAt: { gt: AFTER_PROMO }, creditsRemaining: { gt: 0 } },
             data: { creditsRemaining: { decrement: 1 } },
         });
-        const spent = vi.mocked(prisma.employerPostPack.updateMany).mock.invocationCallOrder[0];
-        expect(spent).toBeLessThan(vi.mocked(prisma.job.create).mock.invocationCallOrder[0]);
-        expect(spent).toBeLessThan(vi.mocked(prisma.employerJob.create).mock.invocationCallOrder[0]);
+        const spent = tx.employerPostPack.updateMany.mock.invocationCallOrder[0];
+        expect(spent).toBeLessThan(tx.job.create.mock.invocationCallOrder[0]);
+        expect(spent).toBeLessThan(tx.employerJob.create.mock.invocationCallOrder[0]);
+        expectNoWriteOutsideTheTransaction();
     });
 
     it('reports the credits left after this post, across the packs, from inside the transaction', async () => {
@@ -290,6 +350,8 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
 
         const { json } = await post();
 
+        // Read through the transaction's client, so a parallel post cannot make it stale.
+        expect(tx.employerPostPack.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: currentPackWhere('user-1', AFTER_PROMO) }));
         // The last credit: the pack still reports its totals (a phase 3 review fix).
         expect(json.pack).toEqual({ remaining: 0, used: config.packPosts, total: config.packPosts, expiresAt: PACK_EXPIRES.toISOString() });
     });
@@ -308,7 +370,6 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
 
     it('a promo post sends no pack credits to the email', async () => {
         vi.setSystemTime(DURING_PROMO);
-        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
 
         await post();
 
@@ -317,16 +378,18 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
 
     it('a credit spent first by a parallel post answers 409 packCreditUnavailable and writes nothing', async () => {
         packCredits(1);
-        vi.mocked(prisma.employerPostPack.updateMany).mockResolvedValue({ count: 0 } as never);
+        tx.employerPostPack.updateMany.mockResolvedValue({ count: 0 });
 
         const { res, json } = await post();
 
         expect(res.status).toBe(409);
         expect(json.packCreditUnavailable).toBe(true);
         expect(json.error).not.toMatch(/[–—]| - /);
-        expect(prisma.job.create).not.toHaveBeenCalled();
-        expect(prisma.employerJob.create).not.toHaveBeenCalled();
+        expect(tx.job.create).not.toHaveBeenCalled();
+        expect(tx.employerJob.create).not.toHaveBeenCalled();
+        expect(transactions.committed).toBe(0);
         expect(sendConfirmationEmail).not.toHaveBeenCalled();
+        expectNoWriteOutsideTheTransaction();
     });
 
     it('a serialization conflict (P2034) answers 409 try again, never 500', async () => {
@@ -348,6 +411,103 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
         const { res } = await post();
 
         expect(res.status).toBe(500);
+    });
+
+    it('a write that fails after the credit was spent rolls the spend back with it: no post, no spent credit, 500', async () => {
+        packCredits(2);
+        tx.employerJob.create.mockRejectedValue(new Error('connection reset'));
+
+        const { res } = await post();
+
+        expect(res.status).toBe(500);
+        expect(tx.employerPostPack.updateMany).toHaveBeenCalledTimes(1);
+        expect(transactions).toEqual({ committed: 0, rolledBack: 1 });
+        expect(sendConfirmationEmail).not.toHaveBeenCalled();
+        expectNoWriteOutsideTheTransaction();
+    });
+});
+
+describe('screening questions are written inside the transaction (code review M4)', () => {
+    const QUESTIONS = [
+        { text: 'Licensed in Texas?', type: 'boolean', required: true, knockout: true, knockoutAnswer: 'yes' },
+        { text: '', type: 'text' },
+        { text: 'Preferred schedule?', type: 'select', options: ['Days', 'Nights'] },
+        { text: 'Years of experience?', type: 'not-a-type' },
+    ];
+    const PLATFORM_BODY = { ...BODY, applyLink: undefined, applyOnPlatform: true, screeningQuestions: QUESTIONS };
+
+    beforeEach(() => {
+        vi.setSystemTime(AFTER_PROMO);
+        signedInEmployer();
+    });
+
+    it('are created with the post, in one write on the transaction client, before it commits', async () => {
+        packCredits(3);
+        let committedAtWrite: number | null = null;
+        tx.jobScreeningQuestion.createMany.mockImplementation(async () => {
+            committedAtWrite = transactions.committed;
+            return { count: 3 };
+        });
+
+        const { res } = await post(PLATFORM_BODY);
+
+        expect(res.status).toBe(200);
+        expect(tx.jobScreeningQuestion.createMany).toHaveBeenCalledWith({
+            data: [
+                { jobId: 'job-1', questionText: 'Licensed in Texas?', questionType: 'boolean', options: [], isRequired: true, isKnockout: true, knockoutAnswer: 'yes', sortOrder: 0 },
+                { jobId: 'job-1', questionText: 'Preferred schedule?', questionType: 'select', options: ['Days', 'Nights'], isRequired: false, isKnockout: false, knockoutAnswer: null, sortOrder: 2 },
+                { jobId: 'job-1', questionText: 'Years of experience?', questionType: 'boolean', options: [], isRequired: false, isKnockout: false, knockoutAnswer: null, sortOrder: 3 },
+            ],
+        });
+        expect(committedAtWrite).toBe(0);
+        expect(transactions.committed).toBe(1);
+        expectNoWriteOutsideTheTransaction();
+    });
+
+    it('a question write that fails leaves no post and no spent credit, and answers 500 with no email', async () => {
+        packCredits(3);
+        // Wherever the write is made, it fails.
+        tx.jobScreeningQuestion.createMany.mockRejectedValue(new Error('connection reset'));
+        vi.mocked(prisma.jobScreeningQuestion.create).mockRejectedValue(new Error('connection reset'));
+
+        const { res } = await post(PLATFORM_BODY);
+
+        expect(res.status).toBe(500);
+        // The credit was spent and the post written inside the transaction, and both rolled back with it.
+        expect(tx.employerPostPack.updateMany).toHaveBeenCalledTimes(1);
+        expect(transactions).toEqual({ committed: 0, rolledBack: 1 });
+        expect(sendConfirmationEmail).not.toHaveBeenCalled();
+        expectNoWriteOutsideTheTransaction();
+    });
+
+    it('so a resubmit after that failure spends one credit, not two', async () => {
+        packCredits(3);
+        tx.jobScreeningQuestion.createMany.mockRejectedValueOnce(new Error('connection reset'));
+
+        const first = await post(PLATFORM_BODY);
+        const second = await post(PLATFORM_BODY);
+
+        expect(first.res.status).toBe(500);
+        expect(second.res.status).toBe(200);
+        // Two spends were attempted; only the one inside the committed transaction stands.
+        expect(transactions).toEqual({ committed: 1, rolledBack: 1 });
+    });
+
+    it('are ignored on a post that applies off the platform', async () => {
+        packCredits(3);
+
+        await post({ ...BODY, screeningQuestions: QUESTIONS });
+
+        expect(tx.jobScreeningQuestion.createMany).not.toHaveBeenCalled();
+    });
+
+    it('a post with none writes none', async () => {
+        packCredits(3);
+
+        await post({ ...PLATFORM_BODY, screeningQuestions: [{ text: '' }, 'not an object'] });
+
+        expect(tx.jobScreeningQuestion.createMany).not.toHaveBeenCalled();
+        expect(transactions.committed).toBe(1);
     });
 });
 
@@ -375,7 +535,7 @@ describe('paid ladder — after the promo with no pack credit', () => {
         // The intro allowance is decided by PAID posts at the signup domain only
         // (predicate pinned in tests/lib/pricing.test.ts).
         expect(prisma.employerJob.count).toHaveBeenCalledWith({ where: paidPostWhere(SIGNUP_DOMAIN) });
-        expect(prisma.job.create).not.toHaveBeenCalled();
+        expect(tx.job.create).not.toHaveBeenCalled();
         expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
@@ -404,6 +564,7 @@ describe('paid ladder — after the promo with no pack credit', () => {
 
         expect(res.status).toBe(403);
         expect(json).toMatchObject({ requiresPayment: true, mode: 'paid', tier: 'pro', price: config.postingPrice });
+        expect(tx.employerPostPack.updateMany).not.toHaveBeenCalled();
         expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
         expect(prisma.$transaction).not.toHaveBeenCalled();
     });
@@ -419,7 +580,8 @@ describe('signup-domain rules that hold in every mode', () => {
         const { res, json } = await post({ ...BODY, contactEmail: 'hr@clinic.example' });
         expect(res.status).toBe(400);
         expect(json.error).toBe('Company email required');
-        expect(prisma.job.create).not.toHaveBeenCalled();
+        expect(tx.job.create).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('400s a free-mail signup after the promo too, before any pack credit is read', async () => {
@@ -429,7 +591,7 @@ describe('signup-domain rules that hold in every mode', () => {
         const { res } = await post();
         expect(res.status).toBe(400);
         expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
-        expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
+        expect(tx.employerPostPack.updateMany).not.toHaveBeenCalled();
     });
 
     it('401s an anonymous caller before any pricing decision', async () => {

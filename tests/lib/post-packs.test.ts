@@ -17,7 +17,14 @@
  *     domain: refunded, disputed and admin-comped packs never use it up;
  *   - a full refund revokes the unused credits for good, a dispute freezes the
  *     pack, a won dispute unfreezes it, and the pack's own posts are taken
- *     down and put back with it, never a renewed one.
+ *     down and put back with it, never a renewed one;
+ *   - (fix pass, security review L2) every query on an account's packs
+ *     refuses a missing account id: Prisma reads `userId: undefined` as no
+ *     filter at all, which would read or spend every account's credits;
+ *   - (fix pass, code review M1) taking the posts down and putting them back
+ *     are two writes each, and the one that fails leaves a state the
+ *     redelivered event finishes: the listing is changed first, matched on
+ *     the status the rows still hold, and the status is flipped last.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
@@ -190,6 +197,22 @@ describe('spendPackCredit: one conditional decrement inside the posting transact
     });
 });
 
+describe('an account id is required (security review L2)', () => {
+    // Prisma reads `userId: undefined` as no filter at all: every account's packs.
+    it.each([['an empty id', ''], ['no id', undefined]])('the where clauses refuse %s', (_label, userId) => {
+        expect(() => usablePackWhere(userId as never, NOW)).toThrow(/account id/);
+        expect(() => currentPackWhere(userId as never, NOW)).toThrow(/account id/);
+    });
+
+    it.each([['an empty id', ''], ['no id', undefined]])('spendPackCredit refuses %s before it reads or writes anything', async (_label, userId) => {
+        const client = { employerPostPack: { findFirst: vi.fn().mockResolvedValue({ id: 'pack-1' }), updateMany: vi.fn().mockResolvedValue({ count: 1 }) } };
+
+        await expect(spendPackCredit(client as never, userId as never, NOW)).rejects.toThrow(/account id/);
+        expect(client.employerPostPack.findFirst).not.toHaveBeenCalled();
+        expect(client.employerPostPack.updateMany).not.toHaveBeenCalled();
+    });
+});
+
 describe('countPaidPacksForDomain: the intro rule', () => {
     it('counts only paid packs bought through Stripe at the domain', async () => {
         vi.mocked(prisma.employerPostPack.count).mockResolvedValue(1 as never);
@@ -273,12 +296,15 @@ describe("takeDownPackPosts / restorePackPosts: the pack's own posts follow it",
         expect(await takeDownPackPosts('pack-1', 'refunded')).toEqual(['job-1', 'job-2']);
         // A renewed pack post is 'paid', with its own renewal payment: it is not selected.
         expect(prisma.employerJob.findMany).toHaveBeenCalledWith({ where: { postPackId: 'pack-1', paymentStatus: 'pack' }, select: { id: true, jobId: true } });
-        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['ej-1', 'ej-2'] }, paymentStatus: 'pack' }, data: { paymentStatus: 'refunded' } });
-        // Only rows this call moved are unpublished: one renewed in between keeps its listing.
+        // Unpublished first, matched on the status the rows still hold: one renewed in between keeps its listing.
         expect(prisma.job.updateMany).toHaveBeenCalledWith({
-            where: { id: { in: ['job-1', 'job-2'] }, employerJobs: { postPackId: 'pack-1', paymentStatus: 'refunded' } },
+            where: { id: { in: ['job-1', 'job-2'] }, employerJobs: { postPackId: 'pack-1', paymentStatus: 'pack' } },
             data: { isPublished: false },
         });
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['ej-1', 'ej-2'] }, paymentStatus: 'pack' }, data: { paymentStatus: 'refunded' } });
+        // The status flips last, so a failed flip leaves rows the redelivery selects again.
+        expect(vi.mocked(prisma.job.updateMany).mock.invocationCallOrder[0])
+            .toBeLessThan(vi.mocked(prisma.employerJob.updateMany).mock.invocationCallOrder[0]);
     });
 
     it('does nothing for a pack with no post standing on it', async () => {
@@ -309,9 +335,83 @@ describe("takeDownPackPosts / restorePackPosts: the pack's own posts follow it",
             where: { id: { in: ['ej-live', 'ej-ended', 'ej-archived', 'ej-paused'] }, paymentStatus: 'disputed' },
             data: { paymentStatus: 'pack' },
         });
+        // Republished first, matched on the status the rows still hold; the status flips last.
         expect(prisma.job.updateMany).toHaveBeenCalledWith({
-            where: { id: { in: ['job-live'] }, archivedAt: null },
+            where: { id: { in: ['job-live'] }, archivedAt: null, employerJobs: { postPackId: 'pack-1', paymentStatus: 'disputed' } },
             data: { isPublished: true, contentChangedAt: NOW },
         });
+        expect(vi.mocked(prisma.job.updateMany).mock.invocationCallOrder[0])
+            .toBeLessThan(vi.mocked(prisma.employerJob.updateMany).mock.invocationCallOrder[0]);
+    });
+});
+
+/**
+ * Code review M1: each of these steps is two writes, and the webhook answers
+ * 500 when one fails, so Stripe redelivers the event. Whichever write failed,
+ * the redelivery has to finish both. The status used to flip first: a failed
+ * listing write after it left rows the redelivery no longer selected (they
+ * hold the new status), so refunded posts stayed live, or restored ones dark.
+ */
+describe('a failed write is finished by the redelivered event (code review M1)', () => {
+    interface Row { id: string; jobId: string; paymentStatus: string }
+    type RowFilter = { postPackId?: string; paymentStatus?: string };
+
+    /** The two tables as the functions read and write them, in place of Prisma; `failOnce` names the table whose next write throws. */
+    function fakeDb(rows: Row[], published: Record<string, boolean>) {
+        const failOnce = new Set<'job' | 'employerJob'>();
+        const stillHolds = (row: Row, where: RowFilter) => where.paymentStatus === undefined || row.paymentStatus === where.paymentStatus;
+        const db = {
+            employerJob: {
+                findMany: vi.fn(async ({ where }: { where: RowFilter }) => rows
+                    .filter((row) => stillHolds(row, where))
+                    .map((row) => ({ id: row.id, jobId: row.jobId, job: { expiresAt: new Date('2027-04-01T00:00:00.000Z'), archivedAt: null, isManuallyUnpublished: false } }))),
+                updateMany: vi.fn(async ({ where, data }: { where: { id: { in: string[] }; paymentStatus: string }; data: { paymentStatus: string } }) => {
+                    if (failOnce.delete('employerJob')) throw new Error('connection reset');
+                    const hit = rows.filter((row) => where.id.in.includes(row.id) && row.paymentStatus === where.paymentStatus);
+                    for (const row of hit) row.paymentStatus = data.paymentStatus;
+                    return { count: hit.length };
+                }),
+            },
+            job: {
+                updateMany: vi.fn(async ({ where, data }: { where: { id: { in: string[] }; employerJobs?: RowFilter }; data: { isPublished: boolean } }) => {
+                    if (failOnce.delete('job')) throw new Error('connection reset');
+                    const hit = rows.filter((row) => where.id.in.includes(row.jobId) && (!where.employerJobs || stillHolds(row, where.employerJobs)));
+                    for (const row of hit) published[row.jobId] = data.isPublished;
+                    return { count: hit.length };
+                }),
+            },
+        };
+        return { db, failOnce };
+    }
+
+    const twoPosts = (paymentStatus: string): Row[] => [
+        { id: 'ej-1', jobId: 'job-1', paymentStatus },
+        { id: 'ej-2', jobId: 'job-2', paymentStatus },
+    ];
+
+    it.each(['job', 'employerJob'] as const)('a full refund whose %s write fails once is finished by the redelivery', async (table) => {
+        const rows = twoPosts('pack');
+        const published = { 'job-1': true, 'job-2': true };
+        const { db, failOnce } = fakeDb(rows, published);
+        failOnce.add(table);
+
+        await expect(takeDownPackPosts('pack-1', 'refunded', db as never)).rejects.toThrow('connection reset');
+        await takeDownPackPosts('pack-1', 'refunded', db as never);
+
+        expect(rows.map((row) => row.paymentStatus)).toEqual(['refunded', 'refunded']);
+        expect(published).toEqual({ 'job-1': false, 'job-2': false });
+    });
+
+    it.each(['job', 'employerJob'] as const)('a won dispute whose %s write fails once is finished by the redelivery', async (table) => {
+        const rows = twoPosts('disputed');
+        const published = { 'job-1': false, 'job-2': false };
+        const { db, failOnce } = fakeDb(rows, published);
+        failOnce.add(table);
+
+        await expect(restorePackPosts('pack-1', NOW, db as never)).rejects.toThrow('connection reset');
+        expect(await restorePackPosts('pack-1', NOW, db as never)).toEqual({ restored: 2, republished: ['job-1', 'job-2'] });
+
+        expect(rows.map((row) => row.paymentStatus)).toEqual(['pack', 'pack']);
+        expect(published).toEqual({ 'job-1': true, 'job-2': true });
     });
 });

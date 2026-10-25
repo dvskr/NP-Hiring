@@ -25,7 +25,7 @@
  * exists in production); the dormant plan code no longer reaches posting.
  */
 import type { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma, type Db } from '@/lib/prisma';
 import { config, type PostingMode, type PricingTier } from '@/lib/config';
 import { countPaidPacksForDomain } from '@/lib/post-packs';
 
@@ -72,8 +72,6 @@ export function domainOf(email: string | null | undefined): string | null {
   const d = email?.toLowerCase().split('@')[1];
   return d && d.length > 0 ? d : null;
 }
-
-type Db = Prisma.TransactionClient | typeof prisma;
 
 /**
  * The query fragment that finds out whether an EmployerJob was bought as a

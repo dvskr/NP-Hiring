@@ -331,6 +331,13 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
  * Now any failure but a duplicate answers 500 with the dedupe row rolled
  * back; Stripe's retry loses the claim (the row is already 'paid') and
  * resolveLostClaim backfills the charge.
+ *
+ * Code review M3 (fix pass): the retry runs none of the activation's later
+ * steps, so the failed write is captured and they run first (the intro race
+ * detector, the confirmation email, the draft cleanup, the GA purchase, the
+ * search ping), and the error is rethrown last. And a backfill that fails
+ * itself throws too, so Stripe keeps retrying instead of acknowledging a
+ * payment with no ledger row.
  */
 describe('Stripe webhook: the new-post ledger write', () => {
     const PAID_SESSION = { id: 'cs_ledger', payment_status: 'paid', metadata: { jobId: 'jobL', pricing: 'pro' }, payment_intent: 'pi_ledger', amount_total: 34900, currency: 'usd' };
@@ -386,5 +393,75 @@ describe('Stripe webhook: the new-post ledger write', () => {
         });
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
         expect(sendDiscordMessage).not.toHaveBeenCalled();
+    });
+
+    it('a failed write still runs the steps the retry never runs, then answers 500 (code review M3)', async () => {
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejL', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: 'clinic.example' } as never);
+        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.jobCharge.create).mockRejectedValue(new Error('connection reset'));
+        const { sendConfirmationEmail } = await import('@/lib/email-service');
+        const { trackServerPurchase } = await import('@/lib/analytics-server');
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(makeRequest({
+            id: 'evt_ledger_fail_steps', type: 'checkout.session.completed',
+            data: { object: { ...PAID_SESSION, metadata: { jobId: 'jobL', pricing: 'intro' } } },
+        }) as never);
+
+        expect(res.status).toBe(500);
+        expect(prisma.processedStripeEvent.delete).toHaveBeenCalledWith({ where: { eventId: 'evt_ledger_fail_steps' } });
+        // The intro race detector, the email, the draft cleanup and the GA purchase all ran before the error.
+        expect(prisma.employerJob.count).toHaveBeenCalled();
+        expect(sendConfirmationEmail).toHaveBeenCalledTimes(1);
+        expect(prisma.jobDraft.deleteMany).toHaveBeenCalledWith({ where: { email: 'x@y.com' } });
+        expect(trackServerPurchase).toHaveBeenCalledTimes(1);
+        // The error rethrown is the ledger write's.
+        expect(JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls)).toContain('connection reset');
+    });
+
+    it("a retry whose backfill fails too answers 500 again: no payment is acknowledged without its ledger row (code review M3)", async () => {
+        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
+        vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
+        vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
+        vi.mocked(prisma.jobCharge.create).mockRejectedValue(new Error('connection reset'));
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(delivery('evt_backfill_fail') as never);
+
+        expect(res.status).toBe(500);
+        expect(prisma.processedStripeEvent.delete).toHaveBeenCalledWith({ where: { eventId: 'evt_backfill_fail' } });
+    });
+
+    it('a second payment whose ledger backfill fails answers 500 too, and is acknowledged only once it is on the ledger', async () => {
+        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
+        vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([{ stripeSessionId: 'cs_first', type: 'new' }] as never);
+        vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
+        vi.mocked(prisma.jobCharge.create).mockRejectedValueOnce(new Error('connection reset'));
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const failed = await POST(delivery('evt_dup_backfill_fail') as never);
+        vi.mocked(prisma.jobCharge.create).mockResolvedValue({} as never);
+        const retried = await POST(delivery('evt_dup_backfill_retry') as never);
+
+        expect(failed.status).toBe(500);
+        expect(retried.status).toBe(200);
+        expect(JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls)).toContain('second payment for one posting');
+    });
+
+    it('a backfill another path already wrote (P2002) is the charge on the ledger: 200', async () => {
+        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
+        vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
+        vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
+        vi.mocked(prisma.jobCharge.create).mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(delivery('evt_backfill_dup') as never);
+
+        expect(res.status).toBe(200);
+        expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
     });
 });

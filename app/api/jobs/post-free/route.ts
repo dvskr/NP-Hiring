@@ -25,14 +25,16 @@
  *
  * Both gate checks + all writes run in ONE Serializable transaction (audit
  * #6 + #7) so two parallel submitters can't both slip past the cap or spend
- * one credit twice, and a failed slug update or EmployerJob insert can't
- * orphan a Job row (nor spend a credit for no post). A serialization
- * conflict answers 409 { retry: true }, never 500. Every row snapshots the
- * SIGNUP email domain into EmployerJob.quotaDomain — the immutable anchor
- * for the promo cap and the per-domain intro price.
+ * one credit twice, and a failed slug update, EmployerJob insert or
+ * screening question insert can't orphan a Job row (nor spend a credit for
+ * no post: code review M4, the questions were written after the commit, so a
+ * failure there spent a credit, answered 500, and a resubmit spent another).
+ * A serialization conflict answers 409 { retry: true }, never 500. Every row
+ * snapshots the SIGNUP email domain into EmployerJob.quotaDomain — the
+ * immutable anchor for the promo cap and the per-domain intro price.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import type { Job } from '@prisma/client';
+import type { Job, Prisma } from '@prisma/client';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
@@ -96,6 +98,33 @@ class PromoCapReachedError extends Error {
 /** The credits left after a pack post, as the response carries them. */
 function packCreditsJson(status: PackCreditStatus) {
   return { remaining: status.remaining, used: status.used, total: status.total, expiresAt: status.expiresAt?.toISOString() ?? null };
+}
+
+const SCREENING_QUESTION_TYPES: readonly string[] = ['boolean', 'text', 'select', 'number'];
+const MAX_SCREENING_QUESTIONS = 5;
+
+/** A screening question row, written with the post inside its transaction once the post has an id. */
+type ScreeningQuestionRow = Omit<Prisma.JobScreeningQuestionCreateManyInput, 'jobId'>;
+
+/**
+ * The screening questions a platform-apply post carries, as rows: the first
+ * five submitted, those with text, each sanitized, sortOrder their place in
+ * what was submitted.
+ */
+function screeningQuestionRows(submitted: unknown): ScreeningQuestionRow[] {
+  if (!Array.isArray(submitted)) return [];
+  return submitted.slice(0, MAX_SCREENING_QUESTIONS).flatMap((q, i): ScreeningQuestionRow[] => {
+    if (!q?.text || typeof q.text !== 'string') return [];
+    return [{
+      questionText: sanitizeText(q.text, 200),
+      questionType: SCREENING_QUESTION_TYPES.includes(q.type) ? q.type : 'boolean',
+      options: Array.isArray(q.options) ? q.options.map((o: unknown) => sanitizeText(String(o), 100)).slice(0, 10) : [],
+      isRequired: !!q.required,
+      isKnockout: !!q.knockout,
+      knockoutAnswer: q.knockoutAnswer ? sanitizeText(String(q.knockoutAnswer), 100) : null,
+      sortOrder: i,
+    }];
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -372,10 +401,16 @@ export async function POST(request: NextRequest) {
     // posts are not left NULL (the legacy unclassified exemption).
     const profession = classifyEmployerJob(sanitized.title, sanitized.description);
 
+    // Screening questions (platform-apply posts only), written with the post
+    // inside the transaction below (code review M4).
+    const screeningQuestions = applyOnPlatform ? screeningQuestionRows(body.screeningQuestions) : [];
+
     // Audit #6 + #7: gate-check + writes wrapped in a single Serializable
     // transaction. Postgres aborts the second transaction if two requests
     // race past the count check. Atomicity also fixes the orphan-row risk
-    // when the slug update or employerJob insert fails after the job insert.
+    // when the slug update, the employerJob insert or the screening question
+    // insert fails after the job insert, and a pack credit is spent only with
+    // the post it paid for.
     let job: Job;
     let packAfter: PackCreditStatus | null;
     try {
@@ -474,6 +509,12 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        if (screeningQuestions.length > 0) {
+          await tx.jobScreeningQuestion.createMany({
+            data: screeningQuestions.map((question) => ({ ...question, jobId: created.id })),
+          });
+        }
+
         // The credits left once this post spent one, read through the same
         // snapshot so a parallel post cannot make the count stale.
         const remaining = postPackId ? await getPackCreditStatus(userId, now, tx) : null;
@@ -525,31 +566,8 @@ export async function POST(request: NextRequest) {
     }
 
     const slug = job.slug!;
-
-    // Create screening questions (if any, only for platform-apply jobs)
-    if (applyOnPlatform && Array.isArray(body.screeningQuestions)) {
-      const questions = body.screeningQuestions.slice(0, 5); // max 5 questions
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        if (!q?.text || typeof q.text !== 'string') continue;
-
-        const validTypes = ['boolean', 'text', 'select', 'number'];
-        const qType = validTypes.includes(q.type) ? q.type : 'boolean';
-
-        await prisma.jobScreeningQuestion.create({
-          data: {
-            jobId: job.id,
-            questionText: sanitizeText(q.text, 200),
-            questionType: qType,
-            options: Array.isArray(q.options) ? q.options.map((o: string) => sanitizeText(String(o), 100)).slice(0, 10) : [],
-            isRequired: !!q.required,
-            isKnockout: !!q.knockout,
-            knockoutAnswer: q.knockoutAnswer ? sanitizeText(String(q.knockoutAnswer), 100) : null,
-            sortOrder: i,
-          },
-        });
-      }
-      logger.info('Screening questions created', { jobId: job.id, count: questions.length });
+    if (screeningQuestions.length > 0) {
+      logger.info('Screening questions created', { jobId: job.id, count: screeningQuestions.length });
     }
 
     // Send confirmation email with dashboard token + the listing duration so

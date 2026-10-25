@@ -483,8 +483,11 @@ model EmployerPostPack {
   // Signup-domain snapshot at purchase: the intro rule counts a paid Stripe
   // pack at this domain as the company's paid purchase.
   quotaDomain           String?       @map("quota_domain")
-  status                String        @default("paid") // 'paid' | 'refunded' | 'disputed'
-  source                String        @default("stripe") // 'stripe' | 'admin'
+  // No default on status or source: every create sets both (the migration
+  // carries none either), so one that forgot is a type error, not a pack
+  // recorded as paid.
+  status                String // 'paid' | 'refunded' | 'disputed'
+  source                String // 'stripe' | 'admin'
   creditsTotal          Int           @map("credits_total")
   creditsRemaining      Int           @map("credits_remaining")
   creditsRevoked        Int           @default(0) @map("credits_revoked")

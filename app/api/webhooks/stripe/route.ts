@@ -14,7 +14,13 @@ import { applyRenewalCheckout } from './apply-renewal';
 import { handlePlanAsyncPaymentFailed, handlePlanCheckout } from './plan-checkout';
 import { applySubscriptionEvent, handlePlanInvoicePaymentFailed, type SubscriptionEventType } from './plan-subscription';
 import { fulfilPostPackCheckout, refreshPackInvoice } from './post-pack-checkout';
-import { applyPackDisputeClosed, applyPackDisputeCreated, applyPackRefund } from './post-pack-refunds';
+import {
+  applyPackDisputeClosed,
+  applyPackDisputeCreated,
+  applyPackRefund,
+  disputeClosedInOurFavour,
+  isUnrecordedPackPayment,
+} from './post-pack-refunds';
 import {
   alertWebhookFailure,
   claimEmailSend,
@@ -197,11 +203,11 @@ async function processEvent(stripe: Stripe, event: Stripe.Event, cleanupDedupe: 
     case 'invoice.payment_failed':
       return handleInvoicePaymentFailed(event, event.data.object as Stripe.Invoice, cleanupDedupe);
     case 'charge.refunded':
-      return handleChargeRefunded(event, event.data.object as Stripe.Charge, cleanupDedupe);
+      return handleChargeRefunded(stripe, event, event.data.object as Stripe.Charge, cleanupDedupe);
     case 'charge.dispute.created':
-      return handleDisputeCreated(event, event.data.object as Stripe.Dispute, cleanupDedupe);
+      return handleDisputeCreated(stripe, event, event.data.object as Stripe.Dispute, cleanupDedupe);
     case 'charge.dispute.closed':
-      return handleDisputeClosed(event, event.data.object as Stripe.Dispute, cleanupDedupe);
+      return handleDisputeClosed(stripe, event, event.data.object as Stripe.Dispute, cleanupDedupe);
     default:
       // customer.subscription.created is intentionally a no-op: the checkout
       // session creates the plan row from the retrieved subscription.
@@ -477,6 +483,35 @@ async function handleInvoicePaymentFailed(event: Stripe.Event, invoice: Stripe.I
   }
 }
 
+/**
+ * A refund or dispute of a 5-post pack payment whose pack is not recorded yet
+ * (code review M2): 500, with the dedupe row rolled back, because Stripe's
+ * retry is the recovery. Once the checkout is fulfilled (this webhook's retry
+ * of it, the verify page or the daily sweep) the pack exists, recorded
+ * refunded or disputed when its charge already was, and the retried event
+ * finds it. Null when the payment is not a pack's: the caller acknowledges it
+ * as before. A failed read of the payment intent throws into the caller's
+ * catch, which answers 500 as well.
+ */
+async function retryUntilPackRecorded(
+  stripe: Stripe,
+  event: Stripe.Event,
+  paymentIntentId: string,
+  cleanupDedupe: CleanupDedupe,
+): Promise<NextResponse | null> {
+  if (!(await isUnrecordedPackPayment(stripe, paymentIntentId))) return null;
+  logger.warn('[Stripe] A 5-post pack payment event arrived before its pack was recorded; answering 500 so Stripe retries', {
+    eventId: event.id, eventType: event.type, paymentIntentId,
+  });
+  return failAndRetry(
+    cleanupDedupe,
+    `${event.type} for a 5-post pack payment arrived before its pack was recorded: Stripe will retry`,
+    null,
+    { eventId: event.id, paymentIntentId },
+    'The 5-post pack for this payment is not recorded yet',
+  );
+}
+
 /** The EmployerJob behind a ledger row. B112: employerJobId is nullable (FK ON DELETE SET NULL). */
 async function employerJobForCharge(employerJobId: string | null) {
   return employerJobId
@@ -526,7 +561,7 @@ async function fullRefundRevokesPosting(
  * refund to 'refunded' + unpublishes when no other payment for the posting
  * stands (fullRefundRevokesPosting), and sends a confirmation email.
  */
-async function handleChargeRefunded(event: Stripe.Event, charge: Stripe.Charge, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
+async function handleChargeRefunded(stripe: Stripe, event: Stripe.Event, charge: Stripe.Charge, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
   try {
     const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : null;
     if (!paymentIntentId) {
@@ -536,10 +571,13 @@ async function handleChargeRefunded(event: Stripe.Event, charge: Stripe.Charge, 
 
     const jobCharge = await prisma.jobCharge.findUnique({ where: { stripePaymentIntentId: paymentIntentId } });
     if (!jobCharge) {
-      // A 5-post pack's payment (post-pack-refunds.ts), else a pre-audit-#28
-      // charge with no payment_intent persisted, or one from outside our flow.
+      // A 5-post pack's payment (post-pack-refunds.ts), one whose pack is not
+      // recorded yet (500, Stripe retries), else a pre-audit-#28 charge with
+      // no payment_intent persisted, or one from outside our flow.
       const pack = await applyPackRefund(charge, paymentIntentId, { eventId: event.id });
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
+      const retry = await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe);
+      if (retry) return retry;
       logger.warn('charge.refunded: no matching JobCharge — pre-#28 row or external charge', { paymentIntentId, chargeId: charge.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -614,7 +652,7 @@ async function handleChargeRefunded(event: Stripe.Event, charge: Stripe.Charge, 
  * charge.refunded. Revoke entitlement (unpublish + mark 'disputed', which the
  * invoice/receipt routes, toggle-publish and renewal checkout treat as non-paid).
  */
-async function handleDisputeCreated(event: Stripe.Event, dispute: Stripe.Dispute, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
+async function handleDisputeCreated(stripe: Stripe, event: Stripe.Event, dispute: Stripe.Dispute, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
   try {
     const paymentIntentId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : null;
     if (!paymentIntentId) {
@@ -625,6 +663,8 @@ async function handleDisputeCreated(event: Stripe.Event, dispute: Stripe.Dispute
     if (!jobCharge) {
       const pack = await applyPackDisputeCreated(dispute, paymentIntentId, { eventId: event.id });
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
+      const retry = await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe);
+      if (retry) return retry;
       logger.warn('charge.dispute.created: no matching JobCharge', { paymentIntentId, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -646,11 +686,13 @@ async function handleDisputeCreated(event: Stripe.Event, dispute: Stripe.Dispute
 /**
  * charge.dispute.closed — the other half of the chargeback lifecycle.
  *   won  → the funds came back: restore 'paid' on a still-'disputed' posting
- *          and re-publish it if its listing window has not ended.
+ *          and re-publish it if its listing window has not ended. A dispute
+ *          closed 'warning_closed' (an inquiry that never became a
+ *          chargeback) is restored the same way (disputeClosedInOurFavour).
  *   lost → record the lost funds on the ledger (refund columns,
  *          refundReason 'dispute_lost'); the posting stays revoked.
  */
-async function handleDisputeClosed(event: Stripe.Event, dispute: Stripe.Dispute, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
+async function handleDisputeClosed(stripe: Stripe, event: Stripe.Event, dispute: Stripe.Dispute, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
   try {
     const paymentIntentId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : null;
     const jobCharge = paymentIntentId
@@ -659,6 +701,8 @@ async function handleDisputeClosed(event: Stripe.Event, dispute: Stripe.Dispute,
     if (!jobCharge) {
       const pack = paymentIntentId ? await applyPackDisputeClosed(dispute, paymentIntentId, { eventId: event.id }) : null;
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
+      const retry = paymentIntentId ? await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe) : null;
+      if (retry) return retry;
       logger.warn('charge.dispute.closed: no matching JobCharge', { paymentIntentId: paymentIntentId ?? undefined, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -671,7 +715,7 @@ async function handleDisputeClosed(event: Stripe.Event, dispute: Stripe.Dispute,
       logger.warn('Chargeback lost — recorded on the ledger', { jobChargeId: jobCharge.id, disputeId: dispute.id, amount: dispute.amount });
       return NextResponse.json({ received: true, dispute: 'lost' });
     }
-    if (dispute.status !== 'won') {
+    if (!disputeClosedInOurFavour(dispute.status)) {
       logger.info('charge.dispute.closed with a non-final outcome — no entitlement change', { disputeId: dispute.id, status: dispute.status });
       return NextResponse.json({ received: true });
     }

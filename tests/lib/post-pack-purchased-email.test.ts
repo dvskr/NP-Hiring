@@ -16,7 +16,9 @@
  *     sender), with a real unsubscribe token in the footer and the header;
  *   - no dashes in the subject or the text;
  *   - a send that fails reports { success: false } instead of throwing, so
- *     the webhook can release its email claim for a retry.
+ *     the webhook can release its email claim for a retry;
+ *   - (fix pass, security review L9) its own log lines never carry the
+ *     buyer's address; the caller logs the Checkout Session instead.
  *
  * The REAL email-service runs (the global setup mocks it); Resend is mocked.
  */
@@ -35,6 +37,7 @@ vi.mock('resend', () => ({
 import { prisma } from '@/lib/prisma';
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
+import { logger } from '@/lib/logger';
 import { packUseByLabel } from '@/lib/pricing-copy';
 
 interface Sent {
@@ -135,5 +138,22 @@ describe('sendPostPackPurchasedEmail', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/bad address/);
+    });
+
+    it("never logs the buyer's address in its own lines, sent or failed (security review L9)", async () => {
+        const info = vi.spyOn(logger, 'info');
+        const error = vi.spyOn(logger, 'error');
+        const own = (spy: typeof info | typeof error) => JSON.stringify(spy.mock.calls.filter(([message]) => /5-post pack purchase email/.test(String(message))));
+
+        await send();
+        expect(own(info)).toContain('5-post pack purchase email sent');
+        resendSendMock.mockResolvedValue({ data: null, error: { name: 'validation_error', message: 'bad address' } });
+        await send();
+        expect(own(error)).toContain('Error sending 5-post pack purchase email');
+
+        expect(own(info)).not.toContain('owner@clinic.example');
+        expect(own(error)).not.toContain('owner@clinic.example');
+        info.mockRestore();
+        error.mockRestore();
     });
 });

@@ -20,23 +20,41 @@
  *   - the idempotency key collapses a double click inside one ten-minute
  *     window into one session (expires_at is a function of the window, so a
  *     replay sends identical parameters), and gives a later click its own.
+ *
+ * Fix pass of the reviews:
+ *   - an account whose email is not confirmed is refused (security L1);
+ *   - the account's open pack sessions from earlier windows are expired
+ *     before a new one is minted, and a session that cannot be expired, or a
+ *     listing that cannot be read, refuses with a retryable 503 (security
+ *     L6); this window's session stays open, since a double click replays it;
+ *   - the payment intent carries { type: 'post_pack', userId }, so a refund or
+ *     dispute that arrives before the pack is recorded is told from any other
+ *     payment and retried (code review M2);
+ *   - the sale gate is lib/post-pack-sale.ts#packSaleClosedReason, the one
+ *     copy, and the route reads no request body at all (code review L5).
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { ANALYTICS_ONLY, CONSENT_COOKIE, serializeConsent } from '@/lib/consent';
+import { readRepo, withoutComments } from '../support/docs-vs-code';
 
 const sessionsCreate = vi.fn();
+const sessionsList = vi.fn();
+const sessionsExpire = vi.fn();
+const sessionsRetrieve = vi.fn();
 vi.mock('stripe', () => ({
-    default: vi.fn().mockImplementation(() => ({ checkout: { sessions: { create: sessionsCreate } } })),
+    default: vi.fn().mockImplementation(() => ({
+        checkout: { sessions: { create: sessionsCreate, list: sessionsList, expire: sessionsExpire, retrieve: sessionsRetrieve } },
+    })),
 }));
 
 const env = vi.hoisted(() => ({
     isFeatureEnabled: vi.fn(),
     getEnv: vi.fn(),
     getBaseUrl: vi.fn(() => 'http://localhost:3000'),
-    getPaidPostingStatus: vi.fn(() => ({ enabled: true, stripeConfigured: true, available: true })),
+    getPaidPostingStatus: vi.fn(),
 }));
 vi.mock('@/lib/env', () => env);
 
@@ -54,9 +72,21 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const AFTER_PROMO_MS = Date.parse('2027-03-01T12:03:00.000Z');
 const WINDOW_MS = 10 * 60 * 1000;
 
-function signedIn(email = 'Owner@Clinic.example', role = 'employer') {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email } }, error: null });
+const CONFIRMED_AT = '2026-11-02T09:00:00Z';
+
+function signedIn(email = 'Owner@Clinic.example', role = 'employer', emailConfirmedAt: string | null = CONFIRMED_AT) {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email, email_confirmed_at: emailConfirmedAt } }, error: null });
     vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ role } as never);
+}
+
+/** The open Checkout Sessions Stripe lists, newest first. */
+function openSessions(sessions: Array<Record<string, unknown>>) {
+    sessionsList.mockReturnValue({ async *[Symbol.asyncIterator]() { for (const session of sessions) yield session; } });
+}
+
+/** An open pack session of `userId` that closes at `expiresAt` (epoch seconds). */
+function openPackSession(id: string, expiresAt: number, userId = 'user-1') {
+    return { id, status: 'open', expires_at: expiresAt, created: expiresAt - 50 * 60, metadata: { type: 'post_pack', sku: 'post-pack-5', userId } };
 }
 
 async function buy(body: unknown = {}, headers: Record<string, string> = {}) {
@@ -82,11 +112,19 @@ beforeEach(() => {
     vi.clearAllMocks();
     process.env.STRIPE_SECRET_KEY = 'sk_test_x';
     env.isFeatureEnabled.mockImplementation((feature: string) => feature === 'paidPosting');
+    // As lib/env.ts builds it: the flag, and whether the Stripe key is set.
+    env.getPaidPostingStatus.mockImplementation(() => {
+        const enabled = env.isFeatureEnabled('paidPosting');
+        const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
+        return { enabled, stripeConfigured, available: enabled && stripeConfigured };
+    });
     env.getEnv.mockReturnValue({ STRIPE_WEBHOOK_SECRET: 'whsec_x' });
     nowSpy = vi.spyOn(Date, 'now').mockReturnValue(AFTER_PROMO_MS);
     vi.spyOn(config, 'isPromoActive').mockReturnValue(false);
     signedIn();
     sessionsCreate.mockResolvedValue({ id: 'cs_pack', url: 'https://checkout.stripe.test/cs_pack' });
+    openSessions([]);
+    sessionsExpire.mockResolvedValue({ status: 'expired' });
 });
 
 afterEach(() => {
@@ -147,6 +185,23 @@ describe('the sale gate', () => {
         expect(res.status).toBe(409);
         expect(config.isPromoActive).toHaveBeenCalledWith(expect.any(Date));
     });
+
+    it('an environment that will not parse: 503 STRIPE_NOT_CONFIGURED, nothing sold', async () => {
+        env.getPaidPostingStatus.mockImplementation(() => { throw new Error('env invalid'); });
+
+        const { res, json } = await buy();
+
+        expect(res.status).toBe(503);
+        expect(json.code).toBe('STRIPE_NOT_CONFIGURED');
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it('reads the gate from lib/post-pack-sale.ts, its one copy, and reads no request body (code review L5)', () => {
+        const route = withoutComments(readRepo('app/api/create-pack-checkout/route.ts'));
+        expect(route).toContain('packSaleClosedReason(');
+        expect(route).not.toContain("isFeatureEnabled('paidPosting')");
+        expect(route).not.toMatch(/readJsonObject|request\.json\(|request\.text\(/);
+    });
 });
 
 describe('who can buy', () => {
@@ -177,6 +232,94 @@ describe('who can buy', () => {
         expect(json.error).toBe('Company email required');
         expect(sessionsCreate).not.toHaveBeenCalled();
     });
+
+    it.each([['null', null], ['empty', '']])('403 for an account whose email is not confirmed (email_confirmed_at %s), in plain words (security review L1)', async (_label, confirmedAt) => {
+        signedIn('owner@clinic.example', 'employer', confirmedAt);
+
+        const { res, json } = await buy();
+
+        expect(res.status).toBe(403);
+        expect(json.error).toBe(`Confirm your email address to buy a ${config.packPosts}-post pack.`);
+        expect(json.error).not.toMatch(/[–—]| - /);
+        expect(sessionsList).not.toHaveBeenCalled();
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+});
+
+describe("the account's other open pack sessions (security review L6)", () => {
+    const windowIndex = Math.floor(AFTER_PROMO_MS / WINDOW_MS);
+    /** expires_at of a pack session minted in window `index` (the renewal checkout's helper, 55 minutes from the window start). */
+    const expiresAtOf = (index: number) => Math.floor((index * WINDOW_MS + 55 * 60 * 1000) / 1000);
+
+    it('are expired before the new session is minted, when they come from an earlier window', async () => {
+        openSessions([openPackSession('cs_earlier', expiresAtOf(windowIndex - 2)), openPackSession('cs_older', expiresAtOf(windowIndex - 4))]);
+
+        const { res } = await buy();
+
+        expect(res.status).toBe(200);
+        expect(sessionsList).toHaveBeenCalledWith(expect.objectContaining({ status: 'open' }));
+        expect(sessionsExpire.mock.calls.map(([id]) => id)).toEqual(['cs_earlier', 'cs_older']);
+        expect(sessionsExpire.mock.invocationCallOrder[1]).toBeLessThan(sessionsCreate.mock.invocationCallOrder[0]);
+    });
+
+    it("leaves this window's session open: a double click replays it, and must not find it closed", async () => {
+        openSessions([openPackSession('cs_this_window', expiresAtOf(windowIndex))]);
+
+        const { res } = await buy();
+
+        expect(res.status).toBe(200);
+        expect(createdParams().expires_at).toBe(expiresAtOf(windowIndex));
+        expect(sessionsExpire).not.toHaveBeenCalled();
+    });
+
+    it("never touches another account's pack session, or a session that is not a pack's", async () => {
+        openSessions([
+            openPackSession('cs_other_account', expiresAtOf(windowIndex - 2), 'user-2'),
+            { id: 'cs_post', status: 'open', expires_at: expiresAtOf(windowIndex - 2), metadata: { jobId: 'job-1', pricing: 'pro' } },
+            { id: 'cs_renewal', status: 'open', expires_at: expiresAtOf(windowIndex - 2), metadata: { jobId: 'job-1', type: 'renewal' } },
+        ]);
+
+        await buy();
+
+        expect(sessionsExpire).not.toHaveBeenCalled();
+        expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('a session that cannot be expired (it may still take money): 503 with Retry-After, nothing minted', async () => {
+        openSessions([openPackSession('cs_earlier', expiresAtOf(windowIndex - 2))]);
+        sessionsExpire.mockRejectedValue(new Error('This Checkout Session is not open'));
+        sessionsRetrieve.mockResolvedValue({ id: 'cs_earlier', status: 'complete' });
+
+        const { res, json } = await buy();
+
+        expect(res.status).toBe(503);
+        expect(res.headers.get('Retry-After')).toBe('60');
+        expect(json.code).toBe('PREVIOUS_PACK_CHECKOUT_OPEN');
+        expect(json.error).not.toMatch(/[–—]| - /);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it('one that expired by itself meanwhile counts as closed', async () => {
+        openSessions([openPackSession('cs_earlier', expiresAtOf(windowIndex - 2))]);
+        sessionsExpire.mockRejectedValue(new Error('This Checkout Session is not open'));
+        sessionsRetrieve.mockResolvedValue({ id: 'cs_earlier', status: 'expired' });
+
+        const { res } = await buy();
+
+        expect(res.status).toBe(200);
+        expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('when Stripe cannot list the open sessions: 503 with Retry-After, nothing minted', async () => {
+        sessionsList.mockImplementation(() => { throw new Error('Stripe is down'); });
+
+        const { res, json } = await buy();
+
+        expect(res.status).toBe(503);
+        expect(res.headers.get('Retry-After')).toBe('60');
+        expect(json.code).toBe('PACK_CHECK_UNAVAILABLE');
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
 });
 
 describe('the Checkout Session', () => {
@@ -203,7 +346,8 @@ describe('the Checkout Session', () => {
         expect(params.client_reference_id).toBe('user-1');
         expect(params.billing_address_collection).toBe('required');
         expect(params.tax_id_collection).toEqual({ enabled: true });
-        expect(params.payment_intent_data).toEqual({ receipt_email: 'Owner@Clinic.example' });
+        // The intent is tagged, so a refund or dispute that lands before the pack is recorded is retried (code review M2).
+        expect(params.payment_intent_data).toEqual({ receipt_email: 'Owner@Clinic.example', metadata: { type: 'post_pack', userId: 'user-1' } });
         expect(params.invoice_creation).toMatchObject({ enabled: true, invoice_data: { metadata: { type: 'post_pack', sku: 'post-pack-5', userId: 'user-1' } } });
         expect(params.success_url).toBe('http://localhost:3000/employer/post-pack?session_id={CHECKOUT_SESSION_ID}');
         expect(params.cancel_url).toBe('http://localhost:3000/employer/post-pack');

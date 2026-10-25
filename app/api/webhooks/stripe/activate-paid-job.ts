@@ -137,23 +137,27 @@ function prismaErrorCode(err: unknown): string | undefined {
 
 /**
  * Record the JobCharge for a paid session that did not win the activation
- * claim: the winner crashed before its ledger write, or this is a second
- * payment for the same posting. Money Stripe took must always be on the
- * ledger (the refund/dispute webhooks match on it). Best-effort — never throws.
+ * claim: the winner crashed before (or failed at) its ledger write, or this
+ * is a second payment for the same posting. Money Stripe took must always be
+ * on the ledger (the refund/dispute webhooks match on it, and a 'new' row
+ * sets the renewal price), so a backfill that fails throws (code review M3):
+ * the webhook answers 500 and Stripe retries, instead of acknowledging a
+ * payment with no ledger row. A duplicate (P2002) is another path's write of
+ * the same charge: done.
  */
 async function ensureJobChargeRecorded(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
   employerJobId: string,
 ): Promise<void> {
-  try {
-    const existing = await prisma.jobCharge.findFirst({
-      where: { stripeSessionId: session.id },
-      select: { id: true },
-    });
-    if (existing) return;
+  const existing = await prisma.jobCharge.findFirst({
+    where: { stripeSessionId: session.id },
+    select: { id: true },
+  });
+  if (existing) return;
 
-    const invoiceData = await fetchInvoiceData(stripe, session);
+  const invoiceData = await fetchInvoiceData(stripe, session);
+  try {
     await prisma.jobCharge.create({
       data: {
         employerJobId,
@@ -165,15 +169,15 @@ async function ensureJobChargeRecorded(
         ...invoiceData,
       },
     });
-    logger.info('Backfilled missing JobCharge for a paid session that lost the activation claim', {
-      sessionId: session.id,
-      employerJobId,
-    });
   } catch (err) {
-    if (prismaErrorCode(err) !== 'P2002') {
-      logger.error('Failed to backfill JobCharge for paid session', err, { sessionId: session.id });
-    }
+    if (prismaErrorCode(err) === 'P2002') return;
+    logger.error('Failed to backfill JobCharge for paid session; rethrowing so Stripe retries', err, { sessionId: session.id });
+    throw err;
   }
+  logger.info('Backfilled missing JobCharge for a paid session that lost the activation claim', {
+    sessionId: session.id,
+    employerJobId,
+  });
 }
 
 /**
@@ -209,7 +213,9 @@ export async function detectIntroDoubleCharge(
       prisma.employerPostPack.count({ where: paidPackWhere(quotaDomain) }),
     ]);
     if (others === 0 && paidPacks === 0) return false;
-    logger.error('Intro price charged twice for one domain (concurrent first checkouts) — refund the difference', undefined, {
+    // Both checkouts got the intro price, so the company paid less than the
+    // ladder asks, not more: no refund is due (code review L2).
+    logger.error('Intro price charged twice for one domain (concurrent first checkouts): the domain paid less than the ladder asks, so no refund is due', undefined, {
       jobId,
       employerJobId,
       quotaDomain,
@@ -235,6 +241,8 @@ export async function detectIntroDoubleCharge(
  *   - anything else (another new-post session already charged, or the row
  *     is refunded/disputed/expired) → the employer paid twice. Record the
  *     charge and report 'duplicate_payment' so a human refunds it.
+ * A backfill that fails throws (ensureJobChargeRecorded), so no outcome is
+ * reported for a payment that is not on the ledger.
  */
 async function resolveLostClaim(
   stripe: Stripe,
@@ -334,6 +342,7 @@ export async function activatePaidJobCheckout(
   // Audit #28: also persist payment_intent so the refund webhook can
   // match `charge.refunded` events back to this JobCharge row.
   const newPostInvoiceData = await fetchInvoiceData(stripe, session);
+  let ledgerError: unknown = null;
   try {
     await prisma.jobCharge.create({
       data: {
@@ -350,12 +359,14 @@ export async function activatePaidJobCheckout(
     // A duplicate (P2002 on stripeSessionId) is this charge already on the
     // ledger. Anything else must not be swallowed (review 2.28 M2): this row
     // sets the post's renewal price (lib/renewal-price.ts) and is what a
-    // refund or dispute is matched by. The webhook answers 500 and rolls its
-    // dedupe row back; Stripe's retry loses the claim (the row is 'paid' now)
-    // and resolveLostClaim backfills the charge.
+    // refund or dispute is matched by. It is rethrown at the end, once the
+    // steps below have run (code review M3): Stripe's retry loses the claim
+    // (the row is 'paid' now), so resolveLostClaim backfills the charge and
+    // runs none of them. The webhook then answers 500 and rolls its dedupe
+    // row back, and that retry is the intended recovery.
     if (prismaErrorCode(chargeErr) !== 'P2002') {
-      logger.error('Failed to record JobCharge for new post; rethrowing so the payment is retried onto the ledger', chargeErr, { jobId });
-      throw chargeErr;
+      logger.error('Failed to record JobCharge for new post; finishing the activation, then rethrowing so the payment is retried onto the ledger', chargeErr, { jobId });
+      ledgerError = chargeErr;
     }
   }
 
@@ -452,6 +463,8 @@ export async function activatePaidJobCheckout(
     );
   }
 
+  // The 'new' charge is still not on the ledger: rethrown last (see above).
+  if (ledgerError !== null) throw ledgerError;
   return { outcome: 'activated', jobId, ...(!published && { leftArchived: true as const }) };
 }
 

@@ -588,10 +588,12 @@ describe('sections 8 and 9: what an operator is told to do', () => {
     // Register 2.8: a restricted live key can do only what its permissions
     // allow, so the list has to cover every Stripe call in app/ and lib/,
     // each at the level the call needs (a POST needs Write, a GET Read), and
-    // the objects a call expands.
+    // the objects a call expands. (Fix pass of the pack reviews: the pack's
+    // fulfilment reads its payment intent and expands the latest charge.)
     it('9b gives a restricted key every permission the Stripe calls in the code need', () => {
         const LABELS: Record<string, string> = {
             'checkout.sessions': 'Checkout Sessions',
+            paymentIntents: 'Payment Intents',
             subscriptions: 'Subscriptions',
             invoices: 'Invoices',
             'billingPortal.sessions': 'Customer portal',
@@ -599,9 +601,11 @@ describe('sections 8 and 9: what an operator is told to do', () => {
         const WRITES = new Set(['create', 'update', 'expire', 'cancel', 'del']);
         const needs = new Map<string, 'Read' | 'Write'>();
         let expandsPaymentIntent = false;
+        let expandsCharge = false;
         for (const file of [...walk('app', isSource), ...walk('lib', isSource)]) {
             const src = withoutComments(readRepo(file));
             if (/expand:\s*\[[^\]]*'payment_intent'/.test(src)) expandsPaymentIntent = true;
+            if (/expand:\s*\[[^\]]*'latest_charge'/.test(src)) expandsCharge = true;
             for (const match of src.matchAll(/\bstripe(?:Client)?\.((?:[a-zA-Z]+\.)+)([a-zA-Z]+)\(/g)) {
                 const resource = match[1].slice(0, -1);
                 if (resource === 'webhooks') continue;
@@ -610,7 +614,8 @@ describe('sections 8 and 9: what an operator is told to do', () => {
                 if (needs.get(LABELS[resource]) !== 'Write') needs.set(LABELS[resource], level);
             }
         }
-        if (expandsPaymentIntent) needs.set('Payment Intents', 'Read');
+        if (expandsPaymentIntent && !needs.has('Payment Intents')) needs.set('Payment Intents', 'Read');
+        if (expandsCharge) needs.set('Charges', 'Read');
         expect(needs.size).toBeGreaterThanOrEqual(5);
 
         const list = between(section9b, 'Restricted live key', '\n- [ ]');

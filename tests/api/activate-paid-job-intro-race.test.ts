@@ -15,7 +15,11 @@
  *     first intro never log; a failing count never throws;
  *   - (2027 re-price, phase 2) a paid Stripe pack at the domain is the
  *     company's paid purchase too, so an intro sale that raced a pack
- *     purchase is logged the same way, counted with paidPackWhere.
+ *     purchase is logged the same way, counted with paidPackWhere;
+ *   - (fix pass, code review L2) the log line says what happened: both
+ *     checkouts got the intro price, so the company paid less than the
+ *     ladder asks, and no refund is due. It used to say "refund the
+ *     difference", which points the wrong way.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
@@ -50,7 +54,11 @@ describe('detectIntroDoubleCharge', () => {
         expect(flagged).toBe(true);
         expect(logger.error).toHaveBeenCalledTimes(1);
         const [message, err, context] = vi.mocked(logger.error).mock.calls[0];
-        expect(message).toMatch(/Intro price charged twice/);
+        expect(message).toMatch(/^Intro price charged twice for one domain/);
+        // The domain paid less than the ladder asks: nothing goes back (code review L2).
+        expect(message).toMatch(/no refund is due/);
+        expect(message).not.toMatch(/refund the difference/);
+        expect(message).not.toMatch(/[–—]| - /);
         expect(err).toBeUndefined();
         expect(context).toMatchObject({ jobId: 'job-2', employerJobId: 'ej-2', quotaDomain: DOMAIN, sessionId: 'cs_test_intro', amountCents: 19900, otherPaidPosts: 1 });
     });

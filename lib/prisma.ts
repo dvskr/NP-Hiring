@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, type Prisma } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import { resolvePoolSizing } from '@/lib/prisma-pool-config'
@@ -53,3 +53,6 @@ if (!globalForPrisma.prisma) {
 }
 
 export const prisma = globalForPrisma.prisma
+
+/** The global client or an interactive transaction's client: what a helper that can run inside a caller's transaction accepts. */
+export type Db = Prisma.TransactionClient | typeof prisma

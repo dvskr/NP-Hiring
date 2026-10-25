@@ -19,6 +19,12 @@
  * whose create on the unique stripeSessionId makes a race with a late
  * webhook harmless. A failure there never breaks the answer: the webhook's
  * retries and the daily sweep still record the pack.
+ *
+ * Once the pack is on the books, its purchase email is sent here if a failed
+ * send left it unsent (sendPurchasedEmailIfUnsent, code review L1): a
+ * replayed webhook finds the pack recorded and runs no side effect, so
+ * nothing else would send it. The EmailSend claim keeps it to one email, and
+ * it never throws.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
@@ -30,7 +36,7 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { stringField } from '@/lib/request-body';
 import { config } from '@/lib/config';
 import { POST_PACK_CHECKOUT_TYPE } from '@/lib/post-pack-sale';
-import { fulfilPostPackCheckout } from '@/app/api/webhooks/stripe/post-pack-checkout';
+import { fulfilPostPackCheckout, sendPurchasedEmailIfUnsent } from '@/app/api/webhooks/stripe/post-pack-checkout';
 
 /** A Checkout Session id as Stripe mints them; anything else is refused before Stripe is asked. */
 const CHECKOUT_SESSION_ID = /^cs_[A-Za-z0-9_]+$/;
@@ -100,6 +106,7 @@ export async function GET(request: NextRequest) {
         captureException(healError, { tags: { area: 'verify-pack-session' }, extra: { sessionId, reason: 'pack self-heal failed' } });
       }
     }
+    if (pack) await sendPurchasedEmailIfUnsent(session);
     return NextResponse.json({ status: 'paid', pack });
   } catch (error) {
     logger.error('Error verifying 5-post pack session', error);

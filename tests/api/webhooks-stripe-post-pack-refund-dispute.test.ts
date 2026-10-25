@@ -16,15 +16,27 @@
  *     exactly the posts it took down; a lost one revokes the frozen credits
  *     for good, recorded as 'dispute_lost';
  *   - every one of them alerts staff, and a redelivery changes nothing twice.
+ *
+ * Fix pass of the reviews:
+ *   - a lost dispute revokes the credits from a pack still 'paid' too (one
+ *     whose dispute.created never froze it), and takes its posts down;
+ *   - a dispute closed 'warning_closed' (an inquiry that never became a
+ *     chargeback) puts the pack back like a won one (security L8);
+ *   - a refund or dispute of a pack payment whose pack is not recorded yet
+ *     (the checkout was not fulfilled) answers 500, so Stripe retries once
+ *     the pack exists: /api/create-pack-checkout tags the payment intent
+ *     (code review M2). Any other unmatched payment is acknowledged as before.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
 import { sendRefundConfirmationEmail } from '@/lib/email-service';
 
+const stripeApi = vi.hoisted(() => ({ paymentIntentsRetrieve: vi.fn() }));
 vi.mock('stripe', () => ({
     default: vi.fn().mockImplementation(() => ({
         webhooks: { constructEvent: vi.fn().mockImplementation((raw: string) => JSON.parse(raw)) },
+        paymentIntents: { retrieve: stripeApi.paymentIntentsRetrieve },
     })),
 }));
 vi.mock('@/lib/email-service', () => ({
@@ -85,6 +97,8 @@ beforeEach(() => {
     vi.mocked(prisma.employerPostPack.updateMany).mockReset().mockResolvedValue({ count: 1 } as never);
     vi.mocked(prisma.employerPostPack.update).mockReset().mockResolvedValue({} as never);
     posts([]);
+    // A payment intent that is not a pack's, unless a test says otherwise.
+    stripeApi.paymentIntentsRetrieve.mockReset().mockResolvedValue({ id: 'pi_pack', metadata: {} });
 });
 
 afterEach(() => {
@@ -183,8 +197,24 @@ describe('a chargeback', () => {
             where: { postPackId: 'pack-1', paymentStatus: 'disputed', jobCharges: { none: {} } },
         }));
         expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['ej-1'] }, paymentStatus: 'disputed' }, data: { paymentStatus: 'pack' } });
-        expect(prisma.job.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['job-1'] }, archivedAt: null }, data: { isPublished: true, contentChangedAt: NOW } });
+        expect(prisma.job.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ['job-1'] }, archivedAt: null, employerJobs: { postPackId: 'pack-1', paymentStatus: 'disputed' } },
+            data: { isPublished: true, contentChangedAt: NOW },
+        });
         expect(alerts()).toContain('dispute won');
+    });
+
+    it("closed 'warning_closed' (an inquiry that never became a chargeback): put back like a won dispute (security review L8)", async () => {
+        packFound({ status: 'paid', creditsRemaining: 3 });
+        posts([{ id: 'ej-1', jobId: 'job-1', job: { expiresAt: new Date('2027-06-01T00:00:00.000Z'), archivedAt: null, isManuallyUnpublished: false } }]);
+
+        const { res, json } = await dispute('charge.dispute.closed', 'warning_closed');
+
+        expect(res.status).toBe(200);
+        expect(json).toEqual({ received: true, pack: 'won' });
+        expect(packWrites()).toContainEqual({ where: { id: 'pack-1', status: 'disputed' }, data: { status: 'paid' } });
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['ej-1'] }, paymentStatus: 'disputed' }, data: { paymentStatus: 'pack' } });
+        expect(alerts()).toContain('inquiry closed');
     });
 
     it('won after a refund: the refund stands, nothing is put back', async () => {
@@ -219,14 +249,91 @@ describe('a chargeback', () => {
         expect(alerts()).toContain('dispute lost');
     });
 
-    it('closed with any other outcome: no change', async () => {
+    it('lost on a pack still paid (its dispute.created never froze it): the credits are revoked and its posts taken down', async () => {
+        packFound({ status: 'paid', creditsRemaining: 4 });
+        posts([{ id: 'ej-1', jobId: 'job-1' }]);
+
+        const { res, json } = await dispute('charge.dispute.closed', 'lost');
+
+        expect(res.status).toBe(200);
+        expect(json).toEqual({ received: true, pack: 'lost' });
+        expect(packWrites()).toContainEqual({
+            where: { id: 'pack-1', status: 'paid', creditsRemaining: 4 },
+            data: { status: 'disputed', creditsRemaining: 0, creditsRevoked: { increment: 4 } },
+        });
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['ej-1'] }, paymentStatus: 'pack' }, data: { paymentStatus: 'disputed' } });
+        expect(prisma.job.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { isPublished: false } }));
+    });
+
+    it.each(['under_review', 'prevented'])("closed with any other outcome ('%s'): no change", async (status) => {
         packFound();
 
-        const { json } = await dispute('charge.dispute.closed', 'warning_closed');
+        const { json } = await dispute('charge.dispute.closed', status);
 
         expect(json.pack).toBe('open');
         expect(packWrites()).toEqual([]);
         expect(prisma.employerPostPack.update).not.toHaveBeenCalled();
+    });
+
+    it('opened on a pack already frozen (recorded disputed by a late fulfilment): says so, changes nothing more', async () => {
+        vi.mocked(prisma.employerPostPack.findUnique).mockResolvedValue({ ...PACK, status: 'disputed' } as never);
+        vi.mocked(prisma.employerPostPack.updateMany).mockResolvedValue({ count: 0 } as never);
+
+        const { json } = await dispute('charge.dispute.created', 'needs_response');
+
+        expect(json.pack).toBe('not_frozen');
+        expect(alerts()).toContain('already frozen');
+        expect(alerts()).not.toContain('it was not paid');
+    });
+});
+
+describe('a pack payment whose pack is not recorded yet (code review M2)', () => {
+    /** The payment intent /api/create-pack-checkout tags, while no pack row has it yet. */
+    function unrecordedPackPayment() {
+        vi.mocked(prisma.employerPostPack.findUnique).mockResolvedValue(null as never);
+        stripeApi.paymentIntentsRetrieve.mockResolvedValue({ id: 'pi_pack', metadata: { type: 'post_pack', userId: 'user-1' } });
+    }
+
+    it.each([
+        ['a refund', () => refund(124500), 'evt_charge.refunded'],
+        ['a dispute opened', () => dispute('charge.dispute.created', 'needs_response'), 'evt_charge.dispute.created'],
+        ['a dispute closed', () => dispute('charge.dispute.closed', 'lost'), 'evt_charge.dispute.closed'],
+    ])('%s answers 500 and rolls the dedupe row back, so Stripe retries once the pack exists', async (_label, deliverEvent, eventId) => {
+        unrecordedPackPayment();
+
+        const { res } = await deliverEvent();
+
+        expect(res.status).toBe(500);
+        expect(stripeApi.paymentIntentsRetrieve).toHaveBeenCalledWith('pi_pack');
+        expect(prisma.processedStripeEvent.delete).toHaveBeenCalledWith({ where: { eventId } });
+        expect(alerts()).toContain('before its pack was recorded');
+        expect(packWrites()).toEqual([]);
+        expect(prisma.employerPostPack.update).not.toHaveBeenCalled();
+    });
+
+    it('a payment that is not a pack payment is acknowledged as before', async () => {
+        const { res, json } = await refund(124500);
+
+        expect(res.status).toBe(200);
+        expect(json.note).toBe('no matching JobCharge');
+        expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+    });
+
+    it('a payment intent Stripe no longer has is acknowledged: no retry can find a pack for it', async () => {
+        stripeApi.paymentIntentsRetrieve.mockRejectedValue(Object.assign(new Error('No such payment_intent'), { code: 'resource_missing' }));
+
+        const { res } = await refund(124500);
+
+        expect(res.status).toBe(200);
+    });
+
+    it('when Stripe cannot be asked, the event answers 500, so Stripe retries', async () => {
+        stripeApi.paymentIntentsRetrieve.mockRejectedValue(new Error('Stripe is down'));
+
+        const { res } = await dispute('charge.dispute.created', 'needs_response');
+
+        expect(res.status).toBe(500);
+        expect(prisma.processedStripeEvent.delete).toHaveBeenCalled();
     });
 });
 

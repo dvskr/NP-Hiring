@@ -13,7 +13,10 @@
  *     fulfilPostPackCheckout (self-heal); a failure there never breaks the
  *     answer, which then says paid with no pack yet;
  *   - a completed session whose delayed payment is still settling answers
- *     'processing'; an open or expired one 'unpaid'.
+ *     'processing'; an open or expired one 'unpaid';
+ *   - (fix pass, code review L1) once the pack is on the books, the purchase
+ *     email a failed send left unsent is sent here: a replayed webhook finds
+ *     the pack recorded and runs no side effect, so nothing else would.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -32,7 +35,7 @@ const getUserMock = vi.fn();
 vi.mock('@/lib/supabase/server', () => ({
     createClient: vi.fn(async () => ({ auth: { getUser: getUserMock } })),
 }));
-const fulfilment = vi.hoisted(() => ({ fulfilPostPackCheckout: vi.fn() }));
+const fulfilment = vi.hoisted(() => ({ fulfilPostPackCheckout: vi.fn(), sendPurchasedEmailIfUnsent: vi.fn() }));
 vi.mock('@/app/api/webhooks/stripe/post-pack-checkout', () => fulfilment);
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 
@@ -68,6 +71,7 @@ beforeEach(() => {
     sessionsRetrieve.mockResolvedValue(packSession());
     vi.mocked(prisma.employerPostPack.findUnique).mockResolvedValue(PACK_ROW as never);
     fulfilment.fulfilPostPackCheckout.mockResolvedValue({ outcome: 'fulfilled', packId: 'pack-1' });
+    fulfilment.sendPurchasedEmailIfUnsent.mockResolvedValue(undefined);
 });
 
 describe('who is answered', () => {
@@ -162,6 +166,37 @@ describe('what a paid session answers', () => {
         expect(res.status).toBe(200);
         expect(json).toEqual({ status: 'paid', pack: null });
         expect(captureException).toHaveBeenCalled();
+    });
+});
+
+describe('the purchase email a failed send left unsent (code review L1)', () => {
+    it('is retried for a pack on the books, with the buyer session', async () => {
+        await verify();
+
+        expect(fulfilment.sendPurchasedEmailIfUnsent).toHaveBeenCalledTimes(1);
+        expect(fulfilment.sendPurchasedEmailIfUnsent).toHaveBeenCalledWith(expect.objectContaining({ id: 'cs_pack' }));
+    });
+
+    it('is retried after a self-heal recorded the pack too (the claim keeps it to one email)', async () => {
+        vi.mocked(prisma.employerPostPack.findUnique)
+            .mockResolvedValueOnce(null as never)
+            .mockResolvedValueOnce(PACK_ROW as never);
+
+        await verify();
+
+        expect(fulfilment.sendPurchasedEmailIfUnsent).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not tried while no pack is on the books, for an unpaid session, or for another account', async () => {
+        vi.mocked(prisma.employerPostPack.findUnique).mockResolvedValue(null as never);
+        fulfilment.fulfilPostPackCheckout.mockRejectedValue(new Error('db down'));
+        await verify();
+        sessionsRetrieve.mockResolvedValue(packSession({ payment_status: 'unpaid' }));
+        await verify();
+        sessionsRetrieve.mockResolvedValue(packSession({ client_reference_id: 'user-2', metadata: { type: 'post_pack', userId: 'user-2' } }));
+        await verify();
+
+        expect(fulfilment.sendPurchasedEmailIfUnsent).not.toHaveBeenCalled();
     });
 });
 

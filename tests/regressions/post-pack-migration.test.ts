@@ -13,6 +13,16 @@
  *     holds billing emails and Stripe ids.
  * prisma/schema.prisma has to say the same, and supabase/rls-policies.sql
  * lists the table with the other service-role-only tables.
+ *
+ * Fix pass (security review L3; the migration had never been applied, so it
+ * was edited in place):
+ *   - it waits at most 5 seconds for a lock, set with SET LOCAL as its first
+ *     statement, so a deploy cannot queue behind a long transaction on
+ *     employer_jobs and stall every write behind it. Never a session-level
+ *     SET: on a pooled connection that outlives the transaction (the
+ *     2026-10-01 pooler lesson);
+ *   - status and source have no default: the one create site sets both, and
+ *     a write that forgot one should fail, not record a pack as paid.
  */
 import { describe, it, expect } from 'vitest';
 import { between, readRepo } from '../support/docs-vs-code';
@@ -35,6 +45,25 @@ describe(`migration ${FOLDER}`, () => {
         expect(added.map((match) => match[1])).toEqual(['post_pack_id']);
         expect(added[0][2]).toBe('TEXT');
         expect(added[0][3]).not.toMatch(/NOT NULL|DEFAULT/i);
+    });
+
+    it('sets a 5 second lock timeout first, for its own transaction only', () => {
+        expect(statements.trimStart()).toMatch(/^SET LOCAL lock_timeout = '5s';/);
+        // The only SET, and never one that outlives the transaction.
+        expect([...statements.matchAll(/^\s*SET\b[^;]*;/gim)].map((match) => match[0].trim())).toEqual(["SET LOCAL lock_timeout = '5s';"]);
+        expect(statements).not.toMatch(/\bSET\s+SESSION\b/i);
+    });
+
+    it('gives status and source no default, so a create has to set both', () => {
+        const table = between(statements, 'CREATE TABLE "employer_post_packs" (', ');');
+        expect(table).toMatch(/"status" TEXT NOT NULL,/);
+        expect(table).toMatch(/"source" TEXT NOT NULL,/);
+        const model = between(schema, 'model EmployerPostPack {', '\n}');
+        for (const field of ['status', 'source']) {
+            const line = model.split('\n').find((text) => new RegExp(`^\\s+${field}\\s`).test(text));
+            expect(line, field).toBeDefined();
+            expect(line, field).not.toContain('@default');
+        }
     });
 
     it('carries the credit CHECK that Prisma cannot express', () => {
