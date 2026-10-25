@@ -102,6 +102,8 @@ interface EmployerJobData {
   contactEmail: string;
   companyWebsite: string | null;
   paymentStatus: string;
+  /** What this post pays to renew, in dollars: the edit API's answer (lib/renewal-price.ts). */
+  renewalPrice: number;
 }
 
 /**
@@ -520,7 +522,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
     return isExpired() || isExpiringSoon();
   };
 
-  // Which rows can buy a $renewalPrice extension (mirrors the dashboard and
+  // Which rows can buy a renewal (mirrors the dashboard and
   // /api/create-renewal-checkout): 'plan' posts run config.durationDays and
   // are never renewed (their slot frees when they end); 'pending' (unpaid)
   // and 'refunded' rows are never renewable. Legacy 'free' rows still open
@@ -547,10 +549,13 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   // restore the post first; it never shows a Renew that can only fail.
   const restoreToRenew = renewableStatus && isArchived && renewalPurchasable;
   const offerPromoRepost = !isPlanPost && !offerRenewal && !restoreToRenew && paidPostingAvailable !== null && promoActive;
+  // What this post pays to renew, from the edit API: the pro price for a post
+  // bought at the posting price, the base price for every other one.
+  const renewalPrice = employerJob?.renewalPrice ?? config.renewalPrice;
   // The shared rule (lib/renewal-offer.ts). This page does not know the
   // employer's quota domain, so it passes no next-post price and the line
   // names the standard post price instead; no claim during the promo.
-  const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable });
+  const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, renewalPrice });
 
   const handleRenewCheckout = async (tier: 'pro') => {
     if (!job || !renewalPurchasable) return;
@@ -559,7 +564,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
     setShowRenewModal(false);
 
     // P7: fire begin_checkout for renewal
-    trackBeginCheckout(config.stripeRenewalPriceInCents, 'renewal');
+    trackBeginCheckout(renewalPrice * 100, 'renewal');
 
     try {
       const response = await fetch('/api/create-renewal-checkout', {
@@ -1239,7 +1244,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 16px' }}>{job.title}</p>
 
             <p style={{ fontSize: '14px', color: '#1A2E35', lineHeight: 1.6, margin: '0 0 8px' }}>
-              Renewals at ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing. This legacy free-trial post isn&apos;t one of them.
+              Renewals from ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing. This legacy free-trial post isn&apos;t one of them.
             </p>
             <p style={{ fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6, margin: '0 0 20px' }}>
               {promoActive
@@ -1270,7 +1275,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
         </div>
       )}
 
-      {/* Renewal Modal — promo / paid (and legacy renewed) posts get the $renewalPrice extension */}
+      {/* Renewal Modal — promo / paid (and legacy renewed) posts get the +config.durationDays extension, at this post's own renewal price */}
       {showRenewModal && job && employerJob?.paymentStatus !== 'free' && offerRenewal && (
         <div style={{
           position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1299,7 +1304,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#BE185D' }}>Renew Listing</span>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', fontFamily: 'var(--font-lora), Georgia, serif' }}>${config.renewalPrice}</span>
+                  <span style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', fontFamily: 'var(--font-lora), Georgia, serif' }}>${renewalPrice}</span>
                   {/* Only a saving that is true for any reader of this page; none during the promo. */}
                   {savingsLine && (
                     <p style={{ fontSize: '11px', color: '#6B7F8A', margin: '0', fontWeight: 600 }}>{savingsLine}</p>

@@ -4,8 +4,10 @@ import Link from 'next/link';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Image from 'next/image';
 import { FileText } from 'lucide-react';
-// Every price, date, slot count and duration in §6–§8 is a config token: the
-// Terms incorporate /pricing by reference, so the two can never disagree.
+// Every price, date and duration in §6–§8 is a config token: the Terms
+// incorporate /pricing by reference, so the two can never disagree. The
+// Employer plan is retired (owner decision, 2026-10-24), so §6–§8 offer no
+// plan and read no plan price or slot count.
 import { config } from '@/lib/config';
 
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
@@ -57,7 +59,7 @@ const TERMS_SECTIONS: ReadonlyArray<{ id: string; title: string }> = [
   { id: 'eligibility-and-accounts', title: '4. Eligibility & Accounts' },
   { id: 'user-responsibilities', title: '5. User Responsibilities' },
   { id: 'job-postings', title: '6. Job Postings' },
-  { id: 'pricing-and-payments', title: '7. Pricing, Launch Promotion, Employer Plan & Payments' },
+  { id: 'pricing-and-payments', title: '7. Pricing, Launch Promotion & Payments' },
   { id: 'refund-policy', title: '8. Refund Policy' },
   { id: 'candidate-data', title: '9. Candidate Data, Unlocks & Privacy' },
   { id: 'intellectual-property', title: '10. Intellectual Property' },
@@ -95,7 +97,7 @@ export default function TermsPage() {
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px 0', lineHeight: 1.15 }}>
                 Terms of <span style={{ color: '#0284C7' }}>Service</span>
               </h1>
-              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: September 27, 2026</p>
+              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: October 24, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Image src="/images/terms/hero.webp" alt="Terms of Service" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
@@ -179,48 +181,36 @@ export default function TermsPage() {
             <li style={liStyle}>We may suspend or terminate employer accounts that repeatedly violate these Terms</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Listing duration & renewals:</p>
-          {/* Plan postings run config.durationDays like every other posting
-              (post-free writes the same expiresAt), are never renewed
-              (create-renewal-checkout 409s them) and are unpublished when the
-              plan ends (lib/employer-plan.ts#pausePlanPosts). A renewal is
-              capped at config.renewalCapDays after creation
+          {/* Every posting runs config.durationDays (post-free and the
+              checkout write the same expiresAt). A renewal is capped at
+              config.renewalCapDays after creation
               (lib/expires-at.ts#renewalExpiresAt) and does not reset the
               posting's unlock or InMail counts. */}
-          <p style={pStyle}>All job postings, whether promotional, paid, or posted from an Employer plan slot, are active for {config.durationDays} days from the date of publication unless the employer closes them sooner or we remove them under these Terms. After {config.durationDays} days, postings expire automatically. Employers may renew promotional and paid postings through the employer dashboard. Each renewal adds {config.durationDays} days to the current expiration date, or to the renewal date if the posting has already expired; renewing early does not forfeit any remaining time on the existing posting. Renewals cannot extend a posting beyond {config.renewalCapDays} days after it was first published. A renewal extends a posting&apos;s term only; it does not add candidate unlocks or InMails.</p>
-          <p style={pStyle}>Postings made from an Employer plan slot are not renewed. Each runs for {config.durationDays} days; when it expires or the employer closes it, its slot becomes available and the employer may publish a new posting in that slot at no additional charge while the plan is active. Postings made from plan slots are unpublished when the plan ends (see §7).</p>
+          <p style={pStyle}>All job postings, whether promotional or paid, are active for {config.durationDays} days from the date of publication unless the employer closes them sooner or we remove them under these Terms. After {config.durationDays} days, postings expire automatically. Employers may renew promotional and paid postings through the employer dashboard. Each renewal adds {config.durationDays} days to the current expiration date, or to the renewal date if the posting has already expired; renewing early does not forfeit any remaining time on the existing posting. Renewals cannot extend a posting beyond {config.renewalCapDays} days after it was first published. A renewal extends a posting&apos;s term only; it does not add candidate unlocks or InMails.</p>
 
-          <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Launch Promotion, Employer Plan & Payments</h2>
+          <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Launch Promotion & Payments</h2>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Launch promotion (through {config.promoEndsLabel}):</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Through {config.promoEndsLabel}, every job posting created by a verified employer is free, with no credit card required, and receives every feature listed below</li>
-            <li style={liStyle}>Promotional postings run for their full {config.durationDays}-day term even if that term ends after {config.promoEndsLabel}, and may be renewed at the standard renewal price</li>
+            <li style={liStyle}>Promotional postings run for their full {config.durationDays}-day term even if that term ends after {config.promoEndsLabel}, and may be renewed at the renewal price for promotional postings set out below</li>
             <li style={liStyle}>We may limit the number of concurrently live promotional postings per employer domain to prevent abuse</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Pricing schedule from {config.ladderStartsLabel} (current as of the &quot;Last updated&quot; date above):</p>
           <ul style={ulStyle}>
             <li style={liStyle}>The first paid posting per verified employer email domain is ${config.introPrice} USD, one-time (the &quot;intro&quot; price). Promotional postings do not consume the intro price</li>
             <li style={liStyle}>Each additional paid posting is ${config.postingPrice} USD, one-time</li>
-            <li style={liStyle}>Renewals of promotional and paid postings are ${config.renewalPrice} USD, one-time, and add {config.durationDays} days as described in §6. Postings made from plan slots are not renewable</li>
-            <li style={liStyle}>All postings, whether promotional, paid, or posted from a plan slot, receive the same features: {config.durationDays}-day duration, Featured badge, top placement in search results, {config.limits.candidateUnlocksPerPosting} candidate profile unlocks and {config.limits.inmailsPerPosting} InMails per posting, and full analytics. Renewing a posting does not add unlocks or InMails</li>
+            <li style={liStyle}>Renewals are ${config.renewalPrice} USD for promotional and intro postings and ${config.proRenewalPrice} USD for postings purchased at ${config.postingPrice}, one-time, and add {config.durationDays} days as described in §6</li>
+            <li style={liStyle}>All postings, whether promotional or paid, receive the same features: {config.durationDays}-day duration, Featured badge, top placement in search results, {config.limits.candidateUnlocksPerPosting} candidate profile unlocks and {config.limits.inmailsPerPosting} InMails per posting, and full analytics. Renewing a posting does not add unlocks or InMails</li>
           </ul>
-          <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Employer plan (from {config.ladderStartsLabel}):</p>
-          <ul style={ulStyle}>
-            <li style={liStyle}>The Employer plan is ${config.planPrice} USD per month and includes {config.planSlots} concurrently active job slots. Every slot is a full Featured posting with the same features and limits as a paid posting</li>
-            <li style={liStyle}>The plan is billed month-to-month through Stripe and renews automatically until cancelled. You may cancel at any time; cancellation stops future charges</li>
-            <li style={liStyle}>Each posting made from a plan slot runs for {config.durationDays} days and is not renewable. When it expires or you close it, its slot becomes available and you may publish another posting in that slot at no additional charge, so you may swap the jobs in your slots at any time while the plan is active</li>
-            <li style={liStyle}>If you cancel, postings made from plan slots stay live through the end of the paid period, or until their own {config.durationDays}-day term ends if that is sooner, after which they are unpublished</li>
-            <li style={liStyle}>If a plan payment fails, we may pause your plan postings after a short grace period until the balance is settled</li>
-            <li style={liStyle}>Plan months are not refunded once billed (see §8)</li>
-          </ul>
-          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created and plan periods beginning after the change date. Postings already paid for under prior pricing are not affected.</p>
+          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Payment terms:</p>
           <ul style={ulStyle}>
-            <li style={liStyle}>Job posting and renewal fees are due at the time of purchase; Employer plan fees are due at the start of each monthly billing period</li>
+            <li style={liStyle}>Job posting and renewal fees are due at the time of purchase</li>
             <li style={liStyle}>All payments are processed by Stripe, our third-party payment processor. Your card statement will show &quot;{brand.legal.stripeDescriptor}&quot; as the merchant</li>
             <li style={liStyle}>All amounts are stated in US Dollars (USD) and are exclusive of any taxes that may apply in your jurisdiction</li>
             <li style={liStyle}>Payment must be completed before a paid posting goes live</li>
-            <li style={liStyle}>You authorize us, through Stripe, to charge the payment method you provide, including recurring monthly charges for an Employer plan until you cancel</li>
-            <li style={liStyle}>Invoices for paid postings and renewals are available from your employer dashboard; Employer plan receipts are issued by Stripe</li>
+            <li style={liStyle}>You authorize us, through Stripe, to charge the payment method you provide</li>
+            <li style={liStyle}>Invoices for paid postings and renewals are available from your employer dashboard</li>
           </ul>
 
           <h2 id="refund-policy" style={h2Style}>8. Refund Policy</h2>
@@ -230,8 +220,7 @@ export default function TermsPage() {
             <li style={liStyle}>To request a refund, email <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a> with your order details and the reason for the request</li>
             <li style={liStyle}>We reserve the right to grant or deny refund requests at our sole discretion</li>
             <li style={liStyle}>If we remove a posting for violation of these Terms, no refund will be issued</li>
-            <li style={liStyle}>Promotional postings and postings made from plan slots have no associated per-posting payment and are therefore not refundable</li>
-            <li style={liStyle}>Employer plan fees are not refunded for a billing month that has already been charged. Cancelling stops future charges, and your plan postings stay live through the end of the paid period, or until their own {config.durationDays}-day term ends if that is sooner</li>
+            <li style={liStyle}>Promotional postings have no associated payment and are therefore not refundable</li>
             <li style={liStyle}>Refunds, if granted, will be issued to the original payment method through Stripe and may take 5 to 10 business days to appear on your statement</li>
           </ul>
 

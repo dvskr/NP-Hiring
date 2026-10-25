@@ -7,8 +7,9 @@
  *   - every server Stripe client comes from lib/stripe.ts (pinned apiVersion);
  *   - the bootstrap webhook event list includes the events the webhook now
  *     handles, and the Payment Link collects billing address + tax ID;
- *   - the /pricing plan CTA goes through the account-binding subscribe route,
- *     never the raw Payment Link;
+ *   - /pricing sells no plan (the Employer plan is retired, owner decision
+ *     2026-10-24) and never reads the raw Payment Link, and the dormant plan
+ *     endpoint still builds an account-bound link server-side;
  *   - token-authenticated invoice/receipt routes are rate-limited;
  *   - the bearer dashboardToken is never written into Stripe metadata.
  */
@@ -88,10 +89,11 @@ describe.skipIf(!hasBootstrap)('Stripe bootstrap (webhook events + Payment Link)
 });
 
 describe('plan purchase surfaces', () => {
-  it('/pricing sends the plan CTA through the subscribe route and the plan-sale gate', () => {
+  it('/pricing offers no plan: no subscribe route, no plan-sale gate, never the raw Payment Link', () => {
     const src = read('app/pricing/page.tsx');
-    expect(src).toContain("'/api/employer/plan/subscribe'");
-    expect(src).toContain('isPlanSaleOpen()');
+    expect(src).not.toContain('/api/employer/plan/subscribe');
+    expect(src).not.toContain('isPlanSaleOpen');
+    expect(src).not.toContain('employer-plan-link');
     expect(src).not.toContain('process.env.STRIPE_PLAN_PAYMENT_LINK');
   });
 

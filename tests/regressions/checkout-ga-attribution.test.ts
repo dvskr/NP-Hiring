@@ -377,12 +377,13 @@ describe('CAPTURE: /api/create-renewal-checkout', () => {
 
   it('stores the GA ids in the session metadata when the visitor consented', async () => {
     const [params] = await renew(CONSENTED);
-    expect(params.metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pro', ...GA_IDS });
+    // The row carries no 'new' charge, so it renews at the base price (renewalRung).
+    expect(params.metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pro', renewalRung: 'base', ...GA_IDS });
   });
 
   it('keeps metadata and key exactly as before without consent', async () => {
     const [params, options] = await renew(GA_COOKIES);
-    expect(params.metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pro' });
+    expect(params.metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pro', renewalRung: 'base' });
     // The tail is the fingerprint of the create parameters; no GA suffix.
     expect(options.idempotencyKey).toMatch(/^renewal-v2-ej-1-none-\d+-[0-9a-f]{12}$/);
   });

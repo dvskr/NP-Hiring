@@ -12,6 +12,10 @@
  * build their metadata in generateMetadata, so the switch needs no deploy.
  *
  * Client-safe: imports only lib/config (lib/pricing.ts loads Prisma).
+ *
+ * The Employer plan is retired (owner decision, 2026-10-24): no sentence here
+ * offers it, and none may read the plan's price or slot count, which stay in
+ * lib/config only for the dormant plan code.
  */
 import { config } from '@/lib/config';
 
@@ -21,14 +25,13 @@ export const PROMO_HEADLINE = `Free through ${config.promoEndsLabel}`;
 /** What every free post includes. Only while config.isPromoActive(). */
 export const PROMO_SUB = `Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required.`;
 
-/** The three prices as a present-tense sentence with no date: the price once the ladder is live. */
-export const LADDER_PRICES = `Your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`;
+/** The two post prices as a present-tense sentence with no date: the price once the ladder is live. */
+export const LADDER_PRICES = `Your first post is $${config.introPrice}, every post after that is $${config.postingPrice}.`;
 
 /**
  * The ladder sentence for `now`. While the promo runs it is dated
- * ("From January 1, 2027: your first post is $199, ..."), exactly the
- * LADDER_LINE the surfaces printed before this module existed; once the
- * ladder is live it is LADDER_PRICES.
+ * ("From January 1, 2027: your first post is ..."); once the ladder is live
+ * it is LADDER_PRICES.
  */
 export function ladderLine(now: Date = new Date()): string {
   if (!config.isPromoActive(now)) return LADDER_PRICES;
@@ -53,12 +56,11 @@ export const FULL_PACKAGE = `Every post gets the full package: ${config.duration
 export const LADDER_FROM_LINE = `Posts start at $${config.introPrice}, with all features included.`;
 
 /**
- * The Employer plan's price for `now`. While the promo runs it is dated, the
- * sentence /pricing, /faq and /for-employers already printed; once the ladder
- * is live it is the plain price.
+ * What a renewal costs, true in both phases: a renewal has two prices
+ * (lib/renewal-price.ts decides which a post pays). The dearer one is named
+ * by the post price it renews, because every post is Featured and "featured
+ * post" no longer tells the two apart. Every surface that states both
+ * prices prints this sentence; a surface about one post prints that post's
+ * own price instead.
  */
-export function planPriceLine(now: Date = new Date()): string {
-  return config.isPromoActive(now)
-    ? `From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month.`
-    : `The Employer plan is $${config.planPrice}/month.`;
-}
+export const RENEWAL_LINE = `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo or intro post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`;

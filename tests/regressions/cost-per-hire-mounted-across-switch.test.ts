@@ -65,12 +65,11 @@ const visibleText = (markup: string): string =>
 
 describe('2.1: the way to buy the calculator prices is one the phase offers', () => {
     it('keeps the selected mode while the phase offers it', () => {
+        // The Employer plan mode went with the plan (owner decision 2026-10-24).
         const kept: Array<[FlatFeeMode, PricingPhase]> = [
             ['promo', 'promo'],
             ['per-post', 'promo'],
-            ['plan', 'promo'],
             ['per-post', 'ladder'],
-            ['plan', 'ladder'],
         ];
         for (const [selected, phase] of kept) {
             expect(offeredFlatFeeMode(selected, phase), `${selected} in ${phase}`).toBe(selected);
@@ -94,12 +93,12 @@ describe('2.1: a calculator mounted before the promo ended, handed the ladder ph
         // The select shows the mode that is priced, and the promo is not on offer.
         expect(markup).toContain('<option value="per-post" selected="">Per post</option>');
         expect(markup).not.toContain('value="promo"');
-        expect(markup.match(/<option /g)).toHaveLength(2);
+        expect(markup.match(/<option /g)).toHaveLength(1);
 
         const text = visibleText(markup);
-        // One intro post at the real price, with the renewal field of the per-post mode.
-        expect(text).toContain(`1 intro post at $${config.introPrice}`);
-        expect(text).toContain(`for a total of $${config.introPrice}`);
+        // One intro post at the real price, with the renewal field of the per-post mode;
+        // the intro post renews at the base renewal price.
+        expect(text).toContain(`1 intro post at $${config.introPrice}, 0 posts at $${config.postingPrice} and 0 renewals at $${config.renewalPrice}, for a total of $${config.introPrice}`);
         expect(text).toContain('Renewals per role');
         expect(text).toContain(`any channel costing more than $${config.introPrice} per hire is the more expensive option`);
 
@@ -114,9 +113,9 @@ describe('2.1: a calculator mounted before the promo ended, handed the ladder ph
     it('still opens on the promo while the promo runs', () => {
         const markup = render('promo');
         expect(markup).toContain('<option value="promo" selected="">');
-        expect(markup.match(/<option /g)).toHaveLength(3);
+        expect(markup.match(/<option /g)).toHaveLength(2);
         const text = visibleText(markup);
-        expect(text).toContain('1 free post during the launch promo');
+        expect(text).toContain(`1 free post during the launch promo and 0 renewals at $${config.renewalPrice}, for a total of $0`);
         expect(text).toContain('That is the launch promo doing the work');
     });
 });

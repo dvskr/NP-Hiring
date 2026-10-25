@@ -27,7 +27,7 @@
 | About 2026-11-06 | Quarterly re-check of the /compare claims is due (dated 2026-08-06) | CLAUDE, section 6 |
 | About 2026-11-11 | Quarterly NLC roster and scope-of-practice review is due (last 2026-08-11) | CLAUDE, section 6 |
 | After 2026-11-14 | NP Week 2026 is over | CLAUDE refreshes or redirects the NP Week post (2.24) |
-| About 2026-11-21 | First expiry warning emails for promo posts (sent 5 days before a 60-day post ends) | Only if the $179 renewal should be on sale by then: Stripe live and paid posting on (1.1, 1.2). Otherwise the email offers a free repost, which is fine |
+| About 2026-11-21 | First expiry warning emails for promo posts (sent 5 days before a 60-day post ends) | Only if the $199 renewal should be on sale by then: Stripe live and paid posting on (1.1, 1.2), with the 2027 re-price shipped first (code that predates it would sell the renewal at the old price). Otherwise the email offers a free repost, which is fine |
 | Before 2027-01-01 10:00 UTC | The promo ends (midnight Hawaii time, `config.promoEndsAt`) and the paid ladder starts on its own. With no deploy, the pricing copy switches: emails at send time, the employer app on its next render, and each page when its cached render is replaced. A page re-renders at most once an hour (the homepage once a minute), and the first request after that window is still answered with the old render while it triggers the new one, so a page shows the promo once more to its first visitor after the switch, however late that visit comes. /terms does not switch (2.15) | Stripe live (1.1), paid posting on (1.2), pricing decisions made (3.1) |
 | 2026-12-31 | The DEA telemedicine flexibilities for prescribing controlled substances expire unless the special registration rule is published first | CLAUDE re-checks the prescribing post, the remote guide and the telehealth FAQ on the remote, telehealth and psychiatric hubs (2.24) |
 | About 2027-03-01 | Promo posts made on 2026-12-31 reach their 60 days | CLAUDE may retire the promo code paths (`docs/pricing-system.md` section 11) |
@@ -35,18 +35,19 @@
 
 ## 1. Owner setup (OWNER)
 
-**1.1 Stripe live mode.** Activate the account and set the statement descriptor. Create the $399 per month
-Price (lookup key `np_hiring_employer_plan_monthly`, metadata `sku=employer-plan`), the subscription Payment
-Link, the live webhook with all 11 events, and the Customer Portal settings. Set failed-payment retries to
-cancel the subscription.
+**1.1 Stripe live mode.** Activate the account and set the statement descriptor, then create the live
+webhook with all 11 events. There is no Price, Payment Link or Customer Portal to create, and no failed-payment
+retry setting to change: you retired the Employer plan on 2026-10-24, and every post and renewal checkout
+prices itself from `lib/config.ts`.
 - Why: nothing can be sold without it. Hard deadline 2027-01-01, or about 2026-11-21 if renewals should sell for the first expiry warnings.
 - Where: Stripe Dashboard, live mode. Step list with exact values: `docs/LAUNCH_RUNBOOK.md` section 8a.
 
 **1.2 Vercel Production env for paid posting.** Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-`STRIPE_PLAN_PAYMENT_LINK`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `ENABLE_PAID_POSTING=true` and
-`NEXT_PUBLIC_BASE_URL=https://nphiring.com`. Keep `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`,
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `ENABLE_PAID_POSTING=true` and `NEXT_PUBLIC_BASE_URL=https://nphiring.com`.
+`STRIPE_PLAN_PAYMENT_LINK` is not set: the plan is retired, and while the variable is unset no plan can be
+sold (`npm run fork:preflight` warns about it; ignore that). Keep `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`,
 `DISCORD_WEBHOOK_URL` and `SENTRY_DSN` set.
-- Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free and plan sales stay closed. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 to every Stripe event until both are set, and plan sales stay closed until then. After 2027-01-01, no test-mode key and no `https://buy.stripe.com/test_` link may stay in Production.
+- Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 to every Stripe event until both are set. After 2027-01-01, no test-mode key may stay in Production.
 - Where: Vercel, then redeploy. Table: `docs/LAUNCH_RUNBOOK.md` section 8b. A restricted live key can stand in for the secret key; its permissions are in `docs/pricing-system.md` section 9b.
 
 **1.3 Google Analytics.** Done 2026-09-28 (`G-PT7KQ9ZEXQ`, 14 month retention). Optional: `GA_API_SECRET`
@@ -223,16 +224,32 @@ marks it limited; settle it at the quarterly /compare review (section 6). The av
 
 Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
 
-### 3.1 Pricing and billing (before plans go on sale on 2027-01-01)
+### 3.1 Pricing and billing (before the paid ladder starts on 2027-01-01)
 
 | # | Question | Today | Where |
 |---|---|---|---|
-| D1 | Plan posts: 60 days each, or live for the whole subscription? | 60 days each, then the slot frees; code and copy agree. Your original wording ("for the whole subscription") needs a code change | `lib/config.ts`, `lib/employer-plan.ts` |
 | D2 | Promo end instant | 2027-01-01 10:00 UTC (midnight Hawaii), so "free through December 31" holds in every US zone. Alternative: midnight Eastern with "11:59 pm ET" printed | `lib/config.ts` |
-| D3 | Intro price taken more than once | A company can open several $199 checkouts before its first paid post and pay each. `detectIntroDoubleCharge` tells staff to "refund the difference", the wrong direction: the company paid $100 less, not more. Block a second open intro checkout per domain, or accept it? The alert wording gets fixed either way | `app/api/webhooks/stripe/activate-paid-job.ts` |
-| D4 | Plan money edge cases | A refund or chargeback on a plan payment is only logged; the plan stays active. A plan bought while plan sales are closed is granted, with a "refund required" alert. A full refund of a renewal takes the whole post down, even inside its original free window. Plan purchases send no GA purchase event. Which should change? | `app/api/webhooks/stripe/route.ts`, `app/api/webhooks/stripe/plan-checkout.ts` |
+| D3 | Intro price taken more than once | A company can open several $249 checkouts before its first paid post and pay each. `detectIntroDoubleCharge` tells staff to "refund the difference", the wrong direction: the company paid $100 less, not more. Block a second open intro checkout per domain, or accept it? The alert wording gets fixed either way | `app/api/webhooks/stripe/activate-paid-job.ts` |
+| D4 | A full refund of a renewal on a post that cost nothing to post | It takes the whole post down, even inside its original free window: today's rule for a promo post, and the rule a pack post will get when the 5-post pack ships. Keep it, or keep such a post up until its original end date? (The plan money cases this row used to list ended with the plan.) | `app/api/webhooks/stripe/route.ts` |
 | D13 | A post archived while its checkout was open, then paid | The payment is recorded and the post stays archived. It goes live only once the employer restores it and then republishes it: the archive route clears `archivedAt` and leaves `isPublished` false ("Republish it to make it visible again"), and the republish route answers 409 for an archived post until it is restored. Stripe's receipt goes out, but no NP Hiring confirmation, because both confirmation emails say the listing is live. Add an archived variant ("Payment received. Restore the post from the Archived tab, then republish it to put it live")? | `lib/email-service.ts`, `app/api/employer/jobs/[jobId]/archive/route.ts`, `app/api/webhooks/stripe/apply-renewal.ts`, `activate-paid-job.ts` |
 | D15 | Should archiving a paid post pause its 60-day listing window? | It does not. `expiresAt` is stamped when the post is created (`expiresFromNow(config.durationDays)`), and again only if an abandoned checkout is resumed; neither the archive route nor the later republish writes it, so the days it spends archived count against it and the post can expire while it sits in the Archived tab. Only a renewal extends it (`renewalExpiresAt`). Pausing the clock means writing a fresh `expiresAt` on restore | `app/api/employer/jobs/[jobId]/archive/route.ts`, `app/api/employer/jobs/[jobId]/toggle-publish/route.ts`, `lib/expires-at.ts` |
+
+### 3.1b The 2027 re-price (recorded 2026-10-24)
+
+You decided the 2027 re-price on 2026-10-24: $249 for a company's first paid post and $349 for every later
+post; renewals at $199, or $249 for a post bought at $349; the Employer plan retired; and a one-time 5-post
+pack at $1,245 in its place. The rows below record the pack decision and the defaults set the same day for the
+questions it left open. Reply with an id to change any of them.
+
+| # | Question | Recorded 2026-10-24 | Where |
+|---|---|---|---|
+| D36 | A one-time 5-post pack, or a monthly subscription? | Decided by the owner on 2026-10-24: a one-time pack, 5 posts for $1,245 ($249 a post), used within 12 months of purchase. It replaces the Employer plan, and a paid pack uses up the company's intro price. Not built yet | the pack phases |
+| D37 | Pack posts for the buying account only, or for anyone at the company domain? | Default set 2026-10-24, the owner may change it: the buying account only, as the plan was. A colleague at the same domain pays $349 a post | the pack phases |
+| D38 | What a refund of a pack does | Default set 2026-10-24, the owner may change it: a full refund takes the pack's live posts down (as a full refund does to a post) and revokes its unused posts; a partial refund revokes unused posts, one for each $249 refunded, and leaves live posts up | the pack phases |
+| D39 | The renewal price of the legacy `free_renewed` and `free_upgraded` posts | Default set 2026-10-24, the owner may change it: $199, the price of every renewal except one of a post bought at $349 | `lib/renewal-price.ts` |
+| D40 | May the pack copy name a saving? | Default set 2026-10-24, the owner may change it: copy never says "save $500" (a first-time buyer's single posts would cost $1,645, not $1,745, and the pack also uses up the intro price). It says "5 posts for $1,245, $249 a post" and, where a comparison helps, "Bought one at a time at $349, five posts cost $1,745." | the pack phases |
+| D41 | A reminder email before unused pack posts expire? | Default set 2026-10-24, the owner may change it: no reminder email. Unused posts lapse 12 months after purchase, and the dashboard shows the date | the pack phases |
+| D42 | Tell the employers with live promo posts that a renewal now costs $199? The welcome emails since 2026-09-12 quoted $179 | Default set 2026-10-24, the owner may change it: no notice. Renewals have never been on sale, so nobody was charged the old price | none |
 
 ### 3.2 Moderation and takedowns
 
@@ -256,11 +273,11 @@ Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
 
 | # | Question | Today | Where |
 |---|---|---|---|
-| D10 | Stripe line-item names | Checkout and renewal item names and descriptions contain an em dash and spaced hyphens. Waiting on your approval of new wording | `app/api/create-checkout/route.ts`, `app/api/create-renewal-checkout/route.ts` |
-| D11 | Renewal wording | While renewals cannot be bought the dashboard says "Renewal is not available yet": keep "yet"? The edit page names savings against the $299 post price, which overstates it for a company whose next post is the $199 intro. After the promo, if paid posting is still off, renewal offers are withheld and no free repost is offered | `components/employer/EmployerDashboardClient.tsx`, `app/jobs/edit/[token]/page.tsx` |
-| D17 | The post-promo pricing copy you have not read yet | Both pricing surfaces switch themselves at `config.promoEndsAt` with no deploy (2.1), to wording written here, not approved by you. /pricing then runs the eyebrow "Per post or by the month" over the heading "Three ways to post", carries a new FAQ "Do all prices include the same features?" and ends its browser title with "Posts From $199". /for-employers stamps its receipt card "No bidding, no contracts" and labels its bento "Flat Per-Post Pricing · From $199". Approve it, or send replacement wording before 2027-01-01 | `app/pricing/pricing-page-copy.ts`, `app/for-employers/for-employers-copy.ts` |
+| D10 | Stripe line-item names | Only the new-post checkout's item name and description still contain an em dash and spaced hyphens; the renewal items already read "Job renewal: (title)" and "(employer), 60 more days". Proposed for the new post: "Intro job post: (title)" or "Pro job post: (title)", described "(employer), (location), 60-day Featured listing". Proposed for the 5-post pack, when it ships: "5-post pack", described "5 job posts, each a 60-day Featured listing, to use within 12 months". Approve both, or send other wording | `app/api/create-checkout/route.ts` |
+| D11 | Renewal wording | While renewals cannot be bought the dashboard says "Renewal is not available yet": keep "yet"? The edit page names the saving against the $349 post price, which overstates it for a company whose next post is the $249 intro: a $199 renewal saves 20% against that, not 42%, and a $249 renewal saves nothing (the dashboard knows the next post price and gets it right). After the promo, if paid posting is still off, renewal offers are withheld and no free repost is offered | `components/employer/EmployerDashboardClient.tsx`, `app/jobs/edit/[token]/page.tsx` |
+| D17 | The post-promo pricing copy you have not read yet | Both pricing surfaces switch themselves at `config.promoEndsAt` with no deploy (2.1), to wording written here, not approved by you. /pricing then runs the eyebrow "Per post" over the heading "What a post costs" (plain per-post wording since the plan was retired; they read "Per post or by the month" and "Three ways to post" while it was on sale), carries a new FAQ "Do all prices include the same features?" and ends its browser title with "Posts From $249". /for-employers stamps its receipt card "No bidding, no contracts" and labels its bento "Flat Per-Post Pricing · From $249". Approve it, or send replacement wording before 2027-01-01 | `app/pricing/pricing-page-copy.ts`, `app/for-employers/for-employers-copy.ts` |
 | D18 | The /resources card for the salary guide | Its description now reads "Interactive calculator by state, experience, setting, and specialty, with the BLS national median and state medians from live postings." It names no edition year and claims no completeness, because the figures refresh daily and a state below the publishing gate prints none. Approve that line, or name an edition instead | `app/resources/page.tsx` |
-| D19 | What a post that costs nothing is told at the till | House rule: never print $0. So the preview shows the price as "Free" and captions a plan post "Included in your Employer plan.", and /post-job/checkout shows "Free" over the caption "no payment needed" whenever the server quote says this post needs no payment, whether that is the promo or a plan slot. Approve both captions, or word them differently | `app/post-job/preview/page.tsx`, `app/post-job/checkout/page.tsx` |
+| D19 | What a post that costs nothing is told at the till | House rule: never print $0. So the preview shows the price as "Free", and /post-job/checkout shows "Free" over the caption "no payment needed" whenever the server quote says this post needs no payment. A post from the 5-post pack, when it ships, is captioned "Included in your post pack." (proposed). Until then the preview keeps the caption "Included in your Employer plan." for a plan post, which only the dormant plan code can produce now that the plan is retired. Approve both captions, or word them differently | `app/post-job/preview/page.tsx`, `app/post-job/checkout/page.tsx` |
 
 ### 3.4b Left from the 2026-10-12 text cleanup
 
@@ -346,7 +363,6 @@ tests fail until every side agrees:
 |---|---|---|---|
 | Weekly | OWNER | Approval queues: testimonials and company claims (0 pending today). Public surfaces show nothing until you approve | `/admin/testimonials`, `/admin/company-claims` |
 | Weekly, through 2026-10-29 | OWNER | Search Console: Pages, Job postings, Sitemaps (1.4) | Search Console |
-| Weekly, once plans sell | OWNER | Plan purchases that matched no account; link them by hand | `/admin/employer-plans` |
 | Quarterly | CLAUDE | Re-verify the NLC roster against NCSBN; bump `NLC_ROSTER_VERIFIED_AT` (2026-08-11) | `lib/blog-license-guides.ts` |
 | Quarterly | CLAUDE | Re-verify practice authority and scope of practice against AANP and each state's source; bump `SOP_LAST_REVIEWED` (2026-08-11), and `LICENSE_GUIDE_REVIEWED_AT` (2026-09-25) when the guides change. Every licensing statement must match that state's `details` string. New York's NP Modernization Act is a sunset provision, now running to 2030-07-01. `STAT_SOURCES.fullPracticeStates` records the AANP map vintage (`asOf`); bump it when AANP revises the map | `lib/state-practice-authority.ts`, `components/ScopeOfPracticeData.ts`, `lib/stats-sources.ts` |
 | Quarterly, or on a competitor change | CLAUDE | Re-verify /compare claims; bump `COMPARE_REVIEW_DATE` (2026-08-06) | `lib/compare-data.ts` |
@@ -356,6 +372,7 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
+- D1 Plan posts, 60 days each or live for the whole subscription: moot. You retired the Employer plan on 2026-10-24 (3.1b); no page offers it and none is sold, and its code stays dormant until it is deleted.
 - 1.3 Google Analytics: live since 2026-09-28.
 - 1.4 Search Console and Google indexing: sitemap index submitted 2026-10-01, Indexing API and Search Console API on, service account is an Owner, health check passes (key rotation and the first month's watch remain, 1.4).
 - 1.5 Bing and IndexNow: verified, key file served (`96f035e`), first run accepted 165 of 165.

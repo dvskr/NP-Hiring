@@ -475,8 +475,6 @@ export default function CheckoutPage() {
             <span className="text-pink-600">✓</span> Email candidate alerts
           </li>
         </ul>
-        {/* The Employer plan line lives once, in the "Before you pay" rail
-            (checkout/layout.tsx); no repeat here (owner call, 2026-10-12). */}
       </div>
 
       {/* Error Message */}

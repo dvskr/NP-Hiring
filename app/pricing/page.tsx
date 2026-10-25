@@ -10,37 +10,34 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 // the ONE audited module, so the audit cannot be forked away again.
 import { employerComparisonRows } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
-import { isPlanSaleOpen } from '@/lib/employer-plan-link';
+import { RENEWAL_LINE } from '@/lib/pricing-copy';
 import {
     pricingPageCopy,
-    PLAN_CANCEL_LINE,
-    PLAN_POSTS_LINE,
-    PLAN_TERMS,
     RENEWAL_CAP_LINE,
     RENEWAL_EFFECT_LINE,
-    RENEWAL_LINE,
 } from './pricing-page-copy';
-import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, Layers } from 'lucide-react';
+import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign } from 'lucide-react';
 
 /**
- * Pricing page — launch promo + 2027 ladder (2026-09-12).
+ * Pricing page — launch promo + 2027 ladder (2026-09-12; re-priced
+ * 2026-10-24, when the owner retired the Employer plan, so the ladder is the
+ * intro post and the featured post).
  *
  * Every number and date on this page is a lib/config token. The canonical
- * sentences the other employer surfaces repeat (PLAN_TERMS, RENEWAL_LINE and
- * the rest) live in ./pricing-page-copy.ts with their history, next to
- * pricingPageCopy(now), which builds everything that depends on the promo
- * clock: the hero, the $0 promo card switch, the feature grid's heading
- * once that card is gone, the ladder heading, the CTA card, the leading
- * FAQ entries and the metadata. The page and
- * generateMetadata read it per render, never at module load, so on
- * config.promoEndsAt this page stops offering free posts and states the
- * ladder as the current price without a deploy (backlog 2.1).
+ * sentences the other employer surfaces repeat (RENEWAL_EFFECT_LINE and the
+ * rest) live in ./pricing-page-copy.ts with their history, and the renewal
+ * prices in lib/pricing-copy.ts (RENEWAL_LINE), next to pricingPageCopy(now),
+ * which builds everything that depends on the promo clock: the hero, the $0
+ * promo card switch, the feature grid's heading once that card is gone, the
+ * ladder heading, the CTA card, the leading FAQ entries and the metadata.
+ * The page and generateMetadata read it per render, never at module load,
+ * so on config.promoEndsAt this page stops offering free posts and states
+ * the ladder as the current price without a deploy (backlog 2.1).
  */
 
-// The hero, the promo card, the FAQ (and its JSON-LD), the metadata and the
-// plan CTA (lib/employer-plan-link.ts isPlanSaleOpen) all follow the
-// launch-promo clock; re-render hourly so they switch without a redeploy
-// when the promo ends — same cadence as /for-employers.
+// The hero, the promo card, the FAQ (and its JSON-LD) and the metadata all
+// follow the launch-promo clock; re-render hourly so they switch without a
+// redeploy when the promo ends — same cadence as /for-employers.
 export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -114,11 +111,11 @@ const ctaSecondary: React.CSSProperties = {
 // promo-clock entries from pricingPageCopy(now).pricingFaqs in front of
 // these at render time; one list feeds the accordion and the JSON-LD.
 const EVERGREEN_FAQS = [
-    { q: 'What does renewal cost?', a: `${RENEWAL_LINE} ${RENEWAL_EFFECT_LINE} Plan posts are not renewed: when one ends, post the role again into its slot at no extra charge.` },
+    { q: 'What does renewal cost?', a: `${RENEWAL_LINE} ${RENEWAL_EFFECT_LINE}` },
     { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you don't lose any time you already have. ${RENEWAL_CAP_LINE}` },
     { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details stay in your dashboard after the posting expires, for as long as the candidate keeps their profile visible and open to offers. To unlock new candidates or send new InMails, you will need an active posting.' },
     { q: 'Can I edit my job posting after publishing?', a: 'Yes. You can edit your posting at any time from your dashboard to update the salary, requirements, or any other details. Changes go live immediately.' },
-    { q: `Need more than ${config.planSlots} active jobs at once?`, a: `Contact us at ${brand.email.support} and tell us how many roles you're hiring for. We'll work out the right arrangement for larger organizations.` },
+    { q: 'Hiring for several roles at once?', a: `Contact us at ${brand.email.support} and tell us how many roles you're hiring for. We'll work out the right arrangement for larger organizations.` },
 ];
 
 /**
@@ -171,7 +168,7 @@ function LaunchPromoCard() {
                 {/* Right — Feature checklist */}
                 <div style={{ padding: '44px 36px 36px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Full Package on Every Post</h2>
-                    <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 20px', lineHeight: 1.5 }}>No tiers. No downgrades. Whether promo, intro, featured, or plan, you get everything.</p>
+                    <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 20px', lineHeight: 1.5 }}>No tiers. No downgrades. Whether promo, intro, or featured, you get everything.</p>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
                         {[
                             `${config.durationDays}-day listing`,
@@ -204,18 +201,9 @@ export default function PricingPage() {
     // genuinely the same rows as the employer page, read at render time so
     // the table switches when the promo ends.
     const comparisonRows = employerComparisonRows(now);
-    // The plan is sold through a Stripe Payment Link (subscription). The CTA
-    // never hands out the raw link: /api/employer/plan/subscribe signs the
-    // buyer in, sends an employer who already has a plan to the dashboard,
-    // and adds their account id to the link (the only key the webhook
-    // attaches a plan by). While plan sales are closed — link unset or not a
-    // Stripe link, ENABLE_PAID_POSTING off, STRIPE_SECRET_KEY or
-    // STRIPE_WEBHOOK_SECRET missing, or the free launch promo running — the
-    // card routes to support instead (lib/employer-plan-link.ts).
-    const planSaleOpen = isPlanSaleOpen();
-    const planHref = planSaleOpen ? '/api/employer/plan/subscribe' : `mailto:${brand.email.support}`;
-    const planCtaLabel = planSaleOpen ? 'Subscribe to the plan' : 'Ask about the plan';
 
+    // The two rungs of the ladder. The Employer plan card that stood third
+    // was retired with the plan (owner decision, 2026-10-24).
     const ladder = [
         {
             key: 'intro',
@@ -238,17 +226,6 @@ export default function PricingPage() {
             note: `${config.durationDays} days, exactly the same features. ${RENEWAL_LINE}`,
             cta: <Link href="/post-job" className="emp-cta-secondary" style={ctaSecondary}>Post a Job <ArrowRight size={15} /></Link>,
             featured: false,
-        },
-        {
-            key: 'plan',
-            icon: <Layers size={22} />,
-            name: 'Employer plan',
-            price: `$${config.planPrice}`,
-            unit: '/month',
-            blurb: PLAN_TERMS,
-            note: `Every slot is a Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. ${PLAN_POSTS_LINE} ${PLAN_CANCEL_LINE}`,
-            cta: <a href={planHref} className="emp-cta-primary" style={ctaPrimary}>{planCtaLabel} <ArrowRight size={15} /></a>,
-            featured: true,
         },
     ];
 
@@ -438,7 +415,7 @@ export default function PricingPage() {
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════
-                SECTION 2: THE LADDER — three cards, same features on every rung
+                SECTION 2: THE LADDER — two cards, same features on every rung
                 (announced for config.ladderStartsLabel while the promo runs,
                 the current price afterwards)
                 ═══════════════════════════════════════════════════════════════ */}
@@ -457,7 +434,7 @@ export default function PricingPage() {
                         {copy.ladderNote}
                     </p>
 
-                    <div className="pricing-ladder-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px', alignItems: 'stretch' }}>
+                    <div className="pricing-ladder-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '18px', alignItems: 'stretch', maxWidth: '760px', margin: '0 auto' }}>
                         {ladder.map((rung) => (
                             <div
                                 key={rung.key}

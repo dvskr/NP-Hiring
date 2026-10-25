@@ -15,10 +15,11 @@
  * Every number and date is a lib/config token, and the sentences match the
  * canonical copy on /pricing (lib/pricing-copy.ts and
  * app/pricing/pricing-page-copy.ts), so the FAQPage JSON-LD never tells
- * Google a different price than the pricing page does.
+ * Google a different price than the pricing page does. The Employer plan is
+ * retired (owner decision, 2026-10-24), so no answer here offers it.
  */
 import { config } from '@/lib/config';
-import { FULL_PACKAGE, LADDER_PRICES, PROMO_HEADLINE, PROMO_SUB, ladderLine, planPriceLine } from '@/lib/pricing-copy';
+import { FULL_PACKAGE, LADDER_PRICES, PROMO_HEADLINE, PROMO_SUB, ladderLine } from '@/lib/pricing-copy';
 
 export interface FaqEntry {
   question: string;
@@ -34,7 +35,7 @@ const INTRO_SCOPE = `It is scoped to your organization's domain, not to a login,
 
 /**
  * The leading /faq employer entries for `now`, in page order: cost,
- * features, intro price, Employer plan. Call it per render.
+ * features, intro price. Call it per render.
  */
 export function employerPricingFaqs(now: Date): FaqEntry[] {
   const promoActive = config.isPromoActive(now);
@@ -47,26 +48,13 @@ export function employerPricingFaqs(now: Date): FaqEntry[] {
     },
     {
       question: 'What features are included?',
-      answer: featuresAnswer(promoActive
-        ? 'free during the promo, intro, featured, or posted from an Employer plan slot'
-        : 'intro, featured, or posted from an Employer plan slot'),
+      answer: featuresAnswer(promoActive ? 'free during the promo, intro, or featured' : 'intro or featured'),
     },
     {
       question: 'What is the intro price, and who gets it?',
       answer: promoActive
         ? `From ${config.ladderStartsLabel}, the first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. ${INTRO_SCOPE}`
         : `The first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. ${INTRO_SCOPE}`,
-    },
-    {
-      // Plan posts are NOT live "for as long as the plan is active": every
-      // post, plan included, runs config.durationDays (post-free writes the
-      // same expiresAt), a plan post is never renewed (create-renewal-checkout
-      // 409s it), and the lapse job takes plan posts down when the plan ends.
-      // What the plan buys is the slot: when a post ends or is closed, the
-      // employer posts into that slot again at no extra charge. Same wording
-      // as PLAN_TERMS / PLAN_POSTS_LINE / PLAN_CANCEL_LINE on /pricing.
-      question: 'How does the Employer plan work?',
-      answer: `${planPriceLine(now)} ${config.planSlots} active job slots while you're subscribed. Swap jobs any time. Cancel any time. Each plan post runs ${config.durationDays} days. When one ends, or you close it to swap in another role, its slot opens up and you can post into it again at no extra charge. Plan posts come down if the plan ends. The plan is billed month to month. If you cancel, your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first. Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`,
     },
   ];
 }

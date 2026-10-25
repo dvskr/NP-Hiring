@@ -1,7 +1,9 @@
 /**
  * POST /api/create-renewal-checkout — which rows may buy a renewal
- * ($config.renewalPrice for +config.durationDays) under the 2026-09-12
- * launch promo + 2027 ladder.
+ * (+config.durationDays, at the base price or the pro price) under the
+ * 2026-09-12 launch promo + 2027 ladder. Which price a row pays is pinned in
+ * create-renewal-checkout-tiered-price.test.ts; the rows here carry no 'new'
+ * charge, so every renewable row is priced at the base renewal.
  *
  *   allowed  'promo' (launch-free posts renew at the normal price) and 'paid'
  *   409      'pending' (never completed), 'expired' (an abandoned checkout the
@@ -96,7 +98,7 @@ beforeEach(() => {
 });
 
 describe('renewable rows', () => {
-    it("allows a 'promo' post to renew at the flat renewal price", async () => {
+    it("allows a 'promo' post to renew at the base renewal price", async () => {
         row('promo');
         const { res, json } = await post();
         expect(res.status).toBe(200);
@@ -104,7 +106,8 @@ describe('renewable rows', () => {
         const arg = sessionsCreate.mock.calls[0][0];
         expect(arg.line_items[0].price_data.unit_amount).toBe(config.stripeRenewalPriceInCents);
         expect(arg.line_items[0].price_data.product_data.description).toContain(`${config.durationDays} more days`);
-        expect(arg.metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pro' });
+        // The rung rides along so the webhook can price a session that carries no total.
+        expect(arg.metadata).toEqual({ jobId: 'job-1', type: 'renewal', tier: 'pro', renewalRung: 'base' });
         expect(res.headers.get('set-cookie')).toContain('pmhnp_renewal_session=cs_r1');
     });
 
@@ -113,6 +116,7 @@ describe('renewable rows', () => {
         const { res } = await post();
         expect(res.status).toBe(200);
         expect(sessionsCreate.mock.calls[0][0].metadata.tier).toBe('intro');
+        expect(sessionsCreate.mock.calls[0][0].metadata.renewalRung).toBe('base');
     });
 
     it("never carries 'plan' or an unknown rung — anything else narrows to 'pro'", async () => {
@@ -230,7 +234,7 @@ describe('archived posts (409: restore first, no Stripe call)', () => {
         const { res } = await post();
         expect(res.status).toBe(200);
         expect(prisma.employerJob.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-            include: { job: { select: expect.objectContaining({ archivedAt: true }) } },
+            include: expect.objectContaining({ job: { select: expect.objectContaining({ archivedAt: true }) } }),
         }));
     });
 

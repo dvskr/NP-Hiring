@@ -9,24 +9,29 @@
  *      renewing". In the code every post, plan included, gets the same fixed
  *      expiresAt = now + config.durationDays (POST /api/jobs/post-free),
  *      nothing extends a plan post, the renewal checkout answers 409 for one,
- *      and pausePlanPosts takes plan posts down when the plan lapses. What
- *      the plan buys is the SLOT: when a post ends or is closed, the employer
- *      posts into it again at no extra charge.
+ *      and pausePlanPosts takes plan posts down when the plan lapses.
  *   2. "Renewing ... refreshes its 25 unlocks and 25 InMails". No renewal
  *      path resets either counter: lib/tier-limits.ts counts unlocks by
  *      ProfileView.employerJobId and InMails by conversations since the
  *      posting was created, and apply-renewal.ts only moves the end date.
  *
+ * 2027 re-price (owner decision 2026-10-24): the Employer plan is retired.
+ * No surface offers it any more, so no copy rests on the plan facts; they
+ * stay pinned in their own block only because the plan code stays, dormant,
+ * until it is deleted. A renewal now has two prices (lib/renewal-price.ts),
+ * which lib/pricing-copy.ts#RENEWAL_LINE names on every surface that states
+ * both.
+ *
  * The first block pins the code facts, so a behaviour change fails here and
  * forces the copy to be re-checked. The rest pins the copy: the banned claims
  * stay gone from every surface's VISIBLE text (comments may explain them),
- * and the plan and renewal answers, which also feed the FAQPage JSON-LD,
- * render the real lifecycle with the real config values.
+ * no surface types a price config holds, and the renewal answers, which also
+ * feed the FAQPage JSON-LD, render the real lifecycle with the real config
+ * values.
  *
  * Since backlog 2.1 the promo-clock copy of /pricing, /for-employers and /faq
  * is built per render by a sibling module of each page, so the copy pins
- * call those builders on both sides of config.promoEndsAt: the lifecycle
- * holds in both phases, and only the promo phase dates the plan price.
+ * call those builders on both sides of config.promoEndsAt.
  * tests/regressions/pricing-pages-phase-switch.test.ts covers the switch.
  */
 import { describe, it, expect } from 'vitest';
@@ -34,13 +39,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { config } from '@/lib/config';
+import { RENEWAL_LINE } from '@/lib/pricing-copy';
+import { renewalRungFor } from '@/lib/renewal-price';
 import {
-    PLAN_CANCEL_LINE,
-    PLAN_POSTS_LINE,
-    PLAN_TERMS,
     RENEWAL_CAP_LINE,
     RENEWAL_EFFECT_LINE,
-    RENEWAL_LINE,
     pricingPageCopy,
 } from '@/app/pricing/pricing-page-copy';
 import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
@@ -98,30 +101,25 @@ const SURFACES = [
     'components/tools/cost-per-hire-model.ts',
 ] as const;
 
+/**
+ * The other sources that state our prices: the comparison table, the
+ * comparison pages, the /post-job metadata and the checkout trust rail.
+ */
+const OTHER_PRICE_SURFACES = [
+    'lib/employer-comparison.ts',
+    'lib/compare-data.ts',
+    'app/post-job/layout.tsx',
+    'app/post-job/checkout/layout.tsx',
+] as const;
+
 describe('the code facts the pricing copy rests on', () => {
-    it('gives every post, plan included, the same fixed config.durationDays expiry', () => {
+    it('gives every post the same fixed config.durationDays expiry', () => {
         const postFree = read('app/api/jobs/post-free/route.ts');
         expect(postFree).toContain('const expiresAt = expiresFromNow(config.durationDays, now);');
-        // One expiry for every mode: nothing branches it on promo vs plan.
+        // One expiry for every mode: nothing branches it on the posting mode.
         expect(postFree.match(/expiresFromNow\(/g)).toHaveLength(1);
         // Line-ending agnostic: a Windows checkout reads CRLF.
         expect(postFree).toMatch(/^\s*expiresAt,\s*$/m);
-    });
-
-    it('refuses to renew a plan post', () => {
-        const renewal = read('app/api/create-renewal-checkout/route.ts');
-        expect(renewal).toMatch(/paymentStatus === 'plan'\)\s*\{\s*return NextResponse\.json\([\s\S]*?status: 409/);
-    });
-
-    it('takes plan posts down when the plan lapses, and frees a slot when a post ends or is closed', () => {
-        const plan = read('lib/employer-plan.ts');
-        expect(plan).toMatch(/export async function pausePlanPosts[\s\S]*?paymentStatus: 'plan'[\s\S]*?data: \{ isPublished: false \}/);
-        // A slot is in use only while its post is published and unexpired.
-        expect(plan).toMatch(/export async function countActivePlanPosts[\s\S]*?paymentStatus: 'plan',\s*job: \{ isPublished: true, OR: \[\{ expiresAt: null \}, \{ expiresAt: \{ gt: now \} \}\] \}/);
-    });
-
-    it('lets the employer cancel the plan themselves (Stripe Customer Portal)', () => {
-        expect(read('app/api/employer/billing-portal/route.ts')).toContain('stripe.billingPortal.sessions.create(');
     });
 
     it('renews by moving the end date only, never by resetting unlocks or InMails', () => {
@@ -135,10 +133,55 @@ describe('the code facts the pricing copy rests on', () => {
         expect(limits).toMatch(/profileView\.count\(\{\s*where: \{ employerJobId \}/);
         expect(limits).toMatch(/createdAt: \{ gte: postingCreatedAt \}/);
     });
+
+    it('prices a renewal by rung: the dearer price only for a post bought at the posting price', () => {
+        // RENEWAL_LINE's two figures, and which post pays which.
+        expect(renewalRungFor({ pricingTier: 'pro', hasNewPostCharge: true })).toBe('pro');
+        for (const row of [
+            { pricingTier: 'pro', hasNewPostCharge: false }, // a promo post, renewed or not
+            { pricingTier: 'intro', hasNewPostCharge: true },
+            { pricingTier: 'pro', hasNewPostCharge: false }, // a legacy paid row with no charge
+        ]) {
+            expect(renewalRungFor(row), JSON.stringify(row)).toBe('base');
+        }
+        expect(config.renewalPriceDollarsFor('pro')).toBe(config.proRenewalPrice);
+        expect(config.renewalPriceDollarsFor('base')).toBe(config.renewalPrice);
+        expect(config.proRenewalPrice).toBeGreaterThan(config.renewalPrice);
+        // The checkout charges the rung's price, not one flat amount.
+        expect(read('app/api/create-renewal-checkout/route.ts')).toContain('unit_amount: config.renewalPriceCentsFor(renewalRung),');
+    });
+});
+
+/**
+ * The retired Employer plan's code stays, dormant, until it is deleted. No
+ * copy describes it any more; these pin the behaviour that code keeps.
+ */
+describe('the retired Employer plan: the dormant code it leaves', () => {
+    it('refuses to renew a plan post', () => {
+        const renewal = read('app/api/create-renewal-checkout/route.ts');
+        expect(renewal).toMatch(/paymentStatus === 'plan'\)\s*\{\s*return NextResponse\.json\([\s\S]*?status: 409/);
+    });
+
+    it('takes plan posts down when the plan lapses, and frees a slot when a post ends or is closed', () => {
+        const plan = read('lib/employer-plan.ts');
+        expect(plan).toMatch(/export async function pausePlanPosts[\s\S]*?paymentStatus: 'plan'[\s\S]*?data: \{ isPublished: false \}/);
+        // A slot is in use only while its post is published and unexpired.
+        expect(plan).toMatch(/export async function countActivePlanPosts[\s\S]*?paymentStatus: 'plan',\s*job: \{ isPublished: true, OR: \[\{ expiresAt: null \}, \{ expiresAt: \{ gt: now \} \}\] \}/);
+    });
+
+    it('keeps the Stripe Customer Portal route, which no page links any more', () => {
+        expect(read('app/api/employer/billing-portal/route.ts')).toContain('stripe.billingPortal.sessions.create(');
+        for (const rel of [PRICING, 'components/employer/UsageWidget.tsx']) {
+            expect(read(rel), rel).not.toMatch(/\/api\/employer\/(?:billing-portal|plan)\b/);
+        }
+    });
 });
 
 describe('no pricing surface repeats a claim the code does not back', () => {
     const BANNED: readonly [RegExp, string][] = [
+        [/Employer plan/i, 'the Employer plan is retired (owner decision 2026-10-24): no surface offers it'],
+        [/\/month\b|per month|billed month/i, 'nothing is sold by the month'],
+        [/\bslots?\b/i, 'there are no plan slots to sell'],
         [/live while (you're|you are) subscribed/i, 'a plan post runs config.durationDays, not the whole subscription'],
         [/(stay|stays|remain|remains) (live|up|visible) while (the|your) (Employer )?plan/i, 'a plan post runs config.durationDays, not the whole plan'],
         [/\bruns? (its|their) full\b/i, 'a plan post comes down early when its plan lapses (pausePlanPosts)'],
@@ -177,8 +220,11 @@ describe('no pricing surface repeats a claim the code does not back', () => {
         }
     });
 
-    it('the banned list catches the reworded plan claims the listing cards used to carry', () => {
+    it('the banned list catches the plan claims and the reworded ones the listing cards used to carry', () => {
         const retired = [
+            'The Employer plan is $399/month.',
+            '5 active job slots while you\'re subscribed.',
+            'Every slot is a full Featured post',
             'Plan posts stay up while your plan is active.',
             'plan posts stay up while your plan is active.',
             'Plan posts remain visible while the Employer plan is active.',
@@ -191,86 +237,98 @@ describe('no pricing surface repeats a claim the code does not back', () => {
     });
 });
 
-describe('the listing cards state the plan post run the code gives', () => {
-    const PLAN_RUN = `run the same ${config.durationDays} days and come down sooner only if the plan ends.`;
+/**
+ * A price on a pricing surface is a config token, never a typed figure: a
+ * literal goes stale the day config changes, as the $179 renewal and the $199
+ * and $299 posts did in the 2027 re-price. Built from config, so the guard
+ * follows the prices it protects.
+ */
+describe('no pricing surface types a price that config holds', () => {
+    const PRICES = [...new Set([config.introPrice, config.postingPrice, config.renewalPrice, config.proRenewalPrice])];
+    const PRICE_LITERAL = new RegExp(`\\$(?:${PRICES.join('|')})(?![\\d,])`);
 
-    it.each(PHASES)('/pricing (%s): every post runs durationDays; plan posts the same, shortened only by the plan ending', (_phase, now) => {
+    it('the guard is built from the current config prices, and catches each of them', () => {
+        expect(PRICES).toEqual(expect.arrayContaining([config.introPrice, config.postingPrice, config.renewalPrice, config.proRenewalPrice]));
+        for (const price of PRICES) expect(PRICE_LITERAL.test(`for $${price}.`), String(price)).toBe(true);
+        // A larger figure that happens to start with a price is not one.
+        expect(PRICE_LITERAL.test(`$${config.postingPrice},000`)).toBe(false);
+    });
+
+    it.each([...SURFACES, ...OTHER_PRICE_SURFACES])('%s', (rel) => {
+        const match = PRICE_LITERAL.exec(visibleText(rel));
+        expect(match?.[0], `${rel} types a price: print the config token instead`).toBeUndefined();
+    });
+});
+
+describe('the listing cards state the run every post gets', () => {
+    it.each(PHASES)('/pricing (%s): every post runs durationDays, and nothing names a plan post', (_phase, now) => {
         const run = pricingPageCopy(now).listingRun;
         expect(run.startsWith(`Every post runs ${config.durationDays} days with no daily budget and no bidding`)).toBe(true);
-        expect(run).toContain(`Plan posts ${PLAN_RUN}`);
+        expect(run).not.toMatch(/\bplan\b/i);
         // The listing card prints the builder's sentence for the render clock.
         expect(read(PRICING)).toContain('{copy.listingRun}');
     });
 
-    it.each(PHASES)('/for-employers (%s): the same run for every job, plan posts shortened only by the plan ending', (_phase, now) => {
+    it.each(PHASES)('/for-employers (%s): the same run for every job', (_phase, now) => {
         const run = forEmployersCopy(now).listingRun;
         expect(run.startsWith(`Every job runs ${config.durationDays} days with no daily budget and no bidding.`)).toBe(true);
-        expect(run).toMatch(new RegExp(`[Pp]lan posts ${PLAN_RUN.replace(/\./g, '\\.')}$`));
+        expect(run).not.toMatch(/\bplan\b/i);
         expect(read(EMPLOYERS)).toContain('{copy.listingRun}');
     });
 
     it('names promo posts in the run only while the promo runs', () => {
-        expect(pricingPageCopy(DURING_PROMO).listingRun).toContain(' days with no daily budget and no bidding, promo posts included. Plan posts run the same ');
-        expect(forEmployersCopy(DURING_PROMO).listingRun).toContain('Promo posts get the same run and the same features; plan posts run the same ');
+        expect(pricingPageCopy(DURING_PROMO).listingRun).toBe(
+            `Every post runs ${config.durationDays} days with no daily budget and no bidding, promo posts included.`,
+        );
+        expect(forEmployersCopy(DURING_PROMO).listingRun).toBe(
+            `Every job runs ${config.durationDays} days with no daily budget and no bidding. Promo posts get the same run and the same features.`,
+        );
         expect(pricingPageCopy(LADDER_START).listingRun).not.toMatch(/promo/i);
         expect(forEmployersCopy(LADDER_START).listingRun).not.toMatch(/promo/i);
     });
 });
 
-describe('the plan answers state the real lifecycle in both phases (they also feed FAQPage JSON-LD)', () => {
-    const lifecycle = (answer: string, now: Date): void => {
-        expect(answer).toContain(`${config.planSlots} active job slots while you're subscribed.`);
-        expect(answer).toContain('Swap jobs any time. Cancel any time.');
-        expect(answer).toContain(`Each plan post runs ${config.durationDays} days.`);
-        expect(answer).toContain('its slot opens up and you can post into it again at no extra charge.');
-        expect(answer).toContain('Plan posts come down if the plan ends.');
-        expect(answer).toContain(`or until their ${config.durationDays} days run out if that comes first.`);
-        // The price is dated only while the ladder is still ahead.
-        if (config.isPromoActive(now)) {
-            expect(answer.startsWith(`From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. `)).toBe(true);
-        } else {
-            expect(answer.startsWith(`The Employer plan is $${config.planPrice}/month. `)).toBe(true);
-            expect(answer).not.toContain(config.ladderStartsLabel);
-        }
-        expect(answer).not.toMatch(/[–—]|\s-\s/);
-    };
-
-    it.each(PHASES)('/pricing (%s) builds its plan answer and plan card from the lifecycle sentences', (_phase, now) => {
-        const plan = pricingPageCopy(now).pricingFaqs.find((f) => f.q === 'How does the Employer plan work?');
-        expect(plan).toBeDefined();
-        lifecycle(plan!.a, now);
-        expect(plan!.a).toContain(` ${PLAN_TERMS} ${PLAN_POSTS_LINE} `);
-        expect(plan!.a.endsWith(PLAN_CANCEL_LINE)).toBe(true);
+describe('the pricing FAQs (they also feed the FAQPage JSON-LD) answer no plan question, in both phases', () => {
+    it.each(PHASES)('/pricing (%s)', (_phase, now) => {
+        const questions = pricingPageCopy(now).pricingFaqs.map((f) => f.q);
+        expect(questions).not.toContain('How does the Employer plan work?');
         const src = read(PRICING);
-        // The plan card note carries the same two sentences.
-        expect(src).toMatch(/note: `Every slot is a Featured post[^`]*\$\{PLAN_POSTS_LINE\} \$\{PLAN_CANCEL_LINE\}`/);
         // JSON-LD republishes the same array the accordion renders.
         expect(src).toMatch(/mainEntity: faqs\.map/);
         expect(src).toContain('const faqs = [...copy.pricingFaqs, ...EVERGREEN_FAQS];');
+        // The volume question no longer counts plan slots.
+        expect(src).not.toContain('config.planSlots');
     });
 
-    it.each(PHASES)('/faq (%s) renders the same lifecycle', (_phase, now) => {
-        const plan = employerPricingFaqs(now).find((f) => f.question === 'How does the Employer plan work?');
-        expect(plan).toBeDefined();
-        lifecycle(plan!.answer, now);
+    it.each(PHASES)('/faq (%s)', (_phase, now) => {
+        expect(employerPricingFaqs(now).map((f) => f.question)).not.toContain('How does the Employer plan work?');
         expect(read(FAQ)).toMatch(/mainEntity: \[\.\.\.jobSeekerFaqs, \.\.\.employerFaqs/);
         expect(read(FAQ)).toContain('...employerPricingFaqs(new Date()),');
     });
 
-    it.each(PHASES)('/for-employers (%s) renders the same lifecycle', (_phase, now) => {
-        const plan = forEmployersCopy(now).pricingFaqs.find((f) => f.q === 'How does the Employer plan work?');
-        expect(plan).toBeDefined();
-        lifecycle(plan!.a, now);
+    it.each(PHASES)('/for-employers (%s)', (_phase, now) => {
+        expect(forEmployersCopy(now).pricingFaqs.map((f) => f.q)).not.toContain('How does the Employer plan work?');
         expect(read(EMPLOYERS)).toMatch(/mainEntity: employerFaqs\.map/);
         expect(read(EMPLOYERS)).toContain('const employerFaqs = [...copy.pricingFaqs, ...EVERGREEN_FAQS];');
+        expect(read(EMPLOYERS)).not.toContain('config.planSlots');
     });
 });
 
 describe('the renewal answers say what a renewal does, and nothing more', () => {
-    it('/pricing: +durationDays, no new unlocks or InMails, plan posts reposted, the cap stated', () => {
+    it('one shared sentence names both renewal prices, each by the post it renews', () => {
         expect(RENEWAL_LINE).toBe(
-            `Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days).`,
+            `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo or intro post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
         );
+        // The pages that state both prices print it, never a copy of their own.
+        const importsShared = /import \{[^}]*\bRENEWAL_LINE\b[^}]*\} from '@\/lib\/pricing-copy'/;
+        for (const rel of [PRICING, 'app/pricing/pricing-page-copy.ts', FAQ, EMPLOYERS, 'app/for-employers/for-employers-copy.ts']) {
+            expect(read(rel), rel).toMatch(importsShared);
+            expect(read(rel), rel).not.toContain('$${config.renewalPrice}');
+            expect(read(rel), rel).not.toContain('${config.renewalPrice}');
+        }
+    });
+
+    it('/pricing: +durationDays, no new unlocks or InMails, the cap stated', () => {
         expect(RENEWAL_EFFECT_LINE).toContain(`A renewal adds ${config.durationDays} days to the post`);
         expect(RENEWAL_EFFECT_LINE).toContain('It does not add unlocks or InMails');
         expect(RENEWAL_CAP_LINE).toBe(
@@ -280,27 +338,33 @@ describe('the renewal answers say what a renewal does, and nothing more', () => 
         const answer = src.match(/q: 'What does renewal cost\?', a: `([^`]*)`/);
         expect(answer).not.toBeNull();
         const template = (answer as RegExpMatchArray)[1];
-        expect(template).toContain('${RENEWAL_LINE} ${RENEWAL_EFFECT_LINE}');
-        expect(template).toContain('Plan posts are not renewed');
-        expect(template).not.toMatch(/refresh|unlocksPerPosting/);
+        expect(template).toBe('${RENEWAL_LINE} ${RENEWAL_EFFECT_LINE}');
     });
 
     it('/faq: renewal gives more days, not more unlocks, and states the cap', () => {
         const src = read(FAQ);
-        expect(src).toContain('Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days) from the employer dashboard.');
-        expect(src).toContain('A renewal gives the post ${config.durationDays} more days; it does not add unlocks or InMails.');
+        expect(src).toContain('Every posting is active for ${config.durationDays} days. ${RENEWAL_LINE} Renew from the employer dashboard. A renewal does not add unlocks or InMails.');
         expect(src).toContain('Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.');
+    });
+
+    it('/for-employers: the pricing card prints the shared sentence', () => {
+        expect(read(EMPLOYERS)).toContain('{RENEWAL_LINE} No hidden fees.');
     });
 });
 
 describe('/terms states the same rules as the marketing pages', () => {
     const terms = read(TERMS);
 
-    it('plan postings run durationDays, are not renewable, and free their slot', () => {
-        expect(terms).toContain('Postings made from an Employer plan slot are not renewed. Each runs for {config.durationDays} days;');
-        expect(terms).toContain('its slot becomes available and the employer may publish a new posting in that slot at no additional charge');
-        expect(terms).toContain('Postings made from plan slots are unpublished when the plan ends');
-        expect(terms).toContain('or until their own {config.durationDays}-day term ends if that is sooner');
+    it('names no Employer plan anywhere a visitor can read it', () => {
+        expect(visibleText(TERMS)).not.toMatch(/Employer plan|plan slots?|monthly billing|month-to-month|\/month/i);
+        expect(terms).not.toContain('config.planPrice');
+        expect(terms).not.toContain('config.planSlots');
+    });
+
+    it('states both renewal prices from config, each by the posting it renews', () => {
+        expect(terms).toContain(
+            'Renewals are ${config.renewalPrice} USD for promotional and intro postings and ${config.proRenewalPrice} USD for postings purchased at ${config.postingPrice}, one-time, and add {config.durationDays} days as described in §6',
+        );
     });
 
     it('renewal adds days only, from the right base, within the cap', () => {

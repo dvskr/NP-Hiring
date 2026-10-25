@@ -8,6 +8,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import { Mail, HelpCircle } from 'lucide-react';
 import { config } from '@/lib/config';
+import { RENEWAL_LINE } from '@/lib/pricing-copy';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { CEU_GUIDE_SLUG, CEU_GUIDE_TITLE } from '@/lib/blog-ceu-guide';
 import { employerPricingFaqs } from './faq-employer-copy';
@@ -92,17 +93,18 @@ export default function FAQPage() {
   // Pricing answers are written around the launch promo + 2027 ladder in
   // lib/config — every number and date is a config token, and the sentences
   // match the canonical copy on /pricing so the FAQPage JSON-LD below never
-  // tells Google a different price than the pricing page does. The four that
-  // follow the promo clock (cost, features, intro price, plan) come from
+  // tells Google a different price than the pricing page does. The three that
+  // follow the promo clock (cost, features, intro price) come from
   // ./faq-employer-copy.ts, built for this render's clock.
   const employerFaqs = [
     ...employerPricingFaqs(new Date()),
     {
       // A renewal moves the end date and nothing else: it does not reset the
       // post's unlock or InMail counts (lib/tier-limits.ts counts both per
-      // posting since it was created).
+      // posting since it was created). Its two prices are the shared
+      // RENEWAL_LINE (lib/pricing-copy.ts).
       question: "How long do job postings last, and what does renewal cost?",
-      answer: `Every posting is active for ${config.durationDays} days. Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days) from the employer dashboard. A renewal gives the post ${config.durationDays} more days; it does not add unlocks or InMails. Plan posts are not renewed: when one ends, post the role again into its slot at no extra charge.`
+      answer: `Every posting is active for ${config.durationDays} days. ${RENEWAL_LINE} Renew from the employer dashboard. A renewal does not add unlocks or InMails.`
     },
     {
       question: "If I renew before my post expires, do I lose the remaining days?",
@@ -126,7 +128,7 @@ export default function FAQPage() {
     },
     {
       question: "Do you offer refunds?",
-      answer: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Promo posts involve no payment to refund, and Employer plan months already billed are not refunded. Cancelling the plan stops future monthly charges, and your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first.`
+      answer: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Promo posts involve no payment to refund.`
     },
   ];
 

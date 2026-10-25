@@ -1104,30 +1104,28 @@ test.describe('/tools/private-practice-revenue-calculator', () => {
  * WORKED EXAMPLE — from cost-per-hire-model.ts with lib/config pricing on this
  * HEAD and STAT_SOURCES.averageSalary $132,300 (BLS OEWS, May 2025).
  *
- * Our side has three ways to buy, and the widget's #cph-flat-mode select is the
- * observable authority on which one it opens with (defaultInputs(phase) opens
- * on 'promo' while config.isPromoActive(), on 'per-post' afterwards, when the
- * promo is not offered at all; backlog 2.1). Every assertion
- * below reads that control rather than a calendar date, so the suite stays true
- * on both sides of the promo:
- *   promo    — every post $0; renewals are still $179
- *   per-post — the FIRST PAID post per employer email domain is $199, every
- *              post after it $299, renewals $179, 60-day window, 25 unlocks
- *   plan     — $399/month for 5 concurrently active slots, no renewals (a plan
- *              post runs 60 days and is never renewed; the employer posts the
- *              role again into its freed slot)
+ * Our side has two ways to buy (the Employer plan was retired on 2026-10-24),
+ * and the widget's #cph-flat-mode select is the observable authority on which
+ * one it opens with (defaultInputs(phase) opens on 'promo' while
+ * config.isPromoActive(), on 'per-post' afterwards, when the promo is not
+ * offered at all; backlog 2.1). Every assertion below reads that control
+ * rather than a calendar date, so the suite stays true on both sides of the
+ * promo:
+ *   promo    — every post $0; a promo post renews at $199 (the base price)
+ *   per-post — the FIRST PAID post per employer email domain is $249, every
+ *              post after it $349; the intro post renews at $199, every later
+ *              post at $249 (the pro price); 60-day window, 25 unlocks
  *
  * Per-post, roles 3, renewals 1/role, intro price on, 1 hire/role, 25 applicants/role:
- *   intro 199 + featured 2 × 299 = 797; renewals 3 × 179 = 537; total 1,334
- *   per hire 1,334/3 = 444.67 → $445; per applicant 1,334/75 = 17.79 → $18
+ *   intro 249 + featured 2 × 349 = 947; renewals 1 × 199 + 2 × 249 = 697; total 1,644
+ *   per hire 1,644/3 = $548; per applicant 1,644/75 = 21.92 → $22
  * CPC $600/role, 20 applicants/role: spend 1,800; 60 applicants; $30/applicant; $600/hire
  * Agency 20% × 132,300 = 26,460/role: spend 79,380; per hire $26,460; applicants n/a
  * Vacancy $500/day × 60 days × 3 roles = 90,000 on every channel:
- *   flat (1,334+90,000)/3 = 30,444.67 → $30,445; cpc 91,800/3 = $30,600; agency 169,380/3 = $56,460
- * Intro price off, 1 role, 0 renewals → 1 featured post → $299.
- * Plan, 3 roles, 2 months: ceil(3/5) = 1 plan × 2 × 399 = $798 → $266 per hire.
+ *   flat (1,644+90,000)/3 = $30,548; cpc 91,800/3 = $30,600; agency 169,380/3 = $56,460
+ * Intro price off, 1 role, 0 renewals → 1 featured post → $349.
  * Promo default (1 role, 0 renewals) → $0, "the launch promo doing the work".
- * Per-post 2.7 roles (intro on, 0 renewals): floor → 2 roles, 199 + 299 = $498 / 2 hires = $249.
+ * Per-post 2.7 roles (intro on, 0 renewals): floor → 2 roles, 249 + 349 = $598 / 2 hires = $299.
  */
 test.describe('/tools/cost-per-hire-calculator', () => {
     const PATH = '/tools/cost-per-hire-calculator';
@@ -1145,16 +1143,19 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         const mode = await page.locator('#cph-flat-mode').inputValue();
         if (mode === 'promo') {
             await expect(headline(page)).toHaveText('$0');
-            await expect(page.getByText(/1 free post during the launch promo and 0 renewals at \$179, for/)).toContainText('for a total of $0');
+            await expect(page.getByText(/1 free post during the launch promo and 0 renewals at \$199, for/)).toContainText('for a total of $0');
             await expect(page.getByText(/That is the launch promo doing the work/)).toBeVisible();
             // The intro-price checkbox belongs to the per-post rung only.
             await expect(page.locator('#cph-intro-price')).toHaveCount(0);
         } else {
             expect(mode, 'the widget opens on the promo or on the per-post ladder').toBe('per-post');
             await expect(page.locator('#cph-intro-price')).toBeChecked();
-            await expect(headline(page)).toHaveText('$199');
-            await expect(page.getByText(/1 intro post at \$199, 0 posts at \$299 and 0 renewals at \$179, for/)).toContainText('for a total of $199');
+            await expect(headline(page)).toHaveText('$249');
+            await expect(page.getByText(/1 intro post at \$249, 0 posts at \$349 and 0 renewals at \$199, for/)).toContainText('for a total of $249');
         }
+        // The Employer plan is retired: no plan mode and no months field.
+        await expect(page.locator('#cph-flat-mode option[value="plan"]')).toHaveCount(0);
+        await expect(page.locator('#cph-plan-months')).toHaveCount(0);
         await expect(page.getByText('Not comparable. Enter the sponsored spend per role from your own invoice.')).toBeVisible();
         await expect(page.getByText('Not comparable. Enter the contingency rate in your agency agreement.')).toBeVisible();
         await expect(page.locator('table thead')).toContainText('Per hire + vacancy (off)');
@@ -1171,9 +1172,9 @@ test.describe('/tools/cost-per-hire-calculator', () => {
             await expect(page.locator('#cph-flat-mode option[value="promo"]')).toHaveCount(0);
         }
         const panel = page.locator('section[aria-labelledby="tool-assumptions-heading"]');
-        await expect(panel).toContainText('one intro-priced post at $199 per employer email domain, lifetime, shared across everyone at your organization');
-        await expect(panel).toContainText('every post after that is $299');
-        await expect(panel).toContainText('renews for $179');
+        await expect(panel).toContainText('one intro-priced post at $249 per employer email domain, lifetime, shared across everyone at your organization');
+        await expect(panel).toContainText('every post after that is $349');
+        await expect(panel).toContainText('Renewals add 60 days: $199 for a promo or intro post, $249 for a $349 post.');
         await expectNoRenderedDashes(page, `${PATH} (defaults)`);
     });
 
@@ -1192,16 +1193,17 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await fillNumber(page, '#cph-cpc-applicants', '20');
         await fillNumber(page, '#cph-agency-pct', '20');
 
-        await expect(headline(page)).toHaveText('$445');
-        await expect(page.getByText(/1 intro post at \$199, 2 posts at \$299 and 3 renewals at \$179, for/)).toContainText('for a total of $1,334');
-        await expect(page.getByText(/any channel costing more than/)).toContainText('$445');
+        await expect(headline(page)).toHaveText('$548');
+        // The intro post renews at $199, the two posts bought at $349 at $249.
+        await expect(page.getByText(/1 intro post at \$249, 2 posts at \$349 and 3 renewals \(1 at \$199, 2 at \$249\), for/)).toContainText('for a total of $1,644');
+        await expect(page.getByText(/any channel costing more than/)).toContainText('$548');
 
         const rows = page.locator('table tbody tr');
         const flat = rows.filter({ hasText: 'Flat-fee posting' });
-        await expect(flat.locator('td').nth(0)).toHaveText('$1,334');
+        await expect(flat.locator('td').nth(0)).toHaveText('$1,644');
         await expect(flat.locator('td').nth(1)).toHaveText('75');
-        await expect(flat.locator('td').nth(2)).toHaveText('$18');
-        await expect(flat.locator('td').nth(3)).toHaveText('$445');
+        await expect(flat.locator('td').nth(2)).toHaveText('$22');
+        await expect(flat.locator('td').nth(3)).toHaveText('$548');
         await expect(flat.locator('td').nth(4)).toHaveText('n/a');
 
         const cpc = rows.filter({ hasText: 'Sponsored / cost-per-click' });
@@ -1218,7 +1220,7 @@ test.describe('/tools/cost-per-hire-calculator', () => {
 
         const verdict = page.getByText(/On the numbers you entered,/);
         await expect(verdict).toContainText('flat-fee posting');
-        await expect(verdict).toContainText('$445');
+        await expect(verdict).toContainText('$548');
         await expect(verdict).toContainText('agency / contingency search');
         await expect(verdict).toContainText('$26,460');
 
@@ -1226,7 +1228,7 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await fillNumber(page, '#cph-vacancy-cost', '500');
         await expect(page.locator('table thead')).not.toContainText('(off)');
         await expect(page.locator('table thead')).toContainText('Per hire + vacancy');
-        await expect(flat.locator('td').nth(4)).toHaveText('$30,445');
+        await expect(flat.locator('td').nth(4)).toHaveText('$30,548');
         await expect(cpc.locator('td').nth(4)).toHaveText('$30,600');
         await expect(agency.locator('td').nth(4)).toHaveText('$56,460');
         await expectNoNaN(page);
@@ -1241,26 +1243,14 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await introPrice.focus();
         await page.keyboard.press('Space');
         await expect(introPrice).not.toBeChecked();
-        await expect(headline(page)).toHaveText('$299');
-        await expect(page.getByText(/1 post at \$299 and 0 renewals at \$179, for/)).toContainText('for a total of $299');
-        await expect(page.getByText(/\d+ intro post at \$199,/)).toHaveCount(0);
+        await expect(headline(page)).toHaveText('$349');
+        // A post bought at $349 renews at $249.
+        await expect(page.getByText(/1 post at \$349 and 0 renewals at \$249, for/)).toContainText('for a total of $349');
+        await expect(page.getByText(/\d+ intro post at \$249,/)).toHaveCount(0);
         // Double toggle is idempotent: back on, back to the intro price.
         await page.keyboard.press('Space');
         await expect(introPrice).toBeChecked();
-        await expect(headline(page)).toHaveText('$199');
-
-        // Employer plan: 3 roles fit one plan's 5 slots; 2 months × $399 = $798.
-        // A plan post is never renewed (it runs 60 days and the role is posted
-        // again into its freed slot), so the renewals field is replaced by the
-        // months field.
-        await fillNumber(page, '#cph-roles', '3');
-        await page.locator('#cph-flat-mode').selectOption('plan');
-        await expect(page.locator('#cph-renewals')).toHaveCount(0);
-        await expect(page.locator('#cph-intro-price')).toHaveCount(0);
-        await fillNumber(page, '#cph-plan-months', '2');
-        await expect(page.getByText(/1 Employer plan \(5 active job slots each\) for 2 months at \$399\/month, no renewals to price, for/))
-            .toContainText('for a total of $798');
-        await expect(headline(page)).toHaveText('$266');
+        await expect(headline(page)).toHaveText('$249');
     });
 
     test('zero / fractional inputs report not-comparable or clamp to whole roles, never NaN', async ({ page }) => {
@@ -1273,8 +1263,8 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         // number of roles at zero and hide the rounding.
         await page.locator('#cph-flat-mode').selectOption('per-post');
         await fillNumber(page, '#cph-roles', '2.7');
-        // Whole roles only: floor(2.7) = 2 → intro $199 + featured $299 = $498 over 2 hires = $249.
-        await expect(headline(page)).toHaveText('$249');
+        // Whole roles only: floor(2.7) = 2 → intro $249 + featured $349 = $598 over 2 hires = $299.
+        await expect(headline(page)).toHaveText('$299');
         // Zero hires: spend exists but no divisor → per-hire is n/a, not Infinity.
         await fillNumber(page, '#cph-hires', '0');
         await expect(headline(page)).toHaveText('n/a');
@@ -1284,7 +1274,7 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await page.reload();
         await expect(page.locator('#cph-roles')).toHaveValue('1');
         const mode = await page.locator('#cph-flat-mode').inputValue();
-        await expect(headline(page)).toHaveText(mode === 'promo' ? '$0' : '$199');
+        await expect(headline(page)).toHaveText(mode === 'promo' ? '$0' : '$249');
     });
 
     test('keyboard-only: Tab order runs roles → hires, typing a new role count reprices the plan', async ({ page }) => {
@@ -1297,8 +1287,8 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await page.keyboard.press('Shift+Tab');
         await expect(page.locator('#cph-roles')).toBeFocused();
         await retypeFocused(page, '#cph-roles', '4');
-        // Intro $199 + 3 × $299 = $1,096 over 4 hires = $274.
-        await expect(headline(page)).toHaveText('$274');
+        // Intro $249 + 3 × $349 = $1,296 over 4 hires = $324.
+        await expect(headline(page)).toHaveText('$324');
         await expect(page.locator('#cph-roles')).toHaveClass(/tool-control/);
     });
 

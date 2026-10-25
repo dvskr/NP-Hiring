@@ -162,7 +162,7 @@ describe('a renewal that would add no full day is not sold (409, no Stripe call)
     const { res } = await renew();
     expect(res.status).toBe(200);
     expect(prisma.employerJob.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      include: { job: { select: expect.objectContaining({ createdAt: true, expiresAt: true }) } },
+      include: expect.objectContaining({ job: { select: expect.objectContaining({ createdAt: true, expiresAt: true }) } }),
     }));
   });
 

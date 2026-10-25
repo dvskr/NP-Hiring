@@ -105,7 +105,7 @@ const TRUE_IN_BOTH_PHASES: readonly BothPhases[] = [
     {
         file: 'components/tools/EmployerCostPerHireCalculator.tsx',
         under: 'ourCostPerHire === 0',
-        why: 'a zero cost per hire needs the promo mode (a per-post or plan total is never zero for a role), and flatFeeModeOptions offers that mode only while the promo runs',
+        why: 'a zero cost per hire needs the promo mode (a per-post total is never zero for a role), and flatFeeModeOptions offers that mode only while the promo runs',
     },
     {
         file: 'lib/outreach-service.ts',

@@ -9,24 +9,32 @@
  * `promoMaxActivePostsPerDomain` is an abuse guard only (never marketed).
  *
  * ── From January 1, 2027 ─────────────────────────────────────────────
- *   Intro post   $199 / 60 days — the FIRST PAID post per company domain
- *   Featured post $299 / 60 days — every later post
- *   Employer plan $399 / month  — 5 active job slots while entitled. Each
- *                 plan post runs 60 days like any other; it is never
- *                 renewed or extended (create-renewal-checkout 409s it).
- *                 When one expires or is closed its slot frees and the
- *                 employer posts again into it at no extra charge; the
- *                 plan-lapse job unpublishes plan posts when the plan ends.
- *   Renewal      $179 / +60 days on any promo/intro/pro post, capped at
- *                 `renewalCapDays` after the post was created. It does NOT
- *                 reset the post's unlock or InMail counters.
+ *   Intro post   $249 / 60 days — the FIRST PAID post per company domain
+ *   Featured post $349 / 60 days — every later post
+ *   Renewal      +60 days, capped at `renewalCapDays` after the post was
+ *                 created. It does NOT reset the post's unlock or InMail
+ *                 counters. A renewal has two prices:
+ *                   $199 (`renewalPrice`)    — 'base': promo, intro, pack
+ *                                              and legacy posts
+ *                   $249 (`proRenewalPrice`) — 'pro': a post bought at the
+ *                                              $349 posting price
+ *                 lib/renewal-price.ts decides which a post pays;
+ *                 `renewalPriceCentsFor` / `renewalPriceDollarsFor` are the
+ *                 only mapping code should use.
+ *   Employer plan — RETIRED (owner decision, 2026-10-24). No page, email,
+ *                 FAQ, checkout rail or calculator offers it, and plan
+ *                 posts stay non-renewable (create-renewal-checkout 409s
+ *                 them). `planPrice`, `planSlots`, `planGraceDays` and the
+ *                 'plan' tier remain only because dormant plan code still
+ *                 reads them; they go when that code does.
  *
  * Every post, whatever it cost, gets the SAME features. The ladder is
  * purely price + billing shape; there is no stripped-down tier.
  *
  * Source-of-truth rules:
  *   - Dollar values and Stripe cent values are declared as pairs here and
- *     nowhere else; `priceCentsForTier` is the only mapping code should use.
+ *     nowhere else; `priceCentsForTier` and `renewalPriceCentsFor` are the
+ *     only mappings code should use.
  *   - Marketing copy is hand-written around these constants (pricing /
  *     for-employers / faq / terms / emails). Change a number here and
  *     revisit the copy surfaces listed in docs/pricing-system.md.
@@ -41,6 +49,12 @@ export type PricingTier = 'intro' | 'pro' | 'plan';
 
 /** What the employer's NEXT post will be, as reported by /api/employer/free-quota-status. */
 export type PostingMode = 'promo' | 'plan' | 'intro' | 'paid';
+
+/**
+ * Which of the two renewal prices a post pays: 'base' (`renewalPrice`) or
+ * 'pro' (`proRenewalPrice`). lib/renewal-price.ts decides it from the row.
+ */
+export type RenewalRung = 'base' | 'pro';
 
 /**
  * The promo ends at midnight in Hawaii (HST, UTC-10, no daylight saving in
@@ -72,12 +86,17 @@ export const config = {
   promoMaxActivePostsPerDomain: 10,
 
   // ─── Per-post ladder (effective January 1, 2027) ───
-  introPrice: 199,            // dollars — first PAID post per company domain
-  stripeIntroPriceInCents: 19900,
-  postingPrice: 299,          // dollars — every later post
-  stripePriceInCents: 29900,
-  renewalPrice: 179,          // dollars — +60 days on a promo / intro / pro post
-  stripeRenewalPriceInCents: 17900,
+  introPrice: 249,            // dollars — first PAID post per company domain
+  stripeIntroPriceInCents: 24900,
+  postingPrice: 349,          // dollars — every later post
+  stripePriceInCents: 34900,
+  // Renewal: +60 days. The base price is what every reader of `renewalPrice`
+  // / `stripeRenewalPriceInCents` has always meant; the pro price is only for
+  // a post bought at `postingPrice` (see renewalPriceCentsFor below).
+  renewalPrice: 199,          // dollars — base: promo / intro / pack / legacy posts
+  stripeRenewalPriceInCents: 19900,
+  proRenewalPrice: 249,       // dollars — a post bought at the posting price
+  stripeProRenewalPriceInCents: 24900,
   /** Listing duration for EVERY post (promo, intro, pro, plan) and every renewal. */
   durationDays: 60,
   /**
@@ -147,6 +166,18 @@ export const config = {
       default: return config.postingPrice;
     }
   },
+
+  /**
+   * Stripe unit_amount for a renewal. Only 'pro' (a post bought at the
+   * posting price) costs more; anything else is the base price, which is also
+   * the fallback lib/renewal-price.ts documents for a missing ledger row.
+   */
+  renewalPriceCentsFor: (rung: RenewalRung): number =>
+    rung === 'pro' ? config.stripeProRenewalPriceInCents : config.stripeRenewalPriceInCents,
+
+  /** Dollar price of a renewal, from the same pairs as `renewalPriceCentsFor`. */
+  renewalPriceDollarsFor: (rung: RenewalRung): number =>
+    rung === 'pro' ? config.proRenewalPrice : config.renewalPrice,
 
   /** Display label for a ladder rung. Legacy/unknown values render as 'Pro'. */
   getTierLabel: (tier?: PricingTier | string): string => {

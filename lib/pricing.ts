@@ -53,6 +53,18 @@ export function domainOf(email: string | null | undefined): string | null {
 type Db = Prisma.TransactionClient | typeof prisma;
 
 /**
+ * The query fragment that finds out whether an EmployerJob was bought as a
+ * post: spread it into the query's `include`. It loads at most one 'new'
+ * JobCharge (one is all the answer needs), and never a 'renewal' charge: a
+ * renewed promo post reads ('paid', 'pro') exactly like a bought post, and
+ * only the 'new' charge tells them apart. lib/renewal-price.ts#renewalRungForRow
+ * turns the loaded row into the renewal price it pays.
+ */
+export const NEW_POST_CHARGE_SELECT = {
+  jobCharges: { where: { type: 'new' }, select: { id: true }, take: 1 },
+} as const satisfies Prisma.EmployerJobInclude;
+
+/**
  * Rows that count as a bought POST for the intro allowance. A 'paid' row
  * qualifies only when it carries a 'new' JobCharge (bought through Checkout)
  * or no charge at all (legacy paid rows from before the ledger existed).
@@ -155,10 +167,12 @@ export async function resolvePostingMode(opts: {
   return quoteForMode(tier === 'intro' ? 'intro' : 'paid');
 }
 
-// ─── Renewal offer (config.renewalPrice) ─────────────────────────────
+// ─── Renewal offer ───────────────────────────────────────────────────
 //
-// The rule that decides whether a renewal may be pitched as a saving lives
-// in lib/renewal-offer.ts, which imports only lib/config, so the dashboard
+// Which of the two renewal prices a post pays is lib/renewal-price.ts (it
+// needs NEW_POST_CHARGE_SELECT above). The rule that decides whether a
+// renewal may be pitched as a saving, against that price, lives in
+// lib/renewal-offer.ts, which imports only lib/config, so the dashboard
 // and the edit page (client bundles that cannot load this Prisma-backed
 // module) use the same rule as the emails and the cron instead of a copy.
 // It is re-exported here so server importers keep this one import path.

@@ -148,9 +148,12 @@ describe('section 3: the decisions', () => {
     });
 
     it('D17 to D19 quote the copy the pages print today', () => {
+        // 2027 re-price: the /pricing ladder section reads "Per post" over
+        // "What a post costs" where "Per post or by the month" and "Three
+        // ways to post" stood while the Employer plan was on sale.
         const QUOTED: ReadonlyArray<{ row: string; file: string; phrase: string }> = [
-            { row: 'D17', file: 'app/pricing/pricing-page-copy.ts', phrase: 'Per post or by the month' },
-            { row: 'D17', file: 'app/pricing/pricing-page-copy.ts', phrase: 'Three ways to post' },
+            { row: 'D17', file: 'app/pricing/pricing-page-copy.ts', phrase: 'Per post' },
+            { row: 'D17', file: 'app/pricing/pricing-page-copy.ts', phrase: 'What a post costs' },
             { row: 'D17', file: 'app/pricing/pricing-page-copy.ts', phrase: 'Do all prices include the same features?' },
             { row: 'D17', file: 'app/pricing/pricing-page-copy.ts', phrase: `Posts From $${config.introPrice}` },
             { row: 'D17', file: 'app/for-employers/for-employers-copy.ts', phrase: 'No bidding, no contracts' },
@@ -165,5 +168,48 @@ describe('section 3: the decisions', () => {
             expect(printed, `${file} no longer prints "${phrase}": the copy changed, so update or close ${row}`).toContain(phrase);
             expect(lineWith(pending, `| ${row} |`), `${row}: ${phrase}`).toContain(phrase);
         }
+    });
+});
+
+describe('the 2027 re-price in the register (owner decisions and defaults of 2026-10-24)', () => {
+    const decisions = between(pending, '## 3. Decisions (DECISION)', '## 4. Data procurement (OWNER)');
+
+    it('D1 is closed: the Employer plan it asked about is retired', () => {
+        expect(decisions).not.toContain('| D1 |');
+        expect(closed).toMatch(/^- D1 /m);
+    });
+
+    it('D36 is the owner\'s own decision; D37 to D42 are the lead\'s defaults, which the owner may change', () => {
+        const d36 = lineWith(decisions, '| D36 |');
+        expect(d36).toMatch(/Decided by the owner on 2026-10-24/);
+        expect(d36).toContain(`$1,245`);
+        for (const row of ['D37', 'D38', 'D39', 'D40', 'D41', 'D42']) {
+            const line = lineWith(decisions, `| ${row} |`);
+            expect(line, row).toContain('Default set 2026-10-24, the owner may change it');
+            expect(line, row).not.toMatch(/Decided by the owner/);
+        }
+        // The pack copy never claims a saving that is not true for every reader.
+        expect(lineWith(decisions, '| D40 |')).toMatch(/save \$500/);
+        expect(lineWith(decisions, '| D39 |')).toContain(`$${config.renewalPrice}`);
+    });
+
+    it('D3, D11 and the renewal date row quote the prices config charges, and none of the old ones', () => {
+        const d3 = lineWith(pending, '| D3 |');
+        expect(d3).toContain(`$${config.introPrice} checkouts`);
+        expect(d3).toContain(`$${config.postingPrice - config.introPrice} less`);
+        const d11 = lineWith(pending, '| D11 |');
+        expect(d11).toContain(`$${config.postingPrice} post price`);
+        expect(d11).toContain(`$${config.introPrice} intro`);
+        const renewalRow = lineWith(pending, '| About 2026-11-21 |');
+        expect(renewalRow).toContain(`$${config.renewalPrice} renewal`);
+        for (const line of [d3, d11, renewalRow]) expect(line).not.toMatch(/\$(?:179|299|399)\b/);
+    });
+
+    it('1.1 and 1.2 ask for no plan Price, Payment Link or Customer Portal, and keep the link unset', () => {
+        const stripeSetup = between(pending, '**1.1 Stripe live mode.**', '**1.3 Google Analytics.**');
+        expect(stripeSetup).toMatch(/no Price, Payment Link or Customer Portal/);
+        expect(stripeSetup).not.toContain('$399');
+        expect(stripeSetup).toContain('`STRIPE_PLAN_PAYMENT_LINK` is not set');
+        expect(stripeSetup).not.toMatch(/Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,\s*`STRIPE_PLAN_PAYMENT_LINK`/);
     });
 });

@@ -14,7 +14,10 @@
  *     unknown / tampered tier;
  *   - `getTierLabel` is what the checkout product name and the dashboard
  *     badge print;
- *   - `renewalCapDays` is the cap the renewal code actually applies.
+ *   - `renewalCapDays` is the cap the renewal code actually applies;
+ *   - a renewal has two prices, 'base' and 'pro', and `renewalPriceCentsFor` /
+ *     `renewalPriceDollarsFor` are the only way code picks one (which post
+ *     pays which is lib/renewal-price.ts, tests/lib/renewal-price.test.ts).
  */
 import { describe, it, expect } from 'vitest';
 import { config } from '@/lib/config';
@@ -154,6 +157,64 @@ describe('config.priceCentsForTier — Stripe unit_amount per rung', () => {
     it('keeps the intro price strictly below the featured price (it is a discount, not a tier)', () => {
         expect(config.introPrice).toBeLessThan(config.postingPrice);
         expect(config.renewalPrice).toBeLessThan(config.postingPrice);
+    });
+});
+
+describe('the 2027 ladder: the owner prices, each declared as a dollar/cent pair', () => {
+    it('the first paid post per company domain is $249 and every later post is $349', () => {
+        expect(config.introPrice).toBe(249);
+        expect(config.stripeIntroPriceInCents).toBe(24900);
+        expect(config.postingPrice).toBe(349);
+        expect(config.stripePriceInCents).toBe(34900);
+    });
+
+    it('the Stripe amounts the checkout charges come from the same pairs', () => {
+        expect(config.priceCentsForTier('intro')).toBe(24900);
+        expect(config.priceCentsForTier('pro')).toBe(34900);
+        expect(config.priceDollarsForTier('intro')).toBe(249);
+        expect(config.priceDollarsForTier('pro')).toBe(349);
+    });
+});
+
+describe('config.renewalPriceCentsFor / renewalPriceDollarsFor: a renewal has two prices', () => {
+    it("'base' is $199, for promo, intro and legacy posts", () => {
+        expect(config.renewalPriceDollarsFor('base')).toBe(199);
+        expect(config.renewalPriceCentsFor('base')).toBe(19900);
+    });
+
+    it("'pro' is $249, for a post bought at the $349 posting price", () => {
+        expect(config.renewalPriceDollarsFor('pro')).toBe(249);
+        expect(config.renewalPriceCentsFor('pro')).toBe(24900);
+    });
+
+    it('keeps renewalPrice and stripeRenewalPriceInCents as the base price, so every existing reader prints the base', () => {
+        expect(config.renewalPrice).toBe(config.renewalPriceDollarsFor('base'));
+        expect(config.stripeRenewalPriceInCents).toBe(config.renewalPriceCentsFor('base'));
+    });
+
+    it('declares the pro renewal as its own dollar/cent pair', () => {
+        expect(config.proRenewalPrice).toBe(249);
+        expect(config.stripeProRenewalPriceInCents).toBe(24900);
+        expect(config.stripeProRenewalPriceInCents).toBe(config.proRenewalPrice * 100);
+    });
+
+    it('cents agree with dollars on both rungs', () => {
+        for (const rung of ['base', 'pro'] as const) {
+            expect(config.renewalPriceCentsFor(rung)).toBe(config.renewalPriceDollarsFor(rung) * 100);
+        }
+    });
+
+    it('a renewal is always cheaper than the post it renews, and the pro renewal costs more than the base one', () => {
+        expect(config.renewalPriceDollarsFor('base')).toBeLessThan(config.renewalPriceDollarsFor('pro'));
+        expect(config.renewalPriceDollarsFor('pro')).toBeLessThan(config.postingPrice);
+        expect(config.renewalPriceDollarsFor('base')).toBeLessThan(config.introPrice);
+    });
+
+    it("prices anything that is not the 'pro' rung at the base renewal (the lower price is the documented fallback)", () => {
+        for (const rung of [undefined, null, '', 'plan', 'pack', 'intro', 'PRO']) {
+            expect(config.renewalPriceCentsFor(rung as never)).toBe(config.stripeRenewalPriceInCents);
+            expect(config.renewalPriceDollarsFor(rung as never)).toBe(config.renewalPrice);
+        }
     });
 });
 

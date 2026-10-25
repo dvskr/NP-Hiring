@@ -12,7 +12,7 @@
  *    ledgered for the refund, alerted, and acknowledged without a retry.
  *  - The same holds for a posting that was never paid for ('pending', or
  *    'expired' after the reconciliation sweep retired the abandoned
- *    checkout): a $179 renewal must not publish a post nobody paid for.
+ *    checkout): a renewal must not publish a post nobody paid for.
  *  - A full refund takes the posting down only when no other payment for it
  *    stands. The alerts "Two paid renewals for one posting, refund required"
  *    and "second payment for one posting" ask the operator for exactly that
@@ -22,6 +22,7 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
 import { sendRefundConfirmationEmail, sendRenewalConfirmationEmail } from '@/lib/email-service';
 
@@ -49,7 +50,7 @@ function makeRequest(body: object): Request {
     });
 }
 
-const AMOUNT = 19900;
+const AMOUNT = config.stripeIntroPriceInCents;
 
 // Load the webhook route graph once, outside any single test's time budget (a
 // cold import under a loaded full suite run can outlast vitest's 5 second default).
@@ -120,8 +121,8 @@ describe('Stripe webhook — refund/dispute entitlement', () => {
 });
 
 describe('Stripe webhook — a full refund takes the posting down only when no other payment for it stands', () => {
-    const RENEWAL = 17900;
-    const POST_FEE = 29900;
+    const RENEWAL = config.stripeRenewalPriceInCents;
+    const POST_FEE = config.stripePriceInCents;
 
     /** The refunded ledger row, as charge.refunded finds it by payment intent. */
     function refundedCharge(type: 'renewal' | 'new', amountCents: number) {
@@ -331,7 +332,7 @@ describe('Stripe webhook — renewal can never re-publish a refunded or disputed
     function renewalEvent(id = 'evt_ren') {
         return {
             id, type: 'checkout.session.completed',
-            data: { object: { id: 'cs_ren', payment_status: 'paid', payment_intent: 'pi_ren', amount_total: 17900, currency: 'usd', metadata: { jobId: 'job1', type: 'renewal', tier: 'pro' } } },
+            data: { object: { id: 'cs_ren', payment_status: 'paid', payment_intent: 'pi_ren', amount_total: config.stripeRenewalPriceInCents, currency: 'usd', metadata: { jobId: 'job1', type: 'renewal', tier: 'pro', renewalRung: 'base' } } },
         };
     }
 

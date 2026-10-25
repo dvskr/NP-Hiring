@@ -31,7 +31,9 @@
  *    across every employee at that domain (lib/pricing.ts#getNextPaidTier
  *    counts paid rows against EmployerJob.quotaDomain). "Per account" would
  *    overstate the discount and understate a multi-recruiter employer's real
- *    spend. The Employer plan is priced as concurrent plans × months.
+ *    spend. Each renewal is priced by the post it renews (the intro post's
+ *    at the base price, every later post's at the pro price). The Employer
+ *    plan is retired (owner decision, 2026-10-24) and is not priced.
  *  - No unmeasured comparative about a channel we do not price. Adverbs of
  *    frequency or degree attached to "cheaper" are benchmarks in disguise: they
  *    assert a distribution we have never sampled, on the one page whose premise

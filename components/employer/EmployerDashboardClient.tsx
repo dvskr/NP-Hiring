@@ -35,6 +35,8 @@ interface Job {
     editToken: string;
     paymentStatus: string;
     pricingTier: string;
+    /** What this post pays to renew, in dollars: the page's answer (lib/renewal-price.ts). */
+    renewalPrice: number;
     slug: string | null;
 }
 
@@ -56,10 +58,10 @@ interface EmployerDashboardClientProps {
  *   - 'pending' (unpaid checkout) and 'refunded' rows are not renewable
  *     either; pending rows get the "Complete payment" action instead.
  * Everything else ('promo', 'paid', legacy free_renewed / free_upgraded)
- * renews at config.renewalPrice, but only while a renewal can be bought
- * (paid posting on; see paidPostingAvailable below), and never while the
- * post is archived. The Renew rule itself is shouldOfferRenew in
- * lib/employer-dashboard-rules.ts.
+ * renews at its own renewalPrice (the server sends it with the row), but only
+ * while a renewal can be bought (paid posting on; see paidPostingAvailable
+ * below), and never while the post is archived. The Renew rule itself is
+ * shouldOfferRenew in lib/employer-dashboard-rules.ts.
  */
 const LEGACY_FREE_STATUSES = new Set(['free', 'free_renewed', 'free_upgraded']);
 
@@ -177,7 +179,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
     // The shared rule (lib/renewal-offer.ts), the one the expiry emails use:
     // no claim during the promo, the employer's own next-post price when
     // known, else the standard post price named as such, nothing under 1%.
-    const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, nextPostPrice });
+    // Measured from the price of the row being renewed.
+    const selectedRenewalPrice = selectedJob?.renewalPrice ?? config.renewalPrice;
+    const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, nextPostPrice, renewalPrice: selectedRenewalPrice });
 
     // Sync internal tab state when the URL query changes (top-nav navigation
     // between Dashboard and Applicants is the primary trigger).
@@ -376,7 +380,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
         setShowRenewModal(false);
 
         // P7: fire begin_checkout for renewal
-        trackBeginCheckout(config.stripeRenewalPriceInCents, 'renewal');
+        trackBeginCheckout(selectedRenewalPrice * 100, 'renewal');
 
         try {
             const response = await fetch('/api/create-renewal-checkout', {
@@ -1367,7 +1371,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '14px' }}>{selectedJob.title}</p>
 
                             <p style={{ fontSize: '14px', color: '#1A2E35', lineHeight: 1.6, marginBottom: '8px' }}>
-                                Renewals at ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing. This legacy free-trial post isn&apos;t one of them.
+                                Renewals from ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing. This legacy free-trial post isn&apos;t one of them.
                             </p>
                             <p style={{ fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6, marginBottom: '20px' }}>
                                 {promoActive
@@ -1430,7 +1434,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                         <p style={{ fontSize: '10px', color: '#6B7F8A', margin: '4px 0 0', lineHeight: 1.5 }}>It does not add unlocks or InMails. Renewals can extend a post to at most {config.renewalCapDays} days after it was first posted.</p>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <span style={{ fontSize: '20px', fontWeight: 800, color: '#831843' }}>${config.renewalPrice}</span>
+                                        <span style={{ fontSize: '20px', fontWeight: 800, color: '#831843' }}>${selectedRenewalPrice}</span>
                                         {/* Only a saving that is true for this employer; none during the promo. */}
                                         {savingsLine && (
                                             <p style={{ fontSize: '10px', color: '#6B7F8A', margin: 0 }}>{savingsLine}</p>

@@ -1,6 +1,7 @@
 /**
- * POST /api/create-renewal-checkout — $config.renewalPrice for
- * +config.durationDays on an existing post.
+ * POST /api/create-renewal-checkout — +config.durationDays on an existing
+ * post, for config.renewalPrice, or config.proRenewalPrice when the post was
+ * bought at the posting price (lib/renewal-price.ts).
  *
  * Eligible rows: 'promo' (launch-free post, renewable at the normal price)
  * and 'paid' (intro / pro). Blocked with 409:
@@ -40,8 +41,9 @@ import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { config, PricingTier } from '@/lib/config';
-import { asPaidTier } from '@/lib/pricing';
+import { config, PricingTier, type RenewalRung } from '@/lib/config';
+import { asPaidTier, NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
+import { renewalRungForRow } from '@/lib/renewal-price';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { getBaseUrl, getEnv, isFeatureEnabled } from '@/lib/env';
 import { logger } from '@/lib/logger';
@@ -175,6 +177,9 @@ export async function POST(request: NextRequest) {
             archivedAt: true,
           },
         },
+        // The row's 'new' charge, if it has one: what tells a post bought at
+        // the posting price from a renewed promo post (renewalRungForRow).
+        ...NEW_POST_CHARGE_SELECT,
       },
     });
 
@@ -272,6 +277,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // What this post pays to renew: config.proRenewalPrice for a post bought at
+    // the posting price, config.renewalPrice for every other one
+    // (lib/renewal-price.ts). Decided here, after every refusal above, from
+    // the stored row; the webhook records what Stripe charged.
+    const renewalRung = renewalRungForRow(employerJob);
+
     // GA attribution for the renewal purchase event the webhook sends later;
     // only this request can read the GA cookies. Empty unless the visitor
     // granted analytics consent (lib/analytics-server.ts#gaCheckoutMetadata).
@@ -284,6 +295,7 @@ export async function POST(request: NextRequest) {
       employerJob,
       jobId,
       tier,
+      renewalRung,
       daysAdded: extension.daysAdded,
       // Closes before the renewal session cookie set below runs out, and is
       // identical for every request in this window (renewalSessionExpiresAt).
@@ -293,12 +305,12 @@ export async function POST(request: NextRequest) {
     // whose parameters differ from the first request. So the key carries a
     // fingerprint of the parameters: whatever changes inside a window (the
     // title is edited between two clicks, the days a renewal near the cap
-    // adds tick down, a deploy changes the copy) gets a key and a session of
-    // its own instead of an idempotency error. The GA ids, which change the
-    // same way (the cookie banner is accepted between two clicks, or GA
-    // starts a new session), ride on the end where they can be read; see
-    // idempotencyKeyWithGaIds. 'v2' set these keys apart from the ones
-    // minted before the parameters gained expires_at.
+    // adds tick down, the renewal price changes, a deploy changes the copy)
+    // gets a key and a session of its own instead of an idempotency error.
+    // The GA ids, which change the same way (the cookie banner is accepted
+    // between two clicks, or GA starts a new session), ride on the end where
+    // they can be read; see idempotencyKeyWithGaIds. 'v2' set these keys
+    // apart from the ones minted before the parameters gained expires_at.
     const idempotencyKey = idempotencyKeyWithGaIds(
       `renewal-v2-${employerJob.id}-${expiryMarker}-${windowIndex}-${digest(JSON.stringify(renewalSessionParams(checkout, {})))}`,
       gaMetadata,
@@ -391,6 +403,8 @@ interface RenewalCheckout {
   employerJob: { id: string; contactEmail: string; job: { title: string; employer: string } };
   jobId: string;
   tier: PricingTier;
+  /** Which renewal price the post pays; the Stripe amount and metadata.renewalRung both follow it. */
+  renewalRung: RenewalRung;
   /** Whole days this renewal adds: the posting period, or what the renewal cap leaves of it. */
   daysAdded: number;
   /** expires_at of the session, in epoch seconds. */
@@ -408,7 +422,7 @@ function renewalSessionParams(
   checkout: RenewalCheckout,
   gaMetadata: Record<string, string>,
 ): Stripe.Checkout.SessionCreateParams {
-  const { employerJob, jobId, tier, daysAdded } = checkout;
+  const { employerJob, jobId, tier, renewalRung, daysAdded } = checkout;
   const { title, employer } = employerJob.job;
   const baseUrl = getBaseUrl();
   return {
@@ -420,8 +434,10 @@ function renewalSessionParams(
             name: `Job renewal: ${title}`,
             description: `${employer}, ${daysAdded} more ${daysAdded === 1 ? 'day' : 'days'}`,
           },
-          // Renewal price is flat for every renewable rung.
-          unit_amount: config.stripeRenewalPriceInCents,
+          // The post's own renewal price. It is part of the parameters the
+          // idempotency key fingerprints, so a post whose price changes
+          // inside a window gets a session of its own.
+          unit_amount: config.renewalPriceCentsFor(renewalRung),
         },
         quantity: 1,
       },
@@ -454,6 +470,9 @@ function renewalSessionParams(
       jobId,
       type: 'renewal',
       tier,
+      // For the webhook (apply-renewal.ts): the price of a session Stripe
+      // reports without a total.
+      renewalRung,
       ...gaMetadata,
     },
   };

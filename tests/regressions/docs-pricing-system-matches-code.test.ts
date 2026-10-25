@@ -23,6 +23,12 @@
  * When a check fails after a code change, the document is what to fix, in
  * the same change. The plan-sale check is a ratchet in both directions: it
  * also fails when the code starts reading the key and the warning stays.
+ *
+ * 2027 re-price, Phase 1 (owner decision 2026-10-24): $249 first post, $349
+ * after, a renewal priced by the post it renews ($199, or $249 for a post
+ * bought at $349), and the Employer plan retired from every surface. The
+ * plan code stays, dormant, so the plan sections (2e, 2f and the section 12
+ * diagram) are marked retired but still describe the code as it runs.
  */
 import path from 'node:path';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
@@ -31,16 +37,19 @@ import { isPlanEntitled, mapStripeSubscriptionStatus } from '@/lib/employer-plan
 import { PROMO_SWITCH_PATHS } from '@/app/api/sitemaps/lastmod';
 import { pricingPageCopy } from '@/app/pricing/pricing-page-copy';
 import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
+import { LADDER_PRICES, RENEWAL_LINE } from '@/lib/pricing-copy';
 import { between, existsInRepo, isSource, lineWith, readRepo, repoPathsNamed, walk, withoutComments } from '../support/docs-vs-code';
 
 const DOC = 'docs/pricing-system.md';
 const doc = readRepo(DOC);
 const pending = readRepo('docs/PENDING_WORK.md');
 
+const section1b = between(doc, '### 1b. Ladder', '### 1c. Helpers');
 const section1c = between(doc, '### 1c. Helpers', '### 1d. What happens');
 const section1d = between(doc, '### 1d. What happens', '## 2. End-to-end flows');
 const section2a = between(doc, '### 2a. Promo post', '### 2b. Plan post');
 const section2c = between(doc, '### 2c. Intro / Featured checkout', '### 2d. Renewal');
+const section2d = between(doc, '### 2d. Renewal', '### 2e. Employer plan lifecycle');
 const section2e = between(doc, '### 2e. Employer plan lifecycle', '### 2f. Plan-lapse job');
 const section2f = between(doc, '### 2f. Plan-lapse job', '### 2g. Expiry');
 const section3a = between(doc, '### 3a. Source-of-truth files', '### 3b. API routes');
@@ -82,7 +91,34 @@ describe('docs/pricing-system.md: every link, path and name it gives exists', ()
     });
 });
 
+/**
+ * A sentence as the document writes it, with its config tokens, evaluated
+ * against config: the document quotes the template, the page prints the
+ * result, and the two must be the same sentence.
+ */
+const TOKENS = {
+    durationDays: config.durationDays,
+    introPrice: config.introPrice,
+    postingPrice: config.postingPrice,
+    renewalPrice: config.renewalPrice,
+    proRenewalPrice: config.proRenewalPrice,
+};
+const evaluated = (template: string): string =>
+    new Function(...Object.keys(TOKENS), `return \`${template}\`;`)(...Object.values(TOKENS)) as string;
+
 describe('section 1: the copy and the switch at config.promoEndsAt', () => {
+    it('1b prices the ladder and both renewals from config, and marks the Employer plan retired', () => {
+        expect(lineWith(section1b, '| Intro post |')).toContain(`$${config.introPrice} (\`config.introPrice\` / \`stripeIntroPriceInCents\` ${config.stripeIntroPriceInCents})`);
+        expect(lineWith(section1b, '| Featured post |')).toContain(`$${config.postingPrice} (\`config.postingPrice\` / \`stripePriceInCents\` ${config.stripePriceInCents})`);
+        const renewal = lineWith(section1b, '| Renewal |');
+        expect(renewal).toContain(`$${config.renewalPrice} (\`config.renewalPrice\` / \`stripeRenewalPriceInCents\` ${config.stripeRenewalPriceInCents})`);
+        expect(renewal).toContain(`$${config.proRenewalPrice} (\`config.proRenewalPrice\` / \`stripeProRenewalPriceInCents\` ${config.stripeProRenewalPriceInCents})`);
+        expect(renewal).toContain('lib/renewal-price.ts');
+        // The plan has no row on sale: it is recorded as retired.
+        expect(section1b).not.toMatch(/^\| Employer plan \|/m);
+        expect(section1b).toMatch(/Employer plan: retired/i);
+    });
+
     it('1c quotes the listing-card sentence each page builder prints, in both phases', () => {
         // The document writes the sentence with its config token, not the number.
         const asWritten = (text: string): string => text.split(String(config.durationDays)).join('${durationDays}');
@@ -94,12 +130,23 @@ describe('section 1: the copy and the switch at config.promoEndsAt', () => {
             expect(lead(employers)).toMatch(/^Every job runs/);
             expect(section1c).toContain(lead(pricing));
             expect(section1c).toContain(lead(employers));
-            // Both cards close on the same plan clause.
-            const planClause = `the same ${config.durationDays} days and come down sooner only if the plan ends.`;
-            expect(pricing.endsWith(planClause)).toBe(true);
-            expect(employers.endsWith(planClause)).toBe(true);
-            expect(section1c).toContain(asWritten(planClause));
+            // Neither card names a plan post: the plan is retired.
+            expect(pricing).not.toMatch(/\bplan\b/i);
+            expect(employers).not.toMatch(/\bplan\b/i);
         }
+        expect(section1c).not.toContain('come down sooner only if the plan ends');
+    });
+
+    it('1c quotes the ladder and the renewal sentence the pages print, with their config tokens', () => {
+        const ladder = '`Your first post is $${introPrice}, every post after that is $${postingPrice}.`';
+        const renewal = '`Renewals add ${durationDays} days: $${renewalPrice} for a promo or intro post, $${proRenewalPrice} for a $${postingPrice} post.`';
+        expect(section1c).toContain(ladder);
+        expect(section1c).toContain(renewal);
+        expect(evaluated(ladder.slice(1, -1))).toBe(LADDER_PRICES);
+        expect(evaluated(renewal.slice(1, -1))).toBe(RENEWAL_LINE);
+        // No plan sentence is quoted as copy any more.
+        expect(section1c).not.toContain('`${planSlots} active job slots');
+        expect(section1c).not.toMatch(/`planPriceLine\(now\)`:/);
     });
 
     it('1d says the first request after a cached page expires is still served the old render', () => {
@@ -224,15 +271,31 @@ describe('section 2: the flows', () => {
         expect(publishStep).toMatch(/unless the post was archived while\s+[│ ]*its checkout was open/);
     });
 
-    it('2e, 3b and 12: the /pricing plan card goes through /api/employer/plan/subscribe, never the raw link', () => {
-        const pricingPage = withoutComments(readRepo('app/pricing/page.tsx'));
-        expect(pricingPage, 'the plan card no longer routes through the subscribe route: update 2e, 12 and this check')
-            .toMatch(/planSaleOpen \? '\/api\/employer\/plan\/subscribe' : `mailto:/);
+    it('2d prices a renewal by the post it renews, from config, and ledgers what Stripe charged', () => {
+        expect(section2d).toContain(`$${config.renewalPrice}`);
+        expect(section2d).toContain(`$${config.proRenewalPrice}`);
+        expect(section2d).toContain('config.renewalPriceCentsFor(renewalRung)');
+        expect(section2d).toContain('metadata.renewalRung');
+        const checkout = withoutComments(readRepo('app/api/create-renewal-checkout/route.ts'));
+        expect(checkout).toContain('unit_amount: config.renewalPriceCentsFor(renewalRung),');
+        const apply = withoutComments(readRepo('app/api/webhooks/stripe/apply-renewal.ts'));
+        expect(apply).toContain('session.amount_total ?? config.renewalPriceCentsFor(asRenewalRung(session.metadata?.renewalRung))');
+        // The one flat renewal amount is gone from the flow.
+        expect(section2d).not.toMatch(/\$179|17900/);
+    });
 
-        expect(section2e).toContain('/api/employer/plan/subscribe while isPlanSaleOpen()');
+    it('2e, 3b and 12: the plan is retired, no page links its routes, and the dormant subscribe route is described as it runs', () => {
+        const pricingPage = withoutComments(readRepo('app/pricing/page.tsx'));
+        expect(pricingPage, 'a page links the plan again: update 2e, 12 and this check').not.toContain('/api/employer/plan/subscribe');
+        expect(pricingPage).not.toContain('isPlanSaleOpen');
+
+        // 2e, 2f and the section 12 diagram are marked retired.
+        for (const [name, section] of [['2e', section2e], ['2f', section2f], ['12', planDiagram]] as const) {
+            expect(section, name).toMatch(/Retired 2026-10-24/);
+        }
+        expect(section2e).toMatch(/no page links/i);
         expect(section2e).not.toContain('href = process.env.STRIPE_PLAN_PAYMENT_LINK');
-        expect(planDiagram).toContain('/api/employer/plan/subscribe');
-        expect(planDiagram).not.toMatch(/\/pricing → STRIPE_PLAN_PAYMENT_LINK/);
+        expect(planDiagram).not.toMatch(/\/pricing →/);
 
         // The subscribe route sends an employer with an entitled OR a pending plan to the dashboard.
         const subscribe = withoutComments(readRepo('app/api/employer/plan/subscribe/route.ts'));
@@ -453,6 +516,24 @@ describe('sections 8 and 9: what an operator is told to do', () => {
         expect(loophole).not.toContain('refund the difference by hand');
     });
 
+    it('9b asks for no plan Payment Link and no Customer Portal setup (the plan is retired)', () => {
+        expect(section9b).not.toMatch(/- \[ \] Stripe Payment Link/);
+        expect(section9b).not.toMatch(/- \[ \] Customer Portal/);
+        expect(section9b).not.toContain('STRIPE_PLAN_PAYMENT_LINK');
+    });
+
+    it('9c: the job_charges monitor lists every amount the checkouts charge at list price', () => {
+        const amounts = [...new Set([
+            config.stripeIntroPriceInCents,
+            config.stripePriceInCents,
+            config.renewalPriceCentsFor('base'),
+            config.renewalPriceCentsFor('pro'),
+        ])].sort((a, b) => a - b);
+        const row = lineWith(section9c, '`job_charges` rows where');
+        const listed = [...row.matchAll(/\b(\d{5})\b/g)].map((match) => Number(match[1])).sort((a, b) => a - b);
+        expect(listed).toEqual(amounts);
+    });
+
     it('9a lists every migration that touches a pricing or Stripe table', () => {
         const pricing = /pricing_tier|processed_stripe|job_charges|quota_domain|employer_plans|stripe_/;
         const migrations = walk('prisma/migrations', (name) => name === 'migration.sql')
@@ -522,6 +603,9 @@ describe('sections 10 and 11: the test map', () => {
         'tests/api/create-checkout-tier.test.ts',
         'tests/api/create-renewal-checkout-status.test.ts',
         'tests/api/create-renewal-checkout-single-payable.test.ts',
+        'tests/api/create-renewal-checkout-tiered-price.test.ts',
+        'tests/api/apply-renewal-amount.test.ts',
+        'tests/lib/renewal-price.test.ts',
         'tests/api/webhooks-stripe-c2.test.ts',
         'tests/api/webhooks-stripe-refund-dispute.test.ts',
         'tests/api/webhooks-stripe-subscription.test.ts',

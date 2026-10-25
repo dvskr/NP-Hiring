@@ -193,31 +193,41 @@ describe('dashboard usage strip: the Plan card', () => {
             inmails: { used: 0, limit: config.limits.inmailsPerPosting, unlimited: false },
         },
     };
-    const NO_PLAN = { plan: null, entitled: false, slots: config.planSlots, used: 0, remaining: 0, price: config.planPrice, paymentLinkUrl: null };
-    // useState order: data, quota, planStatus, loading, billingError.
-    const renderStrip = (quote: object | null): string => render(UsageWidget, [USAGE, quote, NO_PLAN, false, null]);
+    // useState order: data, quota, loading. The strip reads no plan status
+    // any more: the Employer plan is retired (owner decision 2026-10-24).
+    const renderStrip = (quote: object | null): string => render(UsageWidget, [USAGE, quote, false]);
+    /** The retired plan's pitch, in any of the forms the strip used to print. */
+    const PLAN_PITCH = /Employer plan|Subscribe|Contact us|Manage billing|\/mo\b|slots? used/;
 
-    it('during the promo: "Launch promo", free through the promo end, no subscription pitch', () => {
+    it('during the promo: "Launch promo", free through the promo end, no plan pitch', () => {
         vi.setSystemTime(DURING_PROMO);
         const html = renderStrip(PROMO_QUOTE);
         expect(html).toContain('Launch promo');
         expect(html).toContain(`Free through ${config.promoEndsLabel}`);
-        expect(html).not.toContain(`$${config.planPrice}/mo`);
+        expect(html).not.toMatch(PLAN_PITCH);
     });
 
-    it('a promo quote still on screen after the promo ends drops the promo label', () => {
+    it('a promo quote still on screen after the promo ends drops the promo label, and pitches no plan', () => {
         vi.setSystemTime(LADDER_START);
         const html = renderStrip(PROMO_QUOTE);
         expect(html).not.toMatch(PROMO_OFFER);
         expect(html).not.toContain(config.promoEndsLabel);
-        expect(html).toContain(`Contact us · $${config.planPrice}/mo for ${config.planSlots} jobs`);
+        expect(html).not.toMatch(PLAN_PITCH);
     });
 
-    it('after the promo: the next post price', () => {
+    it('after the promo: the next post price, and no plan pitch beside it', () => {
         vi.setSystemTime(LATER);
         const html = renderStrip(INTRO_QUOTE);
         expect(html).toContain(`Next post $${config.introPrice}`);
         expect(html).not.toMatch(PROMO_OFFER);
+        expect(html).not.toMatch(PLAN_PITCH);
+    });
+
+    it('calls no plan endpoint and reads no plan price', () => {
+        const src = read('components/employer/UsageWidget.tsx');
+        expect(src).not.toMatch(/\/api\/employer\/(?:plan|billing-portal)\b/);
+        expect(src).not.toContain('config.planPrice');
+        expect(src).not.toContain('config.planSlots');
     });
 });
 

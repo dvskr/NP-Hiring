@@ -109,9 +109,8 @@ const AFTER_SWITCH = new Date(SWITCH.getTime() + 60 * 60 * 1000);
  */
 const CONTENT_RELEASE_DAY = '2026-10-13';
 
-/** The dated pages neither change touched, with the copy dates they keep. */
+/** The dated pages no release since has touched, with the copy dates they keep. */
 const UNTOUCHED_PAGE_DATES: Readonly<Record<string, string>> = {
-    '/terms': '2026-09-27',
     '/privacy': '2026-09-15',
     '/sub-processors': '2026-09-12',
 };
@@ -141,8 +140,27 @@ const FOLLOW_UPS_DAY = '2026-10-23';
 const FOLLOW_UPS_PAGES: readonly string[] = [
     '/tools/specialty-finder',
     '/tools/private-practice-revenue-calculator',
-    '/tools/cost-per-hire-calculator',
     '/resources/private-practice-guide',
+];
+
+/**
+ * The UTC day the 2027 re-price changed its pages' copy (Phase 1: the new
+ * ladder, the two renewal prices and the retired Employer plan), and the
+ * pages whose promo-phase render prints the ladder, the plan or the renewal
+ * price: /terms also moved its "Last updated" line. Same rule: move the
+ * constant and these entries together if the release ships on a later day.
+ * COMPARE_REVIEW_DATE stays, because no competitor claim was re-checked.
+ */
+const PRICING_RELEASE_DAY = '2026-10-24';
+const PRICING_RELEASE_PAGES: readonly string[] = [
+    '/pricing',
+    '/for-employers',
+    '/faq',
+    '/terms',
+    '/tools/cost-per-hire-calculator',
+    '/compare/np-hiring-vs-indeed',
+    '/compare/np-hiring-vs-aanp-jobcenter',
+    '/compare/np-hiring-vs-enp-network',
 ];
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1). */
@@ -329,18 +347,40 @@ describe('lastmod helpers', () => {
         // guides; the full practice quick answer; the 2025 to 2035 growth
         // figure, the HRSA floor, the stats review date and the certifying
         // body names. The security and register batch then changed three
-        // more pages, and the register follow-ups three tool breadcrumbs.
+        // more pages, the register follow-ups three tool breadcrumbs, and the
+        // 2027 re-price the eight pages that print the ladder, the plan or
+        // the renewal price.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        expect(Object.keys(UNTOUCHED_PAGE_DATES).filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
-        expect(SECURITY_BATCH_PAGES.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
-        expect(FOLLOW_UPS_PAGES.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES];
+        for (const group of groups) {
+            const pages = Array.isArray(group) ? group : Object.keys(group);
+            expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
+        }
+        // No page sits in two release groups.
+        const grouped = [...SECURITY_BATCH_PAGES, ...FOLLOW_UPS_PAGES, ...PRICING_RELEASE_PAGES, ...Object.keys(UNTOUCHED_PAGE_DATES)];
+        expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = FOLLOW_UPS_PAGES.includes(pagePath)
-                ? FOLLOW_UPS_DAY
-                : SECURITY_BATCH_PAGES.includes(pagePath)
-                    ? SECURITY_BATCH_DAY
-                    : UNTOUCHED_PAGE_DATES[pagePath] ?? CONTENT_RELEASE_DAY;
+            const expected = PRICING_RELEASE_PAGES.includes(pagePath)
+                ? PRICING_RELEASE_DAY
+                : FOLLOW_UPS_PAGES.includes(pagePath)
+                    ? FOLLOW_UPS_DAY
+                    : SECURITY_BATCH_PAGES.includes(pagePath)
+                        ? SECURITY_BATCH_DAY
+                        : UNTOUCHED_PAGE_DATES[pagePath] ?? CONTENT_RELEASE_DAY;
             expect(day, pagePath).toBe(expected);
+        }
+    });
+
+    it('2027 re-price: /terms carries the ship day, and its "Last updated" line says the same day', () => {
+        expect(PAGE_CONTENT_DATES['/terms']).toBe(PRICING_RELEASE_DAY);
+        const longDay = new Date(`${PRICING_RELEASE_DAY}T00:00:00.000Z`).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+        });
+        expect(fs.readFileSync(path.join(ROOT, 'app/terms/page.tsx'), 'utf8')).toContain(`Last updated: ${longDay}</p>`);
+        // /terms does not follow the promo clock, so the switch never dates it.
+        expect(PROMO_SWITCH_PATHS.has('/terms')).toBe(false);
+        for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
+            expect(pageContentDate('/terms', at)).toEqual(new Date(`${PRICING_RELEASE_DAY}T00:00:00.000Z`));
         }
     });
 
@@ -359,17 +399,19 @@ describe('lastmod helpers', () => {
         }
     });
 
-    it('content release: all three comparison pages carry its ship day, and the promo switch still dates them afterwards', () => {
-        // All three print the stats review date in their salary row
-        // (STATS_LAST_REVIEWED), which the content release moved, and the
-        // plain copy pass trimmed their shared template the same day.
-        // COMPARE_REVIEW_DATE did not move: nobody re-checked the claims.
+    it('2027 re-price: all three comparison pages carry its ship day, and the promo switch still dates them afterwards', () => {
+        // All three state our price in their capability table and pricing
+        // copy (lib/compare-data.ts), which the re-price changed: the new
+        // ladder, and no Employer plan. COMPARE_REVIEW_DATE did not move:
+        // nobody re-checked the competitor claims.
         for (const pagePath of COMPARE_PAGE_PATHS) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(CONTENT_RELEASE_DAY);
-            expect(pageContentDate(pagePath, PROMO_RUNNING), pagePath).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
+            expect(PRICING_RELEASE_PAGES, pagePath).toContain(pagePath);
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(PRICING_RELEASE_DAY);
+            expect(pageContentDate(pagePath, PROMO_RUNNING), pagePath).toEqual(new Date(`${PRICING_RELEASE_DAY}T00:00:00.000Z`));
             // Its price statements still switch at the promo end, which dates it afterwards.
             expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
         }
+        expect(new Date(`${PRICING_RELEASE_DAY}T00:00:00.000Z`).getTime()).toBeGreaterThan(new Date(COMPARE_REVIEW_DATE).getTime());
     });
 
     it('plain copy pass: the /compare hub carries its ship day, on both sides of the promo end', () => {
@@ -675,18 +717,19 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         const reviewed = new Date(COMPARE_REVIEW_DATE);
         // Each page's copy changed after the review: CQ-13 relinked the Indeed
         // and ENP Network pages, the AANP and ENP Network price sentences were
-        // corrected, and on 2026-10-13 all three got the moved stats review
-        // date and a trimmed template, and the hub a new title, no hero line
-        // and rewritten method bullets. The review date is not moved for a copy
+        // corrected, on 2026-10-13 all three got the moved stats review date
+        // and a trimmed template, and the hub a new title, no hero line and
+        // rewritten method bullets, and the 2027 re-price changed the three
+        // pages' price statements. The review date is not moved for a copy
         // edit that re-checked no claim, so the copy date is what the sitemap emits.
         for (const pagePath of [COMPARE_HUB_PATH, ...COMPARE_PAGE_PATHS]) {
             expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(pageContentDate(pagePath));
             expect(pageContentDate(pagePath)!.getTime(), pagePath).toBeGreaterThan(reviewed.getTime());
         }
-        for (const pagePath of [COMPARE_HUB_PATH, '/compare/np-hiring-vs-aanp-jobcenter']) {
-            expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath)
-                .toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
-        }
+        // The hub prints no price, so the re-price left its date alone.
+        expect(entries.get(`${BASE}${COMPARE_HUB_PATH}`)?.lastModified).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
+        expect(entries.get(`${BASE}/compare/np-hiring-vs-aanp-jobcenter`)?.lastModified)
+            .toEqual(new Date(`${PRICING_RELEASE_DAY}T00:00:00.000Z`));
     });
 
     it('2.1: until the promo ends, no page is dated by the switch', async () => {

@@ -22,6 +22,13 @@
  * re-exports it for the emails and the cron. These blocks test the module
  * directly, prove the move kept what both pages printed (their old copies
  * are the oracle), and keep the module free of Prisma.
+ *
+ * 2027 re-price: a renewal has two prices (lib/renewal-price.ts), so the
+ * offer takes the renewal price of the row being renewed, `renewalPrice`, and
+ * both the price it names and the saving it claims use it. Left out, it is
+ * config.renewalPrice, the base price. The saving rounds down: $199 against
+ * the $249 intro price is 20.08%, against the $349 post price 42.98%; $249
+ * against $349 is 28.65%, and against the $249 intro price nothing.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'node:fs';
@@ -59,7 +66,7 @@ describe('renewalSavings: only a real, rounded-down saving', () => {
         });
     });
 
-    it('against the intro price the saving is small, not the list-price 40%', () => {
+    it('against the intro price the saving is small, not the list-price saving', () => {
         const savings = renewalSavings(config.introPrice, 'next-post');
         expect(savings?.dollars).toBe(config.introPrice - config.renewalPrice);
         expect(savings?.percent).toBe(Math.floor(((config.introPrice - config.renewalPrice) / config.introPrice) * 100));
@@ -78,9 +85,52 @@ describe('renewalSavings: only a real, rounded-down saving', () => {
     });
 
     it('rounds down so the claim never overstates', () => {
-        // 179 vs 299 is 40.13%; 179 vs 199 is 10.05%: both floor, never round up.
+        // 199 vs 349 is 42.98% and 199 vs 249 is 20.08%: both floor, never round up.
+        expect(renewalSavings(config.postingPrice, 'list-price')?.percent).toBe(42);
+        expect(renewalSavings(config.introPrice, 'next-post')?.percent).toBe(20);
         const s = renewalSavings(1000, 'list-price', 555);
         expect(s?.percent).toBe(44); // 44.5% floors to 44
+    });
+});
+
+describe("resolveRenewalOffer: the renewal price of the row being renewed", () => {
+    const PRO = config.proRenewalPrice;
+
+    it('names config.renewalPrice when the caller passes none (the base renewal)', () => {
+        const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
+        expect(offer.price).toBe(config.renewalPrice);
+        expect(offer.savings).toMatchObject({ dollars: config.postingPrice - config.renewalPrice, percent: 42 });
+    });
+
+    it("names the row's own price, and measures the saving from it", () => {
+        const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, renewalPrice: PRO, now: AFTER_PROMO });
+        expect(offer.price).toBe(PRO);
+        expect(offer.savings).toEqual({ dollars: config.postingPrice - PRO, percent: 28, comparedWith: config.postingPrice, basis: 'next-post' });
+    });
+
+    it('with an unknown next post, compares the row\'s own price with the named standard post price', () => {
+        const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: null, renewalPrice: PRO, now: AFTER_PROMO });
+        expect(offer.savings).toEqual({ dollars: config.postingPrice - PRO, percent: 28, comparedWith: config.postingPrice, basis: 'list-price' });
+    });
+
+    it('claims no saving when the next post costs no more than the renewal', () => {
+        // The pro renewal equals the intro price: a renewal is no cheaper than that post.
+        expect(PRO).toBe(config.introPrice);
+        const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.introPrice, renewalPrice: PRO, now: AFTER_PROMO });
+        expect(offer).toEqual({ purchasable: true, promoActive: false, price: PRO, savings: null });
+    });
+
+    it('during the promo the price is named and no saving is claimed, whichever price the row pays', () => {
+        for (const renewalPrice of [config.renewalPrice, PRO]) {
+            const offer = resolveRenewalOffer({ purchasable: true, nextPostPrice: config.postingPrice, renewalPrice, now: DURING_PROMO });
+            expect(offer).toEqual({ purchasable: true, promoActive: true, price: renewalPrice, savings: null });
+        }
+    });
+
+    it('while no renewal can be bought, no saving is claimed at either price', () => {
+        for (const renewalPrice of [config.renewalPrice, PRO]) {
+            expect(resolveRenewalOffer({ purchasable: false, nextPostPrice: config.postingPrice, renewalPrice, now: AFTER_PROMO }).savings).toBeNull();
+        }
     });
 });
 
@@ -122,12 +172,19 @@ describe('renewalSavingsLabel: names the price it is measured against', () => {
     it('next-post and list-price wording, house style', () => {
         const next = renewalSavingsLabel(renewalSavings(config.introPrice, 'next-post')!);
         const list = renewalSavingsLabel(renewalSavings(config.postingPrice, 'list-price')!);
-        expect(next).toBe(`Save 10% vs. your next new post at $${config.introPrice}`);
-        expect(list).toBe(`Save 40% vs. the $${config.postingPrice} post price`);
+        expect(next).toBe(`Save 20% vs. your next new post at $${config.introPrice}`);
+        expect(list).toBe(`Save 42% vs. the $${config.postingPrice} post price`);
         for (const label of [next, list]) {
             expect(label).not.toMatch(/[–—]|\s-\s/);
             expect(label).not.toContain('a new post');
         }
+    });
+
+    it("names the price it is measured against for the pro renewal as well", () => {
+        const next = renewalSavingsLabel(renewalSavings(config.postingPrice, 'next-post', config.proRenewalPrice)!);
+        const list = renewalSavingsLabel(renewalSavings(config.postingPrice, 'list-price', config.proRenewalPrice)!);
+        expect(next).toBe(`Save 28% vs. your next new post at $${config.postingPrice}`);
+        expect(list).toBe(`Save 28% vs. the $${config.postingPrice} post price`);
     });
 });
 
@@ -143,9 +200,26 @@ describe('renewalSavingsLine: the claim the pages print, or nothing', () => {
     it('after the promo: the label for the reader, naming the price it is measured against', () => {
         const ladderStart = new Date(config.promoEndsAt);
         expect(renewalSavingsLine({ purchasable: true, nextPostPrice: config.introPrice, now: ladderStart }))
-            .toBe(`Save 10% vs. your next new post at $${config.introPrice}`);
+            .toBe(`Save 20% vs. your next new post at $${config.introPrice}`);
         expect(renewalSavingsLine({ purchasable: true, now: AFTER_PROMO }))
-            .toBe(`Save 40% vs. the $${config.postingPrice} post price`);
+            .toBe(`Save 42% vs. the $${config.postingPrice} post price`);
+    });
+
+    it("after the promo: the line for a row that pays the pro renewal is measured from that price", () => {
+        const pro = { renewalPrice: config.proRenewalPrice, now: AFTER_PROMO };
+        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: config.postingPrice, ...pro }))
+            .toBe(`Save 28% vs. your next new post at $${config.postingPrice}`);
+        expect(renewalSavingsLine({ purchasable: true, ...pro }))
+            .toBe(`Save 28% vs. the $${config.postingPrice} post price`);
+        // The pro renewal is no cheaper than the intro post, and a free post beats any renewal.
+        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: config.introPrice, ...pro })).toBeNull();
+        expect(renewalSavingsLine({ purchasable: true, nextPostPrice: 0, ...pro })).toBeNull();
+    });
+
+    it('during the promo: no line for the pro renewal either', () => {
+        for (const now of [DURING_PROMO, LAST_PROMO_INSTANT]) {
+            expect(renewalSavingsLine({ purchasable: true, nextPostPrice: config.postingPrice, renewalPrice: config.proRenewalPrice, now })).toBeNull();
+        }
     });
 
     it('no line beside a renewal that cannot be bought, nor for a free plan slot', () => {
@@ -157,9 +231,11 @@ describe('renewalSavingsLine: the claim the pages print, or nothing', () => {
         for (const now of [DURING_PROMO, LAST_PROMO_INSTANT, AFTER_PROMO]) {
             for (const nextPostPrice of [null, 0, config.introPrice, config.postingPrice]) {
                 for (const purchasable of [true, false]) {
-                    const offer = resolveRenewalOffer({ purchasable, nextPostPrice, now });
-                    expect(renewalSavingsLine({ purchasable, nextPostPrice, now }))
-                        .toBe(offer.savings ? renewalSavingsLabel(offer.savings) : null);
+                    for (const renewalPrice of [undefined, config.renewalPrice, config.proRenewalPrice]) {
+                        const offer = resolveRenewalOffer({ purchasable, nextPostPrice, renewalPrice, now });
+                        expect(renewalSavingsLine({ purchasable, nextPostPrice, renewalPrice, now }))
+                            .toBe(offer.savings ? renewalSavingsLabel(offer.savings) : null);
+                    }
                 }
             }
         }
@@ -289,17 +365,20 @@ describe('client surfaces use the shared rule', () => {
             expect(renewalSavingsLine({ purchasable: true, now }), now.toISOString()).toBe(editPageLineBeforeTheMove(now));
         }
         expect(renewalSavingsLine({ purchasable: true, now: DURING_PROMO })).toBeNull();
-        expect(renewalSavingsLine({ purchasable: true, now: AFTER_PROMO })).toBe(`Save 40% vs. the $${config.postingPrice} post price`);
+        expect(renewalSavingsLine({ purchasable: true, now: AFTER_PROMO })).toBe(`Save 42% vs. the $${config.postingPrice} post price`);
     });
 
     it('both pages call the shared rule and keep no copy of it', () => {
         const dashboard = read('components/employer/EmployerDashboardClient.tsx');
         const edit = read('app/jobs/edit/[token]/page.tsx');
         expect(dashboard).toContain("import { renewalSavingsLine } from '@/lib/renewal-offer';");
-        expect(dashboard).toContain('const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, nextPostPrice });');
+        // The row being renewed pays its own renewal price, so the saving is measured from it.
+        expect(dashboard).toContain('const selectedRenewalPrice = selectedJob?.renewalPrice ?? config.renewalPrice;');
+        expect(dashboard).toContain('const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, nextPostPrice, renewalPrice: selectedRenewalPrice });');
         expect(edit).toContain("import { renewalSavingsLine } from '@/lib/renewal-offer';");
         // No quota domain on this page, so no next-post price: the list-price basis.
-        expect(edit).toContain('const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable });');
+        expect(edit).toContain('const renewalPrice = employerJob?.renewalPrice ?? config.renewalPrice;');
+        expect(edit).toContain('const savingsLine = renewalSavingsLine({ purchasable: renewalPurchasable, renewalPrice });');
         for (const [rel, src] of [['dashboard', dashboard], ['edit page', edit]] as const) {
             expect(src, rel).not.toMatch(/function (renewalSavingsLine|listPriceSavingsLine)\b/);
             // Subtracting the renewal price is computing a saving: only lib/renewal-offer does that.
@@ -308,6 +387,29 @@ describe('client surfaces use the shared rule', () => {
             expect(src, rel).not.toContain("from '@/lib/pricing'");
             // Printed only when the rule claims a saving; it is null otherwise.
             expect(src, rel).toContain('{savingsLine && (');
+        }
+    });
+
+    it("both pages print, and report to GA, the renewal price of the row being renewed", () => {
+        const dashboard = read('components/employer/EmployerDashboardClient.tsx');
+        const edit = read('app/jobs/edit/[token]/page.tsx');
+        // The server sends each row's price (lib/renewal-price.ts); the pages never decide it.
+        expect(dashboard).toMatch(/interface Job \{[^}]*\brenewalPrice: number;/);
+        expect(edit).toMatch(/interface EmployerJobData \{[^}]*\brenewalPrice: number;/);
+        expect(dashboard).toContain("trackBeginCheckout(selectedRenewalPrice * 100, 'renewal');");
+        expect(edit).toContain("trackBeginCheckout(renewalPrice * 100, 'renewal');");
+        expect(dashboard).toContain('>${selectedRenewalPrice}</span>');
+        expect(edit).toContain('>${renewalPrice}</span>');
+        for (const [rel, src] of [['dashboard', dashboard], ['edit page', edit]] as const) {
+            // The base price is a list fact, never the price of a row.
+            expect(src, rel).not.toContain('config.stripeRenewalPriceInCents');
+            expect(src, rel).not.toContain('>${config.renewalPrice}</span>');
+            // Neither page works out the rung: it has neither the ledger nor lib/renewal-price.
+            expect(src, rel).not.toContain('@/lib/renewal-price');
+            expect(src, rel).not.toContain('proRenewalPrice');
+            // The legacy free-trial modal states the lowest renewal price.
+            expect(src, rel).toContain('Renewals from ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing.');
+            expect(src, rel).not.toContain('Renewals at $');
         }
     });
 

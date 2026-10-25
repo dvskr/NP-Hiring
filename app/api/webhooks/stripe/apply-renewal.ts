@@ -65,6 +65,7 @@ import { prisma } from '@/lib/prisma';
 import { config, type PricingTier } from '@/lib/config';
 import { logger } from '@/lib/logger';
 import { sendRenewalConfirmationEmail } from '@/lib/email-service';
+import { asRenewalRung } from '@/lib/renewal-price';
 import { JOB_POSTING_ELIGIBILITY_SELECT, pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
 import {
   STRIPE_MAX_SESSION_LIFETIME_MS,
@@ -106,12 +107,25 @@ class RevokedPostingError extends Error {
   }
 }
 
+/**
+ * What this renewal cost, in cents, for the ledger row, the GA purchase event
+ * and the confirmation email alike: what Stripe charged. Only a session
+ * reported without a total (Stripe sends one for every paid payment) falls
+ * back to the price of the rung the checkout sold it at,
+ * metadata.renewalRung; a session minted before rungs existed carries none
+ * and cost the base renewal price. A renewal has two prices, so there is no
+ * single constant to fall back to.
+ */
+function chargedAmountCents(session: Stripe.Checkout.Session): number {
+  return session.amount_total ?? config.renewalPriceCentsFor(asRenewalRung(session.metadata?.renewalRung));
+}
+
 function renewalChargeData(session: Stripe.Checkout.Session, employerJobId: string, invoiceData: StripeInvoiceData) {
   return {
     employerJobId,
     stripeSessionId: session.id,
     stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-    amountCents: session.amount_total ?? config.stripeRenewalPriceInCents,
+    amountCents: chargedAmountCents(session),
     currency: session.currency ?? 'usd',
     type: 'renewal',
     ...invoiceData,
@@ -245,7 +259,7 @@ export async function applyRenewalCheckout(
       gaClientId: session.metadata?.gaClientId,
       gaSessionId: session.metadata?.gaSessionId,
       sessionId: session.id,
-      amountCents: session.amount_total ?? config.stripeRenewalPriceInCents,
+      amountCents: chargedAmountCents(session),
       currency: session.currency ?? 'usd',
       type: 'renewal',
       tier: renewalTier,
@@ -333,6 +347,8 @@ async function sendRenewalEmailOnce(
         invoicePdfUrl: stableInvoiceUrl,
         hostedInvoiceUrl: invoiceData.hostedInvoiceUrl,
         invoiceNumber: invoiceData.invoiceNumber,
+        // The receipt prints what was charged, which differs by post.
+        amountCents: chargedAmountCents(session),
       },
     );
   } catch (emailError) {

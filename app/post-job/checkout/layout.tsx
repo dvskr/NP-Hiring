@@ -63,12 +63,8 @@ const assurances: { icon: React.ReactNode; title: string; body: React.ReactNode 
                 Featured badge, top placement, {config.limits.candidateUnlocksPerPosting} candidate unlocks,{' '}
                 {config.limits.inmailsPerPosting} InMails, and applicant analytics. A one-time charge: $
                 {config.introPrice} for your company&apos;s first paid post, ${config.postingPrice} for every post
-                after that. The exact amount is in the order summary above. Hiring for several roles? The
-                Employer plan is ${config.planPrice}/month for {config.planSlots} active jobs (see{' '}
-                <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'underline' }}>
-                    pricing
-                </Link>
-                ). No subscription is created by this checkout and no card is stored by us.
+                after that. The exact amount is in the order summary above. No subscription is created by this
+                checkout and no card is stored by us.
             </>
         ),
     },

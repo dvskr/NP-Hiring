@@ -15,6 +15,7 @@ import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget'
 // cell-honesty rules live with the data in lib/employer-comparison.ts.
 import { employerComparisonRows } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
+import { RENEWAL_LINE } from '@/lib/pricing-copy';
 // Backlog 2.1: every string that depends on the launch-promo clock (the
 // receipt hero, the pricing card, the CTAs, the pricing FAQ entries and the
 // metadata) comes from this builder, read per render, so the page stops
@@ -119,9 +120,11 @@ const EVERGREEN_FAQS = [
   {
     // P2 #16: this answer now states the ACTUAL policy from Terms §8 rather
     // than implying a guarantee. Posting fees are generally non-refundable;
-    // a request inside 7 days is reviewed, not automatically granted.
+    // a request inside 7 days is reviewed, not automatically granted. The
+    // Employer plan is retired (2026-10-24), so no plan months are named and
+    // the volume question no longer counts plan slots.
     q: 'Do you offer refunds or volume discounts?',
-    a: `Posting fees are generally non-refundable, but if you are unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we will review the request case by case. Postings removed for a Terms violation are not refunded, promo posts involve no payment to refund, and Employer plan months already billed are not refunded. Need more than ${config.planSlots} active jobs at once? Email us.`,
+    a: `Posting fees are generally non-refundable, but if you are unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we will review the request case by case. Postings removed for a Terms violation are not refunded, and promo posts involve no payment to refund. Hiring for several roles at once? Email us.`,
   },
 ];
 
@@ -425,7 +428,7 @@ export default async function ForEmployersPage() {
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{copy.headline}</h3>
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                 {copy.ladder}<br />
-                Renew a promo, intro or featured post for ${config.renewalPrice} (+{config.durationDays} days). No hidden fees.
+                {RENEWAL_LINE} No hidden fees.
               </p>
               <Link href="/post-job" className="emp-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',

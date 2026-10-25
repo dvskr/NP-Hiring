@@ -67,9 +67,10 @@ export const NOT_FOUND_IN_REVIEW = 'Not found on the pages we reviewed';
 export const OUR_FACTS = {
     /**
      * Launch promo (2026-09-12): every post is free through promoEndsLabel;
-     * the per-post ladder and the Employer plan start on ladderStartsLabel.
-     * All four tokens come from lib/config so the /compare pages can never
-     * quote a price or a date the product does not sell.
+     * the per-post ladder starts on ladderStartsLabel. All four tokens come
+     * from lib/config so the /compare pages can never quote a price or a date
+     * the product does not sell. The Employer plan the pages also quoted was
+     * retired on 2026-10-24 (owner decision), so no plan fact is held here.
      */
     promoEndsLabel: config.promoEndsLabel,
     ladderStartsLabel: config.ladderStartsLabel,
@@ -77,9 +78,6 @@ export const OUR_FACTS = {
     introPriceUsd: config.introPrice,
     /** Flat price per job post after the intro post (USD). */
     postingPriceUsd: config.postingPrice,
-    /** Employer plan: monthly price and included active slots. */
-    planPriceUsd: config.planPrice,
-    planSlots: config.planSlots,
     /** Listing duration in days — every post, promo or paid. */
     postingDurationDays: config.durationDays,
     /** Count of free interactive tools under /tools. */
@@ -199,22 +197,22 @@ function ourPriceCopy(now: Date): OurPriceCopy {
     const f = OUR_FACTS;
     if (config.isPromoActive(now)) {
         return {
-            tableCell: `Free through ${f.promoEndsLabel}. From ${f.ladderStartsLabel}: $${f.introPriceUsd} first post, $${f.postingPriceUsd} after, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs. Every post runs ${f.postingDurationDays} days. All of it is published on /pricing`,
-            indeedLead: `Our pricing is a short public page: every post is free through ${f.promoEndsLabel}; from ${f.ladderStartsLabel} your first post is $${f.introPriceUsd}, every post after that is $${f.postingPriceUsd}, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs, each a ${f.postingDurationDays}-day listing.`,
-            aanpLead: `Free through ${f.promoEndsLabel} here, then from ${f.ladderStartsLabel} $${f.introPriceUsd} for your first post and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), every post ${f.postingDurationDays} days`,
+            tableCell: `Free through ${f.promoEndsLabel}. From ${f.ladderStartsLabel}: $${f.introPriceUsd} first post, $${f.postingPriceUsd} after. Every post runs ${f.postingDurationDays} days. All of it is published on /pricing`,
+            indeedLead: `Our pricing is a short public page: every post is free through ${f.promoEndsLabel}; from ${f.ladderStartsLabel} your first post is $${f.introPriceUsd} and every post after that is $${f.postingPriceUsd}, each a ${f.postingDurationDays}-day listing.`,
+            aanpLead: `Free through ${f.promoEndsLabel} here, then from ${f.ladderStartsLabel} $${f.introPriceUsd} for your first post and $${f.postingPriceUsd} after, every post ${f.postingDurationDays} days`,
             aanpUseUs: `You are an employer comparing published prices: free through ${f.promoEndsLabel}, then $${f.introPriceUsd} first post / $${f.postingPriceUsd} after for ${f.postingDurationDays} days here, versus $399 for 30 days there (theirs as published on ${COMPARE_REVIEW_DATE_LABEL}).`,
-            enpLead: `free through ${f.promoEndsLabel} here, then $${f.introPriceUsd} for your first post and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), each ${f.postingDurationDays} days`,
+            enpLead: `free through ${f.promoEndsLabel} here, then $${f.introPriceUsd} for your first post and $${f.postingPriceUsd} after, each ${f.postingDurationDays} days`,
             // "an NP", not "a NP": the article follows the credential.
             enpUseUs: `You are an employer hiring ${indefiniteArticle(brand.niche.short)} ${brand.niche.short} and comparing published prices: free through ${f.promoEndsLabel}, then $${f.introPriceUsd} first post and $${f.postingPriceUsd} after, every post ${f.postingDurationDays} days.`,
         };
     }
     return {
-        tableCell: `$${f.introPriceUsd} first post, $${f.postingPriceUsd} after, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs. Every post runs ${f.postingDurationDays} days. All of it is published on /pricing`,
-        indeedLead: `Our pricing is a short public page: your first post is $${f.introPriceUsd}, every post after that is $${f.postingPriceUsd}, or $${f.planPriceUsd}/month for ${f.planSlots} active jobs, each a ${f.postingDurationDays}-day listing.`,
-        aanpLead: `$${f.introPriceUsd} for your first post here and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), every post ${f.postingDurationDays} days`,
+        tableCell: `$${f.introPriceUsd} first post, $${f.postingPriceUsd} after. Every post runs ${f.postingDurationDays} days. All of it is published on /pricing`,
+        indeedLead: `Our pricing is a short public page: your first post is $${f.introPriceUsd} and every post after that is $${f.postingPriceUsd}, each a ${f.postingDurationDays}-day listing.`,
+        aanpLead: `$${f.introPriceUsd} for your first post here and $${f.postingPriceUsd} after, every post ${f.postingDurationDays} days`,
         // Their price stays dated: it is the review-date snapshot, ours is current.
         aanpUseUs: `You are an employer comparing published prices: $${f.introPriceUsd} first post / $${f.postingPriceUsd} after for ${f.postingDurationDays} days here, versus $399 for 30 days there (theirs as published on ${COMPARE_REVIEW_DATE_LABEL}).`,
-        enpLead: `$${f.introPriceUsd} for your first post here and $${f.postingPriceUsd} after (or $${f.planPriceUsd}/month for ${f.planSlots} active jobs), each ${f.postingDurationDays} days`,
+        enpLead: `$${f.introPriceUsd} for your first post here and $${f.postingPriceUsd} after, each ${f.postingDurationDays} days`,
         enpUseUs: `You are an employer hiring ${indefiniteArticle(brand.niche.short)} ${brand.niche.short} and comparing published prices: $${f.introPriceUsd} first post and $${f.postingPriceUsd} after, every post ${f.postingDurationDays} days.`,
     };
 }

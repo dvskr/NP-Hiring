@@ -1,14 +1,21 @@
 /**
- * lib/renewal-offer.ts — the renewal offer (config.renewalPrice): whether a
- * saving may be claimed for it, and in which words.
+ * lib/renewal-offer.ts — the renewal offer: the price a post renews for, and
+ * whether a saving may be claimed for it, and in which words.
+ *
+ * A renewal costs the base price (config.renewalPrice) or, for a post bought
+ * at the posting price, the pro price (config.proRenewalPrice); which one is
+ * lib/renewal-price.ts. The caller passes the price of the post being
+ * renewed as `renewalPrice`, and both the price the offer names and the
+ * saving it claims use it. Left out, it is config.renewalPrice.
  *
  * A renewal is only worth pitching as a saving when it is cheaper than the
  * new post the SAME reader would otherwise buy. That is never true during
  * the launch promo (a new post is free) or for an employer with a free
  * Employer plan slot, and a domain whose next post is the intro price saves
- * far less than the list prices suggest. This module is the one place the
- * claim is decided, for every surface: the expiry emails and the cron phrase
- * it through renewalSavingsLabel, the dashboard and the edit page through
+ * far less than the list prices suggest (a pro renewal saves nothing against
+ * the intro price). This module is the one place the claim is decided, for
+ * every surface: the expiry emails and the cron phrase it through
+ * renewalSavingsLabel, the dashboard and the edit page through
  * renewalSavingsLine.
  *
  * Client-safe: it imports only lib/config. The dashboard and the edit page
@@ -44,7 +51,7 @@ export interface RenewalOffer {
   purchasable: boolean;
   /** The launch promo is running, so every new post is free. */
   promoActive: boolean;
-  /** config.renewalPrice, in dollars. */
+  /** What the post being renewed pays to renew, in dollars. */
   price: number;
   /** A savings claim that is true for this reader, or null when none is. */
   savings: RenewalSavings | null;
@@ -54,6 +61,12 @@ export interface RenewalOffer {
 export interface RenewalOfferInputs {
   purchasable: boolean;
   nextPostPrice?: number | null;
+  /**
+   * What the post being renewed pays to renew, in dollars
+   * (config.renewalPriceDollarsFor of its rung); config.renewalPrice when
+   * omitted.
+   */
+  renewalPrice?: number;
   now?: Date;
 }
 
@@ -81,19 +94,22 @@ export function renewalSavings(
  *                  /api/employer/free-quota-status in the browser), or
  *                  null/undefined when unknown; unknown compares with
  *                  config.postingPrice and says so
+ *   renewalPrice — what the post being renewed pays, in dollars; both the
+ *                  price the offer names and the saving use it
  *
  * A saving is claimed only when the renewal can be bought, the promo is over
  * and the renewal is actually cheaper than the price it is compared with.
  */
 export function resolveRenewalOffer(opts: RenewalOfferInputs): RenewalOffer {
   const promoActive = config.isPromoActive(opts.now ?? new Date());
+  const price = opts.renewalPrice ?? config.renewalPrice;
   const known = typeof opts.nextPostPrice === 'number' && Number.isFinite(opts.nextPostPrice);
   const savings = opts.purchasable && !promoActive
     ? (known
-      ? renewalSavings(opts.nextPostPrice as number, 'next-post')
-      : renewalSavings(config.postingPrice, 'list-price'))
+      ? renewalSavings(opts.nextPostPrice as number, 'next-post', price)
+      : renewalSavings(config.postingPrice, 'list-price', price))
     : null;
-  return { purchasable: opts.purchasable, promoActive, price: config.renewalPrice, savings };
+  return { purchasable: opts.purchasable, promoActive, price, savings };
 }
 
 /** The savings claim in words that name the price it is measured against. */

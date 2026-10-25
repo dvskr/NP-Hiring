@@ -143,32 +143,26 @@ VAPID keypair for web push (`npx web-push generate-vapid-keys`).
 **Not a launch blocker; a hard date.** The launch promo (every post free through
 December 31, 2026, `config.isPromoActive()`) needs nothing from Stripe and has no
 flag. It ends at 2027-01-01 10:00 UTC (`config.promoEndsAt`, midnight Hawaii time),
-and from that instant the ladder starts on its own: $199 for a company's first paid
-post, $299 for every later post, or the Employer plan at $399 per month (see
-[pricing-system.md](pricing-system.md)). Everything below must be live in production
-before then, or employers hit a 503 on their first paid post.
+and from that instant the ladder starts on its own: $249 for a company's first paid
+post and $349 for every later post (see [pricing-system.md](pricing-system.md)). A
+renewal adds 60 days for $199, or $249 for a post bought at $349. The Employer plan
+is retired (owner decision, 2026-10-24), so there is nothing to set up for it.
+Everything below must be live in production before then, or employers hit a 503 on
+their first paid post.
 
 **Optional earlier date: about 2026-11-21.** Promo posts get their expiry warning
-5 days before their 60 days end, so the first warnings go out around then. The $179
-renewal is offered only while paid posting is on and Stripe is configured; until
-then the email offers a free repost instead. Turning paid posting on during the
-promo is safe: per-post checkout still answers 409 `PROMO_ACTIVE`, plan sales stay
-closed until the promo ends, and only renewals become purchasable.
+5 days before their 60 days end, so the first warnings go out around then. The $199
+renewal of a promo post is offered only while paid posting is on and Stripe is
+configured; until then the email offers a free repost instead. Turning paid posting
+on during the promo is safe: per-post checkout still answers 409 `PROMO_ACTIVE`, and
+only renewals become purchasable.
 
 ### 8a. Stripe Dashboard (live mode)
 
 - [ ] Activate the account. Set the statement descriptor (NPHIRING), public details,
       branding and customer emails.
-- [ ] Product "Employer plan" with a recurring Price of $399 per month, lookup key
-      `np_hiring_employer_plan_monthly`, metadata `sku=employer-plan`.
-- [ ] A Payment Link for that Price (subscription mode):
-      subscription metadata `sku=employer-plan`; "Limit customers to one subscription"
-      on; billing address and tax ID collection required; no free trial; promotion
-      codes off; after payment, redirect to `https://nphiring.com/employer/dashboard`.
-      The webhook fulfils a subscription only when the price lookup key, the price
-      SKU or the subscription SKU matches (`isEmployerPlanSubscription` in
-      `app/api/webhooks/stripe/plan-checkout.ts`); set all three. Anything else is
-      alerted and granted nothing.
+- [ ] No Product, Price or Payment Link to create: each post and renewal checkout
+      prices its own session from `lib/config.ts`, and the Employer plan is retired.
 - [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` with **all 11**
       events below (the list in `.env.example`; `processEvent` in
       `app/api/webhooks/stripe/route.ts` handles every one except
@@ -178,25 +172,24 @@ closed until the promo ends, and only renewals become purchasable.
 
 | Event | What the site does with it |
 |---|---|
-| `checkout.session.completed` | Publishes a paid post, applies a renewal, or starts a plan |
+| `checkout.session.completed` | Publishes a paid post or applies a renewal |
 | `checkout.session.async_payment_succeeded` | Same, once a delayed payment settles |
-| `checkout.session.async_payment_failed` | Alerts; a pending plan is closed |
+| `checkout.session.async_payment_failed` | Alerts |
 | `invoice.paid` | Refreshes invoice PDF links |
-| `invoice.payment_failed` | Plan dunning email |
+| `invoice.payment_failed` | Dormant: the retired plan's dunning email |
 | `charge.refunded` | Ledger update; a full refund takes the post down |
 | `charge.dispute.created` | Takes the post down on a chargeback |
 | `charge.dispute.closed` | Restores the post on a won dispute |
-| `customer.subscription.created` | No-op (the checkout session creates the plan row) |
-| `customer.subscription.updated` | Plan status and paid-through date |
-| `customer.subscription.deleted` | Plan cancelled; posts stay live to the period end |
+| `customer.subscription.created` | No-op |
+| `customer.subscription.updated` | Dormant: the retired plan's status and paid-through date |
+| `customer.subscription.deleted` | Dormant: the retired plan's cancellation |
+
+The four plan events (`invoice.payment_failed` and the three `customer.subscription.*`)
+stay on the endpoint until the dormant plan code is deleted; with no plan sold, their
+handlers have nothing to act on.
 
 - [ ] Settings, Payment methods: choose what per-post Checkout offers. Sessions do not
       pin cards, and delayed methods are safe because fulfilment waits for payment.
-- [ ] Customer Portal: save the live-mode settings (cancel at period end, update
-      payment method, invoice history). The dashboard's "Manage billing"
-      (`app/api/employer/billing-portal/route.ts`) opens the default configuration.
-- [ ] Billing, failed payments: when all retries fail, **cancel the subscription**,
-      so a lapsed plan ends instead of sitting past due.
 - [ ] Stripe Tax: open owner decision (`docs/PENDING_WORK.md` B113).
 
 ### 8b. Vercel Production environment
@@ -206,27 +199,30 @@ closed until the promo ends, and only renewals become purchasable.
 | `ENABLE_PAID_POSTING` | `true` | The flag is real: `isFeatureEnabled('paidPosting')`. Until it is `true`, checkout answers 503 `PAID_POSTING_DISABLED`; with the flag but no key, 503 `STRIPE_NOT_CONFIGURED` |
 | `STRIPE_SECRET_KEY` | live secret key (or a restricted live key) | All Stripe calls |
 | `STRIPE_WEBHOOK_SECRET` | the live endpoint's signing secret | Test and live endpoints have different secrets; a wrong one rejects every event |
-| `STRIPE_PLAN_PAYMENT_LINK` | the live `https://buy.stripe.com/` link | Anything else disables the plan button (`lib/employer-plan-link.ts`); unset falls back to a contact mailto |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | live publishable key | No page reads it today, but `npm run fork:preflight` fails without it while the flag is on |
 | `NEXT_PUBLIC_BASE_URL` | `https://nphiring.com` | Checkout return URLs and email links |
 
-Keep these set: `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` (the daily `plan-lapse`
-job and the payment and plan reconciliation run on Inngest; sync it as in section 6
-step 4), `DISCORD_WEBHOOK_URL` (payment webhook alerts, including "refund required"),
-`SENTRY_DSN`.
+Do not set `STRIPE_PLAN_PAYMENT_LINK`: the Employer plan is retired, and while the
+variable is unset no plan can be sold (`lib/employer-plan-link.ts`).
+`npm run fork:preflight` still prints a warning for it; ignore that warning.
+
+Keep these set: `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` (the daily payment
+reconciliation runs on Inngest, and so do the dormant plan jobs; sync it as in
+section 6 step 4), `DISCORD_WEBHOOK_URL` (payment webhook alerts, including "refund
+required"), `SENTRY_DSN`.
 
 Redeploy after any change: Vercel applies env changes only to new deployments, and
 `NEXT_PUBLIC_` values are baked in at build, so turn the build cache off for that
-redeploy. **After 2027-01-01, no test-mode key may remain in Production**, and no
-`https://buy.stripe.com/test_` link: it passes the link format check but sells
-nothing real.
+redeploy. **After 2027-01-01, no test-mode key may remain in Production.**
 
 ### 8c. Verify
 
 - [ ] `https://nphiring.com/api/create-checkout/availability` returns `{"available":true}`.
 - [ ] Stripe, Webhooks: the endpoint lists the 11 events and a test event returns 200.
-- [ ] After the promo ends, a signed-in employer sees the plan's subscribe button on
-      /pricing, and a plan purchase appears attached in `/admin/employer-plans`.
+- [ ] After the promo ends, /pricing shows the two post prices ($249 first post, $349
+      after) and no plan, and a signed-in employer whose company has no paid post is
+      quoted $249. Renewing a post bought at $349 opens Checkout at $249; any other
+      renewable post opens it at $199.
 
 Also deferred: browser autofill extension (per-board build and Chrome listing),
 re-curating the AI eval fixtures before enabling AI features broadly, and a

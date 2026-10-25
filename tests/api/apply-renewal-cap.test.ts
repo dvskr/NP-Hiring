@@ -64,12 +64,12 @@ const PAID = {
   status: 'complete',
   payment_status: 'paid',
   payment_intent: 'pi_paid',
-  amount_total: 17900,
+  amount_total: config.stripeRenewalPriceInCents,
   currency: 'usd',
   invoice: null,
   created: NOW_S - 120,
   expires_at: NOW_S - 120 + 55 * 60,
-  metadata: { jobId: 'job1', type: 'renewal', tier: 'pro' },
+  metadata: { jobId: 'job1', type: 'renewal', tier: 'pro', renewalRung: 'base' },
 };
 
 function asyncList<T>(items: T[]) {
@@ -155,7 +155,7 @@ describe('a renewal paid for a post at its renewal cap extends nothing, so nothi
     // The money is on the ledger, so the refund can be matched to it...
     expect(prisma.jobCharge.create).toHaveBeenCalledTimes(1);
     expect(prisma.jobCharge.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ stripeSessionId: 'cs_paid', stripePaymentIntentId: 'pi_paid', type: 'renewal', employerJobId: 'ej1', amountCents: 17900 }),
+      data: expect.objectContaining({ stripeSessionId: 'cs_paid', stripePaymentIntentId: 'pi_paid', type: 'renewal', employerJobId: 'ej1', amountCents: config.stripeRenewalPriceInCents }),
     });
     // ...and nothing else moved: no expiry in the past, no republish, no status write.
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe('a renewal paid for a post at its renewal cap extends nothing, so nothi
     // A human hears about it, with what a refund needs.
     expect(captureException).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({
       tags: { area: 'stripe-webhook' },
-      extra: expect.objectContaining({ reason: CAP_ALERT, paymentIntentId: 'pi_paid', amountCents: 17900, jobId: 'job1', employerJobId: 'ej1', sessionId: 'cs_paid' }),
+      extra: expect.objectContaining({ reason: CAP_ALERT, paymentIntentId: 'pi_paid', amountCents: config.stripeRenewalPriceInCents, jobId: 'job1', employerJobId: 'ej1', sessionId: 'cs_paid' }),
     }));
     expect(alerts()).toContain(CAP_ALERT);
     expect(alerts()).toContain('pi_paid');
@@ -182,7 +182,7 @@ describe('a renewal paid for a post at its renewal cap extends nothing, so nothi
       { ...PAID, id: 'cs_applied_first', payment_intent: 'pi_applied_first', created: PAID.created - 60 },
     ]));
     vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([
-      { stripeSessionId: 'cs_applied_first', stripePaymentIntentId: 'pi_applied_first', amountCents: 17900, refundedAmountCents: null },
+      { stripeSessionId: 'cs_applied_first', stripePaymentIntentId: 'pi_applied_first', amountCents: config.stripeRenewalPriceInCents, refundedAmountCents: null },
     ] as never);
 
     const { res } = await deliver('evt_cap_siblings');

@@ -422,10 +422,13 @@ describe('7-vi — /post-job metadata reflects the real pricing model', () => {
   it('the description derives the price from lib/config instead of hand-typing it', () => {
     expect(layout).toContain('config.postingPrice');
     // 2026-09-12 pricing change: the promo sentence is dated from config, and
-    // the ladder (intro / featured / plan) is spelled from config tokens only.
+    // the ladder (intro / featured) is spelled from config tokens only. The
+    // Employer plan beside it was retired on 2026-10-24, so the description
+    // reads no plan token.
     expect(layout).toMatch(/free through \$\{config\.promoEndsLabel\}/);
     expect(layout).toContain('config.introPrice');
-    expect(layout).toContain('config.planPrice');
+    expect(layout).not.toContain('config.planPrice');
+    expect(layout).not.toContain('config.planSlots');
     expect(layout).not.toMatch(/first post is free/i);
     expect(layout).not.toMatch(/\$\d/);
   });

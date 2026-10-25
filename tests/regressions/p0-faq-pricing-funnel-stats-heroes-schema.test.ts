@@ -149,15 +149,21 @@ describe('P0 #15 — FAQPage JSON-LD on the employer funnel pages', () => {
         // can never strand a stale dollar figure in the schema. Since backlog
         // 2.1 the pricing answers are built per render in
         // app/for-employers/for-employers-copy.ts from the lib/pricing-copy
-        // sentences, so the tokens are pinned where they now live.
+        // sentences, so the tokens are pinned where they now live. Since the
+        // 2027 re-price the renewal sentence, which names both renewal
+        // prices, is the shared RENEWAL_LINE.
         const src = read('app/for-employers/page.tsx');
         const builder = read('app/for-employers/for-employers-copy.ts');
+        const shared = read('lib/pricing-copy.ts');
         expect(src).toContain('const employerFaqs = [...copy.pricingFaqs, ...EVERGREEN_FAQS];');
         expect(builder).toContain('LADDER_PRICES');
-        expect(read('lib/pricing-copy.ts')).toContain('$${config.postingPrice}');
-        expect(builder).toContain('$${config.renewalPrice}');
+        expect(builder).toContain('RENEWAL_LINE');
+        expect(shared).toContain('$${config.postingPrice}');
+        expect(shared).toContain('$${config.renewalPrice}');
+        expect(shared).toContain('$${config.proRenewalPrice}');
         expect(builder).toContain('${config.durationDays}');
         expect(builder).toContain('${config.limits.candidateUnlocksPerPosting}');
         expect(builder).not.toMatch(/\$\d/);
+        expect(shared).not.toMatch(/\$\d/);
     });
 });

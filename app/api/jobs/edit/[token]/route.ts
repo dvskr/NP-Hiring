@@ -1,5 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { config } from '@/lib/config';
+import { NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
+import { renewalRungForRow } from '@/lib/renewal-price';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
@@ -18,6 +21,12 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
  *     contactEmail is included because the form displays it for editing,
  *     not because callers should be able to harvest it. Treat the token as
  *     a bearer credential; the rate limiter is the brute-force defense.
+ *
+ * `employerJob.renewalPrice` is what this post pays to renew, in dollars (the
+ * edit page's renewal modal prints it): config.proRenewalPrice for a post
+ * bought at the posting price, config.renewalPrice for every other one
+ * (lib/renewal-price.ts). The page has neither the ledger nor that module, so
+ * the route reads the row's 'new' charge and answers the price, not the charge.
  */
 export async function GET(
   request: NextRequest,
@@ -49,6 +58,7 @@ export async function GET(
             screeningQuestions: { orderBy: { sortOrder: 'asc' } },
           },
         },
+        ...NEW_POST_CHARGE_SELECT,
       },
     });
 
@@ -99,6 +109,7 @@ export async function GET(
         companyWebsite: employerJob.companyWebsite,
         companyLogoUrl: employerJob.companyLogoUrl,
         paymentStatus: employerJob.paymentStatus,
+        renewalPrice: config.renewalPriceDollarsFor(renewalRungForRow(employerJob)),
       },
     });
   } catch (error) {

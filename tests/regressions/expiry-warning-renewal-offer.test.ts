@@ -134,21 +134,23 @@ describe('expiry warning: during the launch promo', () => {
 });
 
 describe('expiry warning: after the promo, paid posting on', () => {
+    // Percents round DOWN (lib/renewal-offer.ts): $199 against the $249 intro
+    // price is 20.08%, against the $349 post price 42.98%.
     it("names the saving against the employer's own next post: the intro price", async () => {
         const sent = await sendWarning({ paymentStatus: 'promo', renewalPurchasable: true, nextPostPrice: config.introPrice, now: AFTER_PROMO });
-        expect(sent.html).toContain(`Renew for ${RENEWAL} (Save 10% vs. your next new post at $${config.introPrice})`);
-        expect(sent.html).toContain(`Renew for ${RENEWAL} and save 10% vs. your next new post at $${config.introPrice}.`);
-        expect(sent.html).not.toContain('40%');
+        expect(sent.html).toContain(`Renew for ${RENEWAL} (Save 20% vs. your next new post at $${config.introPrice})`);
+        expect(sent.html).toContain(`Renew for ${RENEWAL} and save 20% vs. your next new post at $${config.introPrice}.`);
+        expect(sent.html).not.toContain('42%');
     });
 
     it('against the post price for a domain that already bought a post', async () => {
         const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
-        expect(sent.html).toContain(`(Save 40% vs. your next new post at $${config.postingPrice})`);
+        expect(sent.html).toContain(`(Save 42% vs. your next new post at $${config.postingPrice})`);
     });
 
     it('against the named standard post price when the next price is unknown', async () => {
         const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, nextPostPrice: null, now: AFTER_PROMO });
-        expect(sent.html).toContain(`(Save 40% vs. the $${config.postingPrice} post price)`);
+        expect(sent.html).toContain(`(Save 42% vs. the $${config.postingPrice} post price)`);
     });
 
     it('claims no saving when the next post is free (an open plan slot)', async () => {
@@ -161,6 +163,61 @@ describe('expiry warning: after the promo, paid posting on', () => {
         const sent = await sendWarning({ paymentStatus: 'free', renewalPurchasable: true, nextPostPrice: config.postingPrice, now: AFTER_PROMO });
         expect(sent.text).not.toContain(RENEWAL);
         expect(loggedMetadata()).toMatchObject({ offer: 'none' });
+    });
+});
+
+describe("expiry warning: a post bought at the posting price renews for its own price", () => {
+    const PRO_RENEWAL = `$${config.proRenewalPrice}`;
+
+    it('names the pro renewal and measures the saving against it', async () => {
+        // $249 against the $349 next post is 28.65%, rounded down.
+        const sent = await sendWarning({
+            paymentStatus: 'paid',
+            renewalPurchasable: true,
+            nextPostPrice: config.postingPrice,
+            renewalPrice: config.proRenewalPrice,
+            now: AFTER_PROMO,
+        });
+        expect(sent.html).toContain(`Renew for ${PRO_RENEWAL} (Save 28% vs. your next new post at $${config.postingPrice})`);
+        expect(sent.html).toContain(`Renew for ${PRO_RENEWAL} and save 28% vs. your next new post at $${config.postingPrice}.`);
+        expect(sent.html).not.toContain(RENEWAL);
+        expect(sent.html).not.toContain('42%');
+    });
+
+    it('against the named standard post price when the next price is unknown', async () => {
+        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, renewalPrice: config.proRenewalPrice, now: AFTER_PROMO });
+        expect(sent.html).toContain(`(Save 28% vs. the $${config.postingPrice} post price)`);
+    });
+
+    it('claims no saving when the next post costs the same as the renewal', async () => {
+        const sent = await sendWarning({
+            paymentStatus: 'paid',
+            renewalPurchasable: true,
+            nextPostPrice: config.introPrice,
+            renewalPrice: config.proRenewalPrice,
+            now: AFTER_PROMO,
+        });
+        expect(sent.text).toContain(`Renew for ${PRO_RENEWAL}`);
+        for (const part of parts(sent)) expect(part).not.toMatch(/save \d+%/i);
+    });
+
+    it('during the promo it names the price and still claims no saving', async () => {
+        const sent = await sendWarning({
+            paymentStatus: 'paid',
+            renewalPurchasable: true,
+            nextPostPrice: config.postingPrice,
+            renewalPrice: config.proRenewalPrice,
+            now: DURING_PROMO,
+        });
+        expect(sent.text).toContain(`Renew for ${PRO_RENEWAL}`);
+        expect(sent.subject).not.toContain(PRO_RENEWAL);
+        for (const part of parts(sent)) expect(part).not.toMatch(/save \d+%/i);
+    });
+
+    it("an email sent without the row's price offers the base renewal", async () => {
+        const sent = await sendWarning({ paymentStatus: 'paid', renewalPurchasable: true, now: AFTER_PROMO });
+        expect(sent.text).toContain(`Renew for ${RENEWAL}`);
+        expect(sent.text).not.toContain(PRO_RENEWAL);
     });
 });
 
@@ -303,12 +360,41 @@ describe('plan copy elsewhere in the email service matches what plan posts do', 
 
     it('the renewal confirmation claims no new unlocks or InMails', async () => {
         const { sendRenewalConfirmationEmail } = await import('@/lib/email-service');
-        await sendRenewalConfirmationEmail('owner@clinic.example', TITLE, AFTER_PROMO, 'dash', 'tok-abc-123');
+        await sendRenewalConfirmationEmail('owner@clinic.example', TITLE, AFTER_PROMO, 'dash', 'tok-abc-123', { amountCents: config.stripeRenewalPriceInCents });
         const sent = resendSendMock.mock.calls.at(-1)![0] as Sent;
         expect(sent.text).toContain('A renewal adds days only. This posting keeps its applicants, stats, and remaining unlocks and InMails, but gets no new ones.');
         expect(sent.text).not.toMatch(/fresh \d+ candidate unlocks|renewal cycle/);
         expect(sent.text).toContain(`Renewal: $${config.renewalPrice}.00`);
         expect(sent.subject).not.toMatch(DASHES);
+    });
+
+    it.each([
+        ['a post bought at the posting price', config.stripeProRenewalPriceInCents, '$249.00'],
+        ['any other post', config.stripeRenewalPriceInCents, '$199.00'],
+        ['a charge a coupon reduced', 17910, '$179.10'],
+    ])('the renewal confirmation prints the amount actually charged for %s', async (_post, amountCents, printed) => {
+        const { sendRenewalConfirmationEmail } = await import('@/lib/email-service');
+        await sendRenewalConfirmationEmail('owner@clinic.example', TITLE, AFTER_PROMO, 'dash', 'tok-abc-123', { amountCents });
+        const sent = resendSendMock.mock.calls.at(-1)![0] as Sent;
+        expect(sent.text).toContain(`Renewal: ${printed}`);
+        // No other renewal price leaks into the receipt.
+        for (const other of ['$199.00', '$249.00', '$179.10'].filter((price) => price !== printed)) {
+            expect(sent.text).not.toContain(other);
+        }
+    });
+
+    it('the renewal confirmation keeps the invoice links beside the amount', async () => {
+        const { sendRenewalConfirmationEmail } = await import('@/lib/email-service');
+        await sendRenewalConfirmationEmail('owner@clinic.example', TITLE, AFTER_PROMO, 'dash', 'tok-abc-123', {
+            amountCents: config.stripeProRenewalPriceInCents,
+            invoiceNumber: 'INV-0042',
+            invoicePdfUrl: 'https://example.com/api/employer/invoice?jobId=job-1&token=t',
+            hostedInvoiceUrl: 'https://invoice.stripe.test/i/abc',
+        });
+        const sent = resendSendMock.mock.calls.at(-1)![0] as Sent;
+        expect(sent.html).toContain('Renewal: $249.00 · Invoice #INV-0042');
+        expect(sent.html).toContain('href="https://example.com/api/employer/invoice?jobId=job-1&token=t"');
+        expect(sent.html).toContain('href="https://invoice.stripe.test/i/abc"');
     });
 
     it('no email promises unlocked candidates "forever"', async () => {

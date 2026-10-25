@@ -633,13 +633,25 @@ export async function sendConfirmationEmail(
 // 5. RENEWAL CONFIRMATION EMAIL
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * What the renewal confirmation's receipt card prints: the amount charged and
+ * the invoice links. A renewal costs a different amount for different posts
+ * (lib/renewal-price.ts), so the email prints the charge it is handed (the
+ * Checkout total the webhook recorded on the ledger) and never a list price.
+ * The amount is required so that no caller can leave it out.
+ */
+export interface RenewalReceipt extends InvoiceLinks {
+  /** What Stripe charged, in cents. */
+  amountCents: number;
+}
+
 export async function sendRenewalConfirmationEmail(
   email: string,
   jobTitle: string,
   newExpiresAt: Date,
   dashboardToken: string,
   unsubscribeToken: string,
-  invoice?: InvoiceLinks,
+  receipt: RenewalReceipt,
 ): Promise<EmailResult> {
   try {
     const expiryStr = newExpiresAt.toLocaleDateString('en-US', {
@@ -652,9 +664,10 @@ export async function sendRenewalConfirmationEmail(
     // dashboard (dashboardToken param retained for caller compatibility).
     const dashboardUrl = `${BASE_URL}/employer/dashboard`;
 
-    const invoiceLine = invoice?.invoicePdfUrl || invoice?.hostedInvoiceUrl
-      ? `${invoice.invoiceNumber ? `Invoice #${invoice.invoiceNumber} · ` : ''}${invoice.invoicePdfUrl ? `<a href="${invoice.invoicePdfUrl}" style="color:${V2.teal};text-decoration:underline;">Download PDF</a>` : ''}${invoice.invoicePdfUrl && invoice.hostedInvoiceUrl ? ' · ' : ''}${invoice.hostedInvoiceUrl ? `<a href="${invoice.hostedInvoiceUrl}" style="color:${V2.teal};text-decoration:underline;">View online</a>` : ''}`
+    const invoiceLine = receipt.invoicePdfUrl || receipt.hostedInvoiceUrl
+      ? `${receipt.invoiceNumber ? `Invoice #${receipt.invoiceNumber} · ` : ''}${receipt.invoicePdfUrl ? `<a href="${receipt.invoicePdfUrl}" style="color:${V2.teal};text-decoration:underline;">Download PDF</a>` : ''}${receipt.invoicePdfUrl && receipt.hostedInvoiceUrl ? ' · ' : ''}${receipt.hostedInvoiceUrl ? `<a href="${receipt.hostedInvoiceUrl}" style="color:${V2.teal};text-decoration:underline;">View online</a>` : ''}`
       : 'A formal invoice is available from your dashboard.';
+    const charged = `$${(receipt.amountCents / 100).toFixed(2)}`;
 
     const html = emailShellV2(`
       ${headerBlockV2('Listing Renewed Successfully', '')}
@@ -664,7 +677,7 @@ export async function sendRenewalConfirmationEmail(
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;">
           <p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">Receipt</p>
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Renewal: $${config.renewalPrice}.00 · ${invoiceLine}</p>
+          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Renewal: ${charged} · ${invoiceLine}</p>
           <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">A renewal adds days only. This posting keeps its applicants, stats, and remaining unlocks and InMails, but gets no new ones.</p>
         </div>
       </td></tr>
@@ -730,6 +743,13 @@ export interface ExpiryWarningOptions {
    * compares the renewal with config.postingPrice and says so.
    */
   nextPostPrice?: number | null;
+  /**
+   * What the expiring row pays to renew, in dollars (lib/renewal-price.ts): a
+   * post bought at the posting price renews for more than the others. Both
+   * the price the email names and the saving it claims use it. Omitted means
+   * config.renewalPrice.
+   */
+  renewalPrice?: number;
   /** Send time; decides whether the launch promo is running. */
   now?: Date;
 }
@@ -876,6 +896,7 @@ function expiryWarningCopy(jobTitle: string, expiryDateStr: string, days: number
   const offer = resolveRenewalOffer({
     purchasable: !NOT_RENEWABLE_STATUSES.has(options.paymentStatus ?? '') && options.renewalPurchasable === true,
     nextPostPrice: options.nextPostPrice,
+    renewalPrice: options.renewalPrice,
     now,
   });
   if (offer.purchasable) return renewExpiryCopy(context, offer);

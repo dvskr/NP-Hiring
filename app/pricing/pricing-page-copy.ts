@@ -16,21 +16,7 @@
  * repeat, and every number in them is a lib/config token. They hold in both
  * phases:
  *
- *   PLAN_TERMS          — the plan's billing shape.
- *   PLAN_POSTS_LINE     — how a plan post actually lives: it runs
- *                         config.durationDays like every post, is never
- *                         renewed (create-renewal-checkout 409s it), and
- *                         frees its slot when it ends or is closed, so the
- *                         employer posts again into it at no extra charge.
- *                         Plan posts come down when the plan ends
- *                         (lib/employer-plan.ts#pausePlanPosts).
- *   PLAN_CANCEL_LINE    — a cancel keeps plan posts up through the paid
- *                         period (isPlanEntitled), never past a post's own
- *                         config.durationDays.
  *   FEATURES_LINE       — what EVERY post gets (no stripped tier).
- *   RENEWAL_LINE        — +60 days on a promo/intro/featured post; plan
- *                         posts are not renewable. Promo posts made before
- *                         the ladder stay renewable, so it stays true.
  *   RENEWAL_EFFECT_LINE — what a renewal does and nothing more: it moves the
  *                         end date (apply-renewal.ts via
  *                         lib/expires-at.ts#renewalExpiresAt). It does not
@@ -38,6 +24,11 @@
  *                         (lib/tier-limits.ts counts them per posting since
  *                         it was created), so no copy may say so.
  *   RENEWAL_CAP_LINE    — the config.renewalCapDays ceiling on renewals.
+ *
+ * The renewal PRICES are lib/pricing-copy.ts#RENEWAL_LINE, shared with every
+ * surface that states them. The Employer plan is retired (owner decision,
+ * 2026-10-24): neither phase offers it, and nothing here reads its price or
+ * slot count.
  */
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
@@ -48,15 +39,11 @@ import {
     LADDER_PRICES,
     PROMO_HEADLINE,
     PROMO_SUB,
+    RENEWAL_LINE,
     ladderLine,
-    planPriceLine,
 } from '@/lib/pricing-copy';
 
-export const PLAN_TERMS = `${config.planSlots} active job slots while you're subscribed. Swap jobs any time. Cancel any time.`;
-export const PLAN_POSTS_LINE = `Each plan post runs ${config.durationDays} days. When one ends, or you close it to swap in another role, its slot opens up and you can post into it again at no extra charge. Plan posts come down if the plan ends.`;
-export const PLAN_CANCEL_LINE = `If you cancel, your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first.`;
 export const FEATURES_LINE = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
-export const RENEWAL_LINE = `Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days).`;
 export const RENEWAL_EFFECT_LINE = `A renewal adds ${config.durationDays} days to the post: to its current end date while it is still live, or from the day you renew once it has ended. It does not add unlocks or InMails: a post has ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails in total, however many times it is renewed.`;
 export const RENEWAL_CAP_LINE = `Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`;
 
@@ -109,16 +96,7 @@ const INTRO_FAQ: PricingFaq = {
     a: `The intro price ($${config.introPrice}) applies to the first paid post per company email domain. It is scoped to your organization, not to a login, and posts made free during the launch promo don't use it up.`,
 };
 
-const LISTING_RUN_PLAN = `Plan posts run the same ${config.durationDays} days and come down sooner only if the plan ends.`;
-
-function planFaq(now: Date): PricingFaq {
-    return {
-        q: 'How does the Employer plan work?',
-        a: `${planPriceLine(now)} ${PLAN_TERMS} ${PLAN_POSTS_LINE} Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. The plan is billed month to month. ${PLAN_CANCEL_LINE}`,
-    };
-}
-
-/** While the promo runs: the page as it shipped on 2026-09-12. */
+/** While the promo runs: the promo first, then the ladder dated from its start. */
 function promoCopy(now: Date): PricingPageCopy {
     const ladder = ladderLine(now);
     return {
@@ -126,7 +104,7 @@ function promoCopy(now: Date): PricingPageCopy {
         eyebrow: 'Launch Pricing',
         headline: PROMO_HEADLINE,
         sub: PROMO_SUB,
-        listingRun: `Every post runs ${config.durationDays} days with no daily budget and no bidding, promo posts included. ${LISTING_RUN_PLAN}`,
+        listingRun: `Every post runs ${config.durationDays} days with no daily budget and no bidding, promo posts included.`,
         ladderEyebrow: 'After the launch period',
         ladderHeading: `Starting ${config.ladderStartsLabel}`,
         ladderIntro: ladder,
@@ -136,9 +114,8 @@ function promoCopy(now: Date): PricingPageCopy {
         packageSection: null,
         pricingFaqs: [
             { q: 'How long is posting free?', a: `${PROMO_HEADLINE}. ${PROMO_SUB} Promo posts run the full ${config.durationDays} days even if that runs past the promo, and they can be renewed like an intro or featured post.` },
-            { q: `What happens on ${config.ladderStartsLabel}?`, a: `${ladder} ${RENEWAL_LINE} Every post, whether promo, intro, featured, or plan, gets exactly the same features. There is no stripped-down tier.` },
+            { q: `What happens on ${config.ladderStartsLabel}?`, a: `${ladder} ${RENEWAL_LINE} Every post, whether promo, intro, or featured, gets exactly the same features. There is no stripped-down tier.` },
             INTRO_FAQ,
-            planFaq(now),
         ],
         meta: {
             title: `Pricing | ${brand.niche.short} Job Board | Free Through ${config.promoEndsLabel}`,
@@ -160,9 +137,11 @@ function ladderCopy(now: Date): PricingPageCopy {
         eyebrow: 'Pricing',
         headline: LADDER_HEADLINE,
         sub: `${ladderLine(now)} ${FULL_PACKAGE}`,
-        listingRun: `Every post runs ${config.durationDays} days with no daily budget and no bidding. ${LISTING_RUN_PLAN}`,
-        ladderEyebrow: 'Per post or by the month',
-        ladderHeading: 'Three ways to post',
+        listingRun: `Every post runs ${config.durationDays} days with no daily budget and no bidding.`,
+        // Register D17: plain per-post wording where "Per post or by the
+        // month" and "Three ways to post" stood while the plan was on sale.
+        ladderEyebrow: 'Per post',
+        ladderHeading: 'What a post costs',
         ladderIntro: ladderLine(now),
         ladderNote: `Every rung gets the same package: ${FEATURES_LINE}.`,
         ctaBlurb: `${LADDER_FROM_LINE} No bidding, no contracts.`,
@@ -172,13 +151,12 @@ function ladderCopy(now: Date): PricingPageCopy {
         packageSection: {
             eyebrow: "What's Included",
             heading: 'Every Post Gets the Full Package',
-            intro: 'No tiers. No downgrades. Whether intro, featured, or plan, you get everything.',
+            intro: 'No tiers. No downgrades. Whether intro or featured, you get everything.',
         },
         pricingFaqs: [
             { q: 'How much does it cost to post a job?', a: `${LADDER_PRICES} ${FULL_PACKAGE}` },
-            { q: 'Do all prices include the same features?', a: 'Yes. Every post, whether intro, featured, or plan, gets exactly the same features. There is no stripped-down tier.' },
+            { q: 'Do all prices include the same features?', a: 'Yes. Every post, whether intro or featured, gets exactly the same features. There is no stripped-down tier.' },
             INTRO_FAQ,
-            planFaq(now),
         ],
         meta: {
             title: `Pricing | ${brand.niche.short} Job Board | Posts From $${config.introPrice}`,

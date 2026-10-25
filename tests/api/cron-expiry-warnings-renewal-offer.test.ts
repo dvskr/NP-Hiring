@@ -3,8 +3,8 @@
  * (package RENEWAL-OFFER).
  *
  * The cron used to pass only paymentStatus to the pre-expiry warning and
- * print "Renew for $179 (save 40%)" in the post-expiry email for every promo
- * and paid row. Now, per run:
+ * print one renewal price with a list-price saving in the post-expiry email
+ * for every promo and paid row. Now, per run:
  *   - renewals are offered only when the same check behind
  *     /api/create-checkout/availability says one can be bought (read once;
  *     unreadable counts as not purchasable);
@@ -16,11 +16,16 @@
  *   - (backlog 2.1) every free-posting line is judged at the run's own clock,
  *     so it stops at config.promoEndsAt with no deploy; after that a row the
  *     renewal checkout refuses is offered a paid repost at the ladder price,
- *     only while new posts can be bought.
+ *     only while new posts can be bought;
+ *   - (2027 re-price) a renewal has two prices (lib/renewal-price.ts), so each
+ *     email names its OWN row's price and measures its saving from it: both
+ *     queries load the row's 'new' charge, and the price rides in the
+ *     warning's options (`renewalPrice`) and in the post-expiry offer.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
+import { NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
 import { LADDER_PRICES } from '@/lib/pricing-copy';
 
 const sendExpiryWarningEmail = vi.fn();
@@ -61,6 +66,10 @@ interface RowOpts {
     domain?: string | null;
     userId?: string | null;
     expiresInDays: number;
+    /** EmployerJob.pricingTier; 'pro' unless set. */
+    pricingTier?: string;
+    /** The row has a JobCharge of type 'new', as NEW_POST_CHARGE_SELECT loads it: a post bought at the posting price. */
+    bought?: boolean;
 }
 
 function row(id: string, opts: RowOpts) {
@@ -74,6 +83,8 @@ function row(id: string, opts: RowOpts) {
             id: `ej-${id}`,
             contactEmail: `hr@${opts.domain ?? 'clinic.example'}`,
             paymentStatus: opts.status,
+            pricingTier: opts.pricingTier ?? 'pro',
+            jobCharges: opts.bought ? [{ id: `jc-${id}` }] : [],
             quotaDomain: opts.domain === undefined ? 'clinic.example' : opts.domain,
             userId: opts.userId === undefined ? 'user-1' : opts.userId,
             dashboardToken: `dash-${id}`,
@@ -149,7 +160,7 @@ describe('during the launch promo with paid posting off (production today)', () 
         expect(prisma.employerJob.count).not.toHaveBeenCalled();
     });
 
-    it('the post-expiry email offers the free repost, not a $179 renewal', async () => {
+    it('the post-expiry email offers the free repost, not a renewal', async () => {
         vi.setSystemTime(DURING_PROMO);
         getPaidPostingStatus.mockReturnValue({ enabled: false, stripeConfigured: false, available: false });
         seed([], [row('gone', { status: 'promo', expiresInDays: -1 })]);
@@ -226,8 +237,9 @@ describe('after the promo with paid posting on', () => {
 
         await runCron();
 
-        expect(postExpiryHtml('repeat')).toContain(`Renew for $${config.renewalPrice} (Save 40% vs. your next new post at $${config.postingPrice})`);
-        expect(postExpiryHtml('first')).toContain(`Renew for $${config.renewalPrice} (Save 10% vs. your next new post at $${config.introPrice})`);
+        // $199 against the $349 post price is 42.98%, against the $249 intro price 20.08%.
+        expect(postExpiryHtml('repeat')).toContain(`Renew for $${config.renewalPrice} (Save 42% vs. your next new post at $${config.postingPrice})`);
+        expect(postExpiryHtml('first')).toContain(`Renew for $${config.renewalPrice} (Save 20% vs. your next new post at $${config.introPrice})`);
         // A renewal only moves the end date, within the cap.
         expect(postExpiryHtml('repeat')).toContain('carry over. A renewal does not add unlocks or InMails.');
         expect(postExpiryHtml('repeat')).toContain(`Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`);
@@ -239,7 +251,7 @@ describe('after the promo with paid posting on', () => {
 
         await runCron();
 
-        expect(postExpiryHtml('gone')).toContain(`(Save 40% vs. the $${config.postingPrice} post price)`);
+        expect(postExpiryHtml('gone')).toContain(`(Save 42% vs. the $${config.postingPrice} post price)`);
         expect(logger.warn).toHaveBeenCalled();
     });
 
@@ -252,6 +264,98 @@ describe('after the promo with paid posting on', () => {
         expect(html).not.toContain(`$${config.renewalPrice}`);
         expect(html).toContain(`Each plan post runs ${config.durationDays} days, so this one has ended and its slot is free again. Post a job into it at no extra charge while you're subscribed.`);
         expect(html).not.toMatch(/plan slots? —|stay live while/);
+    });
+});
+
+describe("each email names its own row's renewal price (a post bought at the posting price renews for more)", () => {
+    const BOUGHT = { status: 'paid', pricingTier: 'pro', bought: true } as const;
+
+    beforeEach(() => {
+        vi.setSystemTime(AFTER_PROMO);
+        getPaidPostingStatus.mockReturnValue({ enabled: true, stripeConfigured: true, available: true });
+    });
+
+    it('loads the row\'s new charge with the post, in the warning query and in the post-expiry query', async () => {
+        seed([row('a', { status: 'promo', expiresInDays: 3 })], [row('gone', { status: 'promo', expiresInDays: -1 })]);
+
+        await runCron();
+
+        expect(prisma.job.findMany).toHaveBeenCalledTimes(2);
+        for (const [args] of vi.mocked(prisma.job.findMany).mock.calls) {
+            expect(args?.include).toEqual({ employerJobs: { include: NEW_POST_CHARGE_SELECT } });
+        }
+    });
+
+    it("passes each warning its row's price: the pro renewal only for a post that was bought at the posting price", async () => {
+        seed([
+            row('promo', { status: 'promo', expiresInDays: 3 }),
+            row('renewed-promo', { status: 'paid', pricingTier: 'pro', expiresInDays: 3 }),
+            row('intro', { status: 'paid', pricingTier: 'intro', bought: true, expiresInDays: 3 }),
+            row('bought', { ...BOUGHT, expiresInDays: 3 }),
+            row('legacy', { status: 'paid', pricingTier: 'pro', expiresInDays: 3, domain: null, userId: null }),
+        ]);
+
+        await runCron();
+
+        expect(warningOptionsFor('promo')).toMatchObject({ renewalPrice: config.renewalPrice });
+        expect(warningOptionsFor('renewed-promo')).toMatchObject({ renewalPrice: config.renewalPrice });
+        expect(warningOptionsFor('intro')).toMatchObject({ renewalPrice: config.renewalPrice });
+        expect(warningOptionsFor('bought')).toMatchObject({ renewalPrice: config.proRenewalPrice });
+        expect(warningOptionsFor('legacy')).toMatchObject({ renewalPrice: config.renewalPrice });
+    });
+
+    it('a row loaded without its charges is priced at the base renewal', async () => {
+        const noCharges = row('bare', { ...BOUGHT, expiresInDays: 3 });
+        delete (noCharges.employerJobs as { jobCharges?: unknown }).jobCharges;
+        seed([noCharges]);
+
+        await runCron();
+
+        expect(warningOptionsFor('bare')).toMatchObject({ renewalPrice: config.renewalPrice });
+    });
+
+    it('also hands the price over during the promo, where the renewal is offered with no saving', async () => {
+        vi.setSystemTime(DURING_PROMO);
+        seed([row('bought', { ...BOUGHT, expiresInDays: 3 })]);
+
+        await runCron();
+
+        expect(warningOptionsFor('bought')).toMatchObject({ renewalPurchasable: true, nextPostPrice: null, renewalPrice: config.proRenewalPrice });
+    });
+
+    it('the post-expiry email names the pro renewal and measures the saving from it', async () => {
+        seed([], [
+            row('bought', { ...BOUGHT, domain: DOMAIN_WITH_PAID_POST, userId: 'user-r', expiresInDays: -1 }),
+            row('promo', { status: 'promo', domain: DOMAIN_WITH_PAID_POST, userId: 'user-r', expiresInDays: -2 }),
+        ]);
+
+        await runCron();
+
+        // $249 against the $349 post price is 28.65%; $199 against it is 42.98%.
+        const bought = postExpiryHtml('bought');
+        expect(bought).toContain(`Renew for $${config.proRenewalPrice} (Save 28% vs. your next new post at $${config.postingPrice})`);
+        expect(bought).not.toContain(`Renew for $${config.renewalPrice}`);
+        expect(postExpiryHtml('promo')).toContain(`Renew for $${config.renewalPrice} (Save 42% vs. your next new post at $${config.postingPrice})`);
+    });
+
+    it('claims no saving when the next post costs no more than the renewal', async () => {
+        // The pro renewal equals the intro price, so against an intro-priced next post there is nothing to claim.
+        seed([], [row('bought', { ...BOUGHT, domain: DOMAIN_WITHOUT_PAID_POST, userId: 'user-f', expiresInDays: -1 })]);
+
+        await runCron();
+
+        const html = postExpiryHtml('bought');
+        expect(html).toContain(`Renew for $${config.proRenewalPrice} to relist it`);
+        expect(html).not.toMatch(/save \d+%/i);
+    });
+
+    it('a failed price lookup falls back to the named post price, measured from the row\'s own renewal price', async () => {
+        getPlanSlotStatus.mockRejectedValue(new Error('db down'));
+        seed([], [row('bought', { ...BOUGHT, expiresInDays: -1 })]);
+
+        await runCron();
+
+        expect(postExpiryHtml('bought')).toContain(`Renew for $${config.proRenewalPrice} (Save 28% vs. the $${config.postingPrice} post price)`);
     });
 });
 
@@ -283,7 +387,12 @@ describe('after the promo with paid posting on but no webhook secret', () => {
         await runCron();
 
         expect(warningOptionsFor('a')).toMatchObject({ renewalPurchasable: false, postingPurchasable: false });
-        expect(postExpiryHtml('gone')).not.toContain(`${config.renewalPrice}`);
+        // The price is searched with its dollar sign: the bare number is also
+        // in the XHTML namespace URL (w3.org/1999/xhtml) every email opens with.
+        const html = postExpiryHtml('gone');
+        expect(html).not.toContain(`$${config.renewalPrice}`);
+        expect(html).not.toContain('Renew for');
+        expect(html).toContain('Go to Your Dashboard');
     });
 });
 

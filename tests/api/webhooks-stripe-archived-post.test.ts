@@ -25,6 +25,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import type Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 import { logger } from '@/lib/logger';
 import { sendConfirmationEmail, sendRenewalConfirmationEmail } from '@/lib/email-service';
 import { trackServerPurchase } from '@/lib/analytics-server';
@@ -74,8 +75,8 @@ function paidSession(id: string, metadata: Record<string, string>, amountTotal: 
   };
 }
 
-const RENEWAL_SESSION = paidSession('cs_renewal', { jobId: 'job1', type: 'renewal', tier: 'pro' }, 17900);
-const NEW_POST_SESSION = paidSession('cs_new_post', { jobId: 'job2', pricing: 'pro' }, 29900);
+const RENEWAL_SESSION = paidSession('cs_renewal', { jobId: 'job1', type: 'renewal', tier: 'pro', renewalRung: 'base' }, config.stripeRenewalPriceInCents);
+const NEW_POST_SESSION = paidSession('cs_new_post', { jobId: 'job2', pricing: 'pro' }, config.stripePriceInCents);
 
 function asyncList<T>(items: T[]) {
   return { async *[Symbol.asyncIterator]() { for (const item of items) yield item; } };

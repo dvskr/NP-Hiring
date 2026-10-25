@@ -26,6 +26,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import type Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
 import { logger } from '@/lib/logger';
 import { captureException } from '@/lib/sentry';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
@@ -63,12 +64,12 @@ const PAID = {
   status: 'complete',
   payment_status: 'paid',
   payment_intent: 'pi_paid',
-  amount_total: 17900,
+  amount_total: config.stripeRenewalPriceInCents,
   currency: 'usd',
   invoice: null,
   created: CREATED,
   expires_at: CREATED + LIFETIME_S,
-  metadata: { jobId: 'job1', type: 'renewal', tier: 'pro' },
+  metadata: { jobId: 'job1', type: 'renewal', tier: 'pro', renewalRung: 'base' },
 };
 
 function sibling(id: string, overrides: Record<string, unknown> = {}) {
@@ -229,7 +230,7 @@ describe('two paid renewals for one post never pass silently', () => {
         employerJobId: 'ej1',
         paymentIntentId: 'pi_paid',
         otherPaymentIntentIds: 'pi_paid_too',
-        amountCents: 17900,
+        amountCents: config.stripeRenewalPriceInCents,
       }),
     }));
     const discord = JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls);
@@ -336,7 +337,7 @@ describe('two paid renewals for one post never pass silently', () => {
 describe('the ledger is a second net for a second paid renewal', () => {
   /** Another renewal charge for the posting, as the ledger read returns it. */
   function ledgerRow(overrides: Record<string, unknown> = {}) {
-    return { stripeSessionId: 'cs_first', stripePaymentIntentId: 'pi_first', amountCents: 17900, refundedAmountCents: null, ...overrides };
+    return { stripeSessionId: 'cs_first', stripePaymentIntentId: 'pi_first', amountCents: config.stripeRenewalPriceInCents, refundedAmountCents: null, ...overrides };
   }
 
   it('raises the alert when Stripe cannot be listed: the renewal charges ledgered since this session could first be paid', async () => {
@@ -381,7 +382,7 @@ describe('the ledger is a second net for a second paid renewal', () => {
   });
 
   it('a renewal charge already refunded in full is not a second payment to chase; a partly refunded one still is', async () => {
-    vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([ledgerRow({ refundedAmountCents: 17900 })] as never);
+    vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([ledgerRow({ refundedAmountCents: config.stripeRenewalPriceInCents })] as never);
     await deliver('evt_ledger_refunded');
     expect(sendDiscordMessage).not.toHaveBeenCalled();
 

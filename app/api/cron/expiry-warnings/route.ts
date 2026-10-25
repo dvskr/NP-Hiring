@@ -14,7 +14,8 @@ import { brand } from '@/config/brand'
 import { getEnv, getPaidPostingStatus } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import { getPlanSlotStatus } from '@/lib/employer-plan'
-import { nextNewPostPrice, renewalSavingsLabel, resolveRenewalOffer, type RenewalOffer } from '@/lib/pricing'
+import { NEW_POST_CHARGE_SELECT, nextNewPostPrice, renewalSavingsLabel, resolveRenewalOffer, type RenewalOffer } from '@/lib/pricing'
+import { renewalRungForRow, type RenewalPriceRow } from '@/lib/renewal-price'
 import { ladderLine } from '@/lib/pricing-copy'
 
 export const maxDuration = 120 // 2 minutes — expiry warning emails
@@ -26,12 +27,13 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
 // email timely; the EmailSend dedup below makes re-scans idempotent.
 const POST_EXPIRY_LOOKBACK_DAYS = 3
 
-// Rows that can buy the per-post renewal (config.renewalPrice), and only
-// while paid posting is on (see RenewalContext). 'plan' rows are
-// deliberately excluded: each plan post runs config.durationDays and its
-// slot frees when it ends, so the employer posts again into that slot
-// instead of renewing (the renewal checkout 409s them). Legacy free-quota
-// rows re-enter via the dashboard's own path (unchanged).
+// Rows that can buy the per-post renewal (config.renewalPrice, or
+// config.proRenewalPrice for a post bought at the posting price: see
+// renewalInputsFor), and only while paid posting is on (see RenewalContext).
+// 'plan' rows are deliberately excluded: each plan post runs
+// config.durationDays and its slot frees when it ends, so the employer posts
+// again into that slot instead of renewing (the renewal checkout 409s them).
+// Legacy free-quota rows re-enter via the dashboard's own path (unchanged).
 const RENEWABLE_STATUSES = new Set(['promo', 'paid'])
 
 // Statuses whose expiry is worth an email at all — everything that was
@@ -51,6 +53,9 @@ interface RenewalContext {
   now: Date
   nextPostPrices: Map<string, number | null>
 }
+
+/** An EmployerJob with its 'new' charge, if it has one (NEW_POST_CHARGE_SELECT). */
+type ExpiringEmployerJob = EmployerJob & RenewalPriceRow
 
 function readRenewalPurchasable(): boolean {
   try {
@@ -92,15 +97,21 @@ async function nextPostPriceFor(employerJob: EmployerJob, ctx: RenewalContext): 
   return price
 }
 
-/** Renewal inputs for one row: purchasable only for renewable rows while paid posting is on. */
+/**
+ * Renewal inputs for one row: purchasable only for renewable rows while paid
+ * posting is on, and the row's own renewal price (a post bought at the
+ * posting price renews for more than the others: lib/renewal-price.ts), which
+ * both the price an email names and the saving it claims use.
+ */
 async function renewalInputsFor(
-  employerJob: EmployerJob,
+  employerJob: ExpiringEmployerJob,
   ctx: RenewalContext,
-): Promise<{ purchasable: boolean; nextPostPrice: number | null }> {
+): Promise<{ purchasable: boolean; nextPostPrice: number | null; renewalPrice: number }> {
   const purchasable = ctx.purchasable && RENEWABLE_STATUSES.has(employerJob.paymentStatus)
+  const renewalPrice = config.renewalPriceDollarsFor(renewalRungForRow(employerJob))
   // No saving is claimed during the promo, so the price lookup is skipped.
-  if (!purchasable || config.isPromoActive(ctx.now)) return { purchasable, nextPostPrice: null }
-  return { purchasable, nextPostPrice: await nextPostPriceFor(employerJob, ctx) }
+  if (!purchasable || config.isPromoActive(ctx.now)) return { purchasable, nextPostPrice: null, renewalPrice }
+  return { purchasable, nextPostPrice: await nextPostPriceFor(employerJob, ctx), renewalPrice }
 }
 
 /**
@@ -168,7 +179,7 @@ function postExpiryOffer(
  */
 async function sendPostExpiryEmail(
   job: Job,
-  employerJob: EmployerJob,
+  employerJob: ExpiringEmployerJob,
   ctx: RenewalContext,
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -252,8 +263,9 @@ export async function GET(request: NextRequest) {
             expiryWarningSentAt: null,
           },
         },
+        // With each row's 'new' charge, which sets the renewal price it is offered.
         include: {
-          employerJobs: true,
+          employerJobs: { include: NEW_POST_CHARGE_SELECT },
         },
       })
 
@@ -289,6 +301,7 @@ export async function GET(request: NextRequest) {
                 renewalPurchasable: renewal.purchasable,
                 postingPurchasable: renewalCtx.purchasable,
                 nextPostPrice: renewal.nextPostPrice,
+                renewalPrice: renewal.renewalPrice,
                 now,
               },
             )
@@ -337,7 +350,7 @@ export async function GET(request: NextRequest) {
           },
         },
         include: {
-          employerJobs: true,
+          employerJobs: { include: NEW_POST_CHARGE_SELECT },
         },
       })
 

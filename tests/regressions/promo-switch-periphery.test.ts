@@ -255,10 +255,12 @@ describe('2.1 M2: /tools/cost-per-hire-calculator', () => {
         return faq!.mainEntity.map((entry) => entry.acceptedAnswer.text);
     };
 
-    it('while the promo runs: the promo is offered, selected and explained, exactly as before', () => {
+    it('while the promo runs: the promo is offered, selected and explained, beside the dated per-post ladder', () => {
         const markup = html(React.createElement(CostPerHireCalculatorPage));
         expect(markup).toContain('<option value="promo" selected="">');
-        expect(markup.match(/<option /g)).toHaveLength(3);
+        // The promo and the per-post ladder: the Employer plan mode was retired with the plan.
+        expect(markup.match(/<option /g)).toHaveLength(2);
+        expect(markup).not.toContain('value="plan"');
         const text = visibleText(markup);
         expect(text).toContain(`Launch promo: free through ${config.promoEndsLabel}`);
         expect(text).toContain(`During our launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}`);
@@ -272,7 +274,8 @@ describe('2.1 M2: /tools/cost-per-hire-calculator', () => {
         const markup = html(React.createElement(CostPerHireCalculatorPage));
         expect(markup).not.toContain('value="promo"');
         expect(markup).toContain('<option value="per-post" selected="">Per post</option>');
-        expect(markup.match(/<option /g)).toHaveLength(2);
+        expect(markup.match(/<option /g)).toHaveLength(1);
+        expect(markup).not.toContain('value="plan"');
         const text = visibleText(markup);
         expect(text).toContain(`Your first post is $${config.introPrice}, every post after that is $${config.postingPrice} for ${config.durationDays} days`);
         // The default per-post plan prices one intro post: a real price, not $0.
@@ -282,6 +285,17 @@ describe('2.1 M2: /tools/cost-per-hire-calculator', () => {
         const answers = faqAnswers(markup).join('\n');
         expect(answers).toContain(LADDER_PRICES);
         expectLadderOnly(answers, '/tools/cost-per-hire-calculator FAQPage JSON-LD');
+    });
+
+    it('prices no Employer plan in either phase: no plan mode, no months field, no monthly price', () => {
+        for (const now of [PROMO_RUNNING, LADDER_LIVE]) {
+            vi.setSystemTime(now);
+            const markup = html(React.createElement(CostPerHireCalculatorPage));
+            expect(markup).not.toContain('id="cph-plan-months"');
+            for (const text of [visibleText(markup), faqAnswers(markup).join('\n')]) {
+                expect(text, now.toISOString()).not.toMatch(/Employer plan|\/month|active jobs|plan slots?/i);
+            }
+        }
     });
 });
 
@@ -298,8 +312,10 @@ describe('2.1 M2: the comparison pages', () => {
 
         vi.setSystemTime(LADDER_LIVE);
         const after = visibleText(html(React.createElement(Page)));
-        expect(after).toContain(`$${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs. Every post runs ${config.durationDays} days.`);
+        expect(after).toContain(`$${config.introPrice} first post, $${config.postingPrice} after. Every post runs ${config.durationDays} days.`);
         expectLadderOnly(after, _slug);
+        // The Employer plan is retired (owner decision 2026-10-24) in both phases.
+        for (const text of [before, after]) expect(text, _slug).not.toMatch(/Employer plan|\/month|active jobs/);
     });
 
     it('metadata is phase-neutral, so it reads the same on both sides of the switch', async () => {
@@ -336,11 +352,12 @@ describe('2.1 M2: the phase copy follows the house style in both phases', () => 
 });
 
 describe('2.1 M2: /post-job metadata', () => {
-    it('offers the promo while it runs, exactly as the static metadata did', async () => {
+    it('offers the promo while it runs, and dates the ladder from its start', async () => {
         const metadata = await postJobMetadata();
         expect(metadata.description).toBe(
-            `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post, $${config.postingPrice} for every post after that, or $${config.planPrice}/month for ${config.planSlots} active jobs. Every listing includes email alerts to subscribed candidates.`,
+            `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post and $${config.postingPrice} for every post after that. Every listing includes email alerts to subscribed candidates.`,
         );
+        expect(metadata.description).not.toMatch(/Employer plan|\/month|active jobs/);
     });
 
     it('states the ladder once the promo has ended, and keeps the robots gate and canonical in both phases', async () => {

@@ -11,10 +11,11 @@ import { Metadata } from 'next';
 // pricing ladder that has never existed on this board (a ghost inherited
 // from the donor board's copy: /for-employers explicitly says 'No tiers').
 // The real model is the launch promo (every post free through
-// config.promoEndsLabel) followed by the per-post ladder + Employer plan;
-// every number and date derives from lib/config so the metadata cannot
-// drift from the checkout again. (The regression test bans the old tier
-// names from this file, so they are deliberately not quoted here.)
+// config.promoEndsLabel) followed by the per-post ladder (the Employer plan
+// beside it was retired on 2026-10-24); every number and date derives from
+// lib/config so the metadata cannot drift from the checkout again. (The
+// regression test bans the old tier names from this file, so they are
+// deliberately not quoted here.)
 //
 // Launch-promo clock (backlog 2.1): the description offers free posting and
 // dates the ladder only while the promo runs; once config.promoEndsAt has
@@ -39,7 +40,7 @@ export const revalidate = 3600;
 /** The description for `now`: the promo and the dated ladder, or the ladder. */
 function postJobDescription(now: Date): string {
     if (config.isPromoActive(now)) {
-        return `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post, $${config.postingPrice} for every post after that, or $${config.planPrice}/month for ${config.planSlots} active jobs. Every listing includes email alerts to subscribed candidates.`;
+        return `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post and $${config.postingPrice} for every post after that. Every listing includes email alerts to subscribed candidates.`;
     }
     return `Post your ${brand.niche.short} job opening, with every feature included. ${LADDER_PRICES} Every listing includes email alerts to subscribed candidates.`;
 }

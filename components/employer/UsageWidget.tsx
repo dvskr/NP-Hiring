@@ -6,24 +6,19 @@ import Link from 'next/link';
 import { config } from '@/lib/config';
 import { currentQuote } from '@/lib/next-post-quote';
 import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
-import { brand } from '@/config/brand';
 
 /**
  * Dashboard usage strip: Plan card + unlock / InMail meters + "Post Another".
  *
- * The Plan card is the dashboard's compact Employer-plan widget. It reads
- * two endpoints and picks ONE label so the employer is never told two
- * things at once:
- *   1. GET /api/employer/plan — an active plan wins: "Employer plan · N of
- *      M slots used".
- *   2. GET /api/employer/free-quota-status — otherwise the next-post quote:
- *      launch promo ("Free through <date>", only while the promo is still
- *      running on this render) or the paid rung.
- * Without an active plan the card carries the Subscribe link (Stripe
- * Payment Link from the plan endpoint) or, when no link is configured, a
- * mailto to support — the same fallback /pricing uses. A Stripe-billed plan
- * (including one that is past due) instead carries "Manage billing", which
- * opens the Stripe Customer Portal via POST /api/employer/billing-portal.
+ * The Plan card states what the employer's NEXT post is, from
+ * GET /api/employer/free-quota-status: the launch promo ("Free through
+ * <date>", only while the promo is still running on this render) or the
+ * paid rung and its price.
+ *
+ * The Employer plan is retired (owner decision, 2026-10-24): the card no
+ * longer reads the plan status endpoint, pitches no subscription and opens
+ * no Stripe Customer Portal. The card's optional footer action stays for the
+ * next way to buy.
  */
 
 interface UsageData {
@@ -45,17 +40,6 @@ interface QuotaStatus {
     promoEndsLabel?: string;
 }
 
-/** GET /api/employer/plan — see lib/employer-plan.ts#getPlanSlotStatus. */
-interface PlanStatus {
-    plan: { status: string; slots: number; currentPeriodEnd: string; source: string; canManageBilling?: boolean } | null;
-    entitled: boolean;
-    slots: number;
-    used: number;
-    remaining: number;
-    price: number;
-    paymentLinkUrl: string | null;
-}
-
 /* ═══ Clay Design Tokens ═══ */
 const clayCard: React.CSSProperties = {
     borderRadius: '18px',
@@ -73,42 +57,22 @@ const clayIconWrap: React.CSSProperties = {
 export default function UsageWidget() {
     const [data, setData] = useState<UsageData | null>(null);
     const [quota, setQuota] = useState<QuotaStatus | null>(null);
-    const [planStatus, setPlanStatus] = useState<PlanStatus | null>(null);
     const [loading, setLoading] = useState(true);
-    const [billingError, setBillingError] = useState<string | null>(null);
     // The Plan card reads the promo phase as it renders (currentQuote below);
     // this gives a strip left open over config.promoEndsAt the render that
     // drops its promo label.
     useRerenderAtPromoEnd();
 
-    const openBillingPortal = async () => {
-        setBillingError(null);
-        try {
-            const res = await fetch('/api/employer/billing-portal', { method: 'POST' });
-            const body = await res.json().catch(() => null);
-            if (res.ok && body?.url) {
-                window.location.href = body.url;
-                return;
-            }
-            setBillingError(body?.error ?? 'Could not open billing. Please contact support.');
-        } catch {
-            setBillingError('Could not open billing. Please contact support.');
-        }
-    };
-
     useEffect(() => {
-        // Fetch in parallel — usage drives the meters; plan + quota drive the
-        // Plan card (see the header comment for precedence). Each request
-        // degrades independently: a missing plan endpoint just means "no
-        // active plan", never a broken strip.
+        // Fetch in parallel — usage drives the meters; the quote drives the
+        // Plan card. Each request degrades independently: a missing quote
+        // just leaves the card on the tier label, never a broken strip.
         Promise.allSettled([
             fetch('/api/employer/usage').then(r => r.ok ? r.json() : null),
             fetch('/api/employer/free-quota-status').then(r => r.ok ? r.json() : null),
-            fetch('/api/employer/plan').then(r => r.ok ? r.json() : null),
-        ]).then(([usageResult, quotaResult, planResult]) => {
+        ]).then(([usageResult, quotaResult]) => {
             if (usageResult.status === 'fulfilled') setData(usageResult.value);
             if (quotaResult.status === 'fulfilled') setQuota(quotaResult.value);
-            if (planResult.status === 'fulfilled') setPlanStatus(planResult.value);
         }).finally(() => setLoading(false));
     }, []);
 
@@ -140,45 +104,22 @@ export default function UsageWidget() {
 
     const t = tierGradients[tier] || tierGradients.pro;
 
-    // ─── Plan card label (one message, precedence documented up top) ───
+    // ─── Plan card label (one message: the next post) ───
     // The quote is the server's answer from when the dashboard loaded. A
     // 'promo' answer stops holding at config.promoEndsAt, so it counts only
     // while the promo runs on this render (currentQuote). A dashboard left
     // open over the boundary is rendered again at that instant
     // (useRerenderAtPromoEnd above), so it drops the promo label instead of
-    // advertising free posting, and shows the Subscribe pitch the ladder
-    // phase carries.
+    // advertising free posting.
     const liveQuota = currentQuote(quota);
-    const hasActivePlan = planStatus?.entitled === true;
     const quoteMode = liveQuota?.eligible === true ? liveQuota.mode : undefined;
     const promoEndsLabel = liveQuota?.promoEndsLabel ?? config.promoEndsLabel;
-    const planPrice = planStatus?.price ?? config.planPrice;
-    const planSlots = planStatus?.slots && planStatus.slots > 0 ? planStatus.slots : config.planSlots;
 
-    const planLabel = hasActivePlan
-        ? 'Employer plan'
-        : quoteMode === 'promo'
-            ? 'Launch promo'
-            : tierLabel;
-    const planSublabel = hasActivePlan && planStatus
-        ? `${planStatus.used} of ${planStatus.slots} slots used`
-        : quoteMode === 'promo'
-            ? `Free through ${promoEndsLabel}`
-            : quoteMode === 'intro' || quoteMode === 'paid'
-                ? `Next post $${liveQuota?.price ?? config.priceDollarsForTier(liveQuota?.tier)}`
-                : null;
-
-    // Subscribe (Stripe Payment Link) or Contact us (mailto) — only when the
-    // employer is NOT already on a plan. Hidden during the launch promo:
-    // every post is free then, so a subscription pitch would only confuse.
-    const canManageBilling = planStatus?.plan?.canManageBilling === true
-        && (hasActivePlan || planStatus.plan.status === 'past_due');
-    const planAction: CardAction | null = canManageBilling
-        ? { label: billingError ?? 'Manage billing', onClick: openBillingPortal }
-        : !hasActivePlan && quoteMode !== 'promo'
-            ? planStatus?.paymentLinkUrl
-                ? { href: planStatus.paymentLinkUrl, label: `Subscribe · $${planPrice}/mo for ${planSlots} jobs`, external: true }
-                : { href: `mailto:${brand.email.support}`, label: `Contact us · $${planPrice}/mo for ${planSlots} jobs`, external: false }
+    const planLabel = quoteMode === 'promo' ? 'Launch promo' : tierLabel;
+    const planSublabel = quoteMode === 'promo'
+        ? `Free through ${promoEndsLabel}`
+        : quoteMode === 'intro' || quoteMode === 'paid'
+            ? `Next post $${liveQuota?.price ?? config.priceDollarsForTier(liveQuota?.tier)}`
             : null;
 
     return (
@@ -188,7 +129,7 @@ export default function UsageWidget() {
             gap: '10px',
             marginBottom: '24px',
         }}>
-            {/* ─── Plan card — active plan / launch promo / next-post rung, plus Subscribe or Contact ─── */}
+            {/* ─── Plan card — launch promo / next-post rung ─── */}
             <CompactCard
                 icon={<Zap size={14} color="#fff" />}
                 iconBg={t.gradient}
@@ -197,7 +138,6 @@ export default function UsageWidget() {
                 value={planLabel}
                 valueColor={t.accent}
                 sub={planSublabel}
-                action={planAction}
             />
 
             {/* ─── Candidate Unlocks ─── */}
@@ -270,7 +210,7 @@ export default function UsageWidget() {
     );
 }
 
-/** Plan card footer: a link (Subscribe / Contact) or a button (Manage billing). */
+/** Plan card footer: a link or a button. No caller passes one since the Employer plan was retired. */
 type CardAction =
     | { href: string; label: string; external: boolean }
     | { label: string; onClick: () => void };
@@ -286,7 +226,7 @@ function CompactCard({
     value: string;
     valueColor: string;
     sub: string | null;
-    /** Optional footer action — Subscribe (Payment Link), Contact (mailto) or Manage billing (portal). */
+    /** Optional footer action: a link, or a button. */
     action?: CardAction | null;
 }) {
     const actionStyle: React.CSSProperties = {

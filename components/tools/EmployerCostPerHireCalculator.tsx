@@ -9,9 +9,12 @@
  * render as free, and a made-up benchmark on a page that concludes our product
  * is cheaper would be indefensible.
  *
- * Our side has three ways to buy (launch promo → free; per-post ladder; the
- * Employer plan) and the widget prices whichever one the reader picks, so a
- * $0 promo result is always labelled as a dated window rather than a rate.
+ * Our side has two ways to buy (launch promo → free; the per-post ladder),
+ * since the Employer plan was retired on 2026-10-24, and the widget prices
+ * whichever one the reader picks, so a $0 promo result is always labelled
+ * as a dated window rather than a rate. Each renewal is priced by
+ * the post it renews (lib/renewal-price.ts): the intro post's and a promo
+ * post's at the base price, a later post's at the pro price.
  * Which ways are on offer follows the launch-promo clock: the server page
  * decides the phase per render and passes it in (`phase`), so the server
  * HTML and the hydrated widget agree. Once the promo has ended the promo is
@@ -34,13 +37,11 @@ import ToolStyles from './ToolStyles';
 import { parsePlainAmount } from './parse-amount';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle } from './tool-theme';
 import {
-    DEFAULT_PLAN_MONTHS,
     FIRST_YEAR_BASE_SOURCE,
     FLAT_FEE_COST_PER_DAY,
     FLAT_FEE_PRICING,
     FREE_POST_SCOPE_NOTE,
     INTRO_PRICE_SCOPE_NOTE,
-    PLAN_NO_RENEWALS_NOTE,
     RENEWAL_SCOPE_NOTE,
     compareChannels,
     defaultInputs,
@@ -48,6 +49,7 @@ import {
     flatFeeModeOptions,
     flatFeeSpend,
     offeredFlatFeeMode,
+    perPostRenewalPrices,
     rankByCostPerHire,
     type CostPerHireInputs,
     type FlatFeeMode,
@@ -61,7 +63,6 @@ function toDraft(inputs: CostPerHireInputs): Draft {
     return {
         roles: String(inputs.roles),
         renewalsPerRole: String(inputs.renewalsPerRole),
-        planMonths: String(inputs.planMonths),
         hiresPerRole: String(inputs.hiresPerRole),
         flatFeeApplicantsPerRole: String(inputs.flatFeeApplicantsPerRole),
         flatFeeTimeToFillDays: String(inputs.flatFeeTimeToFillDays),
@@ -176,7 +177,6 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
             renewalsPerRole: num(draft.renewalsPerRole),
             flatFeeMode,
             useIntroPrice,
-            planMonths: num(draft.planMonths),
             hiresPerRole: num(draft.hiresPerRole),
             flatFeeApplicantsPerRole: num(draft.flatFeeApplicantsPerRole),
             flatFeeTimeToFillDays: num(draft.flatFeeTimeToFillDays),
@@ -244,9 +244,8 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                 )}
                 {formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is{' '}
                 {formatUsd(FLAT_FEE_PRICING.postingPrice)} for {FLAT_FEE_PRICING.durationDays} days
-                ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day), or {formatUsd(FLAT_FEE_PRICING.planPrice)}/month for{' '}
-                {FLAT_FEE_PRICING.planSlots} active jobs. Renewal: {RENEWAL_SCOPE_NOTE}; {PLAN_NO_RENEWALS_NOTE}.
-                Every post includes {FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks and{' '}
+                ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day). {RENEWAL_SCOPE_NOTE} Every post includes{' '}
+                {FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks and{' '}
                 {FLAT_FEE_PRICING.inmailsPerPosting} direct messages.
             </p>
             <div style={{ marginBottom: '10px' }}>
@@ -271,24 +270,13 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                     value={draft.flatFeeApplicantsPerRole}
                     onChange={set('flatFeeApplicantsPerRole')}
                 />
-                {flatFeeMode === 'plan' ? (
-                    <NumberField
-                        id="cph-plan-months"
-                        label="Months on the Employer plan"
-                        hint={`Starts at ${DEFAULT_PLAN_MONTHS}, our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. There are no renewals to price, because ${PLAN_NO_RENEWALS_NOTE}.`}
-                        value={draft.planMonths}
-                        suffix="months"
-                        onChange={set('planMonths')}
-                    />
-                ) : (
-                    <NumberField
-                        id="cph-renewals"
-                        label="Renewals per role"
-                        hint={`Each renewal adds ${formatUsd(FLAT_FEE_PRICING.renewalPrice)} and another ${FLAT_FEE_PRICING.durationDays} days, up to ${FLAT_FEE_PRICING.renewalCapDays} days after the post first went live. It does not add unlocks or messages.`}
-                        value={draft.renewalsPerRole}
-                        onChange={set('renewalsPerRole')}
-                    />
-                )}
+                <NumberField
+                    id="cph-renewals"
+                    label="Renewals per role"
+                    hint={`Each renewal adds another ${FLAT_FEE_PRICING.durationDays} days, up to ${FLAT_FEE_PRICING.renewalCapDays} days after the post first went live. It does not add unlocks or messages.`}
+                    value={draft.renewalsPerRole}
+                    onChange={set('renewalsPerRole')}
+                />
             </div>
             {flatFeeMode === 'per-post' && (
                 <label
@@ -416,14 +404,7 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                             {flat.introPostings > 0 && `${flat.introPostings} intro post at ${formatUsd(FLAT_FEE_PRICING.introPrice)}, `}
                             {flat.proPostings} {flat.proPostings === 1 ? 'post' : 'posts'} at{' '}
                             {formatUsd(FLAT_FEE_PRICING.postingPrice)} and {flat.renewals}{' '}
-                            {flat.renewals === 1 ? 'renewal' : 'renewals'} at {formatUsd(FLAT_FEE_PRICING.renewalPrice)}
-                        </>
-                    )}
-                    {flat.mode === 'plan' && (
-                        <>
-                            {flat.planCount} Employer {flat.planCount === 1 ? 'plan' : 'plans'} ({FLAT_FEE_PRICING.planSlots}{' '}
-                            active job slots each) for {flat.planMonths} {flat.planMonths === 1 ? 'month' : 'months'} at{' '}
-                            {formatUsd(FLAT_FEE_PRICING.planPrice)}/month, no renewals to price
+                            {flat.renewals === 1 ? 'renewal' : 'renewals'}{perPostRenewalPrices(flat)}
                         </>
                     )}
                     , for a total of <strong>{formatUsd(flat.total)}</strong>.
@@ -435,15 +416,9 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                     )}
                     {ourCostPerHire === 0 && (
                         <>
-                            {' '}That is the launch promo doing the work: {FREE_POST_SCOPE_NOTE}. Switch to a{' '}
+                            {' '}That is the launch promo doing the work: {FREE_POST_SCOPE_NOTE}. Switch to the{' '}
                             {FLAT_FEE_PRICING.ladderStartsLabel} option above to see what the same roles cost once it
                             ends.
-                        </>
-                    )}
-                    {flat.mode === 'plan' && flat.planCount > 1 && (
-                        <>
-                            {' '}Modelled as enough plans to hold every role at once. Swapping roles through fewer slots
-                            costs less.
                         </>
                     )}
                 </p>

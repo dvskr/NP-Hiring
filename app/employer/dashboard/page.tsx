@@ -1,6 +1,9 @@
 import { brand } from '@/config/brand';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { config } from '@/lib/config';
+import { NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
+import { renewalRungForRow } from '@/lib/renewal-price';
 import { redirect } from 'next/navigation';
 import { Metadata } from 'next';
 import { requireEmployer } from '@/lib/auth/protect';
@@ -43,7 +46,9 @@ export default async function EmployerDashboardPage() {
                         select: { jobApplications: true }
                     }
                 }
-            }
+            },
+            // Each row's 'new' charge, which sets the renewal price it pays.
+            ...NEW_POST_CHARGE_SELECT,
         },
         orderBy: {
             createdAt: 'desc',
@@ -65,6 +70,9 @@ export default async function EmployerDashboardPage() {
         editToken: record.editToken,
         paymentStatus: record.paymentStatus,
         pricingTier: record.pricingTier || 'pro',
+        // What this post pays to renew: the client cannot work it out, since
+        // it has neither the ledger nor lib/renewal-price.ts.
+        renewalPrice: config.renewalPriceDollarsFor(renewalRungForRow(record)),
         slug: record.job.slug,
     }));
 

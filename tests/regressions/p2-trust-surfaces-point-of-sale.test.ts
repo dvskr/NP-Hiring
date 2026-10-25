@@ -20,6 +20,11 @@
  *   4. /for-employers discloses the pricing terms (launch-promo end date and
  *      the 2027 ladder) from config tokens, never typed-in numbers;
  *   5. the comparison table keeps its honesty guarantees.
+ *
+ * The typed-price guards are built from lib/config (PRICE_LITERAL below), so
+ * they ban whatever the ladder charges today: a list typed into this file
+ * banned $199 / $299 / $399 and would have let a hard-coded $249 or $349
+ * through after the 2027 re-price.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -44,6 +49,31 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
  */
 const code = (src: string) =>
     src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+/**
+ * Every dollar figure config prices something at: the two post prices, the
+ * two renewal prices, and the retired plan's monthly price, which no point
+ * of sale may print either. A typed literal of any of them goes stale the
+ * day config changes.
+ */
+const CONFIG_PRICES = [...new Set([
+    pricingConfig.introPrice,
+    pricingConfig.postingPrice,
+    pricingConfig.renewalPrice,
+    pricingConfig.proRenewalPrice,
+    pricingConfig.planPrice,
+])];
+const PRICE_LITERAL = new RegExp(`\\$(?:${CONFIG_PRICES.join('|')})(?![\\d,])`);
+
+describe('P2 #16: the typed-price guard follows config', () => {
+    it('catches a typed literal of every price config holds, the new ladder included', () => {
+        for (const price of [pricingConfig.introPrice, pricingConfig.postingPrice, pricingConfig.renewalPrice, pricingConfig.proRenewalPrice]) {
+            expect(PRICE_LITERAL.test(`only $${price} today`), String(price)).toBe(true);
+        }
+        // A config token in a template is not a literal.
+        expect(PRICE_LITERAL.test('only $${config.postingPrice} today')).toBe(false);
+    });
+});
 
 const preview = read('app/post-job/preview/page.tsx');
 const checkoutLayout = read('app/post-job/checkout/layout.tsx');
@@ -88,9 +118,7 @@ describe('P2 #16 — the price is visible before checkout', () => {
         expect(preview).toContain(': config.postingPrice;');
         expect(preview).toContain('`$${config.introPrice} today, the intro price for your first post`');
         // No typed-in dollar amount in the preview page's actual markup.
-        expect(previewCode).not.toMatch(/\$199\b/);
-        expect(previewCode).not.toMatch(/\$299\b/);
-        expect(previewCode).not.toMatch(/\$399\b/);
+        expect(previewCode).not.toMatch(PRICE_LITERAL);
     });
 
     it('shows nothing rather than a wrong price while quota status is unknown', () => {
@@ -136,10 +164,17 @@ describe('P2 #16 — checkout carries the policy and real social proof', () => {
     });
 
     it('renders price and package figures from lib/config', () => {
+        expect(checkoutLayout).toContain('config.introPrice');
         expect(checkoutLayout).toContain('config.postingPrice');
         expect(checkoutLayout).toContain('config.durationDays');
         expect(checkoutLayout).toContain('config.limits.candidateUnlocksPerPosting');
-        expect(checkoutLayoutCode).not.toMatch(/\$199\b/);
+        expect(checkoutLayoutCode).not.toMatch(PRICE_LITERAL);
+    });
+
+    it('pitches no Employer plan beside a per-post checkout (the plan is retired)', () => {
+        expect(checkoutLayoutCode).not.toMatch(/Employer plan|\/month/i);
+        expect(checkoutLayout).not.toContain('config.planPrice');
+        expect(checkoutLayout).not.toContain('config.planSlots');
     });
 
     it('uses the consent-gated testimonial component for social proof', () => {
@@ -226,9 +261,10 @@ describe('P2 #16 — the point-of-sale trust copy clears AA on the surface it la
 describe('P2 #16 — /for-employers discloses the pricing terms', () => {
     it('states the launch-promo end date and the 2027 ladder from config wherever a price is sold', () => {
         // 2026-09-12 pricing change: every post is free through
-        // config.promoEndsLabel, then the intro / featured / plan ladder. The
-        // old "one free post, shorter duration" disclosure is gone because
-        // the concept is — every post now runs config.durationDays.
+        // config.promoEndsLabel, then the intro / featured ladder (the
+        // Employer plan beside it was retired on 2026-10-24). The old "one
+        // free post, shorter duration" disclosure is gone because the
+        // concept is: every post now runs config.durationDays.
         // Backlog 2.1: the page prints these from forEmployersCopy(now), so
         // the disclosure is pinned on the builder in both phases: the promo
         // with its end date and the dated ladder while it runs, the plain
@@ -237,11 +273,11 @@ describe('P2 #16 — /for-employers discloses the pricing terms', () => {
         expect(promo.headline).toBe(`Free through ${pricingConfig.promoEndsLabel}`);
         expect(promo.receiptStamp).toBe(promo.headline);
         expect(promo.ladder).toBe(
-            `From ${pricingConfig.ladderStartsLabel}: your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}, or $${pricingConfig.planPrice}/month for ${pricingConfig.planSlots} active jobs.`,
+            `From ${pricingConfig.ladderStartsLabel}: your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}.`,
         );
         const ladder = forEmployersCopy(LADDER_START);
         expect(ladder.ladder).toBe(
-            `Your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}, or $${pricingConfig.planPrice}/month for ${pricingConfig.planSlots} active jobs.`,
+            `Your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}.`,
         );
         expect(ladder.receiptTotal).toBe(`From $${pricingConfig.introPrice}`);
         // The receipt and the pricing card print that sentence, and the
@@ -252,7 +288,7 @@ describe('P2 #16 — /for-employers discloses the pricing terms', () => {
         for (const src of [employersCode, builderCode]) {
             expect(src).not.toContain('One free post per organization');
             expect(src).not.toMatch(/first post (is )?free/i);
-            expect(src).not.toMatch(/\$(199|299|399)\b/);
+            expect(src).not.toMatch(PRICE_LITERAL);
         }
     });
 
@@ -312,10 +348,12 @@ describe('P2 #16 — the comparison table is honest', () => {
         const rows = comparison.slice(comparison.indexOf('const INVENTORY_ROW'));
         const flatRow = rows.split('\n').find((l) => l.includes('Flat Per-Post Pricing, No Bidding'));
         expect(flatRow).toBeDefined();
-        expect(flatRow).toContain('From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs');
+        expect(flatRow).toContain('From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after. Others bill per click or per day');
         const durationRow = rows.split('\n').find((l) => l.includes('-Day Listing Duration'));
         expect(durationRow).toContain('Every post runs ${config.durationDays} days. Competitor durations vary by plan');
-        expect(comparisonCode).not.toMatch(/\$(199|299|399)\b/);
+        expect(comparisonCode).not.toMatch(PRICE_LITERAL);
+        // The retired Employer plan is no row and no note any more.
+        expect(comparisonCode).not.toMatch(/config\.plan(?:Price|Slots)|\/month|active jobs/);
     });
 
     it('drops the free-posting row and the ladder date once the promo has ended', () => {
@@ -325,7 +363,7 @@ describe('P2 #16 — the comparison table is honest', () => {
         expect(after.map((r) => r.feature).join('\n')).not.toMatch(/Free Posting/);
         expect(after).toHaveLength(during.length - 1);
         const flat = after.find((r) => r.feature === 'Flat Per-Post Pricing, No Bidding');
-        expect(flat?.note).toBe(`$${pricingConfig.introPrice} first post, $${pricingConfig.postingPrice} after, or $${pricingConfig.planPrice}/month for ${pricingConfig.planSlots} active jobs. Others bill per click or per day`);
+        expect(flat?.note).toBe(`$${pricingConfig.introPrice} first post, $${pricingConfig.postingPrice} after. Others bill per click or per day`);
         expect(JSON.stringify(after)).not.toContain(pricingConfig.promoEndsLabel);
         expect(JSON.stringify(after)).not.toContain(pricingConfig.ladderStartsLabel);
     });
