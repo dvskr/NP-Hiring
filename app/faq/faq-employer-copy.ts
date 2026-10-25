@@ -16,10 +16,12 @@
  * canonical copy on /pricing (lib/pricing-copy.ts and
  * app/pricing/pricing-page-copy.ts), so the FAQPage JSON-LD never tells
  * Google a different price than the pricing page does. The Employer plan is
- * retired (owner decision, 2026-10-24), so no answer here offers it.
+ * retired (owner decision, 2026-10-24), so no answer here offers it; the
+ * 5-post pack answer that took its place is the shared one /pricing and
+ * /for-employers print, dated while the promo runs.
  */
 import { config } from '@/lib/config';
-import { FULL_PACKAGE, LADDER_PRICES, PROMO_HEADLINE, PROMO_SUB, ladderLine } from '@/lib/pricing-copy';
+import { FULL_PACKAGE, LADDER_PRICES, PACK_FAQ_QUESTION, PROMO_HEADLINE, PROMO_SUB, ladderLine, packFaqAnswer } from '@/lib/pricing-copy';
 
 export interface FaqEntry {
   question: string;
@@ -35,7 +37,7 @@ const INTRO_SCOPE = `It is scoped to your organization's domain, not to a login,
 
 /**
  * The leading /faq employer entries for `now`, in page order: cost,
- * features, intro price. Call it per render.
+ * features, intro price, 5-post pack. Call it per render.
  */
 export function employerPricingFaqs(now: Date): FaqEntry[] {
   const promoActive = config.isPromoActive(now);
@@ -55,6 +57,10 @@ export function employerPricingFaqs(now: Date): FaqEntry[] {
       answer: promoActive
         ? `From ${config.ladderStartsLabel}, the first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. ${INTRO_SCOPE}`
         : `The first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. ${INTRO_SCOPE}`,
+    },
+    {
+      question: PACK_FAQ_QUESTION,
+      answer: packFaqAnswer(now),
     },
   ];
 }

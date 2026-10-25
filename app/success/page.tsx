@@ -25,12 +25,13 @@ function SuccessContent() {
 
   // No-charge posts don't go through Stripe — they post directly via
   // /api/jobs/post-free and redirect here with `?mode=promo` (launch period)
-  // or `?mode=plan` (Employer-plan slot). `?free=true` is the pre-ladder
+  // or `?mode=pack` (a 5-post pack credit; the Employer plan's `?mode=plan`
+  // went with the plan's posting path). `?free=true` is the pre-ladder
   // spelling and still means "posted free during the promo". Nothing to
   // verify in any of these cases.
-  const isPlanMode = modeParam === 'plan';
+  const isPackMode = modeParam === 'pack';
   const isPromoMode = modeParam === 'promo' || freeParam === 'true';
-  const isFreeMode = isPlanMode || isPromoMode;
+  const isFreeMode = isPackMode || isPromoMode;
 
   const [state, setState] = useState<{
     loading: boolean;
@@ -60,9 +61,10 @@ function SuccessContent() {
     if (isFreeMode) {
       clearJobDraft();
       // P7: no-charge post conversion event (no Stripe purchase event fires
-      // for promo / plan posts)
+      // for promo / pack posts; the pack's own purchase event fired when it
+      // was bought)
       const jobId = searchParams.get('jobId') ?? 'unknown';
-      trackSubmitFreePost(jobId, isPlanMode ? 'plan' : 'promo');
+      trackSubmitFreePost(jobId, isPackMode ? 'pack' : 'promo');
       return;
     }
 
@@ -125,7 +127,7 @@ function SuccessContent() {
 
     tick();
     return () => { cancelled = true; };
-  }, [sessionId, isFreeMode, isPlanMode]);
+  }, [sessionId, isFreeMode, isPackMode]);
 
   // ─── Clay design tokens (match post-job/preview/dashboard pages) ───
   const pageWrap: React.CSSProperties = {
@@ -248,8 +250,8 @@ function SuccessContent() {
           <p style={{ fontSize: '16px', color: '#5A6B73', margin: '0 0 6px', lineHeight: 1.6 }}>
             {state.session?.jobTitle
               ? <>Your job <strong style={{ color: '#1A2E35' }}>{state.session.jobTitle}</strong> is now live on {brand.name}.</>
-              : isPlanMode
-                ? 'Your job is live. Posted under your Employer plan.'
+              : isPackMode
+                ? `Your job is live. Posted with your ${config.packPosts}-post pack.`
                 : isPromoMode
                   ? `Your job is live. Free during our launch period through ${config.promoEndsLabel}.`
                   : 'Your job post is now live.'}

@@ -28,7 +28,9 @@
  * The renewal PRICES are lib/pricing-copy.ts#RENEWAL_LINE, shared with every
  * surface that states them. The Employer plan is retired (owner decision,
  * 2026-10-24): neither phase offers it, and nothing here reads its price or
- * slot count.
+ * slot count. The 5-post pack took its place (phase 3 of the 2027 re-price):
+ * a card beside the two post cards, dated from the ladder's start while the
+ * promo runs, and the shared pack FAQ in both phases.
  */
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
@@ -37,10 +39,14 @@ import {
     LADDER_FROM_LINE,
     LADDER_HEADLINE,
     LADDER_PRICES,
+    PACK_COMPARISON,
+    PACK_FAQ_QUESTION,
     PROMO_HEADLINE,
     PROMO_SUB,
     RENEWAL_LINE,
     ladderLine,
+    packFaqAnswer,
+    packPriceLine,
 } from '@/lib/pricing-copy';
 
 export const FEATURES_LINE = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
@@ -65,6 +71,12 @@ export interface PricingPageCopy {
     ladderHeading: string;
     ladderIntro: string;
     ladderNote: string;
+    /**
+     * The 5-post pack card's note. While the promo runs it opens on the pack
+     * price dated from config.ladderStartsLabel, and the card offers no way
+     * to buy; once the ladder is live the price is the card's own figure.
+     */
+    packNote: string;
     /** Body of the comparison section's CTA card. */
     ctaBlurb: string;
     /** The post-a-job button: that CTA card, and the hero once the promo card is gone. */
@@ -96,6 +108,12 @@ const INTRO_FAQ: PricingFaq = {
     a: `The intro price ($${config.introPrice}) applies to the first paid post per company email domain. It is scoped to your organization, not to a login, and posts made free during the launch promo don't use it up.`,
 };
 
+/** The pack card's note after its dated price (while the promo runs) or on its own. */
+const PACK_CARD_TERMS = `Each post runs ${config.durationDays} days with the same features. ${PACK_COMPARISON}`;
+
+/** The shared pack answer (lib/pricing-copy.ts), dated while the promo runs. */
+const packFaq = (now: Date): PricingFaq => ({ q: PACK_FAQ_QUESTION, a: packFaqAnswer(now) });
+
 /** While the promo runs: the promo first, then the ladder dated from its start. */
 function promoCopy(now: Date): PricingPageCopy {
     const ladder = ladderLine(now);
@@ -109,6 +127,7 @@ function promoCopy(now: Date): PricingPageCopy {
         ladderHeading: `Starting ${config.ladderStartsLabel}`,
         ladderIntro: ladder,
         ladderNote: `Until then, every post is free, and every rung gets the same package: ${FEATURES_LINE}.`,
+        packNote: `${packPriceLine(now)} ${PACK_CARD_TERMS}`,
         ctaBlurb: `Every post is free through ${config.promoEndsLabel}, with all features included. From ${config.ladderStartsLabel}, from $${config.introPrice}.`,
         postCta: 'Post a Job: Free',
         packageSection: null,
@@ -116,6 +135,7 @@ function promoCopy(now: Date): PricingPageCopy {
             { q: 'How long is posting free?', a: `${PROMO_HEADLINE}. ${PROMO_SUB} Promo posts run the full ${config.durationDays} days even if that runs past the promo, and they can be renewed like an intro or featured post.` },
             { q: `What happens on ${config.ladderStartsLabel}?`, a: `${ladder} ${RENEWAL_LINE} Every post, whether promo, intro, or featured, gets exactly the same features. There is no stripped-down tier.` },
             INTRO_FAQ,
+            packFaq(now),
         ],
         meta: {
             title: `Pricing | ${brand.niche.short} Job Board | Free Through ${config.promoEndsLabel}`,
@@ -144,6 +164,7 @@ function ladderCopy(now: Date): PricingPageCopy {
         ladderHeading: 'What a post costs',
         ladderIntro: ladderLine(now),
         ladderNote: `Every rung gets the same package: ${FEATURES_LINE}.`,
+        packNote: PACK_CARD_TERMS,
         ctaBlurb: `${LADDER_FROM_LINE} No bidding, no contracts.`,
         postCta: 'Post a Job',
         // The heading /for-employers gives the same grid, and the promo card's
@@ -157,6 +178,7 @@ function ladderCopy(now: Date): PricingPageCopy {
             { q: 'How much does it cost to post a job?', a: `${LADDER_PRICES} ${FULL_PACKAGE}` },
             { q: 'Do all prices include the same features?', a: 'Yes. Every post, whether intro or featured, gets exactly the same features. There is no stripped-down tier.' },
             INTRO_FAQ,
+            packFaq(now),
         ],
         meta: {
             title: `Pricing | ${brand.niche.short} Job Board | Posts From $${config.introPrice}`,

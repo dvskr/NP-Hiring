@@ -69,25 +69,41 @@ export function usablePackWhere(userId: string, now: Date): Prisma.EmployerPostP
   return { userId, status: 'paid', expiresAt: { gt: now }, creditsRemaining: { gt: 0 } };
 }
 
+/**
+ * The packs that still stand for `userId` at `now`: paid and unexpired,
+ * whether or not a credit is left, so a used-up pack keeps reporting its
+ * totals ("5 of 5 used") until it expires.
+ */
+export function currentPackWhere(userId: string, now: Date): Prisma.EmployerPostPackWhereInput {
+  return { userId, status: 'paid', expiresAt: { gt: now } };
+}
+
 /** The order credits are spent in: the pack that expires first, then the oldest. */
 const SPEND_ORDER: Prisma.EmployerPostPackOrderByWithRelationInput[] = [{ expiresAt: 'asc' }, { purchasedAt: 'asc' }];
 
 export interface PackCreditStatus {
   /** At least one credit can be spent now. */
   usable: boolean;
-  /** Credits left across the account's usable packs. */
+  /** Credits left across the account's current packs. */
   remaining: number;
+  /** Credits those packs have spent on posts (total less remaining; a revoked credit is neither). */
+  used: number;
   /** Credits those packs hold, used or not (sold less revoked). */
   total: number;
-  /** When the pack a post spends from next expires; null without a usable pack. */
+  /**
+   * When the pack a post spends from next expires. With every current pack
+   * used up, when the last of them expires; null without a current pack.
+   */
   expiresAt: Date | null;
 }
 
-const noPackCredit = (): PackCreditStatus => ({ usable: false, remaining: 0, total: 0, expiresAt: null });
+const noPackCredit = (): PackCreditStatus => ({ usable: false, remaining: 0, used: 0, total: 0, expiresAt: null });
 
 /**
- * What the account can spend now, across its usable packs. Pass a
- * transaction client as `db` to read it through the transaction's snapshot.
+ * What the account holds and can spend now, across its current packs (paid
+ * and unexpired: a used-up pack still counts, so its totals stay readable).
+ * Pass a transaction client as `db` to read it through the transaction's
+ * snapshot.
  */
 export async function getPackCreditStatus(
   userId: string | null | undefined,
@@ -96,16 +112,21 @@ export async function getPackCreditStatus(
 ): Promise<PackCreditStatus> {
   if (!userId) return noPackCredit();
   const packs = await db.employerPostPack.findMany({
-    where: usablePackWhere(userId, now),
+    where: currentPackWhere(userId, now),
     select: { creditsRemaining: true, creditsTotal: true, creditsRevoked: true, expiresAt: true },
     orderBy: SPEND_ORDER,
   });
   if (packs.length === 0) return noPackCredit();
+  const remaining = packs.reduce((sum, pack) => sum + pack.creditsRemaining, 0);
+  const total = packs.reduce((sum, pack) => sum + pack.creditsTotal - pack.creditsRevoked, 0);
+  // The pack a post spends next: the first in spend order with a credit left.
+  const next = packs.find((pack) => pack.creditsRemaining > 0);
   return {
-    usable: true,
-    remaining: packs.reduce((sum, pack) => sum + pack.creditsRemaining, 0),
-    total: packs.reduce((sum, pack) => sum + pack.creditsTotal - pack.creditsRevoked, 0),
-    expiresAt: packs[0].expiresAt,
+    usable: next !== undefined,
+    remaining,
+    used: total - remaining,
+    total,
+    expiresAt: (next ?? packs[packs.length - 1]).expiresAt,
   };
 }
 

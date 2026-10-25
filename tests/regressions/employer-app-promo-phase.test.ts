@@ -29,7 +29,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ts from 'typescript';
 import { config } from '@/lib/config';
-import { LADDER_PRICES } from '@/lib/pricing-copy';
+import { LADDER_PRICES, packUseByLabel } from '@/lib/pricing-copy';
 import { postJobPricingCopy } from '@/app/post-job/_lib/post-job-pricing-copy';
 import PreviewPage from '@/app/post-job/preview/page';
 import UsageWidget from '@/components/employer/UsageWidget';
@@ -93,6 +93,12 @@ function render(component: React.ComponentType, state: unknown[]): string {
 /** GET /api/employer/free-quota-status payloads, as lib/pricing.ts#quoteForMode shapes them. */
 const PROMO_QUOTE = { eligible: true, mode: 'promo', tier: 'pro', willBeFree: true, price: 0, priceCents: 0, durationDays: config.durationDays, promoEndsLabel: config.promoEndsLabel };
 const INTRO_QUOTE = { eligible: true, mode: 'intro', tier: 'intro', willBeFree: false, price: config.introPrice, priceCents: config.stripeIntroPriceInCents, durationDays: config.durationDays };
+/** A usable 5-post pack credit (2027 re-price, phase 3): 3 of 5 left. */
+const PACK_EXPIRES = '2027-12-01T12:00:00.000Z';
+const PACK_QUOTE = {
+    eligible: true, mode: 'pack', tier: 'pack', willBeFree: true, price: 0, priceCents: 0, durationDays: config.durationDays,
+    pack: { remaining: 3, used: config.packPosts - 3, total: config.packPosts, expiresAt: PACK_EXPIRES },
+};
 
 describe('/post-job wizard: postJobPricingCopy', () => {
     it('during the promo: the sentences the wizard has always printed', () => {
@@ -182,6 +188,24 @@ describe('/post-job/preview: the package line and caption', () => {
         expect(html).toContain(`Continue to Payment: $${config.introPrice}`);
         expect(html).not.toMatch(PROMO_OFFER);
     });
+
+    it('a 5-post pack credit: posted from the pack, captioned "Included in your post pack." (D19), with no payment', () => {
+        vi.setSystemTime(LATER);
+        const html = renderPreview(PACK_QUOTE);
+        expect(html).toContain(`From your ${config.packPosts}-post pack, live for ${config.durationDays} days`);
+        expect(html).toContain(`2 of ${config.packPosts} pack posts left after this one`);
+        expect(html).toContain('Included in your post pack.');
+        expect(html).toContain('Looks Good, Post Job');
+        expect(html).not.toContain('Continue to Payment');
+        expect(html).not.toMatch(/launch promo|launch period|\$0\b|Employer plan|plan slot/i);
+    });
+
+    it('sends a pack post to /success?mode=pack, as a promo post to ?mode=promo', () => {
+        const src = read('app/post-job/preview/page.tsx');
+        expect(src).toContain("const postedMode = result.mode === 'pack' || result.mode === 'promo' ? result.mode : null;");
+        expect(src).toContain('router.push(postedMode ? `/success?mode=${postedMode}` : \'/success?free=true\');');
+        expect(src).not.toMatch(/result\.mode === 'plan'/);
+    });
 });
 
 describe('dashboard usage strip: the Plan card', () => {
@@ -193,9 +217,10 @@ describe('dashboard usage strip: the Plan card', () => {
             inmails: { used: 0, limit: config.limits.inmailsPerPosting, unlimited: false },
         },
     };
-    // useState order: data, quota, loading. The strip reads no plan status
-    // any more: the Employer plan is retired (owner decision 2026-10-24).
-    const renderStrip = (quote: object | null): string => render(UsageWidget, [USAGE, quote, false]);
+    // useState order: data, quota, loading, packs (GET /api/employer/post-packs).
+    // The strip reads no plan status any more: the Employer plan is retired
+    // (owner decision 2026-10-24); the 5-post pack took its card's action.
+    const renderStrip = (quote: object | null, packs: object | null = null): string => render(UsageWidget, [USAGE, quote, false, packs]);
     /** The retired plan's pitch, in any of the forms the strip used to print. */
     const PLAN_PITCH = /Employer plan|Subscribe|Contact us|Manage billing|\/mo\b|slots? used/;
 
@@ -228,6 +253,56 @@ describe('dashboard usage strip: the Plan card', () => {
         expect(src).not.toMatch(/\/api\/employer\/(?:plan|billing-portal)\b/);
         expect(src).not.toContain('config.planPrice');
         expect(src).not.toContain('config.planSlots');
+    });
+
+    describe('the 5-post pack (2027 re-price, phase 3)', () => {
+        const BUY = `Buy ${config.packPosts} posts · ${config.formatDollars(config.packPrice)}`;
+        const credit = (remaining: number) => ({ remaining, used: config.packPosts - remaining, total: config.packPosts, expiresAt: PACK_EXPIRES });
+        const PAID_QUOTE = { eligible: true, mode: 'paid', tier: 'pro', willBeFree: false, price: config.postingPrice, priceCents: config.stripePriceInCents, durationDays: config.durationDays };
+
+        it('a usable credit: "N of 5 posts left" and the date to use them by', () => {
+            vi.setSystemTime(LATER);
+            const html = renderStrip(PACK_QUOTE, { saleOpen: false, credit: credit(3) });
+            expect(html).toContain(`3 of ${config.packPosts} posts left`);
+            expect(html).toContain(`Use by ${packUseByLabel(new Date(PACK_EXPIRES))}`);
+            expect(html).not.toContain(BUY);
+        });
+
+        it('while the sale is open: a way to buy the pack, to /employer/post-pack', () => {
+            vi.setSystemTime(LATER);
+            const html = renderStrip(INTRO_QUOTE, { saleOpen: true, credit: null });
+            expect(html).toContain(`<a href="/employer/post-pack"`);
+            expect(html).toContain(BUY);
+            // The card still states the next post's price.
+            expect(html).toContain(`Next post $${config.introPrice}`);
+        });
+
+        it('a used-up pack: "5 of 5 posts used", then the next post price', () => {
+            vi.setSystemTime(LATER);
+            const html = renderStrip(PAID_QUOTE, { saleOpen: true, credit: credit(0) });
+            expect(html).toContain(`${config.packPosts} of ${config.packPosts} posts used`);
+            expect(html).toContain(`Next post $${config.postingPrice}`);
+            expect(html).toContain(BUY);
+        });
+
+        it('takes the credit from the quote when the pack list is not there', () => {
+            vi.setSystemTime(LATER);
+            const html = renderStrip(PACK_QUOTE, null);
+            expect(html).toContain(`3 of ${config.packPosts} posts left`);
+            expect(html).not.toContain(BUY);
+        });
+
+        it('while the promo runs the promo wins, as it does when posting, and nothing is sold', () => {
+            vi.setSystemTime(DURING_PROMO);
+            const html = renderStrip(PROMO_QUOTE, { saleOpen: false, credit: credit(5) });
+            expect(html).toContain('Launch promo');
+            expect(html).not.toContain(BUY);
+            expect(html).not.toMatch(PLAN_PITCH);
+        });
+
+        it('reads the pack list from GET /api/employer/post-packs', () => {
+            expect(read('components/employer/UsageWidget.tsx')).toContain("fetch('/api/employer/post-packs')");
+        });
     });
 });
 

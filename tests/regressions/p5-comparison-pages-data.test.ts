@@ -72,6 +72,10 @@ const PHASES = [
     ['ladder', LADDER_LIVE],
 ] as const;
 
+/** The 5-post pack as our price statements name it (owner decisions 2026-10-24 and 2026-10-25). */
+const PACK_PRICE = config.formatDollars(config.packPrice);
+const PACK = `or ${config.packPosts} posts for ${PACK_PRICE}`;
+
 /** Every profile in both phases: the content invariants hold in each. */
 const ALL_PROFILES: readonly CompetitorProfile[] = PHASES.flatMap(([, now]) => [...competitorProfiles(now)]);
 
@@ -179,6 +183,8 @@ describe('compare-data: our side derives from the live product registries', () =
     it('OUR_FACTS match the registries that render the product', () => {
         expect(OUR_FACTS.introPriceUsd).toBe(config.introPrice);
         expect(OUR_FACTS.postingPriceUsd).toBe(config.postingPrice);
+        expect(OUR_FACTS.packPosts).toBe(config.packPosts);
+        expect(OUR_FACTS.packPriceUsd).toBe(config.packPrice);
         // The Employer plan is retired (owner decision 2026-10-24): no plan fact to quote.
         expect(Object.keys(OUR_FACTS).filter((key) => /plan/i.test(key))).toEqual([]);
         expect(OUR_FACTS.postingDurationDays).toBe(config.durationDays);
@@ -242,19 +248,20 @@ describe('compare-data: copy hygiene + truth posture', () => {
 
 describe('compare-data: our price statements follow the launch-promo clock (backlog 2.1)', () => {
     it('while the promo runs, every price statement leads with the promo and dates the ladder, with the review date and the article put right', () => {
-        // 2027 re-price (owner decision 2026-10-24): the ladder is the intro
-        // price then the posting price, and the Employer plan is retired.
-        const cell = `Free through ${config.promoEndsLabel}. From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after. Every post runs ${config.durationDays} days. All of it is published on /pricing`;
+        // 2027 re-price (owner decisions 2026-10-24 and 2026-10-25): the
+        // ladder is the intro price then the posting price, or the 5-post
+        // pack, and the Employer plan is retired.
+        const cell = `Free through ${config.promoEndsLabel}. From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, ${PACK}. Every post runs ${config.durationDays} days. All of it is published on /pricing`;
         for (const profile of competitorProfiles(PROMO_RUNNING)) {
             expect(pricingCell(profile), profile.slug).toBe(cell);
         }
         const indeed = profileFor('np-hiring-vs-indeed', PROMO_RUNNING);
         expect(pricingBody(indeed)).toBe(
-            `Our pricing is a short public page: every post is free through ${config.promoEndsLabel}; from ${config.ladderStartsLabel} your first post is $${config.introPrice} and every post after that is $${config.postingPrice}, each a ${config.durationDays}-day listing. Indeed's model is different by design: its pricing page states there is no flat upfront fee and sponsorship is results-based (per click or per started application, with budgets), alongside a monthly free-post allowance. Neither model is wrong; ours is simpler to budget for a single ${brand.niche.short} hire.`,
+            `Our pricing is a short public page: every post is free through ${config.promoEndsLabel}; from ${config.ladderStartsLabel} your first post is $${config.introPrice} and every post after that is $${config.postingPrice}, or buy ${config.packPosts} posts for ${PACK_PRICE}, each a ${config.durationDays}-day listing. Indeed's model is different by design: its pricing page states there is no flat upfront fee and sponsorship is results-based (per click or per started application, with budgets), alongside a monthly free-post allowance. Neither model is wrong; ours is simpler to budget for a single ${brand.niche.short} hire.`,
         );
         const aanp = profileFor('np-hiring-vs-aanp-jobcenter', PROMO_RUNNING);
         expect(pricingBody(aanp)).toBe(
-            `Free through ${config.promoEndsLabel} here, then from ${config.ladderStartsLabel} $${config.introPrice} for your first post and $${config.postingPrice} after, every post ${config.durationDays} days, versus $399 for a single 30-day posting there (their published price on the review date). Both prices are public, so you can compare them directly for your hiring volume.`,
+            `Free through ${config.promoEndsLabel} here, then from ${config.ladderStartsLabel} $${config.introPrice} for your first post and $${config.postingPrice} after, ${PACK}, every post ${config.durationDays} days, versus $399 for a single 30-day posting there (their published price on the review date). Both prices are public, so you can compare them directly for your hiring volume.`,
         );
         // The review date dates their price only: ours went public on 2026-09-12.
         expect(aanp.guidance.useUs[1]).toBe(
@@ -262,7 +269,7 @@ describe('compare-data: our price statements follow the launch-promo clock (back
         );
         const enp = profileFor('np-hiring-vs-enp-network', PROMO_RUNNING);
         expect(pricingBody(enp)).toBe(
-            `Both boards publish employer pricing openly, and credit is due for that. The numbers differ: free through ${config.promoEndsLabel} here, then $${config.introPrice} for your first post and $${config.postingPrice} after, each ${config.durationDays} days, versus postings starting at $389 there (their published price on the review date).`,
+            `Both boards publish employer pricing openly, and credit is due for that. The numbers differ: free through ${config.promoEndsLabel} here, then $${config.introPrice} for your first post and $${config.postingPrice} after, ${PACK}, each ${config.durationDays} days, versus postings starting at $389 there (their published price on the review date).`,
         );
         // The article is computed from the credential: "an NP".
         expect(enp.guidance.useUs[2]).toBe(
@@ -278,16 +285,17 @@ describe('compare-data: our price statements follow the launch-promo clock (back
             expect(text, profile.slug).not.toContain(config.promoEndsLabel);
             expect(text, profile.slug).not.toContain(config.ladderStartsLabel);
             expect(text, profile.slug).not.toMatch(/free through|launch (?:promo|period)|\$0\b/i);
-            // The pricing row states both current prices, in the present tense.
+            // The pricing row states both current prices and the pack, in the present tense.
             const cell = pricingCell(profile);
             expect(cell, profile.slug).toBe(
-                `$${config.introPrice} first post, $${config.postingPrice} after. Every post runs ${config.durationDays} days. All of it is published on /pricing`,
+                `$${config.introPrice} first post, $${config.postingPrice} after, ${PACK}. Every post runs ${config.durationDays} days. All of it is published on /pricing`,
             );
             expect(pricingBody(profile), profile.slug).toContain(`$${config.introPrice}`);
             expect(pricingBody(profile), profile.slug).toContain(`$${config.postingPrice}`);
+            expect(pricingBody(profile), profile.slug).toContain(PACK_PRICE);
         }
         expect(pricingBody(profileFor('np-hiring-vs-indeed', LADDER_LIVE))).toContain(
-            `Our pricing is a short public page: your first post is $${config.introPrice} and every post after that is $${config.postingPrice}, each a ${config.durationDays}-day listing.`,
+            `Our pricing is a short public page: your first post is $${config.introPrice} and every post after that is $${config.postingPrice}, or buy ${config.packPosts} posts for ${PACK_PRICE}, each a ${config.durationDays}-day listing.`,
         );
         // A new sentence, so the article is computed: "an NP", never "a NP".
         expect(profileFor('np-hiring-vs-enp-network', LADDER_LIVE).guidance.useUs[2]).not.toMatch(/\ba NP\b/);

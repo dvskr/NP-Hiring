@@ -258,8 +258,10 @@ describe('2.1 M2: /tools/cost-per-hire-calculator', () => {
     it('while the promo runs: the promo is offered, selected and explained, beside the dated per-post ladder', () => {
         const markup = html(React.createElement(CostPerHireCalculatorPage));
         expect(markup).toContain('<option value="promo" selected="">');
-        // The promo and the per-post ladder: the Employer plan mode was retired with the plan.
-        expect(markup.match(/<option /g)).toHaveLength(2);
+        // The promo, the per-post ladder and the 5-post pack: the Employer plan
+        // mode was retired with the plan.
+        expect(markup.match(/<option /g)).toHaveLength(3);
+        expect(markup).toContain(`<option value="pack">${config.packPosts}-post pack, from ${config.ladderStartsLabel}</option>`);
         expect(markup).not.toContain('value="plan"');
         const text = visibleText(markup);
         expect(text).toContain(`Launch promo: free through ${config.promoEndsLabel}`);
@@ -274,7 +276,8 @@ describe('2.1 M2: /tools/cost-per-hire-calculator', () => {
         const markup = html(React.createElement(CostPerHireCalculatorPage));
         expect(markup).not.toContain('value="promo"');
         expect(markup).toContain('<option value="per-post" selected="">Per post</option>');
-        expect(markup.match(/<option /g)).toHaveLength(1);
+        expect(markup).toContain(`<option value="pack">${config.packPosts}-post pack</option>`);
+        expect(markup.match(/<option /g)).toHaveLength(2);
         expect(markup).not.toContain('value="plan"');
         const text = visibleText(markup);
         expect(text).toContain(`Your first post is $${config.introPrice}, every post after that is $${config.postingPrice} for ${config.durationDays} days`);
@@ -312,7 +315,7 @@ describe('2.1 M2: the comparison pages', () => {
 
         vi.setSystemTime(LADDER_LIVE);
         const after = visibleText(html(React.createElement(Page)));
-        expect(after).toContain(`$${config.introPrice} first post, $${config.postingPrice} after. Every post runs ${config.durationDays} days.`);
+        expect(after).toContain(`$${config.introPrice} first post, $${config.postingPrice} after, or ${config.packPosts} posts for ${config.formatDollars(config.packPrice)}. Every post runs ${config.durationDays} days.`);
         expectLadderOnly(after, _slug);
         // The Employer plan is retired (owner decision 2026-10-24) in both phases.
         for (const text of [before, after]) expect(text, _slug).not.toMatch(/Employer plan|\/month|active jobs/);
@@ -355,7 +358,7 @@ describe('2.1 M2: /post-job metadata', () => {
     it('offers the promo while it runs, and dates the ladder from its start', async () => {
         const metadata = await postJobMetadata();
         expect(metadata.description).toBe(
-            `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post and $${config.postingPrice} for every post after that. Every listing includes email alerts to subscribed candidates.`,
+            `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post, $${config.postingPrice} for every post after that, or ${config.packPosts} posts for ${config.formatDollars(config.packPrice)}. Every listing includes email alerts to subscribed candidates.`,
         );
         expect(metadata.description).not.toMatch(/Employer plan|\/month|active jobs/);
     });

@@ -5,6 +5,8 @@ import { Users, Mail, TrendingUp, Loader2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { config } from '@/lib/config';
 import { currentQuote } from '@/lib/next-post-quote';
+import { packUseByLabel } from '@/lib/pricing-copy';
+import { packCreditsLine } from '@/lib/post-pack-view';
 import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 
 /**
@@ -12,13 +14,15 @@ import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
  *
  * The Plan card states what the employer's NEXT post is, from
  * GET /api/employer/free-quota-status: the launch promo ("Free through
- * <date>", only while the promo is still running on this render) or the
- * paid rung and its price.
+ * <date>", only while the promo is still running on this render), a 5-post
+ * pack credit ("3 of 5 posts left", "Use by <date>"), or the paid rung and
+ * its price. A used-up pack still reads "5 of 5 posts used" above the next
+ * post's price. While the pack can be sold (GET /api/employer/post-packs
+ * answers saleOpen), the card's action buys one at /employer/post-pack.
  *
  * The Employer plan is retired (owner decision, 2026-10-24): the card no
  * longer reads the plan status endpoint, pitches no subscription and opens
- * no Stripe Customer Portal. The card's optional footer action stays for the
- * next way to buy.
+ * no Stripe Customer Portal.
  */
 
 interface UsageData {
@@ -30,14 +34,29 @@ interface UsageData {
     };
 }
 
+/** The account's current 5-post packs, summed (lib/post-packs.ts#getPackCreditStatus). */
+interface PackCredit {
+    remaining: number;
+    used: number;
+    total: number;
+    expiresAt: string | null;
+}
+
 /** GET /api/employer/free-quota-status — see lib/pricing.ts#PricingQuote. */
 interface QuotaStatus {
     eligible: boolean;
-    mode?: 'promo' | 'plan' | 'intro' | 'paid';
-    tier?: 'intro' | 'pro' | 'plan';
+    mode?: 'promo' | 'pack' | 'intro' | 'paid';
+    tier?: 'intro' | 'pro' | 'pack';
     willBeFree?: boolean;
     price?: number;
     promoEndsLabel?: string;
+    pack?: PackCredit;
+}
+
+/** GET /api/employer/post-packs, the two fields the strip reads. */
+interface PackSummary {
+    saleOpen: boolean;
+    credit: PackCredit | null;
 }
 
 /* ═══ Clay Design Tokens ═══ */
@@ -58,6 +77,7 @@ export default function UsageWidget() {
     const [data, setData] = useState<UsageData | null>(null);
     const [quota, setQuota] = useState<QuotaStatus | null>(null);
     const [loading, setLoading] = useState(true);
+    const [packs, setPacks] = useState<PackSummary | null>(null);
     // The Plan card reads the promo phase as it renders (currentQuote below);
     // this gives a strip left open over config.promoEndsAt the render that
     // drops its promo label.
@@ -65,14 +85,18 @@ export default function UsageWidget() {
 
     useEffect(() => {
         // Fetch in parallel — usage drives the meters; the quote drives the
-        // Plan card. Each request degrades independently: a missing quote
-        // just leaves the card on the tier label, never a broken strip.
+        // Plan card; the pack list says whether a pack can be bought. Each
+        // request degrades independently: a missing quote just leaves the
+        // card on the tier label, a missing pack list offers no purchase,
+        // never a broken strip.
         Promise.allSettled([
             fetch('/api/employer/usage').then(r => r.ok ? r.json() : null),
             fetch('/api/employer/free-quota-status').then(r => r.ok ? r.json() : null),
-        ]).then(([usageResult, quotaResult]) => {
+            fetch('/api/employer/post-packs').then(r => r.ok ? r.json() : null),
+        ]).then(([usageResult, quotaResult, packsResult]) => {
             if (usageResult.status === 'fulfilled') setData(usageResult.value);
             if (quotaResult.status === 'fulfilled') setQuota(quotaResult.value);
+            if (packsResult.status === 'fulfilled') setPacks(packsResult.value);
         }).finally(() => setLoading(false));
     }, []);
 
@@ -115,12 +139,34 @@ export default function UsageWidget() {
     const quoteMode = liveQuota?.eligible === true ? liveQuota.mode : undefined;
     const promoEndsLabel = liveQuota?.promoEndsLabel ?? config.promoEndsLabel;
 
-    const planLabel = quoteMode === 'promo' ? 'Launch promo' : tierLabel;
+    // The account's 5-post packs: from the pack list, else from the quote
+    // (both read lib/post-packs.ts#getPackCreditStatus). While the promo
+    // runs the promo wins, as it does when posting, and a credit stays unspent.
+    const packCredit = quoteMode === 'promo' ? null : (packs?.credit ?? liveQuota?.pack ?? null);
+    const nextPostPrice = quoteMode === 'intro' || quoteMode === 'paid'
+        ? `Next post $${liveQuota?.price ?? config.priceDollarsForTier(liveQuota?.tier)}`
+        : null;
+
+    // The packs' line as every pack surface prints it (lib/post-pack-view.ts).
+    const planLabel = quoteMode === 'promo'
+        ? 'Launch promo'
+        : packCredit
+            ? packCreditsLine({
+                state: packCredit.remaining > 0 ? 'active' : 'used',
+                total: packCredit.total,
+                remaining: packCredit.remaining,
+                used: packCredit.used,
+            })
+            : tierLabel;
     const planSublabel = quoteMode === 'promo'
         ? `Free through ${promoEndsLabel}`
-        : quoteMode === 'intro' || quoteMode === 'paid'
-            ? `Next post $${liveQuota?.price ?? config.priceDollarsForTier(liveQuota?.tier)}`
-            : null;
+        : packCredit && packCredit.remaining > 0 && packCredit.expiresAt
+            ? `Use by ${packUseByLabel(new Date(packCredit.expiresAt))}`
+            : nextPostPrice;
+    // Buy a pack, only while it can be sold (never during the promo).
+    const planAction: CardAction | null = packs?.saleOpen
+        ? { href: '/employer/post-pack', label: `Buy ${config.packPosts} posts · ${config.formatDollars(config.packPrice)}`, external: false }
+        : null;
 
     return (
         <div style={{
@@ -129,7 +175,7 @@ export default function UsageWidget() {
             gap: '10px',
             marginBottom: '24px',
         }}>
-            {/* ─── Plan card — launch promo / next-post rung ─── */}
+            {/* ─── Plan card — launch promo / pack credits / next-post rung ─── */}
             <CompactCard
                 icon={<Zap size={14} color="#fff" />}
                 iconBg={t.gradient}
@@ -138,6 +184,7 @@ export default function UsageWidget() {
                 value={planLabel}
                 valueColor={t.accent}
                 sub={planSublabel}
+                action={planAction}
             />
 
             {/* ─── Candidate Unlocks ─── */}
@@ -210,7 +257,7 @@ export default function UsageWidget() {
     );
 }
 
-/** Plan card footer: a link or a button. No caller passes one since the Employer plan was retired. */
+/** Plan card footer: a link or a button (the 5-post pack's purchase link). */
 type CardAction =
     | { href: string; label: string; external: boolean }
     | { label: string; onClick: () => void };

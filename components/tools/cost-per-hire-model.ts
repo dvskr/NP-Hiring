@@ -18,14 +18,14 @@
  * entered reports NOT COMPARABLE rather than a zero — a $0 agency column would
  * read as free.
  *
- * OUR SIDE HAS TWO WAYS TO BUY, AND THE MODEL PRICES EACH ONE HONESTLY
+ * OUR SIDE HAS THREE WAYS TO BUY, AND THE MODEL PRICES EACH ONE HONESTLY
  *   - 'promo'    — through config.promoEndsLabel every post is free. A plan
  *                  modelled here costs $0 on our side, which is a real price
  *                  for a dated window, not a comparison — the widget says so
  *                  and points the reader at the ladder. Offered only while
  *                  the promo runs: once it has ended nobody can buy a promo
  *                  post, so flatFeeModeOptions('ladder') leaves it out and
- *                  the ladder option loses its start date (PricingPhase). A
+ *                  the ladder options lose their start date (PricingPhase). A
  *                  promo post renews at the base renewal price.
  *   - 'per-post' — from config.ladderStartsLabel: the FIRST PAID post per
  *                  employer email DOMAIN is config.introPrice, every post
@@ -37,8 +37,17 @@
  *                  intro post renews at the base renewal price, every post
  *                  bought at the posting price at the pro renewal price
  *                  (lib/renewal-price.ts).
- * The Employer plan was a third way to buy until it was retired; the model
- * prices no plan.
+ *   - 'pack'     — from config.ladderStartsLabel: config.packPrice for
+ *                  config.packPosts posts (lib/post-packs.ts). A pack for
+ *                  every config.packPosts roles, the roles left over one at a
+ *                  time at the posting price, or from one more pack when that
+ *                  costs less at the till. A paid pack uses up the domain's
+ *                  intro price, so with the intro price applied the model also
+ *                  prices the first post at the intro price, bought before
+ *                  any pack, and keeps the lower total. Pack posts renew at the
+ *                  base renewal price, like the intro post.
+ * The Employer plan was a way to buy until it was retired; the model prices
+ * no plan.
  *
  * The two defaults that are not zero are traceable and labelled as such in the
  * UI:
@@ -58,7 +67,7 @@ import { formatUsd } from './tool-theme';
 export type ChannelKey = 'flatFee' | 'cpc' | 'agency';
 
 /** How the employer buys from us. See the header for what each one prices. */
-export type FlatFeeMode = 'promo' | 'per-post';
+export type FlatFeeMode = 'promo' | 'per-post' | 'pack';
 
 /** Flat-fee prices and dates, straight from the pricing config. */
 export const FLAT_FEE_PRICING = {
@@ -82,7 +91,10 @@ export const FLAT_FEE_PRICING = {
     proRenewalPrice: config.proRenewalPrice,
     /** A renewal never extends a post past this many days after it was created. */
     renewalCapDays: config.renewalCapDays,
-    /** Listing duration for EVERY post — promo, intro, featured — and every renewal. */
+    /** The 5-post pack: its one-time price, and the posts it holds. */
+    packPrice: config.packPrice,
+    packPosts: config.packPosts,
+    /** Listing duration for EVERY post — promo, intro, featured, pack — and every renewal. */
     durationDays: config.durationDays,
     candidateUnlocksPerPosting: config.limits.candidateUnlocksPerPosting,
     inmailsPerPosting: config.limits.inmailsPerPosting,
@@ -121,6 +133,17 @@ export const INTRO_PRICE_SCOPE_NOTE =
 export const RENEWAL_SCOPE_NOTE = RENEWAL_LINE;
 
 /**
+ * How the pack mode prices a hiring plan, as one string the method notes
+ * render: the mix of packs and single posts flatFeeSpend works out, and why
+ * the intro post is bought first when it is used at all (a pack uses up the
+ * domain's intro price). It names a price, never a saving.
+ */
+export const PACK_SCOPE_NOTE =
+    `The ${FLAT_FEE_PRICING.packPosts}-post pack option buys a pack for every ${FLAT_FEE_PRICING.packPosts} roles and posts the rest one at a time at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or from one more pack when that costs less. ` +
+    `A pack uses up your domain's intro price, so with the intro price applied the calculator also prices your first post at ${formatUsd(FLAT_FEE_PRICING.introPrice)}, bought before any pack, and keeps whichever total is lower. ` +
+    `Pack posts renew at ${formatUsd(FLAT_FEE_PRICING.renewalPrice)}.`;
+
+/**
  * The pricing phase the calculator is offered in: 'promo' while
  * config.isPromoActive(), 'ladder' from config.promoEndsAt. The server page
  * decides it per render (pricingPhase(now)) and hands it to the client
@@ -140,15 +163,17 @@ export interface FlatFeeModeOption {
     label: string;
 }
 
-/** While the promo runs: the promo, then the per-post ladder dated from its start. */
+/** While the promo runs: the promo, then the per-post ladder and the pack dated from its start. */
 const PROMO_PHASE_MODE_OPTIONS: readonly FlatFeeModeOption[] = [
     { mode: 'promo', label: `Launch promo: free through ${FLAT_FEE_PRICING.promoEndsLabel}` },
     { mode: 'per-post', label: `Per post, from ${FLAT_FEE_PRICING.ladderStartsLabel}` },
+    { mode: 'pack', label: `${FLAT_FEE_PRICING.packPosts}-post pack, from ${FLAT_FEE_PRICING.ladderStartsLabel}` },
 ];
 
-/** Once the ladder is live: the way anyone can still buy, with no start date. */
+/** Once the ladder is live: the ways anyone can still buy, with no start date. */
 const LADDER_PHASE_MODE_OPTIONS: readonly FlatFeeModeOption[] = [
     { mode: 'per-post', label: 'Per post' },
+    { mode: 'pack', label: `${FLAT_FEE_PRICING.packPosts}-post pack` },
 ];
 
 /**
@@ -203,9 +228,10 @@ export interface CostPerHireInputs {
     /** Which of our two ways to buy the flat-fee column is priced on. */
     flatFeeMode: FlatFeeMode;
     /**
-     * Per-post mode only: whether your employer email DOMAIN still has its
-     * intro price available — shared across every colleague who signs up at
-     * that domain, so one paid post anywhere in the organization means false.
+     * Per-post and pack modes: whether your employer email DOMAIN still has
+     * its intro price available — shared across every colleague who signs up
+     * at that domain, so one paid post (or paid pack) anywhere in the
+     * organization means false.
      */
     useIntroPrice: boolean;
     /** Hires you expect per role. Applies to every channel — same role, same hire. */
@@ -243,18 +269,24 @@ export interface FlatFeeBreakdown {
     mode: FlatFeeMode;
     /** Posts that cost nothing because they fall inside the launch promo. */
     promoPostings: number;
-    /** 0 or 1 — the domain's intro-priced post, per-post mode only. */
+    /** 0 or 1 — the domain's intro-priced post, per-post and pack modes. */
     introPostings: number;
-    /** Posts at the featured price, per-post mode only. */
+    /** Posts at the featured price, per-post and pack modes. */
     proPostings: number;
+    /** 5-post packs bought, pack mode only. */
+    packs: number;
+    /** Roles posted with a pack credit, pack mode only (a last pack may hold credits left unused). */
+    packPostings: number;
     /** Every renewal priced, whatever it costs. */
     renewals: number;
-    /** Renewals at the base renewal price: of promo posts and of the intro post. */
+    /** Renewals at the base renewal price: of promo posts, pack posts and the intro post. */
     baseRenewals: number;
     /** Renewals at the pro renewal price: of posts bought at the posting price. */
     proRenewals: number;
-    /** Intro + featured post spend (per-post mode). */
+    /** Intro + featured single post spend (per-post and pack modes). */
     postingSpend: number;
+    /** packs × the pack price (pack mode). */
+    packSpend: number;
     renewalSpend: number;
     total: number;
 }
@@ -267,13 +299,40 @@ const emptyBreakdown = (mode: FlatFeeMode): FlatFeeBreakdown => ({
     promoPostings: 0,
     introPostings: 0,
     proPostings: 0,
+    packs: 0,
+    packPostings: 0,
     renewals: 0,
     baseRenewals: 0,
     proRenewals: 0,
     postingSpend: 0,
+    packSpend: 0,
     renewalSpend: 0,
     total: 0,
 });
+
+/** A way to post some roles from packs and single posts at the posting price. */
+interface PackMix {
+    packs: number;
+    packPostings: number;
+    proPostings: number;
+    /** What the mix costs at the till: packs plus single posts. */
+    spend: number;
+}
+
+/**
+ * The cheapest way to post `roles` roles with packs and posts at the posting
+ * price: a pack for every config.packPosts roles, the rest one at a time, or
+ * from one more pack when the single posts would cost more than it.
+ */
+function packMix(roles: number): PackMix {
+    const { packPosts, packPrice, postingPrice } = FLAT_FEE_PRICING;
+    const whole = Math.floor(roles / packPosts);
+    const left = roles - whole * packPosts;
+    if (left > 0 && left * postingPrice > packPrice) {
+        return { packs: whole + 1, packPostings: roles, proPostings: 0, spend: (whole + 1) * packPrice };
+    }
+    return { packs: whole, packPostings: whole * packPosts, proPostings: left, spend: whole * packPrice + left * postingPrice };
+}
 
 /** Flat-fee spend for the whole hiring plan, priced from lib/config. */
 export function flatFeeSpend(inputs: CostPerHireInputs): FlatFeeBreakdown {
@@ -286,6 +345,10 @@ export function flatFeeSpend(inputs: CostPerHireInputs): FlatFeeBreakdown {
         const baseRenewals = roles * renewalsPerRole;
         const renewalSpend = baseRenewals * FLAT_FEE_PRICING.renewalPrice;
         return { ...base, promoPostings: roles, renewals: baseRenewals, baseRenewals, renewalSpend, total: renewalSpend };
+    }
+
+    if (inputs.flatFeeMode === 'pack') {
+        return packSpend(base, roles, renewalsPerRole, inputs.useIntroPrice);
     }
 
     // Domain-scoped, not account-scoped: the intro price applies to the first
@@ -314,18 +377,54 @@ export function flatFeeSpend(inputs: CostPerHireInputs): FlatFeeBreakdown {
 }
 
 /**
- * How the per-post result line prices its renewals, appended to "N
- * renewals": the intro post renews at the base price and every post after it
- * at the pro price, so a line with both kinds of post splits the count
- * (" (1 at $199, 2 at $249)"), and a line with one kind names its price.
+ * Pack mode: the cheaper of the pack mix for every role, and, with the intro
+ * price applied, the intro post first and the pack mix for the rest. The
+ * intro post comes first because a paid pack uses up the domain's intro price
+ * (lib/pricing.ts#getNextPaidTier). Chosen on what is paid at the till; pack
+ * posts and the intro post renew at the base price, posts bought at the
+ * posting price at the pro price.
+ */
+function packSpend(base: FlatFeeBreakdown, roles: number, renewalsPerRole: number, useIntroPrice: boolean): FlatFeeBreakdown {
+    const withoutIntro = { introPostings: 0, ...packMix(roles) };
+    const rest = packMix(Math.max(0, roles - 1));
+    const withIntro = { introPostings: 1, ...rest, spend: FLAT_FEE_PRICING.introPrice + rest.spend };
+    const mix = useIntroPrice && roles > 0 && withIntro.spend < withoutIntro.spend ? withIntro : withoutIntro;
+    const baseRenewals = (mix.introPostings + mix.packPostings) * renewalsPerRole;
+    const proRenewals = mix.proPostings * renewalsPerRole;
+    const postingSpend = mix.introPostings * FLAT_FEE_PRICING.introPrice + mix.proPostings * FLAT_FEE_PRICING.postingPrice;
+    const packSpendTotal = mix.packs * FLAT_FEE_PRICING.packPrice;
+    const renewalSpend = baseRenewals * FLAT_FEE_PRICING.renewalPrice + proRenewals * FLAT_FEE_PRICING.proRenewalPrice;
+    return {
+        ...base,
+        introPostings: mix.introPostings,
+        proPostings: mix.proPostings,
+        packs: mix.packs,
+        packPostings: mix.packPostings,
+        renewals: baseRenewals + proRenewals,
+        baseRenewals,
+        proRenewals,
+        postingSpend,
+        packSpend: packSpendTotal,
+        renewalSpend,
+        total: postingSpend + packSpendTotal + renewalSpend,
+    };
+}
+
+/**
+ * How the per-post and pack result lines price their renewals, appended to
+ * "N renewals": the intro post and pack posts renew at the base price and a
+ * post bought at the posting price at the pro price, so a line with both
+ * kinds of post splits the count (" (1 at $199, 2 at $249)"), and a line
+ * with one kind names its price.
  */
 export function perPostRenewalPrices(flat: FlatFeeBreakdown): string {
-    if (flat.introPostings > 0 && flat.proPostings > 0) {
+    const basePosts = flat.introPostings + flat.packPostings;
+    if (basePosts > 0 && flat.proPostings > 0) {
         return flat.renewals > 0
             ? ` (${flat.baseRenewals} at ${formatUsd(FLAT_FEE_PRICING.renewalPrice)}, ${flat.proRenewals} at ${formatUsd(FLAT_FEE_PRICING.proRenewalPrice)})`
             : '';
     }
-    return ` at ${formatUsd(flat.introPostings > 0 ? FLAT_FEE_PRICING.renewalPrice : FLAT_FEE_PRICING.proRenewalPrice)}`;
+    return ` at ${formatUsd(basePosts > 0 ? FLAT_FEE_PRICING.renewalPrice : FLAT_FEE_PRICING.proRenewalPrice)}`;
 }
 
 export interface ChannelResult {

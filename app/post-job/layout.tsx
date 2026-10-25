@@ -40,7 +40,7 @@ export const revalidate = 3600;
 /** The description for `now`: the promo and the dated ladder, or the ladder. */
 function postJobDescription(now: Date): string {
     if (config.isPromoActive(now)) {
-        return `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post and $${config.postingPrice} for every post after that. Every listing includes email alerts to subscribed candidates.`;
+        return `Post your ${brand.niche.short} job opening for free through ${config.promoEndsLabel}, with every feature included. From ${config.ladderStartsLabel}: $${config.introPrice} for your first post, $${config.postingPrice} for every post after that, or ${config.packPosts} posts for ${config.formatDollars(config.packPrice)}. Every listing includes email alerts to subscribed candidates.`;
     }
     return `Post your ${brand.niche.short} job opening, with every feature included. ${LADDER_PRICES} Every listing includes email alerts to subscribed candidates.`;
 }

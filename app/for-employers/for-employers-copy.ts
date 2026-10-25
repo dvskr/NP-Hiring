@@ -16,7 +16,8 @@
  * the canonical ones /pricing renders (lib/pricing-copy.ts and
  * app/pricing/pricing-page-copy.ts): never invent a figure here. The
  * Employer plan is retired (owner decision, 2026-10-24): neither phase
- * offers it.
+ * offers it. The 5-post pack answer is the shared one, dated while the promo
+ * runs.
  */
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
@@ -25,10 +26,12 @@ import {
   LADDER_FROM_LINE,
   LADDER_HEADLINE,
   LADDER_PRICES,
+  PACK_FAQ_QUESTION,
   PROMO_HEADLINE,
   PROMO_SUB,
   RENEWAL_LINE,
   ladderLine,
+  packFaqAnswer,
 } from '@/lib/pricing-copy';
 
 export interface EmployerFaq {
@@ -85,6 +88,7 @@ function promoCopy(now: Date): ForEmployersCopy {
     pricingFaqs: [
       { q: COST_QUESTION, a: `${PROMO_HEADLINE}. ${PROMO_SUB} ${ladder} ${RENEWAL_LINE} No pay-per-click bidding, no contracts.` },
       { q: 'What does every job post include?', a: includesAnswer('free during the promo, intro, or featured') },
+      { q: PACK_FAQ_QUESTION, a: packFaqAnswer(now) },
     ],
     meta: {
       description: `Hire ${brand.niche.long}s. Every post is free through ${config.promoEndsLabel} with all features included. Reach candidates actively searching for ${brand.niche.short} roles.`,
@@ -113,6 +117,7 @@ function ladderCopy(now: Date): ForEmployersCopy {
     pricingFaqs: [
       { q: COST_QUESTION, a: `${LADDER_PRICES} ${FULL_PACKAGE} ${RENEWAL_LINE} No pay-per-click bidding, no contracts.` },
       { q: 'What does every job post include?', a: includesAnswer('intro or featured') },
+      { q: PACK_FAQ_QUESTION, a: packFaqAnswer(now) },
     ],
     meta: {
       description: `Hire ${brand.niche.long}s. ${LADDER_FROM_LINE} Reach candidates actively searching for ${brand.niche.short} roles.`,

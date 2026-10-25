@@ -10,18 +10,26 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 // the ONE audited module, so the audit cannot be forked away again.
 import { employerComparisonRows } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
-import { RENEWAL_LINE } from '@/lib/pricing-copy';
+import { isPackSaleOpen } from '@/lib/post-pack-sale';
+import { REFUND_ANSWER, RENEWAL_LINE } from '@/lib/pricing-copy';
 import {
     pricingPageCopy,
     RENEWAL_CAP_LINE,
     RENEWAL_EFFECT_LINE,
 } from './pricing-page-copy';
-import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign } from 'lucide-react';
+import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, Package } from 'lucide-react';
 
 /**
  * Pricing page — launch promo + 2027 ladder (2026-09-12; re-priced
  * 2026-10-24, when the owner retired the Employer plan, so the ladder is the
- * intro post and the featured post).
+ * intro post and the featured post; the 5-post pack card joined them in
+ * phase 3 of the re-price).
+ *
+ * The pack card offers no way to buy while the promo runs (the pack is sold
+ * from the ladder's start, owner decision). Once the ladder is live its
+ * button goes to /employer/post-pack while lib/post-pack-sale.ts#isPackSaleOpen
+ * holds (paid posting on, Stripe and the webhook secret set), and to the
+ * support email otherwise, as the retired plan card did.
  *
  * Every number and date on this page is a lib/config token. The canonical
  * sentences the other employer surfaces repeat (RENEWAL_EFFECT_LINE and the
@@ -115,6 +123,9 @@ const EVERGREEN_FAQS = [
     { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you don't lose any time you already have. ${RENEWAL_CAP_LINE}` },
     { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details stay in your dashboard after the posting expires, for as long as the candidate keeps their profile visible and open to offers. To unlock new candidates or send new InMails, you will need an active posting.' },
     { q: 'Can I edit my job posting after publishing?', a: 'Yes. You can edit your posting at any time from your dashboard to update the salary, requirements, or any other details. Changes go live immediately.' },
+    // All sales are final (owner decision 2026-10-25), in the words /faq and
+    // /for-employers print; /terms section 8 states it in its own.
+    { q: 'Can I get a refund?', a: REFUND_ANSWER },
     { q: 'Hiring for several roles at once?', a: `Contact us at ${brand.email.support} and tell us how many roles you're hiring for. We'll work out the right arrangement for larger organizations.` },
 ];
 
@@ -202,8 +213,16 @@ export default function PricingPage() {
     // the table switches when the promo ends.
     const comparisonRows = employerComparisonRows(now);
 
-    // The two rungs of the ladder. The Employer plan card that stood third
-    // was retired with the plan (owner decision, 2026-10-24).
+    // The pack card's button: none while the promo runs, the purchase page
+    // while the sale is open, the support email while it is closed.
+    const packCta = copy.promoActive
+        ? null
+        : isPackSaleOpen(now)
+            ? <Link href="/employer/post-pack" className="emp-cta-primary" style={ctaPrimary}>Buy {config.packPosts} posts <ArrowRight size={15} /></Link>
+            : <a href={`mailto:${brand.email.support}`} className="emp-cta-primary" style={ctaPrimary}>Ask about the pack <ArrowRight size={15} /></a>;
+
+    // The two rungs of the ladder, then the 5-post pack where the retired
+    // Employer plan card stood (owner decisions, 2026-10-24 and 2026-10-25).
     const ladder = [
         {
             key: 'intro',
@@ -226,6 +245,17 @@ export default function PricingPage() {
             note: `${config.durationDays} days, exactly the same features. ${RENEWAL_LINE}`,
             cta: <Link href="/post-job" className="emp-cta-secondary" style={ctaSecondary}>Post a Job <ArrowRight size={15} /></Link>,
             featured: false,
+        },
+        {
+            key: 'pack',
+            icon: <Package size={22} />,
+            name: `${config.packPosts}-post pack`,
+            price: config.formatDollars(config.packPrice),
+            unit: `for ${config.packPosts} posts`,
+            blurb: `${config.formatDollars(config.packPrice / config.packPosts)} a post, to use within ${config.packValidityMonths} months`,
+            note: copy.packNote,
+            cta: packCta,
+            featured: true,
         },
     ];
 
@@ -415,9 +445,10 @@ export default function PricingPage() {
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════
-                SECTION 2: THE LADDER — two cards, same features on every rung
-                (announced for config.ladderStartsLabel while the promo runs,
-                the current price afterwards)
+                SECTION 2: THE LADDER — the two post cards and the 5-post pack,
+                same features on every rung (announced for
+                config.ladderStartsLabel while the promo runs, the current
+                price afterwards)
                 ═══════════════════════════════════════════════════════════════ */}
             <section style={{ background: '#FFF', padding: '80px 20px' }}>
                 <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -434,7 +465,7 @@ export default function PricingPage() {
                         {copy.ladderNote}
                     </p>
 
-                    <div className="pricing-ladder-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '18px', alignItems: 'stretch', maxWidth: '760px', margin: '0 auto' }}>
+                    <div className="pricing-ladder-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px', alignItems: 'stretch' }}>
                         {ladder.map((rung) => (
                             <div
                                 key={rung.key}

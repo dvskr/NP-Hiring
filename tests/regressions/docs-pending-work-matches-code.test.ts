@@ -159,7 +159,9 @@ describe('section 3: the decisions', () => {
             { row: 'D17', file: 'app/for-employers/for-employers-copy.ts', phrase: 'No bidding, no contracts' },
             { row: 'D17', file: 'app/for-employers/for-employers-copy.ts', phrase: `Flat Per-Post Pricing · From $${config.introPrice}` },
             { row: 'D18', file: 'app/resources/page.tsx', phrase: 'Interactive calculator by state, experience, setting, and specialty, with the BLS national median and state medians from live postings.' },
-            { row: 'D19', file: 'app/post-job/preview/page.tsx', phrase: 'Included in your Employer plan.' },
+            // Phase 3: a pack post's caption, built as D19 proposed; the plan caption went with the plan mode.
+            { row: 'D19', file: 'app/post-job/preview/page.tsx', phrase: 'Included in your post pack.' },
+            { row: 'D19', file: 'app/post-job/checkout/page.tsx', phrase: 'Included in your post pack.' },
             { row: 'D19', file: 'app/post-job/checkout/page.tsx', phrase: 'no payment needed' },
         ];
         for (const { row, file, phrase } of QUOTED) {
@@ -179,11 +181,18 @@ describe('the 2027 re-price in the register (owner decisions and defaults of 202
         expect(closed).toMatch(/^- D1 /m);
     });
 
-    it('D36 is the owner\'s own decision; D37 to D42 are the lead\'s defaults, which the owner may change', () => {
+    it('D36 and D38 are the owner\'s own decisions; D37 and D39 to D42 are the lead\'s defaults, which the owner may change', () => {
         const d36 = lineWith(decisions, '| D36 |');
         expect(d36).toMatch(/Decided by the owner on 2026-10-24/);
         expect(d36).toContain(`$1,245`);
-        for (const row of ['D37', 'D38', 'D39', 'D40', 'D41', 'D42']) {
+        expect(d36).not.toMatch(/Not built yet/);
+        // All sales final (owner, 2026-10-25), which /terms §8 states.
+        const d38 = lineWith(decisions, '| D38 |');
+        expect(d38).toMatch(/Decided by the owner on 2026-10-25: all sales are final/);
+        expect(d38).not.toContain('Default set');
+        expect(d38).not.toMatch(/one for each \$249 refunded/);
+        expect(readRepo('app/terms/page.tsx')).toContain('All sales are final.');
+        for (const row of ['D37', 'D39', 'D40', 'D41', 'D42']) {
             const line = lineWith(decisions, `| ${row} |`);
             expect(line, row).toContain('Default set 2026-10-24, the owner may change it');
             expect(line, row).not.toMatch(/Decided by the owner/);

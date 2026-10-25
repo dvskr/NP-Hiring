@@ -182,11 +182,11 @@ export default function TermsPage() {
           </ul>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Listing duration & renewals:</p>
           {/* Every posting runs config.durationDays (post-free and the
-              checkout write the same expiresAt). A renewal is capped at
-              config.renewalCapDays after creation
-              (lib/expires-at.ts#renewalExpiresAt) and does not reset the
-              posting's unlock or InMail counts. */}
-          <p style={pStyle}>All job postings, whether promotional or paid, are active for {config.durationDays} days from the date of publication unless the employer closes them sooner or we remove them under these Terms. After {config.durationDays} days, postings expire automatically. Employers may renew promotional and paid postings through the employer dashboard. Each renewal adds {config.durationDays} days to the current expiration date, or to the renewal date if the posting has already expired; renewing early does not forfeit any remaining time on the existing posting. Renewals cannot extend a posting beyond {config.renewalCapDays} days after it was first published. A renewal extends a posting&apos;s term only; it does not add candidate unlocks or InMails.</p>
+              checkout write the same expiresAt), a 5-post pack posting
+              included. A renewal is capped at config.renewalCapDays after
+              creation (lib/expires-at.ts#renewalExpiresAt) and does not reset
+              the posting's unlock or InMail counts. */}
+          <p style={pStyle}>All job postings, whether promotional, paid or published with a 5-post pack credit, are active for {config.durationDays} days from the date of publication unless the employer closes them sooner or we remove them under these Terms. After {config.durationDays} days, postings expire automatically. Employers may renew promotional, paid and pack postings through the employer dashboard. Each renewal adds {config.durationDays} days to the current expiration date, or to the renewal date if the posting has already expired; renewing early does not forfeit any remaining time on the existing posting. Renewals cannot extend a posting beyond {config.renewalCapDays} days after it was first published. A renewal extends a posting&apos;s term only; it does not add candidate unlocks or InMails.</p>
 
           <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Launch Promotion & Payments</h2>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Launch promotion (through {config.promoEndsLabel}):</p>
@@ -199,29 +199,35 @@ export default function TermsPage() {
           <ul style={ulStyle}>
             <li style={liStyle}>The first paid posting per verified employer email domain is ${config.introPrice} USD, one-time (the &quot;intro&quot; price). Promotional postings do not consume the intro price</li>
             <li style={liStyle}>Each additional paid posting is ${config.postingPrice} USD, one-time</li>
-            <li style={liStyle}>Renewals are ${config.renewalPrice} USD for promotional and intro postings and ${config.proRenewalPrice} USD for postings purchased at ${config.postingPrice}, one-time, and add {config.durationDays} days as described in §6</li>
-            <li style={liStyle}>All postings, whether promotional or paid, receive the same features: {config.durationDays}-day duration, Featured badge, top placement in search results, {config.limits.candidateUnlocksPerPosting} candidate profile unlocks and {config.limits.inmailsPerPosting} InMails per posting, and full analytics. Renewing a posting does not add unlocks or InMails</li>
+            <li style={liStyle}>A 5-post pack is {config.formatDollars(config.packPrice)} USD, one-time, for {config.packPosts} posting credits ({config.formatDollars(config.packPrice / config.packPosts)} USD a posting). Each credit publishes one posting with the same features and duration as any other posting</li>
+            <li style={liStyle}>Pack credits may be used within {config.packValidityMonths} months of purchase; credits not used by then expire. Pack credits belong to the employer account that bought the pack and cannot be used by another account, including one at the same organization</li>
+            <li style={liStyle}>A pack bought through checkout counts as your organization&apos;s first paid purchase: after it, the intro price no longer applies, and each additional paid posting is ${config.postingPrice} USD</li>
+            <li style={liStyle}>Packs are sold from {config.ladderStartsLabel}, and only to employer accounts registered with a company email address</li>
+            <li style={liStyle}>Renewals are ${config.renewalPrice} USD for promotional, intro and pack postings and ${config.proRenewalPrice} USD for postings purchased at ${config.postingPrice}, one-time, and add {config.durationDays} days as described in §6</li>
+            <li style={liStyle}>All postings, whether promotional, paid or from a pack, receive the same features: {config.durationDays}-day duration, Featured badge, top placement in search results, {config.limits.candidateUnlocksPerPosting} candidate profile unlocks and {config.limits.inmailsPerPosting} InMails per posting, and full analytics. Renewing a posting does not add unlocks or InMails</li>
           </ul>
-          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
+          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings and pack credits already paid for under prior pricing are not affected.</p>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Payment terms:</p>
           <ul style={ulStyle}>
-            <li style={liStyle}>Job posting and renewal fees are due at the time of purchase</li>
+            <li style={liStyle}>Job posting, renewal and pack fees are due at the time of purchase</li>
             <li style={liStyle}>All payments are processed by Stripe, our third-party payment processor. Your card statement will show &quot;{brand.legal.stripeDescriptor}&quot; as the merchant</li>
             <li style={liStyle}>All amounts are stated in US Dollars (USD) and are exclusive of any taxes that may apply in your jurisdiction</li>
             <li style={liStyle}>Payment must be completed before a paid posting goes live</li>
             <li style={liStyle}>You authorize us, through Stripe, to charge the payment method you provide</li>
-            <li style={liStyle}>Invoices for paid postings and renewals are available from your employer dashboard</li>
+            <li style={liStyle}>Invoices for paid postings and renewals are available from your employer dashboard, and invoices for packs from the billing section of your employer settings</li>
           </ul>
 
+          {/* All sales are final (owner decision 2026-10-25). Two exceptions
+              only: a refund the law requires, and a billing error, which is
+              corrected. /pricing, /faq and /for-employers answer the refund
+              question with lib/pricing-copy.ts#REFUND_ANSWER, the same rule
+              in plain words. */}
           <h2 id="refund-policy" style={h2Style}>8. Refund Policy</h2>
           <ul style={ulStyle}>
-            <li style={liStyle}>Job posting and renewal fees are generally non-refundable</li>
-            <li style={liStyle}>Refund requests may be considered within 7 days of purchase on a case-by-case basis</li>
-            <li style={liStyle}>To request a refund, email <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a> with your order details and the reason for the request</li>
-            <li style={liStyle}>We reserve the right to grant or deny refund requests at our sole discretion</li>
-            <li style={liStyle}>If we remove a posting for violation of these Terms, no refund will be issued</li>
+            <li style={liStyle}>All sales are final. Fees for job postings, renewals and 5-post packs are non-refundable once paid, including pack credits left unused when the pack expires. If we remove a posting for violation of these Terms, no refund will be issued.</li>
             <li style={liStyle}>Promotional postings have no associated payment and are therefore not refundable</li>
-            <li style={liStyle}>Refunds, if granted, will be issued to the original payment method through Stripe and may take 5 to 10 business days to appear on your statement</li>
+            <li style={liStyle}>We will issue a refund where applicable law requires one</li>
+            <li style={liStyle}>We will correct a billing error, such as being charged twice for the same posting. To report one, email <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a> with your order details</li>
           </ul>
 
           <h2 id="candidate-data" style={h2Style}>9. Candidate Data, Unlocks & Privacy</h2>

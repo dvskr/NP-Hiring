@@ -61,6 +61,7 @@ import {
   FLAT_FEE_PRICING,
   FREE_POST_SCOPE_NOTE,
   INTRO_PRICE_SCOPE_NOTE,
+  PACK_SCOPE_NOTE,
   RENEWAL_SCOPE_NOTE,
   compareChannels,
   defaultInputs,
@@ -110,6 +111,11 @@ const GUIDE_FILE = 'app/resources/private-practice-guide/page.tsx';
 const CPH_COPY = 'app/tools/cost-per-hire-calculator/cost-per-hire-copy.ts';
 /** Both pricing phases, so every cost-per-hire default is checked in each. */
 const PHASES: readonly PricingPhase[] = ['promo', 'ladder'];
+/** The 5-post pack (2027 re-price, phase 3) as the calculator copy names it. */
+const PACK_PRICE = config.formatDollars(config.packPrice);
+const PACK_CLAUSE = `or buy ${config.packPosts} posts for ${PACK_PRICE}`;
+/** How the calculator prices the pack, as its method note says (and PACK_SCOPE_NOTE holds). */
+const PACK_METHOD_NOTE = `The ${config.packPosts}-post pack option buys a pack for every ${config.packPosts} roles and posts the rest one at a time at $${config.postingPrice}, or from one more pack when that costs less. A pack uses up your domain's intro price, so with the intro price applied the calculator also prices your first post at $${config.introPrice}, bought before any pack, and keeps whichever total is lower. Pack posts renew at $${config.renewalPrice}.`;
 
 /** Removes jsonLd(...) calls so what remains is markup a reader sees. */
 function stripJsonLd(src: string): string {
@@ -659,6 +665,9 @@ describe('cost per hire — prices come from the pricing config', () => {
     expect(FLAT_FEE_PRICING.renewalPrice).toBe(config.renewalPrice);
     expect(FLAT_FEE_PRICING.proRenewalPrice).toBe(config.proRenewalPrice);
     expect(FLAT_FEE_PRICING.renewalCapDays).toBe(config.renewalCapDays);
+    // The 5-post pack (2027 re-price, phase 3), at the price its checkout charges.
+    expect(FLAT_FEE_PRICING.packPrice).toBe(config.packPrice);
+    expect(FLAT_FEE_PRICING.packPosts).toBe(config.packPosts);
     // The Employer plan is retired (owner decision 2026-10-24): nothing to price.
     expect(Object.keys(FLAT_FEE_PRICING).filter((key) => /plan/i.test(key))).toEqual([]);
     expect(FLAT_FEE_PRICING.durationDays).toBe(config.durationDays);
@@ -676,6 +685,8 @@ describe('cost per hire — prices come from the pricing config', () => {
       expect(code).not.toContain(String(config.postingPrice));
       expect(code).not.toContain(String(config.renewalPrice));
       expect(code).not.toContain(String(config.proRenewalPrice));
+      expect(code).not.toContain(String(config.packPrice));
+      expect(code).not.toContain(config.formatDollars(config.packPrice).slice(1));
       expect(code).not.toContain(String(config.planPrice));
       expect(code).not.toMatch(/config\.plan(?:Price|Slots)/);
     }
@@ -730,17 +741,21 @@ describe('cost per hire — the promo is offered only while it runs (backlog 2.1
   const PROMO_RUNNING = new Date('2026-12-31T12:00:00Z');
   const LADDER_LIVE = new Date(config.promoEndsAt);
 
-  it('offers the promo and the dated per-post ladder while it runs, and no Employer plan', () => {
+  it('offers the promo, then the dated per-post ladder and 5-post pack while it runs, and no Employer plan', () => {
     expect(flatFeeModeOptions('promo')).toEqual([
       { mode: 'promo', label: `Launch promo: free through ${config.promoEndsLabel}` },
       { mode: 'per-post', label: `Per post, from ${config.ladderStartsLabel}` },
+      { mode: 'pack', label: `${config.packPosts}-post pack, from ${config.ladderStartsLabel}` },
     ]);
     expect(pricingPhase(PROMO_RUNNING)).toBe('promo');
   });
 
   it('offers no promo mode once it has ended, and no option dates the ladder', () => {
     const options = flatFeeModeOptions(pricingPhase(LADDER_LIVE));
-    expect(options.map((option) => option.mode)).toEqual(['per-post']);
+    expect(options).toEqual([
+      { mode: 'per-post', label: 'Per post' },
+      { mode: 'pack', label: `${config.packPosts}-post pack` },
+    ]);
     for (const { label } of options) {
       expect(label).not.toMatch(/free|promo|\$0/i);
       expect(label).not.toContain(config.ladderStartsLabel);
@@ -769,17 +784,18 @@ describe('cost per hire — the promo is offered only while it runs (backlog 2.1
 
   it('prints the method notes, the FAQ and the card while the promo runs: the promo, then the dated ladder', () => {
     const assumptions = costPerHireAssumptions('promo');
-    expect(assumptions).toHaveLength(9);
+    expect(assumptions).toHaveLength(10);
     expect(assumptions[1]).toBe(
-      `Our prices are the ones you pay at checkout. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}. Every post runs ${config.durationDays} days and includes ${config.limits.candidateUnlocksPerPosting} candidate unlocks plus ${config.limits.inmailsPerPosting} direct messages. ${RENEWAL_SCOPE_NOTE}`,
+      `Our prices are the ones you pay at checkout. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, ${PACK_CLAUSE}. Every post runs ${config.durationDays} days and includes ${config.limits.candidateUnlocksPerPosting} candidate unlocks plus ${config.limits.inmailsPerPosting} direct messages. ${RENEWAL_SCOPE_NOTE}`,
     );
     expect(assumptions[2]).toMatch(/^The promo result is a real price for a dated window/);
     expect(assumptions[2]).toContain(`price the same roles on the ${config.ladderStartsLabel} ladder as well.`);
+    expect(assumptions[4]).toBe(PACK_METHOD_NOTE);
     const faqs = costPerHireFaqs('promo');
     expect(faqs).toHaveLength(7);
-    expect(faqs[2].a).toContain(`A posting is a fixed price that does not: free during the launch promo, then $${config.introPrice} for your first post and $${config.postingPrice} after.`);
+    expect(faqs[2].a).toContain(`A posting is a fixed price that does not: free during the launch promo, then $${config.introPrice} for your first post and $${config.postingPrice} after, or ${config.packPosts} posts for ${PACK_PRICE}.`);
     expect(faqs[5].a).toBe(
-      `Every post (promo, intro, or featured) runs ${config.durationDays} days, is featured, and includes ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks and ${config.limits.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}. ${RENEWAL_SCOPE_NOTE} The calculator uses the same prices you pay at checkout.`,
+      `Every post (promo, intro, or featured) runs ${config.durationDays} days, is featured, and includes ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks and ${config.limits.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, ${PACK_CLAUSE}. ${RENEWAL_SCOPE_NOTE} The calculator uses the same prices you pay at checkout.`,
     );
     expect(postRoleBlurb('promo')).toBe(`Free through ${config.promoEndsLabel}, every feature included.`);
   });
@@ -796,13 +812,14 @@ describe('cost per hire — the promo is offered only while it runs (backlog 2.1
     const phase = pricingPhase(LADDER_LIVE);
     const assumptions = costPerHireAssumptions(phase);
     const faqs = costPerHireFaqs(phase);
-    // The promo-result note goes with the promo mode.
-    expect(assumptions).toHaveLength(8);
+    // The promo-result note goes with the promo mode; the pack note stays.
+    expect(assumptions).toHaveLength(9);
     expect(assumptions.join('\n')).not.toMatch(/The promo result/);
     expect(assumptions[1]).toContain(LADDER_PRICES);
+    expect(assumptions[3]).toBe(PACK_METHOD_NOTE);
     expect(faqs[5].a).toContain(LADDER_PRICES);
     expect(faqs[5].a).toContain('Every post (intro or featured)');
-    expect(faqs[2].a).toContain(`A posting is a fixed price that does not: $${config.introPrice} for your first post and $${config.postingPrice} after.`);
+    expect(faqs[2].a).toContain(`A posting is a fixed price that does not: $${config.introPrice} for your first post and $${config.postingPrice} after, or ${config.packPosts} posts for ${PACK_PRICE}.`);
     expect(postRoleBlurb(phase)).toBe(LADDER_PRICES);
     // The only promo mention left is the history that keeps the intro price unspent.
     const copy = [...assumptions, ...faqs.flatMap(({ q, a }) => [q, a]), postRoleBlurb(phase)]
@@ -938,7 +955,7 @@ describe('cost per hire — the renewal rule is stated from one string, and pric
   it('is the shared renewal sentence, which names both config prices by the post each renews', () => {
     expect(RENEWAL_SCOPE_NOTE).toBe(RENEWAL_LINE);
     expect(RENEWAL_SCOPE_NOTE).toBe(
-      `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo or intro post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
+      `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo, intro or pack post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
     );
     // The renewal checkout still refuses the dormant plan posts it never sold a renewal for.
     const renewalRoute = read('app/api/create-renewal-checkout/route.ts');
@@ -1003,6 +1020,98 @@ describe('cost per hire — no unmeasured comparative claims', () => {
     const page = readCode(routeFile('/tools/cost-per-hire-calculator'));
     expect(page).toMatch(/we sell/i);
     expect(readCode(NEW_COMPONENTS[2])).toMatch(/we sell/i);
+  });
+});
+
+/**
+ * The 5-post pack mode (2027 re-price, phase 3; plan section 3.10): a pack
+ * for every five roles, the roles left over one at a time at the posting
+ * price, or from one more pack when that costs less at the till. A pack uses
+ * up the domain's intro price (lib/pricing.ts#getNextPaidTier), so with the
+ * intro price applied the model also prices the first post at the intro
+ * price, bought before any pack, and keeps the lower total. That is the plan's
+ * floor(roles / 5) packs plus min(remainder x $349, $1,245), with the intro
+ * post the plan's formula left out. Pack posts and the intro post renew at
+ * the base price, a post bought at the posting price at the pro price.
+ */
+describe('cost per hire — the 5-post pack mode', () => {
+  const P = config.packPosts;
+  const pack = (roles: number, useIntroPrice: boolean, renewalsPerRole = 0) =>
+    flatFeeSpend({ ...defaultInputs('ladder'), flatFeeMode: 'pack', roles, useIntroPrice, renewalsPerRole });
+
+  it('buys a pack for every five roles', () => {
+    const spend = pack(2 * P, false);
+    expect(spend.mode).toBe('pack');
+    expect(spend.packs).toBe(2);
+    expect(spend.packPostings).toBe(2 * P);
+    expect(spend.introPostings + spend.proPostings).toBe(0);
+    expect(spend.packSpend).toBe(2 * config.packPrice);
+    expect(spend.total).toBe(2 * config.packPrice);
+  });
+
+  it('posts the roles left over one at a time, or from one more pack when that costs less', () => {
+    // 3 single posts cost less than a pack; 4 cost more, so a fourth role buys a pack.
+    expect(3 * config.postingPrice).toBeLessThan(config.packPrice);
+    expect(4 * config.postingPrice).toBeGreaterThan(config.packPrice);
+    const three = pack(P + 3, false);
+    expect(three).toMatchObject({ packs: 1, packPostings: P, proPostings: 3, introPostings: 0 });
+    expect(three.total).toBe(config.packPrice + 3 * config.postingPrice);
+    const four = pack(P + 4, false);
+    expect(four).toMatchObject({ packs: 2, packPostings: P + 4, proPostings: 0 });
+    expect(four.total).toBe(2 * config.packPrice);
+  });
+
+  it('uses the intro post first when that costs less, because a pack uses up the intro price', () => {
+    // Six roles: the intro post plus a pack ($1,494) is less than a pack plus a $349 post ($1,594).
+    const six = pack(P + 1, true);
+    expect(six).toMatchObject({ introPostings: 1, packs: 1, packPostings: P, proPostings: 0 });
+    expect(six.total).toBe(config.introPrice + config.packPrice);
+    // Five roles: one pack ($1,245) is less than the intro post plus four more ($1,494 or $1,645).
+    const five = pack(P, true);
+    expect(five).toMatchObject({ introPostings: 0, packs: 1, packPostings: P });
+    expect(five.total).toBe(config.packPrice);
+    // Without the intro price, six roles are a pack and a post at the posting price.
+    expect(pack(P + 1, false).total).toBe(config.packPrice + config.postingPrice);
+  });
+
+  it('buys no pack where single posts cost less, and is then priced as per post', () => {
+    for (const useIntroPrice of [true, false]) {
+      for (const roles of [1, 2, 3]) {
+        const asPack = pack(roles, useIntroPrice);
+        const perPost = flatFeeSpend({ ...defaultInputs('ladder'), flatFeeMode: 'per-post', roles, useIntroPrice });
+        expect(asPack.packs, `${roles} roles`).toBe(0);
+        expect(asPack.total, `${roles} roles`).toBe(perPost.total);
+      }
+    }
+  });
+
+  it('never costs more than buying the same roles one at a time', () => {
+    for (const useIntroPrice of [true, false]) {
+      for (let roles = 0; roles <= 4 * P; roles += 1) {
+        const perPost = flatFeeSpend({ ...defaultInputs('ladder'), flatFeeMode: 'per-post', roles, useIntroPrice });
+        expect(pack(roles, useIntroPrice).postingSpend + pack(roles, useIntroPrice).packSpend, `${roles} roles`).toBeLessThanOrEqual(perPost.postingSpend);
+      }
+    }
+  });
+
+  it('renews pack posts and the intro post at the base price, a post at the posting price at the pro price', () => {
+    const spend = pack(P + 3, true, 1);
+    // Eight roles: the intro post, one pack and two posts at the posting price is the cheapest mix.
+    expect(spend).toMatchObject({ introPostings: 1, packs: 1, packPostings: P, proPostings: 2 });
+    expect(spend.baseRenewals).toBe(P + 1);
+    expect(spend.proRenewals).toBe(2);
+    expect(spend.renewalSpend).toBe((P + 1) * config.renewalPrice + 2 * config.proRenewalPrice);
+    expect(spend.total).toBe(config.introPrice + config.packPrice + 2 * config.postingPrice + spend.renewalSpend);
+    expect(costPerHireModel.perPostRenewalPrices(spend)).toBe(` (${P + 1} at $${config.renewalPrice}, 2 at $${config.proRenewalPrice})`);
+    expect(costPerHireModel.perPostRenewalPrices(pack(P, false, 1))).toBe(` at $${config.renewalPrice}`);
+  });
+
+  it('is stated in one note the method notes render, never a saving', () => {
+    expect(PACK_SCOPE_NOTE).toBe(PACK_METHOD_NOTE);
+    expect(PACK_SCOPE_NOTE).not.toMatch(/\bsav(?:e|es|ing)\b|\$500|discount/i);
+    const uses = readCode(CPH_COPY).match(/PACK_SCOPE_NOTE/g) ?? [];
+    expect(uses.length, `${CPH_COPY} interpolates PACK_SCOPE_NOTE`).toBeGreaterThan(1);
+    for (const phase of PHASES) expect(costPerHireAssumptions(phase), phase).toContain(PACK_SCOPE_NOTE);
   });
 });
 

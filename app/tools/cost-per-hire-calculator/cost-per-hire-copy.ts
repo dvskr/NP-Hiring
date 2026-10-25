@@ -14,10 +14,11 @@
  *
  * Every price is a cost-per-hire-model or lib/pricing-copy token (both read
  * lib/config), and every pricing RULE is stated through its shared note
- * (FREE_POST_SCOPE_NOTE, INTRO_PRICE_SCOPE_NOTE, RENEWAL_SCOPE_NOTE), never
- * paraphrased; see tests/regressions/p3-tools-round-2-registry.test.ts. The
- * Employer plan is retired (owner decision, 2026-10-24): nothing here prices
- * or names it.
+ * (FREE_POST_SCOPE_NOTE, INTRO_PRICE_SCOPE_NOTE, RENEWAL_SCOPE_NOTE,
+ * PACK_SCOPE_NOTE), never paraphrased; see
+ * tests/regressions/p3-tools-round-2-registry.test.ts. The Employer plan is
+ * retired (owner decision, 2026-10-24): nothing here prices or names it. The
+ * 5-post pack is the third way to buy (2027 re-price, phase 3).
  */
 import { LADDER_PRICES } from '@/lib/pricing-copy';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -28,9 +29,13 @@ import {
   FLAT_FEE_PRICING,
   FREE_POST_SCOPE_NOTE,
   INTRO_PRICE_SCOPE_NOTE,
+  PACK_SCOPE_NOTE,
   RENEWAL_SCOPE_NOTE,
   type PricingPhase,
 } from '@/components/tools/cost-per-hire-model';
+
+/** The pack, as the ladder sentences name it: "5 posts for $1,245". */
+const PACK_POSTS = `${FLAT_FEE_PRICING.packPosts} posts for ${formatUsd(FLAT_FEE_PRICING.packPrice)}`;
 
 export interface CostPerHireFaq {
   q: string;
@@ -44,7 +49,7 @@ const POST_RUN_NOTE = `Every post runs ${FLAT_FEE_PRICING.durationDays} days and
 function ourPricesAssumption(phase: PricingPhase): string {
   const lead = 'Our prices are the ones you pay at checkout.';
   if (phase === 'promo') {
-    return `${lead} During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}. ${POST_RUN_NOTE}`;
+    return `${lead} During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or buy ${PACK_POSTS}. ${POST_RUN_NOTE}`;
   }
   return `${lead} ${LADDER_PRICES} ${POST_RUN_NOTE}`;
 }
@@ -61,6 +66,7 @@ export function costPerHireAssumptions(phase: PricingPhase): readonly string[] {
       : []),
     // Once it has ended the promo is named in full: nothing above introduces it any more.
     `The intro price is scoped to the employer's email domain rather than to a login: ${INTRO_PRICE_SCOPE_NOTE}. A five-recruiter health system therefore gets one intro-priced post between all five, not one each, so a multi-role plan modeled per post shows at most one intro post and prices every other post at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}. Posts made free during the ${promo ? 'promo' : 'launch promo'} do not use the intro price up.`,
+    PACK_SCOPE_NOTE,
     `Every figure for the sponsored-ad and agency channels is yours. The calculator supplies no typical cost per click, contingency rate, time-to-fill, or applicant-to-hire ratio.`,
     `A channel with nothing entered is reported as not comparable, never as zero. A zero in a cost column would read as free.`,
     `The applicant-volume default of ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} is the number of candidate unlocks a posting includes. It is a plan feature, not an expected response rate. Replace it with what your own postings draw.`,
@@ -72,9 +78,9 @@ export function costPerHireAssumptions(phase: PricingPhase): readonly string[] {
 /** The FAQ for `phase`, in page order. It feeds the accordion and the FAQPage JSON-LD alike. */
 export function costPerHireFaqs(phase: PricingPhase): readonly CostPerHireFaq[] {
   const promo = phase === 'promo';
-  const ladder = `${formatUsd(FLAT_FEE_PRICING.introPrice)} for your first post and ${formatUsd(FLAT_FEE_PRICING.postingPrice)} after`;
+  const ladder = `${formatUsd(FLAT_FEE_PRICING.introPrice)} for your first post and ${formatUsd(FLAT_FEE_PRICING.postingPrice)} after, or ${PACK_POSTS}`;
   const whatItCosts = promo
-    ? `During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}.`
+    ? `During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or buy ${PACK_POSTS}.`
     : LADDER_PRICES;
   return [
     {

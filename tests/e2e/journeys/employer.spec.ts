@@ -655,11 +655,11 @@ test.describe('seeded employer: dashboard + paid-posting gate', () => {
     await loginAsEmployer(page);
     const quota = await (await page.request.get('/api/employer/free-quota-status')).json();
     // The gate only exists for a post that costs money. While the launch promo
-    // runs (or an Employer plan still has a slot) the quote comes back free, so
+    // runs (or a 5-post pack credit is left) the quote comes back free, so
     // there is nothing to gate and the test has no subject.
     test.skip(
       quota.eligible !== true || quota.willBeFree !== false,
-      'Seeded employer\'s next post is still free (launch promo or plan slot) — gate not reachable',
+      'Seeded employer\'s next post is still free (launch promo or pack credit) — gate not reachable',
     );
     // Which rung the ladder put this employer on decides the amount every label
     // below must show: intro for the domain's first paid post, featured after.
@@ -1028,8 +1028,8 @@ test.describe('employer lifecycle (ephemeral employer, local only)', () => {
   test('full wizard → preview (price, H1, no ghost tiers) → back to edit → publish at no charge', async ({ page }) => {
     await loginFresh(page);
     // Publishing here goes through /api/jobs/post-free, which only succeeds on
-    // a no-charge rung: 'promo' while the launch promo runs, 'plan' for an
-    // employer holding a slot. On the intro or featured rung the post needs a
+    // a no-charge rung: 'promo' while the launch promo runs, 'pack' for an
+    // employer holding a 5-post pack credit. On the intro or featured rung the post needs a
     // real Stripe payment, which E2E must never make, so the wizard cannot be
     // driven to publication and the rest of the lifecycle has no job to use.
     const preQuota = await (await page.request.get('/api/employer/free-quota-status')).json();
@@ -1106,10 +1106,10 @@ test.describe('employer lifecycle (ephemeral employer, local only)', () => {
     await expect(page.getByRole('heading', { level: 1, name: state.title })).toBeVisible();
     await expect(page.getByText('Free', { exact: true })).toBeVisible({ timeout: BOOT_TIMEOUT });
     // The caption names WHY this post costs nothing, and the two no-charge
-    // rungs give different reasons: the dated launch promo, or a plan slot.
+    // rungs give different reasons: the dated launch promo, or a pack credit.
     await expect(
-      preQuota.mode === 'plan'
-        ? page.getByText(/included in your Employer plan/i)
+      preQuota.mode === 'pack'
+        ? page.getByText(/included in your post pack/i)
         : page.getByText(/every post is free during our launch period/i),
     ).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/\b(Starter|Growth|Premium)\b/);
@@ -1153,8 +1153,8 @@ test.describe('employer lifecycle (ephemeral employer, local only)', () => {
     state.jobId = created.jobId;
     state.editToken = created.editToken;
 
-    // /success reads ?mode=promo | ?mode=plan; ?free=true is the pre-ladder spelling.
-    await expect(page).toHaveURL(/\/success\?(mode=promo|mode=plan|free=true)/);
+    // /success reads ?mode=promo | ?mode=pack; ?free=true is the pre-ladder spelling.
+    await expect(page).toHaveURL(/\/success\?(mode=promo|mode=pack|free=true)/);
     await expect(page.getByRole('heading', { name: /job posted successfully/i })).toBeVisible({ timeout: BOOT_TIMEOUT });
     await expectNoDashCopy(page, '/success (no-charge post)');
     // The wizard's local + server drafts are consumed by publishing.

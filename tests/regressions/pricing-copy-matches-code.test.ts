@@ -52,6 +52,15 @@ import { employerPricingFaqs } from '@/app/faq/faq-employer-copy';
 const ROOT = path.resolve(__dirname, '../..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
+/** The text of `src` from the first `start` to the next `end` after it. */
+function between(src: string, start: string, end: string): string {
+    const from = src.indexOf(start);
+    expect(from, start).toBeGreaterThan(-1);
+    const to = src.indexOf(end, from);
+    expect(to, end).toBeGreaterThan(from);
+    return src.slice(from, to);
+}
+
 /** The last promo day and the switch instant: every copy pin runs in both phases. */
 const DURING_PROMO = new Date('2026-12-31T12:00:00.000Z');
 const LADDER_START = new Date(config.promoEndsAt);
@@ -244,12 +253,23 @@ describe('no pricing surface repeats a claim the code does not back', () => {
  * follows the prices it protects.
  */
 describe('no pricing surface types a price that config holds', () => {
-    const PRICES = [...new Set([config.introPrice, config.postingPrice, config.renewalPrice, config.proRenewalPrice])];
-    const PRICE_LITERAL = new RegExp(`\\$(?:${PRICES.join('|')})(?![\\d,])`);
+    // The two post prices, the two renewal prices, the 5-post pack and the
+    // pack's one comparison figure (five posts at the posting price).
+    const PRICES = [...new Set([
+        config.introPrice, config.postingPrice, config.renewalPrice, config.proRenewalPrice,
+        config.packPrice, config.postingPrice * config.packPosts,
+    ])];
+    // Each figure as digits and as copy prints it ($1,245), never followed by
+    // more digits ($349,000 is a salary, not the posting price).
+    const SPELLINGS = [...new Set(PRICES.flatMap((price) => [String(price), config.formatDollars(price).slice(1)]))];
+    const PRICE_LITERAL = new RegExp(`\\$(?:${SPELLINGS.join('|')})(?!\\d|,\\d)`);
 
     it('the guard is built from the current config prices, and catches each of them', () => {
-        expect(PRICES).toEqual(expect.arrayContaining([config.introPrice, config.postingPrice, config.renewalPrice, config.proRenewalPrice]));
-        for (const price of PRICES) expect(PRICE_LITERAL.test(`for $${price}.`), String(price)).toBe(true);
+        expect(PRICES).toEqual(expect.arrayContaining([config.introPrice, config.postingPrice, config.renewalPrice, config.proRenewalPrice, config.packPrice]));
+        for (const price of PRICES) {
+            expect(PRICE_LITERAL.test(`for $${price}.`), String(price)).toBe(true);
+            expect(PRICE_LITERAL.test(`for ${config.formatDollars(price)}, then`), config.formatDollars(price)).toBe(true);
+        }
         // A larger figure that happens to start with a price is not one.
         expect(PRICE_LITERAL.test(`$${config.postingPrice},000`)).toBe(false);
     });
@@ -317,7 +337,7 @@ describe('the pricing FAQs (they also feed the FAQPage JSON-LD) answer no plan q
 describe('the renewal answers say what a renewal does, and nothing more', () => {
     it('one shared sentence names both renewal prices, each by the post it renews', () => {
         expect(RENEWAL_LINE).toBe(
-            `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo or intro post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
+            `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo, intro or pack post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
         );
         // The pages that state both prices print it, never a copy of their own.
         const importsShared = /import \{[^}]*\bRENEWAL_LINE\b[^}]*\} from '@\/lib\/pricing-copy'/;
@@ -361,10 +381,39 @@ describe('/terms states the same rules as the marketing pages', () => {
         expect(terms).not.toContain('config.planSlots');
     });
 
-    it('states both renewal prices from config, each by the posting it renews', () => {
+    it('states both renewal prices from config, each by the posting it renews, pack postings at the base price', () => {
         expect(terms).toContain(
-            'Renewals are ${config.renewalPrice} USD for promotional and intro postings and ${config.proRenewalPrice} USD for postings purchased at ${config.postingPrice}, one-time, and add {config.durationDays} days as described in §6',
+            'Renewals are ${config.renewalPrice} USD for promotional, intro and pack postings and ${config.proRenewalPrice} USD for postings purchased at ${config.postingPrice}, one-time, and add {config.durationDays} days as described in §6',
         );
+    });
+
+    it('§6 and §7 state the 5-post pack as the code sells and spends it, from config', () => {
+        const pricingSection = between(terms, 'id="pricing-and-payments"', 'id="refund-policy"');
+        // §6: a pack posting runs and renews like any other.
+        expect(terms).toContain('All job postings, whether promotional, paid or published with a 5-post pack credit, are active for {config.durationDays} days');
+        expect(terms).toContain('Employers may renew promotional, paid and pack postings through the employer dashboard.');
+        // §7: price, credits, 12 months, the buying account, the intro price, the sale window.
+        expect(terms).toContain('A 5-post pack is {config.formatDollars(config.packPrice)} USD, one-time, for {config.packPosts} posting credits');
+        expect(terms).toContain('Pack credits may be used within {config.packValidityMonths} months of purchase');
+        expect(terms).toContain('belong to the employer account that bought the pack');
+        expect(terms).toContain('A pack bought through checkout counts as your organization&apos;s first paid purchase');
+        expect(terms).toContain('Packs are sold from {config.ladderStartsLabel}');
+        // The pack's terms name no saving.
+        expect(pricingSection).not.toMatch(/\bsav(?:e|es|ing|ings)\b|\$500/i);
+    });
+
+    it('§8: all sales are final, with only the two exceptions the owner kept (2026-10-25)', () => {
+        const refundSection = between(terms, 'id="refund-policy"', 'id="candidate-data"');
+        // The rule, with the removed-posting line folded into it.
+        expect(refundSection).toContain('All sales are final. Fees for job postings, renewals and 5-post packs are non-refundable');
+        expect(refundSection).toContain('including pack credits left unused when the pack expires');
+        expect(refundSection).toContain('If we remove a posting for violation of these Terms, no refund will be issued.');
+        expect(refundSection).toContain('Promotional postings have no associated payment and are therefore not refundable');
+        // The two exceptions: a refund the law requires, and a billing error corrected.
+        expect(refundSection).toContain('where applicable law requires one');
+        expect(refundSection).toContain('a billing error, such as being charged twice for the same posting');
+        // Gone: the 7-day case-by-case requests, the discretion line and the "if granted" line.
+        expect(refundSection).not.toMatch(/7 days|case-by-case|case by case|sole discretion|generally non-refundable|if granted/i);
     });
 
     it('renewal adds days only, from the right base, within the cap', () => {

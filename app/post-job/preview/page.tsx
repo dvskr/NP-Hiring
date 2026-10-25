@@ -47,19 +47,21 @@ interface JobFormData {
  * the payload is now a PricingQuote — see lib/pricing.ts). `mode` says WHY
  * the next post is free or paid and drives every label on this page:
  *   promo → free through config.promoEndsLabel
- *   plan  → a slot on the employer's Employer plan
+ *   pack  → a credit from the employer's 5-post pack
  *   intro → config.introPrice, the company's first paid post
  *   paid  → config.postingPrice
- * Every field except `eligible` is optional so an older cached payload (or a
- * transient failure) degrades to neutral copy instead of crashing.
+ * (The Employer plan's 'plan' mode is gone from the quote since phase 2 of
+ * the 2027 re-price.) Every field except `eligible` is optional so an older
+ * cached payload (or a transient failure) degrades to neutral copy instead
+ * of crashing.
  */
 interface QuotaStatus {
   eligible: boolean;
   reason?: string;
-  mode?: 'promo' | 'plan' | 'intro' | 'paid';
-  tier?: 'intro' | 'pro' | 'plan';
+  mode?: 'promo' | 'pack' | 'intro' | 'paid';
+  tier?: 'intro' | 'pro' | 'pack';
   willBeFree?: boolean;
-  /** Dollars due now; 0 for promo / plan. */
+  /** Dollars due now; 0 for promo / pack. */
   price?: number;
   priceCents?: number;
   durationDays?: number;
@@ -67,7 +69,8 @@ interface QuotaStatus {
   promoActive?: boolean;
   promoEndsLabel?: string;
   ladderStartsLabel?: string;
-  plan?: { slots: number; used: number; remaining: number };
+  /** The account's current 5-post packs: credits left, used and held, and the next expiry. */
+  pack?: { remaining: number; used?: number; total: number; expiresAt: string | null };
   // Legacy fields — still emitted by the API, no longer rendered here.
   remaining?: number;
   limit?: number;
@@ -170,7 +173,7 @@ export default function PreviewPage() {
     setError(null);
     try {
       // Always try the no-charge path first — post-free resolves the mode
-      // server-side (promo → plan → intro/paid) and answers requiresPayment
+      // server-side (promo → pack → intro/paid) and answers requiresPayment
       // when a Stripe checkout is actually needed.
       if (!formData) return;
       const response = await fetch('/api/jobs/post-free', {
@@ -216,10 +219,10 @@ export default function PreviewPage() {
           // integrity; a stale draft can be cleared from the dashboard.
         }
         // post-free reports which no-charge path it took so /success can say
-        // "free during our launch period" vs "posted under your Employer
-        // plan". `?free=true` remains the fallback the success page still
-        // honours for older callers.
-        const postedMode = result.mode === 'plan' || result.mode === 'promo' ? result.mode : null;
+        // "free during our launch period" vs "posted with your 5-post pack".
+        // `?free=true` remains the fallback the success page still honours
+        // for older callers.
+        const postedMode = result.mode === 'pack' || result.mode === 'promo' ? result.mode : null;
         router.push(postedMode ? `/success?mode=${postedMode}` : '/success?free=true');
       } else if (result.requiresPayment) {
         // Next post is a paid rung — fire the P7 funnel event with the quote
@@ -342,12 +345,13 @@ export default function PreviewPage() {
   // promo claimed).
   const postingMode = quotaStatus?.eligible === true ? quotaStatus.mode : undefined;
   const listingDays = quotaStatus?.durationDays ?? config.durationDays;
-  const planSlots = quotaStatus?.plan?.slots ?? config.planSlots;
-  const planSlotNumber = (quotaStatus?.plan?.used ?? 0) + 1;
+  // The credits this post leaves, when the quote carries the pack.
+  const pack = postingMode === 'pack' ? quotaStatus?.pack : undefined;
+  const packPostsLeftAfter = pack ? Math.max(0, pack.remaining - 1) : null;
   const packageHeadline = postingMode === 'promo'
     ? `Free through ${config.promoEndsLabel}, live for ${listingDays} days`
-    : postingMode === 'plan'
-      ? `Using plan slot ${planSlotNumber} of ${planSlots}`
+    : postingMode === 'pack'
+      ? `From your ${config.packPosts}-post pack, live for ${listingDays} days`
       : postingMode === 'intro'
         ? `$${config.introPrice} today, the intro price for your first post`
         : postingMode === 'paid'
@@ -377,8 +381,8 @@ export default function PreviewPage() {
   // has to say why.
   const priceCaption = postingMode === 'promo'
     ? `Every post is free during our launch period through ${config.promoEndsLabel}. No credit card required.`
-    : postingMode === 'plan'
-      ? 'Included in your Employer plan.'
+    : postingMode === 'pack'
+      ? 'Included in your post pack.'
       : willBePaid
         ? postingMode === 'intro'
           ? `One-time charge · secure Stripe checkout · every post after this one is $${config.postingPrice}`
@@ -618,9 +622,9 @@ export default function PreviewPage() {
             <div style={{ minWidth: 0, flex: 1 }}>
               <p style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{packageHeadline}</p>
               <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>{packageDetails}</p>
-              {postingMode === 'plan' && typeof quotaStatus?.plan?.remaining === 'number' && (
+              {pack && packPostsLeftAfter !== null && (
                 <p style={{ fontSize: '11px', color: '#BE185D', margin: '4px 0 0', fontWeight: 600 }}>
-                  {Math.max(0, quotaStatus.plan.remaining - 1)} of {planSlots} plan slots left after this post
+                  {packPostsLeftAfter} of {pack.total} pack posts left after this one
                 </p>
               )}
             </div>
@@ -640,8 +644,7 @@ export default function PreviewPage() {
               {priceCaption}
               {willBePaid && (
                 <>
-                  {' · '}Posting fees are generally non-refundable. Refund requests within 7 days are reviewed case
-                  by case (<Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>Terms §8</Link>).
+                  {' · '}All sales are final (<Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>Terms §8</Link>).
                 </>
               )}
             </p>

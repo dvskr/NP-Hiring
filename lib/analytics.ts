@@ -854,8 +854,11 @@ export function trackViewPostJobPage() {
   gtag('event', 'view_post_job_page', {});
 }
 
-/** Employer clicked through to Stripe checkout */
-export function trackBeginCheckout(amountCents: number, type: 'new' | 'renewal') {
+/**
+ * Employer clicked through to Stripe checkout: a new post, a renewal, or a
+ * 5-post pack (valued at its price, config.stripePackPriceInCents).
+ */
+export function trackBeginCheckout(amountCents: number, type: 'new' | 'renewal' | 'pack') {
   gtag('event', 'begin_checkout', {
     currency: 'USD',
     value: amountCents / 100,
@@ -865,11 +868,12 @@ export function trackBeginCheckout(amountCents: number, type: 'new' | 'renewal')
 
 /**
  * No-charge post submitted successfully (no Stripe involved). `mode` records
- * WHY it was free — 'promo' (launch period) or 'plan' (Employer plan slot) —
- * so the two funnels stay separable in GA4 after the promo ends. The event
- * name is unchanged to keep historical reports continuous.
+ * WHY it was free — 'promo' (launch period) or 'pack' (a 5-post pack credit,
+ * which took the retired Employer plan slot's place) — so the funnels stay
+ * separable in GA4 after the promo ends. The event name is unchanged to keep
+ * historical reports continuous.
  */
-export function trackSubmitFreePost(jobId: string, mode?: 'promo' | 'plan') {
+export function trackSubmitFreePost(jobId: string, mode?: 'promo' | 'pack') {
   gtag('event', 'submit_free_post', { job_id: jobId, ...(mode ? { posting_mode: mode } : {}) });
 }
 

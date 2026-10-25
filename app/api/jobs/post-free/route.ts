@@ -95,7 +95,7 @@ class PromoCapReachedError extends Error {
 
 /** The credits left after a pack post, as the response carries them. */
 function packCreditsJson(status: PackCreditStatus) {
-  return { remaining: status.remaining, total: status.total, expiresAt: status.expiresAt?.toISOString() ?? null };
+  return { remaining: status.remaining, used: status.used, total: status.total, expiresAt: status.expiresAt?.toISOString() ?? null };
 }
 
 export async function POST(request: NextRequest) {
@@ -555,7 +555,8 @@ export async function POST(request: NextRequest) {
     // Send confirmation email with dashboard token + the listing duration so
     // the email's "N-day listing" line matches the actual expiresAt written
     // to the DB (audit #30), plus the mode so the template can say "free
-    // during our launch promo", or name the pack a pack post was made with.
+    // during our launch promo", or name the pack a pack post was made with
+    // and the credits it left.
     try {
       await sendConfirmationEmail(
         sanitized.contactEmail,
@@ -566,6 +567,7 @@ export async function POST(request: NextRequest) {
         config.durationDays,
         undefined, // invoice — no charge on a promo or pack post
         postingMode,
+        packAfter ? { remaining: packAfter.remaining, expiresAt: packAfter.expiresAt } : undefined,
       );
     } catch (emailError) {
       logger.error('Failed to send confirmation email', emailError);

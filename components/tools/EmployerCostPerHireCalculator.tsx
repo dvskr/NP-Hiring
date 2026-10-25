@@ -9,12 +9,13 @@
  * render as free, and a made-up benchmark on a page that concludes our product
  * is cheaper would be indefensible.
  *
- * Our side has two ways to buy (launch promo → free; the per-post ladder),
- * since the Employer plan was retired on 2026-10-24, and the widget prices
- * whichever one the reader picks, so a $0 promo result is always labelled
- * as a dated window rather than a rate. Each renewal is priced by
- * the post it renews (lib/renewal-price.ts): the intro post's and a promo
- * post's at the base price, a later post's at the pro price.
+ * Our side has three ways to buy (launch promo → free; the per-post ladder;
+ * the 5-post pack, which took the retired Employer plan's place), and the
+ * widget prices whichever one the reader picks, so a $0 promo result is
+ * always labelled as a dated window rather than a rate. Each renewal is
+ * priced by the post it renews (lib/renewal-price.ts): the intro post's, a
+ * promo post's and a pack post's at the base price, a later post's at the
+ * pro price.
  * Which ways are on offer follows the launch-promo clock: the server page
  * decides the phase per render and passes it in (`phase`), so the server
  * HTML and the hydrated widget agree. Once the promo has ended the promo is
@@ -244,7 +245,8 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                 )}
                 {formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is{' '}
                 {formatUsd(FLAT_FEE_PRICING.postingPrice)} for {FLAT_FEE_PRICING.durationDays} days
-                ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day). {RENEWAL_SCOPE_NOTE} Every post includes{' '}
+                ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day), or buy {FLAT_FEE_PRICING.packPosts} posts for{' '}
+                {formatUsd(FLAT_FEE_PRICING.packPrice)}. {RENEWAL_SCOPE_NOTE} Every post includes{' '}
                 {FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks and{' '}
                 {FLAT_FEE_PRICING.inmailsPerPosting} direct messages.
             </p>
@@ -278,7 +280,7 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                     onChange={set('renewalsPerRole')}
                 />
             </div>
-            {flatFeeMode === 'per-post' && (
+            {(flatFeeMode === 'per-post' || flatFeeMode === 'pack') && (
                 <label
                     htmlFor="cph-intro-price"
                     style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '10px' }}
@@ -405,6 +407,15 @@ export default function EmployerCostPerHireCalculator({ phase }: EmployerCostPer
                             {flat.proPostings} {flat.proPostings === 1 ? 'post' : 'posts'} at{' '}
                             {formatUsd(FLAT_FEE_PRICING.postingPrice)} and {flat.renewals}{' '}
                             {flat.renewals === 1 ? 'renewal' : 'renewals'}{perPostRenewalPrices(flat)}
+                        </>
+                    )}
+                    {flat.mode === 'pack' && (
+                        <>
+                            {flat.packs} {flat.packs === 1 ? 'pack' : 'packs'} of {FLAT_FEE_PRICING.packPosts} posts at{' '}
+                            {formatUsd(FLAT_FEE_PRICING.packPrice)}
+                            {flat.introPostings > 0 && `, ${flat.introPostings} intro post at ${formatUsd(FLAT_FEE_PRICING.introPrice)}`}
+                            {flat.proPostings > 0 && `, ${flat.proPostings} ${flat.proPostings === 1 ? 'post' : 'posts'} at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}`}
+                            {' '}and {flat.renewals} {flat.renewals === 1 ? 'renewal' : 'renewals'}{perPostRenewalPrices(flat)}
                         </>
                     )}
                     , for a total of <strong>{formatUsd(flat.total)}</strong>.

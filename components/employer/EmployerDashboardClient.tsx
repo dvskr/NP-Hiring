@@ -811,6 +811,10 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                     {job.paymentStatus === 'promo' && (
                                                         <span style={{ ...clayPill, background: '#FDF2F8', color: '#BE185D', border: '1px solid rgba(190,24,93,0.18)' }}>Launch promo</span>
                                                     )}
+                                                    {/* A 5-post pack credit paid for it: no invoice of its own (the pack's is in Settings, Billing). */}
+                                                    {job.paymentStatus === 'pack' && (
+                                                        <span style={{ ...clayPill, background: '#FDF2F8', color: '#BE185D', border: '1px solid rgba(190,24,93,0.18)' }}>Pack post</span>
+                                                    )}
                                                     {job.paymentStatus === 'plan' && (
                                                         <span style={{ ...clayPill, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid rgba(29,78,216,0.18)' }}>Plan slot</span>
                                                     )}

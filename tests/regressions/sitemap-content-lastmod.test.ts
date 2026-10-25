@@ -147,8 +147,11 @@ const FOLLOW_UPS_PAGES: readonly string[] = [
  * The UTC day the 2027 re-price changed its pages' copy (Phase 1: the new
  * ladder, the two renewal prices and the retired Employer plan), and the
  * pages whose promo-phase render prints the ladder, the plan or the renewal
- * price: /terms also moved its "Last updated" line. Same rule: move the
- * constant and these entries together if the release ships on a later day.
+ * price: /terms also moved its "Last updated" line. Phase 3 (the 5-post pack
+ * and all sales final) changed the same eight pages on the same day: the pack
+ * in the ladder lines, the pack card, answer and calculator mode, /terms
+ * sections 6 to 8 and every refund answer. Same rule: move the constant and
+ * these entries together if the release ships on a later day.
  * COMPARE_REVIEW_DATE stays, because no competitor claim was re-checked.
  */
 const PRICING_RELEASE_DAY = '2026-10-25';

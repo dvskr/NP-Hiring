@@ -4,15 +4,17 @@
  *
  * The quote follows lib/pricing.ts#resolvePostingMode: promo, then a usable
  * pack credit, then intro, then paid. The answer carries
- * `pack: { remaining, total, expiresAt }` whenever the account holds a usable
- * credit (lib/post-packs.ts#getPackCreditStatus), in place of the retired
- * Employer plan's `plan` field, which is never sent again. The legacy
- * `remaining` / `limit` pair reads the credits left and held in pack mode.
+ * `pack: { remaining, used, total, expiresAt }` whenever the account holds a
+ * current pack, used up or not (lib/post-packs.ts#getPackCreditStatus; a
+ * used-up pack still reports its totals, a phase 3 review fix), in place of
+ * the retired Employer plan's `plan` field, which is never sent again. The
+ * legacy `remaining` / `limit` pair reads the credits left and held in pack
+ * mode.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
-import { usablePackWhere } from '@/lib/post-packs';
+import { currentPackWhere } from '@/lib/post-packs';
 
 const getUserMock = vi.fn();
 vi.mock('@/lib/supabase/server', () => ({
@@ -78,20 +80,36 @@ describe('after the promo', () => {
             priceCents: 0,
             durationDays: config.durationDays,
             promoActive: false,
-            pack: { remaining: 7, total: 2 * config.packPosts, expiresAt: SOON.toISOString() },
+            pack: { remaining: 7, used: 3, total: 2 * config.packPosts, expiresAt: SOON.toISOString() },
             remaining: 7,
             limit: 2 * config.packPosts,
         });
-        expect(prisma.employerPostPack.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: usablePackWhere('user-1', AFTER_PROMO) }));
+        expect(prisma.employerPostPack.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: currentPackWhere('user-1', AFTER_PROMO) }));
         // A credit wins ahead of the intro price: no paid-post count is read.
         expect(prisma.employerJob.count).not.toHaveBeenCalled();
     });
 
-    it('quotes the ladder and sends no pack field without a usable credit', async () => {
+    it('quotes the ladder and sends no pack field without a current pack', async () => {
         const { json } = await quote();
 
         expect(json).toMatchObject({ mode: 'intro', tier: 'intro', price: config.introPrice, willBeFree: false, remaining: 0, limit: 0 });
         expect(json).not.toHaveProperty('pack');
+    });
+
+    it('once the last credit is used, quotes the paid post and still reports the pack: 5 of 5 used, and its expiry', async () => {
+        packs([{ creditsRemaining: 0, expiresAt: LATER }]);
+        vi.mocked(prisma.employerPostPack.count).mockResolvedValue(1 as never);
+
+        const { json } = await quote();
+
+        expect(json).toMatchObject({
+            mode: 'paid',
+            willBeFree: false,
+            price: config.postingPrice,
+            pack: { remaining: 0, used: config.packPosts, total: config.packPosts, expiresAt: LATER.toISOString() },
+            remaining: 0,
+            limit: 0,
+        });
     });
 
     it('quotes the posting price once the domain bought a pack, though its credits are gone', async () => {
@@ -121,7 +139,7 @@ describe('during the promo', () => {
 
         const { json } = await quote();
 
-        expect(json).toMatchObject({ mode: 'promo', willBeFree: true, promoActive: true, pack: { remaining: 5, total: config.packPosts, expiresAt: LATER.toISOString() } });
+        expect(json).toMatchObject({ mode: 'promo', willBeFree: true, promoActive: true, pack: { remaining: 5, used: 0, total: config.packPosts, expiresAt: LATER.toISOString() } });
         // The legacy pair keeps its promo meaning: cap headroom and cap.
         expect(json.limit).toBe(config.promoMaxActivePostsPerDomain);
     });

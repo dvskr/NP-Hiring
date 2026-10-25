@@ -15,7 +15,7 @@ import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget'
 // cell-honesty rules live with the data in lib/employer-comparison.ts.
 import { employerComparisonRows } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
-import { RENEWAL_LINE } from '@/lib/pricing-copy';
+import { REFUND_ANSWER, RENEWAL_LINE } from '@/lib/pricing-copy';
 // Backlog 2.1: every string that depends on the launch-promo clock (the
 // receipt hero, the pricing card, the CTAs, the pricing FAQ entries and the
 // metadata) comes from this builder, read per render, so the page stops
@@ -118,13 +118,13 @@ const EVERGREEN_FAQS = [
     a: 'Yes. Open your employer dashboard from the link in your confirmation email and click Edit on any posting. Changes to the salary, requirements, or description go live immediately.',
   },
   {
-    // P2 #16: this answer now states the ACTUAL policy from Terms §8 rather
-    // than implying a guarantee. Posting fees are generally non-refundable;
-    // a request inside 7 days is reviewed, not automatically granted. The
-    // Employer plan is retired (2026-10-24), so no plan months are named and
-    // the volume question no longer counts plan slots.
+    // P2 #16: this answer states the ACTUAL policy from Terms §8, never a
+    // guarantee. Since 2026-10-25 that policy is all sales final (owner
+    // decision): the shared REFUND_ANSWER /pricing and /faq print, with only
+    // the two exceptions §8 keeps. The Employer plan is retired
+    // (2026-10-24), so the volume question counts no plan slots.
     q: 'Do you offer refunds or volume discounts?',
-    a: `Posting fees are generally non-refundable, but if you are unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we will review the request case by case. Postings removed for a Terms violation are not refunded, and promo posts involve no payment to refund. Hiring for several roles at once? Email us.`,
+    a: `${REFUND_ANSWER} Hiring for several roles at once? Email us.`,
   },
 ];
 

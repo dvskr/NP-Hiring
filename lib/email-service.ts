@@ -14,7 +14,7 @@ import {
 } from '@/lib/email-templates-v2';
 import { renderJobCardHtml } from '@/lib/utils/render-job-card';
 import { resolveRenewalOffer, renewalSavingsLabel, type RenewalOffer } from '@/lib/pricing';
-import { LADDER_HEADLINE, PROMO_HEADLINE, PROMO_SUB, ladderLine } from '@/lib/pricing-copy';
+import { LADDER_HEADLINE, PROMO_HEADLINE, PROMO_SUB, ladderLine, packUseByLabel } from '@/lib/pricing-copy';
 import { buildListUnsubscribeHeaders } from '@/lib/email/list-unsubscribe';
 import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
 
@@ -129,10 +129,33 @@ function pricingCopyForNow(now: Date = new Date()): { label: string; headline: s
 
 /**
  * How a post was placed — drives the confirmation email's wording. 'pack'
- * (a 5-post pack credit) prints the paid wording, with no invoice block: the
- * pack itself was invoiced when it was bought.
+ * (a 5-post pack credit) names the pack and the credits the post left, with
+ * no invoice block: the pack itself was invoiced when it was bought.
  */
 export type ConfirmationMode = 'promo' | 'pack' | 'plan' | 'paid';
+
+/** What a pack post left on the account (POST /api/jobs/post-free reads it in its transaction). */
+export interface PackPostCredits {
+  /** Credits left across the account's current packs. */
+  remaining: number;
+  /** When the pack the next post spends from expires; null when none is left. */
+  expiresAt: Date | null;
+}
+
+/**
+ * The confirmation email's pack sentence (plan section 3.9): "Posted with
+ * your 5-post pack. 3 posts left, to use by February 29, 2028." The date is
+ * the "Use by" date every pack surface prints (packUseByLabel).
+ */
+function packConfirmationSentence(pack: PackPostCredits | undefined): string {
+  const name = `${config.packPosts}-post pack`;
+  if (!pack) return `Posted with your ${name}.`;
+  if (pack.remaining <= 0) return `Posted with the last post in your ${name}.`;
+  const left = `${pack.remaining} post${pack.remaining === 1 ? '' : 's'} left`;
+  return pack.expiresAt
+    ? `Posted with your ${name}. ${left}, to use by ${packUseByLabel(pack.expiresAt)}.`
+    : `Posted with your ${name}. ${left}.`;
+}
 
 // Canonical EmailType union — every value the platform sends should be in this list.
 // Drives MARKETING_EMAIL_TYPES below and is the type for `sendAndLog`'s emailType param,
@@ -520,7 +543,9 @@ export interface InvoiceLinks {
  *   'promo' → free during our launch period through config.promoEndsLabel
  *   'plan'  → posted under your Employer plan: runs `durationDays`, then its
  *             slot is free for another post at no extra charge
- *   'pack' / 'paid' / undefined → today's wording, with `durationDays`
+ *   'pack'  → posted with the 5-post pack, the credits it left (`pack`, slot
+ *             9) and the date to use them by, then today's wording
+ *   'paid' / undefined → today's wording, with `durationDays`
  *
  * Positional compatibility: slot 7 has always been `invoice` (the paid
  * webhook passes InvoiceLinks there), so `mode` is the true trailing slot 8.
@@ -539,6 +564,7 @@ export async function sendConfirmationEmail(
   durationDays: number = config.durationDays,
   invoiceOrMode?: InvoiceLinks | ConfirmationMode,
   modeArg?: ConfirmationMode,
+  pack?: PackPostCredits,
 ): Promise<EmailResult> {
   const mode: ConfirmationMode = typeof invoiceOrMode === 'string' ? invoiceOrMode : (modeArg ?? 'paid');
   const invoice: InvoiceLinks | undefined =
@@ -563,7 +589,9 @@ export async function sendConfirmationEmail(
         ? `It is free during our launch period through ${config.promoEndsLabel} and will remain active for ${durationDays} days.`
         : mode === 'plan'
           ? `It was posted under your Employer plan and runs ${durationDays} days. When it ends, post again into the free slot at no extra charge while you're subscribed.`
-          : `The listing will remain active for ${durationDays} days.`;
+          : mode === 'pack'
+            ? `${packConfirmationSentence(pack)} The listing will remain active for ${durationDays} days.`
+            : `The listing will remain active for ${durationDays} days.`;
     const modeNote =
       mode === 'promo'
         ? `<p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Launch offer: every post is free through ${config.promoEndsLabel}. No credit card required.</p>`
@@ -1055,32 +1083,49 @@ export interface PostPackPurchasedEmailOptions {
 
 /**
  * The notice a 5-post pack purchase sends once the webhook has recorded it:
- * how many posts, and the date to use them by. No price: Stripe's receipt
- * and invoice carry the amount charged. Transactional, like the confirmation
- * and renewal emails: it ignores marketing suppression and mints a real
- * unsubscribe token for the footer and the List-Unsubscribe header. Minimal
- * on purpose while the pack ships dark. The date is the UTC calendar date,
- * the one packExpiresAt clamps to the end of a month.
+ * how many posts, the date to use them by, what each post includes, the
+ * invoice when Stripe issued one, and where to post and manage them. No
+ * price: Stripe's receipt and invoice carry the amount charged.
+ * Transactional, like the confirmation and renewal emails: it ignores
+ * marketing suppression and mints a real unsubscribe token for the footer
+ * and the List-Unsubscribe header. The date is the "Use by" date every pack
+ * surface prints (lib/pricing-copy.ts#packUseByLabel: the last day the
+ * credits last in every US time zone; the UTC date would overstate it by a
+ * day for a purchase made on a US evening).
  */
 export async function sendPostPackPurchasedEmail(to: string, opts: PostPackPurchasedEmailOptions): Promise<EmailResult> {
   try {
-    const useBy = opts.expiresAt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
-    const invoiceLine = opts.hostedInvoiceUrl
-      ? `${spacerV2(12)}${bodyTextV2(`${opts.invoiceNumber ? `Invoice #${escapeHtml(opts.invoiceNumber)} · ` : ''}<a href="${opts.hostedInvoiceUrl}" style="color:${V2.teal};text-decoration:underline;">View your invoice</a>`)}`
+    const useBy = packUseByLabel(opts.expiresAt);
+    const lead = `You have ${opts.posts} job posts to use by ${useBy}.`;
+    // Stripe's hosted invoice page, https only, escaped as an attribute value.
+    const invoiceUrl = opts.hostedInvoiceUrl?.startsWith('https://') ? opts.hostedInvoiceUrl : null;
+    const invoiceCard = invoiceUrl
+      ? `
+      ${spacerV2(12)}
+      ${infoCardV2(`
+          ${sectionLabelV2('Receipt and invoice', V2.teal)}
+          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${opts.invoiceNumber ? `Invoice #${escapeHtml(opts.invoiceNumber)} · ` : ''}<a href="${escapeHtml(invoiceUrl)}" style="color:${V2.teal};text-decoration:underline;">View your invoice</a></p>`)}`
       : '';
     const unsubToken = await getOrCreateUnsubToken(to);
     const html = emailShellV2(`
       ${headerBlockV2(`Your ${opts.posts}-Post Pack Is Ready`, '')}
       ${spacerV2(12)}
-      ${bodyTextV2(`You have ${opts.posts} job posts to use by ${useBy}.`)}${invoiceLine}
+      ${bodyTextV2(`You have <strong>${opts.posts} job posts</strong> to use by <strong>${useBy}</strong>.`)}
+      ${spacerV2(20)}
+      ${infoCardV2(`
+          ${sectionLabelV2('Every post includes', V2.teal)}
+          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Each is a ${config.durationDays}-day listing with the full package: ${FEATURES_LINE}.</p>
+          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">The posts belong to this account.</p>`)}${invoiceCard}
       ${spacerV2(28)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Post a Job', `${BASE_URL}/post-job`)}
       </td></tr>
+      ${spacerV2(16)}
+      <tr><td class="content-pad" style="padding:0 40px;text-align:center;"><p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textMuted};line-height:1.6;">See the posts left from your <a href="${BASE_URL}/employer/dashboard" style="color:${V2.teal};text-decoration:underline;">dashboard</a>. Questions? Reply to this email or contact <a href="mailto:${brand.email.support}" style="color:${V2.teal};text-decoration:underline;">${brand.email.support}</a>.</p></td></tr>
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubToken),
-      `You have ${opts.posts} job posts to use by ${useBy}.`,
+      lead,
     );
 
     await sendAndLog(

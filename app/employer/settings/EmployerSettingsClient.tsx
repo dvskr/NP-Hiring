@@ -10,6 +10,9 @@ import {
 import { createClient } from '@/lib/supabase/client';
 // Niche specialty vocabulary — see config/niche/credentials.ts for FORK NOTEs.
 import { SPECIALTY_PRESETS } from '@/config/niche/credentials';
+import { config } from '@/lib/config';
+import type { PostPackView } from '@/lib/post-pack-view';
+import PackPurchases from './PackPurchases';
 
 interface CompanyInfo {
     name: string;
@@ -124,6 +127,12 @@ const clayTabActive: React.CSSProperties = {
     border: '1px solid rgba(0,0,0,0.05)',
 };
 
+/** The packs and the posts in Billing, when the account has both. */
+const billingSubheading: React.CSSProperties = {
+    fontSize: '13px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px',
+    textTransform: 'uppercase', letterSpacing: '0.04em',
+};
+
 const clayTabInactive: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: '12px',
     padding: '16px', borderRadius: '14px', width: '100%', justifyContent: 'flex-start',
@@ -143,6 +152,9 @@ export default function EmployerSettingsClient() {
     const [profile, setProfile] = useState<ProfileInfo | null>(null);
     const [company, setCompany] = useState<CompanyInfo | null>(null);
     const [payments, setPayments] = useState<Payment[]>([]);
+    // The account's 5-post packs (GET /api/employer/post-packs), listed in Billing.
+    const [packs, setPacks] = useState<PostPackView[]>([]);
+    const [packsFailed, setPacksFailed] = useState(false);
     const [alertPrefs, setAlertPrefs] = useState<AlertPrefs>({ specialties: [], states: [], minExperience: null, workMode: '', isActive: false });
     const [savingAlerts, setSavingAlerts] = useState(false);
     const [activeSection, setActiveSection] = useState<'company' | 'billing' | 'alerts' | 'notifications' | 'account'>('company');
@@ -171,6 +183,15 @@ export default function EmployerSettingsClient() {
             .then(d => { setNewsletterOptIn(d.optIn ?? false); setNewsletterChecked(true); })
             .catch(() => setNewsletterChecked(true));
     }, [profile?.email]);
+
+    useEffect(() => {
+        // The account's 5-post packs. Loaded on their own, so a failure here
+        // shows in Billing and never holds up the rest of the page.
+        fetch('/api/employer/post-packs')
+            .then(r => (r.ok ? r.json() : Promise.reject(new Error(`post-packs answered ${r.status}`))))
+            .then(d => setPacks(Array.isArray(d?.packs) ? d.packs : []))
+            .catch(() => setPacksFailed(true));
+    }, []);
 
     useEffect(() => {
         // Per-job notification preferences
@@ -605,20 +626,39 @@ export default function EmployerSettingsClient() {
                             Payment History
                         </h3>
                     </div>
-                    {payments.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                            <div style={{
-                                width: '56px', height: '56px', borderRadius: '18px', margin: '0 auto 16px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: '#F5F6F8',
-                                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.04), inset -1px -1px 2px rgba(255,255,255,0.4)',
-                            }}>
-                                <FileText size={24} color="#B0BEC5" />
-                            </div>
-                            <p style={{ color: '#8A9BA6', fontSize: '14px', margin: 0 }}>
-                                No payment history yet.
-                            </p>
+                    {/* The 5-post packs first: each is a purchase with its own
+                        invoice, and the posts it paid for are listed below. */}
+                    {packsFailed && (
+                        <p role="alert" style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600, margin: '0 0 20px' }}>
+                            We could not load your {config.packPosts}-post packs.
+                        </p>
+                    )}
+                    {packs.length > 0 && (
+                        <div style={{ marginBottom: '28px' }}>
+                            <h4 style={billingSubheading}>{config.packPosts}-post packs</h4>
+                            <PackPurchases packs={packs} />
                         </div>
+                    )}
+                    {packs.length > 0 && payments.length > 0 && (
+                        <h4 style={billingSubheading}>Job posts</h4>
+                    )}
+                    {payments.length === 0 ? (
+                        // The empty state only when there is no pack either.
+                        packs.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                                <div style={{
+                                    width: '56px', height: '56px', borderRadius: '18px', margin: '0 auto 16px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: '#F5F6F8',
+                                    boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.04), inset -1px -1px 2px rgba(255,255,255,0.4)',
+                                }}>
+                                    <FileText size={24} color="#B0BEC5" />
+                                </div>
+                                <p style={{ color: '#8A9BA6', fontSize: '14px', margin: 0 }}>
+                                    No payment history yet.
+                                </p>
+                            </div>
+                        )
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
@@ -632,12 +672,14 @@ export default function EmployerSettingsClient() {
                                 <tbody>
                                     {payments.map(p => {
                                         // No-charge rows have no invoice link: legacy free-trial
-                                        // posts ('free*'), launch-promo posts ('promo') and
-                                        // Employer-plan slots ('plan' — billed by the subscription,
-                                        // not per post). Paid posts get a "Download" button that
-                                        // hits our PDF generator. `isFree` is the billing API's own
-                                        // flag; the status check is belt-and-suspenders for a
-                                        // payload that predates the promo/plan statuses.
+                                        // posts ('free*'), launch-promo posts ('promo'), 5-post
+                                        // pack posts ('pack': the pack's own invoice, listed
+                                        // above, covers them) and Employer-plan slots ('plan',
+                                        // billed by the subscription, not per post). Paid posts
+                                        // get a "Download" button that hits our PDF generator.
+                                        // `isFree` is the billing API's own flag; the status check
+                                        // is belt-and-suspenders for a payload that predates the
+                                        // promo/pack/plan statuses.
                                         // Defensive reads — historical payment rows occasionally have
                                         // null `tier` or missing `charges`, and a render-time crash on
                                         // those (`p.tier.includes` etc.) was producing the System
@@ -646,16 +688,19 @@ export default function EmployerSettingsClient() {
                                         const tier = p.tier ?? '';
                                         const status = p.status ?? '';
                                         const isPromoPost = status === 'promo';
+                                        const isPackPost = status === 'pack';
                                         const isPlanPost = status === 'plan';
-                                        const isNoCharge = p.isFree || isPromoPost || isPlanPost;
+                                        const isNoCharge = p.isFree || isPromoPost || isPackPost || isPlanPost;
                                         const isFeatured = tier.includes('Featured');
                                         const planLabel = isPlanPost
                                             ? 'Employer plan'
-                                            : isPromoPost
-                                                ? 'Launch promo'
-                                                : p.isFree
-                                                    ? 'Free trial'
-                                                    : (tier || 'Standard');
+                                            : isPackPost
+                                                ? 'Pack post'
+                                                : isPromoPost
+                                                    ? 'Launch promo'
+                                                    : p.isFree
+                                                        ? 'Free trial'
+                                                        : (tier || 'Standard');
                                         const planBg = isPlanPost ? '#EFF6FF' : isNoCharge ? '#FDF2F8' : (isFeatured ? '#FFF8E1' : '#FDF2F8');
                                         const planColor = isPlanPost ? '#1D4ED8' : isNoCharge ? '#BE185D' : (isFeatured ? '#F59E0B' : '#BE185D');
                                         const statusLabel = p.isActive ? 'Active' : 'Expired';

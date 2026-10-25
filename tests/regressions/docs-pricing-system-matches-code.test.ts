@@ -29,6 +29,11 @@
  * bought at $349), and the Employer plan retired from every surface. The
  * plan code stays, dormant, so the plan sections (2e, 2f and the section 12
  * diagram) are marked retired but still describe the code as it runs.
+ *
+ * Phase 3 (owner decisions 2026-10-25): the 5-post pack's pages and copy,
+ * and all sales final. Section 1c quotes the pack sentences and the refund
+ * answer with their config tokens, and the money-path list names the pack's
+ * purchase, credit and admin suites.
  */
 import path from 'node:path';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
@@ -37,7 +42,7 @@ import { isPlanEntitled, mapStripeSubscriptionStatus } from '@/lib/employer-plan
 import { PROMO_SWITCH_PATHS } from '@/app/api/sitemaps/lastmod';
 import { pricingPageCopy } from '@/app/pricing/pricing-page-copy';
 import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
-import { LADDER_PRICES, RENEWAL_LINE } from '@/lib/pricing-copy';
+import { LADDER_PRICES, PACK_COMPARISON, PACK_OFFER, REFUND_ANSWER, RENEWAL_LINE, packPriceLine } from '@/lib/pricing-copy';
 import { between, existsInRepo, isSource, lineWith, readRepo, repoPathsNamed, walk, withoutComments } from '../support/docs-vs-code';
 
 const DOC = 'docs/pricing-system.md';
@@ -97,11 +102,15 @@ describe('docs/pricing-system.md: every link, path and name it gives exists', ()
  * result, and the two must be the same sentence.
  */
 const TOKENS = {
+    config,
     durationDays: config.durationDays,
     introPrice: config.introPrice,
     postingPrice: config.postingPrice,
     renewalPrice: config.renewalPrice,
     proRenewalPrice: config.proRenewalPrice,
+    packPosts: config.packPosts,
+    packPrice: config.packPrice,
+    formatDollars: config.formatDollars,
 };
 const evaluated = (template: string): string =>
     new Function(...Object.keys(TOKENS), `return \`${template}\`;`)(...Object.values(TOKENS)) as string;
@@ -138,8 +147,8 @@ describe('section 1: the copy and the switch at config.promoEndsAt', () => {
     });
 
     it('1c quotes the ladder and the renewal sentence the pages print, with their config tokens', () => {
-        const ladder = '`Your first post is $${introPrice}, every post after that is $${postingPrice}.`';
-        const renewal = '`Renewals add ${durationDays} days: $${renewalPrice} for a promo or intro post, $${proRenewalPrice} for a $${postingPrice} post.`';
+        const ladder = '`Your first post is $${introPrice}, every post after that is $${postingPrice}, or buy ${packPosts} posts for ${formatDollars(packPrice)}.`';
+        const renewal = '`Renewals add ${durationDays} days: $${renewalPrice} for a promo, intro or pack post, $${proRenewalPrice} for a $${postingPrice} post.`';
         expect(section1c).toContain(ladder);
         expect(section1c).toContain(renewal);
         expect(evaluated(ladder.slice(1, -1))).toBe(LADDER_PRICES);
@@ -147,6 +156,22 @@ describe('section 1: the copy and the switch at config.promoEndsAt', () => {
         // No plan sentence is quoted as copy any more.
         expect(section1c).not.toContain('`${planSlots} active job slots');
         expect(section1c).not.toMatch(/`planPriceLine\(now\)`:/);
+    });
+
+    it('1c quotes the 5-post pack sentences and the refund answer the pages print, in both phases', () => {
+        const pricePromo = '`From ${config.ladderStartsLabel}, a ${packPosts}-post pack is ${formatDollars(packPrice)}.`';
+        const priceLadder = '`A ${packPosts}-post pack is ${formatDollars(packPrice)}.`';
+        const offer = '`${packPosts} posts for ${formatDollars(packPrice)}, ${formatDollars(packPrice / packPosts)} a post`';
+        const comparison = '`Bought one at a time at $${postingPrice}, five posts cost ${formatDollars(postingPrice * packPosts)}.`';
+        for (const template of [pricePromo, priceLadder, offer, comparison]) expect(section1c, template).toContain(template);
+        expect(evaluated(pricePromo.slice(1, -1))).toBe(packPriceLine(PROMO_RUNNING));
+        expect(evaluated(priceLadder.slice(1, -1))).toBe(packPriceLine(LADDER_LIVE));
+        expect(evaluated(offer.slice(1, -1))).toBe(PACK_OFFER);
+        expect(evaluated(comparison.slice(1, -1))).toBe(PACK_COMPARISON);
+        // The refund answer is quoted with its one token.
+        const refund = `\`${REFUND_ANSWER.split(`${config.packPosts}-post packs`).join('${packPosts}-post packs')}\``;
+        expect(section1c).toContain(refund);
+        expect(evaluated(refund.slice(1, -1))).toBe(REFUND_ANSWER);
     });
 
     it('1d says the first request after a cached page expires is still served the old render', () => {
@@ -620,6 +645,12 @@ describe('sections 10 and 11: the test map', () => {
         'tests/lib/renewal-checkout-sessions.test.ts',
         'tests/lib/pricing.test.ts',
         'tests/lib/email-change-policy.test.ts',
+        // The 5-post pack: a purchase, the credits it grants, and the admin changes that grant or revoke them.
+        'tests/api/create-pack-checkout.test.ts',
+        'tests/api/webhooks-stripe-post-pack.test.ts',
+        'tests/lib/post-packs.test.ts',
+        'tests/lib/post-pack-admin.test.ts',
+        'tests/api/admin-post-packs.test.ts',
     ];
 
     it('names every money-path suite, and each one exists', () => {

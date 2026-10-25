@@ -23,7 +23,10 @@
  * 2027 re-price (owner decision 2026-10-24): the Employer plan is retired, so
  * none of the three pages offers it in either phase (no plan card, no plan
  * FAQ in the page or its FAQPage JSON-LD), and the renewal answers name both
- * renewal prices through lib/pricing-copy.ts#RENEWAL_LINE.
+ * renewal prices through lib/pricing-copy.ts#RENEWAL_LINE. Phase 3 added the
+ * 5-post pack to the ladder sentence and a pack FAQ to each page, dated while
+ * the promo runs; tests/regressions/pricing-pack-surfaces.test.ts pins the
+ * pack card and the pack and refund answers.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import React from 'react';
@@ -36,9 +39,11 @@ import {
     LADDER_FROM_LINE,
     LADDER_HEADLINE,
     LADDER_PRICES,
+    PACK_FAQ_QUESTION,
     PROMO_HEADLINE,
     PROMO_SUB,
     RENEWAL_LINE,
+    packFaqAnswer,
 } from '@/lib/pricing-copy';
 import { FEATURES_LINE, pricingPageCopy } from '@/app/pricing/pricing-page-copy';
 import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
@@ -60,6 +65,10 @@ const LATER = new Date('2027-03-15T12:00:00.000Z');
 const PROMO_TIMES = [DURING_PROMO, LAST_PROMO_SECOND] as const;
 const LADDER_TIMES = [LADDER_START, LATER] as const;
 const DASHES = /[–—]|\s-\s/;
+/** The 5-post pack's clause at the end of the ladder sentence. */
+const PACK_CLAUSE = `or buy ${config.packPosts} posts for ${config.formatDollars(config.packPrice)}`;
+/** The ladder sentence as it reads while the promo runs. */
+const DATED_LADDER = `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, ${PACK_CLAUSE}.`;
 
 /**
  * Free posting, or the dated ladder, stated as a current offer. Posts made
@@ -164,8 +173,9 @@ describe('lib/pricing-copy: the ladder-phase sentences the pages share', () => {
         );
         expect(LADDER_FROM_LINE).toBe(`Posts start at $${config.introPrice}, with all features included.`);
         expect(RENEWAL_LINE).toBe(
-            `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo or intro post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
+            `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo, intro or pack post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
         );
+        expect(LADDER_PRICES).toBe(`Your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, ${PACK_CLAUSE}.`);
         for (const line of [LADDER_HEADLINE, FULL_PACKAGE, LADDER_FROM_LINE, LADDER_PRICES, RENEWAL_LINE]) {
             expect(offersIn(line), line).toEqual([]);
             expect(line).not.toMatch(DASHES);
@@ -202,9 +212,7 @@ describe('/pricing: the copy builder', () => {
             );
             expect(copy.ladderEyebrow).toBe('After the launch period');
             expect(copy.ladderHeading).toBe(`Starting ${config.ladderStartsLabel}`);
-            expect(copy.ladderIntro).toBe(
-                `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}.`,
-            );
+            expect(copy.ladderIntro).toBe(DATED_LADDER);
             expect(copy.ladderNote).toBe(`Until then, every post is free, and every rung gets the same package: ${FEATURES_LINE}.`);
             expect(copy.ctaBlurb).toBe(
                 `Every post is free through ${config.promoEndsLabel}, with all features included. From ${config.ladderStartsLabel}, from $${config.introPrice}.`,
@@ -216,7 +224,9 @@ describe('/pricing: the copy builder', () => {
                 'How long is posting free?',
                 `What happens on ${config.ladderStartsLabel}?`,
                 'What is the intro price, and who gets it?',
+                PACK_FAQ_QUESTION,
             ]);
+            expect(copy.pricingFaqs[3].a).toBe(packFaqAnswer(now));
             expect(copy.pricingFaqs[0].a).toBe(
                 `${PROMO_HEADLINE}. ${PROMO_SUB} Promo posts run the full ${config.durationDays} days even if that runs past the promo, and they can be renewed like an intro or featured post.`,
             );
@@ -263,8 +273,11 @@ describe('/pricing: the copy builder', () => {
 
     it('turns the two promo FAQ entries into present-tense price answers', () => {
         const faqs = pricingPageCopy(LADDER_START).pricingFaqs;
-        expect(faqs).toHaveLength(3);
-        const [cost, features, intro] = faqs;
+        expect(faqs).toHaveLength(4);
+        const [cost, features, intro, pack] = faqs;
+        // The pack answer states its price in the present tense once the ladder is live.
+        expect(pack).toEqual({ q: PACK_FAQ_QUESTION, a: packFaqAnswer(LADDER_START) });
+        expect(pack.a).not.toContain(config.ladderStartsLabel);
         expect(cost).toEqual({ q: 'How much does it cost to post a job?', a: `${LADDER_PRICES} ${FULL_PACKAGE}` });
         expect(features).toEqual({
             q: 'Do all prices include the same features?',
@@ -339,6 +352,7 @@ describe('/pricing: the rendered page and its metadata follow the clock', () => 
             [2, ladderHeading],
             [3, `${config.getTierLabel('intro')} post`],
             [3, 'Featured post'],
+            [3, `${config.packPosts}-post pack`],
             [2, 'How We Compare'],
             [3, `Ready to Hire Your Next ${brand.niche.short}?`],
             [2, 'Frequently Asked Questions'],
@@ -408,7 +422,7 @@ describe('/for-employers: the copy builder', () => {
     it('keeps the promo page as it shipped, up to the last promo second', () => {
         for (const now of PROMO_TIMES) {
             const copy = forEmployersCopy(now);
-            const ladder = `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}.`;
+            const ladder = DATED_LADDER;
             expect(copy.promoActive).toBe(true);
             expect(copy.headline).toBe(PROMO_HEADLINE);
             expect(copy.postCta).toBe('Post a Job: Free');
@@ -426,7 +440,9 @@ describe('/for-employers: the copy builder', () => {
             expect(copy.pricingFaqs.map((f) => f.q)).toEqual([
                 `How much does it cost to hire on ${brand.name}?`,
                 'What does every job post include?',
+                PACK_FAQ_QUESTION,
             ]);
+            expect(copy.pricingFaqs[2].a).toBe(packFaqAnswer(now));
             expect(copy.pricingFaqs[0].a).toBe(
                 `${PROMO_HEADLINE}. ${PROMO_SUB} ${ladder} ${RENEWAL_LINE} No pay-per-click bidding, no contracts.`,
             );
@@ -451,7 +467,8 @@ describe('/for-employers: the copy builder', () => {
             expect(copy.bentoIntro).toBe('No tiers. No feature gates. Intro or featured: every listing gets the same premium treatment.');
             expect(copy.listingRun).toBe(`Every job runs ${config.durationDays} days with no daily budget and no bidding.`);
             expect(copy.ctaBlurb).toBe(`${LADDER_FROM_LINE} No bidding, no contracts.`);
-            expect(copy.pricingFaqs).toHaveLength(2);
+            expect(copy.pricingFaqs).toHaveLength(3);
+            expect(copy.pricingFaqs[2]).toEqual({ q: PACK_FAQ_QUESTION, a: packFaqAnswer(now) });
             expect(copy.pricingFaqs[0].a).toBe(
                 `${LADDER_PRICES} ${FULL_PACKAGE} ${RENEWAL_LINE} No pay-per-click bidding, no contracts.`,
             );
@@ -529,12 +546,13 @@ describe('/faq: the employer pricing answers follow the clock', () => {
     it('keeps the promo answers, up to the last promo second', () => {
         for (const now of PROMO_TIMES) {
             const faqs = employerPricingFaqs(now);
-            expect(faqs).toHaveLength(3);
-            const [cost, features, intro] = faqs;
+            expect(faqs).toHaveLength(4);
+            const [cost, features, intro, pack] = faqs;
             expect(cost).toEqual({
                 question: 'How much does it cost to post a job?',
-                answer: `${PROMO_HEADLINE}. ${PROMO_SUB} From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}.`,
+                answer: `${PROMO_HEADLINE}. ${PROMO_SUB} ${DATED_LADDER}`,
             });
+            expect(pack).toEqual({ question: PACK_FAQ_QUESTION, answer: packFaqAnswer(now) });
             expect(features.answer.startsWith('Every job post, whether free during the promo, intro, or featured, gets the same features')).toBe(true);
             expect(intro.answer).toBe(
                 `From ${config.ladderStartsLabel}, the first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. It is scoped to your organization's domain, not to a login, and posts made free during the launch promo do not use it up.`,
@@ -545,8 +563,9 @@ describe('/faq: the employer pricing answers follow the clock', () => {
     it('states the ladder as the current price from the switch instant, and offers nothing free', () => {
         for (const now of LADDER_TIMES) {
             const faqs = employerPricingFaqs(now);
-            expect(faqs).toHaveLength(3);
-            const [cost, features, intro] = faqs;
+            expect(faqs).toHaveLength(4);
+            const [cost, features, intro, pack] = faqs;
+            expect(pack).toEqual({ question: PACK_FAQ_QUESTION, answer: packFaqAnswer(now) });
             expect(cost).toEqual({ question: 'How much does it cost to post a job?', answer: `${LADDER_PRICES} ${FULL_PACKAGE}` });
             expect(features.answer.startsWith('Every job post, whether intro or featured, gets the same features')).toBe(true);
             expect(intro.answer.startsWith(`The first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}.`)).toBe(true);

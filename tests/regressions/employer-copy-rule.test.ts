@@ -180,6 +180,6 @@ describe('employer copy rule: the employer application surfaces', () => {
         const captions = src.slice(src.indexOf('const priceCaption'), src.indexOf('const primaryCtaLabel'));
         expect(captions).not.toContain('$0');
         expect(captions).toContain('Every post is free during our launch period through ${config.promoEndsLabel}.');
-        expect(captions).toContain('Included in your Employer plan.');
+        expect(captions).toContain('Included in your post pack.');
     });
 });

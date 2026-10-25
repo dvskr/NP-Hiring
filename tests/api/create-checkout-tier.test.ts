@@ -518,13 +518,23 @@ describe('5-post pack (2027 re-price, phase 2)', () => {
         expect(prisma.employerJob.create).not.toHaveBeenCalled();
         expect(sessionsCreate).not.toHaveBeenCalled();
         expect(res.headers.get('set-cookie')).toBeNull();
-        // The credit is read for the signed-in account.
+        // The account's own current packs are read (lib/post-packs.ts#currentPackWhere).
         expect(prisma.employerPostPack.findMany).toHaveBeenCalledWith(expect.objectContaining({
-            where: expect.objectContaining({ userId: 'user-1', status: 'paid', creditsRemaining: { gt: 0 } }),
+            where: expect.objectContaining({ userId: 'user-1', status: 'paid' }),
         }));
     });
 
     it('sells the post as before once no credit is usable', async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(1 as never);
+
+        const { res, json } = await post(BODY);
+
+        expect(res.status).toBe(200);
+        expect(json).toMatchObject({ tier: 'pro', price: config.postingPrice });
+    });
+
+    it('sells the post as before when the current pack is used up', async () => {
+        vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([{ ...PACK, creditsRemaining: 0 }] as never);
         vi.mocked(prisma.employerJob.count).mockResolvedValue(1 as never);
 
         const { res, json } = await post(BODY);

@@ -17,12 +17,12 @@ import { ShieldCheck, Clock, LifeBuoy } from 'lucide-react';
  * a new API endpoint just to hydrate social proof.
  *
  * TRUTH RULES:
- *   - The policy text below MATCHES app/terms/page.tsx §8 exactly in
- *     substance: posting fees are GENERALLY NON-REFUNDABLE, and a refund
- *     request inside 7 days is CONSIDERED case by case. It is deliberately
- *     not phrased as a "7-day money-back guarantee", because that is not
- *     what the Terms say and a buyer discovering the difference after
- *     paying is exactly how chargebacks start.
+ *   - The policy text below MATCHES app/terms/page.tsx §8 in substance:
+ *     since 2026-10-25 ALL SALES ARE FINAL (owner decision), with only two
+ *     exceptions, a refund the law requires and a billing error, which is
+ *     corrected. It never promises a refund window or a money-back
+ *     guarantee: a buyer discovering the difference after paying is exactly
+ *     how chargebacks start.
  *   - Social proof comes from <FeaturedTestimonials>, which renders only
  *     consented, admin-approved rows and renders NOTHING when none exist.
  *     There is no fallback copy, no logo wall, and no invented quote.
@@ -70,15 +70,16 @@ const assurances: { icon: React.ReactNode; title: string; body: React.ReactNode 
     },
     {
         icon: <LifeBuoy size={16} aria-hidden="true" />,
-        title: 'If it does not work out',
+        title: 'Refunds',
         body: (
             <>
-                Posting fees are generally non-refundable, but if you are unsatisfied, email{' '}
+                <strong>All sales are final.</strong> A job post is not refundable once paid for, and neither is a
+                posting removed for breaking our Terms. We refund only where the law requires it, and we correct
+                a billing error, such as a charge made twice for the same post: email{' '}
                 <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>
                     {brand.email.support}
-                </a>{' '}
-                within <strong>7 days of purchase</strong> and we will review your refund request case by case.
-                Postings removed for a Terms violation are not refunded. The full policy is in{' '}
+                </a>
+                . The full policy is in{' '}
                 <Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>
                     Terms §8
                 </Link>

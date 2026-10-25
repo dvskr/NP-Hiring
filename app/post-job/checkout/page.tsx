@@ -54,8 +54,8 @@ interface JobFormData {
  */
 interface PricingQuote {
   eligible: boolean;
-  mode?: 'promo' | 'plan' | 'intro' | 'paid';
-  tier?: 'intro' | 'pro' | 'plan';
+  mode?: 'promo' | 'pack' | 'intro' | 'paid';
+  tier?: 'intro' | 'pro' | 'pack';
   willBeFree?: boolean;
   price?: number;
   priceCents?: number;
@@ -66,7 +66,7 @@ type QuoteFetch = 'loading' | 'loaded' | 'failed';
 /**
  * What the page may say about the amount. Only the server quote supplies a
  * number: there is no list-price fallback, because the server may charge a
- * different rung (intro) or nothing at all (promo, plan slot).
+ * different rung (intro) or nothing at all (promo, a 5-post pack credit).
  *   loading — the quote has not answered yet: no amount, Pay disabled;
  *   free    — the next post needs no payment: no Pay button at all;
  *   paid    — the quoted amount, shown on the summary and the Pay button;
@@ -104,6 +104,10 @@ export default function CheckoutPage() {
   const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
   const [fetchedQuote, setFetchedQuote] = useState<PricingQuote | null>(null);
   const [quoteFetch, setQuoteFetch] = useState<QuoteFetch>('loading');
+  // create-checkout answered 409 PACK_CREDIT_AVAILABLE: the account holds a
+  // 5-post pack credit the quote on screen did not show, so this post is
+  // published with it from the preview and nothing is sold here.
+  const [packCreditFound, setPackCreditFound] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,7 +182,9 @@ export default function CheckoutPage() {
   // reads as no quote, because the server now charges this post. The hook
   // renders a page left open over that instant again, so the banner goes.
   useRerenderAtPromoEnd();
-  const quoteView = toQuoteView(quoteFetch, currentQuote(fetchedQuote));
+  const quoteView: QuoteView = packCreditFound
+    ? { kind: 'free', mode: 'pack' }
+    : toQuoteView(quoteFetch, currentQuote(fetchedQuote));
   const isIntroRung = quoteView.kind === 'paid' && quoteView.isIntro;
   const nextPostIsFree = quoteView.kind === 'free';
 
@@ -229,7 +235,14 @@ export default function CheckoutPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({} as { error?: string; cause?: string }));
+        const errorData = await response.json().catch(() => ({} as { error?: string; cause?: string; code?: string }));
+        // A 5-post pack credit pays for this post: show the way back to the
+        // preview, which publishes it with the credit, instead of an error.
+        if (response.status === 409 && errorData.code === 'PACK_CREDIT_AVAILABLE') {
+          setPackCreditFound(true);
+          setLoading(false);
+          return;
+        }
         const baseMsg = errorData.error || 'Failed to create checkout session';
         const fullMsg = errorData.cause ? `${baseMsg}: ${errorData.cause}` : baseMsg;
         throw new Error(fullMsg);
@@ -294,7 +307,7 @@ export default function CheckoutPage() {
 
   // F3: paid posting isn't open (flag off or Stripe unconfigured) — show a
   // clear "coming soon" state instead of letting the Pay button 503. A free
-  // quote (launch promo, plan slot) skips it: that post needs no checkout,
+  // quote (launch promo, a 5-post pack credit) skips it: that post needs no checkout,
   // and the page below sends the employer back to the preview to post it.
   if (paidPostingAvailable === false && !nextPostIsFree) {
     return (
@@ -400,7 +413,7 @@ export default function CheckoutPage() {
       </div>
 
       {/* Stale-draft guard: the quote says this employer's next post needs no
-          payment (launch promo or an Employer-plan slot). Charging them
+          payment (launch promo or a 5-post pack credit). Charging them
           anyway would be the worst outcome on this page, so point them back
           to the preview, whose primary button posts without Stripe. */}
       {quoteView.kind === 'free' && (
@@ -410,8 +423,8 @@ export default function CheckoutPage() {
             {/* The promo reason only for a promo quote, which currentQuote
                 keeps only while the promo runs; a free quote without a
                 mode states no reason rather than a promo it cannot vouch for. */}
-            {quoteView.mode === 'plan'
-              ? ' (it uses a slot on your Employer plan)'
+            {quoteView.mode === 'pack'
+              ? ` (it uses a post from your ${config.packPosts}-post pack)`
               : quoteView.mode === 'promo'
                 ? ` (every post is free through ${config.promoEndsLabel})`
                 : ''}
@@ -447,7 +460,10 @@ export default function CheckoutPage() {
             {quoteView.kind === 'free' && (
               <>
                 <span className="text-3xl font-bold text-gray-900">Free</span>
-                <p className="text-sm text-gray-500">no payment needed</p>
+                {/* Register D19: never "$0"; a pack post says where it is paid from. */}
+                <p className="text-sm text-gray-500">
+                  {quoteView.mode === 'pack' ? 'Included in your post pack.' : 'no payment needed'}
+                </p>
               </>
             )}
             {quoteView.kind === 'loading' && (
@@ -484,7 +500,7 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {/* Payment Button. A free quote (promo or plan slot) renders no Pay
+      {/* Payment Button. A free quote (promo or a pack credit) renders no Pay
           button at all, only the way back to the preview, which posts
           without Stripe; the server refuses a promo checkout as well. */}
       {quoteView.kind === 'free' ? (

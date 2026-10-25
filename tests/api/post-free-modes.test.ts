@@ -33,7 +33,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { paidPostWhere } from '@/lib/pricing';
-import { usablePackWhere } from '@/lib/post-packs';
+import { currentPackWhere } from '@/lib/post-packs';
 import { sendConfirmationEmail } from '@/lib/email-service';
 
 const getUserMock = vi.fn();
@@ -91,12 +91,16 @@ function signedInEmployer(email = `owner@${SIGNUP_DOMAIN}`) {
 
 const PACK_EXPIRES = new Date('2027-12-15T00:00:00.000Z');
 
-/** The account's usable packs, as getPackCreditStatus reads them: before the post, then after its credit is spent. */
+/**
+ * The account's current pack, as getPackCreditStatus reads it (paid and
+ * unexpired, with or without a credit left): before the post, then after its
+ * credit is spent.
+ */
 function packCredits(before: number, after: number = before - 1) {
-    const usable = (remaining: number) => (remaining > 0 ? [{ creditsRemaining: remaining, creditsTotal: config.packPosts, creditsRevoked: 0, expiresAt: PACK_EXPIRES }] : []);
+    const current = (remaining: number) => [{ creditsRemaining: remaining, creditsTotal: config.packPosts, creditsRevoked: 0, expiresAt: PACK_EXPIRES }];
     vi.mocked(prisma.employerPostPack.findMany)
-        .mockResolvedValueOnce(usable(before) as never)
-        .mockResolvedValueOnce(usable(after) as never);
+        .mockResolvedValueOnce(current(before) as never)
+        .mockResolvedValueOnce(current(after) as never);
     vi.mocked(prisma.employerPostPack.findFirst).mockResolvedValue({ id: 'pack-1' } as never);
     vi.mocked(prisma.employerPostPack.updateMany).mockResolvedValue({ count: 1 } as never);
 }
@@ -249,7 +253,7 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
             success: true,
             jobId: 'job-1',
             mode: 'pack',
-            pack: { remaining: 4, total: config.packPosts, expiresAt: PACK_EXPIRES.toISOString() },
+            pack: { remaining: 4, used: 1, total: config.packPosts, expiresAt: PACK_EXPIRES.toISOString() },
         });
         expect(vi.mocked(prisma.employerJob.create).mock.calls[0][0].data).toMatchObject({
             paymentStatus: 'pack',
@@ -270,7 +274,7 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
 
         await post();
 
-        expect(prisma.employerPostPack.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: usablePackWhere('user-1', AFTER_PROMO) }));
+        expect(prisma.employerPostPack.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: currentPackWhere('user-1', AFTER_PROMO) }));
         expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'Serializable' });
         expect(prisma.employerPostPack.updateMany).toHaveBeenCalledWith({
             where: { id: 'pack-1', userId: 'user-1', status: 'paid', expiresAt: { gt: AFTER_PROMO }, creditsRemaining: { gt: 0 } },
@@ -286,10 +290,11 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
 
         const { json } = await post();
 
-        expect(json.pack).toEqual({ remaining: 0, total: 0, expiresAt: null });
+        // The last credit: the pack still reports its totals (a phase 3 review fix).
+        expect(json.pack).toEqual({ remaining: 0, used: config.packPosts, total: config.packPosts, expiresAt: PACK_EXPIRES.toISOString() });
     });
 
-    it("sends the confirmation email in 'pack' mode, with no invoice", async () => {
+    it("sends the confirmation email in 'pack' mode, with no invoice, and the credits this post left", async () => {
         packCredits(3);
 
         await post();
@@ -297,6 +302,17 @@ describe('5-post pack: after the promo, a usable credit publishes the post', () 
         const args = vi.mocked(sendConfirmationEmail).mock.calls[0];
         expect(args[6]).toBeUndefined();
         expect(args[7]).toBe('pack');
+        // The pack sentence: "Posted with your 5-post pack. 2 posts left, to use by <date>."
+        expect(args[8]).toEqual({ remaining: 2, expiresAt: PACK_EXPIRES });
+    });
+
+    it('a promo post sends no pack credits to the email', async () => {
+        vi.setSystemTime(DURING_PROMO);
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+
+        await post();
+
+        expect(vi.mocked(sendConfirmationEmail).mock.calls[0][8]).toBeUndefined();
     });
 
     it('a credit spent first by a parallel post answers 409 packCreditUnavailable and writes nothing', async () => {

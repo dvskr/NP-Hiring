@@ -6,8 +6,10 @@
  * $299" button; the amount fell back to config.postingPrice whenever the
  * quote was free or missing, while the server would have charged the $199
  * intro rung. Pins:
- *   - a free quote (promo or plan slot) renders no Pay button at all, only
- *     the way back to the preview, even while paid posting is switched off;
+ *   - a free quote (promo, or a 5-post pack credit, captioned "Included in
+ *     your post pack.", register D19) renders no Pay button at all, only the
+ *     way back to the preview, even while paid posting is switched off; so
+ *     does create-checkout's 409 PACK_CREDIT_AVAILABLE;
  *   - a paid quote shows exactly the quoted amount (intro or featured);
  *   - no quote yet: no amount, Pay disabled; no usable quote: no amount,
  *     Pay says so, and Stripe shows the amount before anything is charged;
@@ -68,7 +70,7 @@ const JOB = {
 };
 
 const PROMO = { eligible: true, mode: 'promo', tier: 'pro', willBeFree: true, price: 0, priceCents: 0 };
-const PLAN = { eligible: true, mode: 'plan', tier: 'plan', willBeFree: true, price: 0, priceCents: 0 };
+const PACK = { eligible: true, mode: 'pack', tier: 'pack', willBeFree: true, price: 0, priceCents: 0, pack: { remaining: 3, total: config.packPosts, expiresAt: '2027-12-01T12:00:00.000Z' } };
 const INTRO = { eligible: true, mode: 'intro', tier: 'intro', willBeFree: false, price: config.introPrice, priceCents: config.stripeIntroPriceInCents };
 const FEATURED = { eligible: true, mode: 'paid', tier: 'pro', willBeFree: false, price: config.postingPrice, priceCents: config.stripePriceInCents };
 
@@ -77,12 +79,14 @@ interface PageState {
     quote?: object | null;
     /** GET /api/create-checkout/availability; null while unknown. */
     paidPostingAvailable?: boolean | null;
+    /** create-checkout answered 409 PACK_CREDIT_AVAILABLE to a Pay click. */
+    packCreditFound?: boolean;
 }
 
 function renderPage(state: PageState): string {
     // The page's useState calls, in order: jobData, loading, error,
-    // paidPostingAvailable, fetchedQuote, quoteFetch.
-    seeded.values = [JOB, false, null, state.paidPostingAvailable ?? true, state.quote ?? null, state.quoteFetch];
+    // paidPostingAvailable, fetchedQuote, quoteFetch, packCreditFound.
+    seeded.values = [JOB, false, null, state.paidPostingAvailable ?? true, state.quote ?? null, state.quoteFetch, state.packCreditFound ?? false];
     seeded.index = 0;
     return renderToStaticMarkup(React.createElement(CheckoutPage));
 }
@@ -124,12 +128,29 @@ describe('a free quote renders no Pay button', () => {
         expect(html).toContain('Go back to the preview to post it');
     });
 
-    it('Employer plan slot: no Pay button either', () => {
-        const html = renderPage({ quoteFetch: 'loaded', quote: PLAN });
+    it('a 5-post pack credit: no Pay button either, captioned as included in the pack (D19)', () => {
+        vi.setSystemTime(LADDER_START);
+        const html = renderPage({ quoteFetch: 'loaded', quote: PACK });
 
-        expect(html).toContain('it uses a slot on your Employer plan');
+        expect(html).toContain(`it uses a post from your ${config.packPosts}-post pack`);
+        expect(html).toContain('Included in your post pack.');
+        expect(html).toContain('>Free<');
+        expect(html).not.toContain('no payment needed');
         expect(html).not.toContain('Proceed to Payment');
+        expect(html).toContain('Go back to the preview to post it');
         expect(html).not.toContain(FEATURED_AMOUNT);
+    });
+
+    it('a 409 PACK_CREDIT_AVAILABLE on a stale paid quote sends the employer to post with the credit', () => {
+        vi.setSystemTime(LADDER_START);
+        const html = renderPage({ quoteFetch: 'loaded', quote: FEATURED, packCreditFound: true });
+
+        expect(html).not.toContain('Proceed to Payment');
+        expect(html).toContain('Included in your post pack.');
+        expect(html).toContain('<a href="/post-job/preview"');
+        // The page reads the code create-checkout answers with, not a guess from the message.
+        const src = fs.readFileSync(path.join(process.cwd(), 'app/post-job/checkout/page.tsx'), 'utf8');
+        expect(src).toMatch(/response\.status === 409 && errorData\.code === 'PACK_CREDIT_AVAILABLE'/);
     });
 });
 
@@ -211,9 +232,9 @@ describe('once the promo has ended, nothing free is claimed from a promo quote',
         expect(html).not.toContain('Proceed to Payment');
     });
 
-    it('plan and paid quotes render as they always have', () => {
+    it('pack and paid quotes render as they always have', () => {
         vi.setSystemTime(LADDER_START);
-        expect(renderPage({ quoteFetch: 'loaded', quote: PLAN })).toContain('it uses a slot on your Employer plan');
+        expect(renderPage({ quoteFetch: 'loaded', quote: PACK })).toContain(`it uses a post from your ${config.packPosts}-post pack`);
         expect(renderPage({ quoteFetch: 'loaded', quote: INTRO })).toContain(`Proceed to Payment: ${INTRO_AMOUNT}`);
     });
 

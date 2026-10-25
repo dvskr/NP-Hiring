@@ -16,13 +16,15 @@
  *   { eligible, reason?, mode, tier, willBeFree, price, priceCents,
  *     durationDays, paidDurationDays, promoActive, promoEndsAt,
  *     promoEndsLabel, ladderStartsLabel,
- *     pack?: { remaining, total, expiresAt }, remaining, limit }
- * `pack` is sent whenever the account holds a usable credit, in either
- * phase (lib/post-packs.ts#getPackCreditStatus; expiresAt is the expiry of
- * the pack a post spends next). It replaced the retired Employer plan's
- * `plan` field. `remaining` / `limit` are legacy fields kept so old callers
- * keep compiling: promo → promo cap headroom / cap; pack → credits left /
- * held; paid modes → 0 / 0.
+ *     pack?: { remaining, used, total, expiresAt }, remaining, limit }
+ * `pack` is sent whenever the account holds a current pack (paid and
+ * unexpired), in either phase, used up or not, so a page can say "5 of 5
+ * used" (lib/post-packs.ts#getPackCreditStatus; expiresAt is the expiry of
+ * the pack a post spends next, or of the last current pack once every
+ * credit is used). It replaced the retired Employer plan's `plan` field.
+ * `remaining` / `limit` are legacy fields kept so old callers keep
+ * compiling: promo → promo cap headroom / cap; pack → credits left / held;
+ * paid modes → 0 / 0.
  */
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -96,8 +98,13 @@ export async function GET() {
       promoEndsAt: config.promoEndsAt,
       promoEndsLabel: config.promoEndsLabel,
       ladderStartsLabel: config.ladderStartsLabel,
-      ...(packCredit.usable && {
-        pack: { remaining: packCredit.remaining, total: packCredit.total, expiresAt: packCredit.expiresAt?.toISOString() ?? null },
+      ...(packCredit.total > 0 && {
+        pack: {
+          remaining: packCredit.remaining,
+          used: packCredit.used,
+          total: packCredit.total,
+          expiresAt: packCredit.expiresAt?.toISOString() ?? null,
+        },
       }),
       remaining,
       limit,

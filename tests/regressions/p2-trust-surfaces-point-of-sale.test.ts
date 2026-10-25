@@ -12,9 +12,10 @@
  * These guards pin:
  *   1. the price is disclosed on /post-job/preview, before checkout, and the
  *      primary button says what clicking it will do;
- *   2. the refund language everywhere matches Terms §8 — "generally
- *      non-refundable, requests inside 7 days reviewed case by case" — and
- *      is never upgraded to a money-back guarantee;
+ *   2. the refund language everywhere matches Terms §8 — since 2026-10-25
+ *      "all sales are final" (owner decision), with only a refund the law
+ *      requires and a corrected billing error as exceptions — and is never
+ *      upgraded to a money-back guarantee or a refund window;
  *   3. checkout carries the policy plus consent-gated social proof that
  *      renders nothing when nothing is approved;
  *   4. /for-employers discloses the pricing terms (launch-promo end date and
@@ -32,6 +33,7 @@ import path from 'node:path';
 import { brand } from '@/config/brand';
 import { config as pricingConfig } from '@/lib/config';
 import { employerComparisonRows } from '@/lib/employer-comparison';
+import { REFUND_ANSWER } from '@/lib/pricing-copy';
 import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
 
 /** Both sides of the launch-promo switch (backlog 2.1): /for-employers copy is built per render. */
@@ -52,26 +54,36 @@ const code = (src: string) =>
 
 /**
  * Every dollar figure config prices something at: the two post prices, the
- * two renewal prices, and the retired plan's monthly price, which no point
- * of sale may print either. A typed literal of any of them goes stale the
- * day config changes.
+ * two renewal prices, the 5-post pack, and the retired plan's monthly price,
+ * which no point of sale may print either. A typed literal of any of them
+ * goes stale the day config changes. The pack price is matched as digits and
+ * as copy prints it ($1,245).
  */
 const CONFIG_PRICES = [...new Set([
     pricingConfig.introPrice,
     pricingConfig.postingPrice,
     pricingConfig.renewalPrice,
     pricingConfig.proRenewalPrice,
+    pricingConfig.packPrice,
     pricingConfig.planPrice,
 ])];
-const PRICE_LITERAL = new RegExp(`\\$(?:${CONFIG_PRICES.join('|')})(?![\\d,])`);
+const PRICE_SPELLINGS = [...new Set(CONFIG_PRICES.flatMap((price) => [String(price), pricingConfig.formatDollars(price).slice(1)]))];
+const PRICE_LITERAL = new RegExp(`\\$(?:${PRICE_SPELLINGS.join('|')})(?!\\d|,\\d)`);
+
+/** The refund posture Terms §8 states since 2026-10-25, and the wording it replaced. */
+const ALL_SALES_FINAL = /All sales are final/;
+const RETIRED_REFUND_POSTURE = /generally non-refundable|within 7 days|7 days of purchase|case\s*by\s*case|case-by-case|sole discretion/i;
 
 describe('P2 #16: the typed-price guard follows config', () => {
-    it('catches a typed literal of every price config holds, the new ladder included', () => {
-        for (const price of [pricingConfig.introPrice, pricingConfig.postingPrice, pricingConfig.renewalPrice, pricingConfig.proRenewalPrice]) {
+    it('catches a typed literal of every price config holds, the new ladder and the pack included', () => {
+        for (const price of [pricingConfig.introPrice, pricingConfig.postingPrice, pricingConfig.renewalPrice, pricingConfig.proRenewalPrice, pricingConfig.packPrice]) {
             expect(PRICE_LITERAL.test(`only $${price} today`), String(price)).toBe(true);
+            expect(PRICE_LITERAL.test(`only ${pricingConfig.formatDollars(price)}, today`), pricingConfig.formatDollars(price)).toBe(true);
         }
         // A config token in a template is not a literal.
         expect(PRICE_LITERAL.test('only $${config.postingPrice} today')).toBe(false);
+        // A larger figure that starts with a price is not one.
+        expect(PRICE_LITERAL.test(`$${pricingConfig.postingPrice},000`)).toBe(false);
     });
 });
 
@@ -135,8 +147,8 @@ describe('P2 #16 — the price is visible before checkout', () => {
     });
 
     it('states the real refund posture next to the price, not a guarantee', () => {
-        expect(preview).toMatch(/generally non-refundable/);
-        expect(preview).toMatch(/7 days are reviewed case\s*by\s*case/);
+        expect(preview).toMatch(ALL_SALES_FINAL);
+        expect(previewCode).not.toMatch(RETIRED_REFUND_POSTURE);
         expect(previewCode).not.toMatch(/money[- ]back guarantee/i);
         expect(previewCode).not.toMatch(/full refund/i);
     });
@@ -149,18 +161,21 @@ describe('P2 #16 — checkout carries the policy and real social proof', () => {
         expect(checkoutLayout).toContain('{children}');
     });
 
-    it('states the 7-day review window and links the governing Terms section', () => {
-        expect(checkoutLayout).toMatch(/generally non-refundable/);
-        expect(checkoutLayout).toContain('7 days of purchase');
+    it('states that all sales are final, with the two exceptions, and links the governing Terms section', () => {
+        expect(checkoutLayout).toMatch(ALL_SALES_FINAL);
+        expect(checkoutLayout).toContain('where the law requires it');
+        expect(checkoutLayout).toContain('a billing error');
         expect(checkoutLayout).toContain('href="/terms"');
+        expect(checkoutLayoutCode).not.toMatch(RETIRED_REFUND_POSTURE);
         expect(checkoutLayoutCode).not.toMatch(/money[- ]back guarantee/i);
     });
 
     it('keeps that promise consistent with what the Terms actually say', () => {
-        // If Terms §8 ever stops offering the 7-day review, this fails and
+        // If Terms §8 ever offers a refund window again, this fails and
         // forces the point-of-sale copy to be updated in the same change.
-        expect(terms).toContain('within 7 days of purchase');
-        expect(terms).toMatch(/generally non-refundable/);
+        const refundPolicy = terms.slice(terms.indexOf('id="refund-policy"'), terms.indexOf('id="candidate-data"'));
+        expect(refundPolicy).toMatch(ALL_SALES_FINAL);
+        expect(refundPolicy).not.toMatch(RETIRED_REFUND_POSTURE);
     });
 
     it('renders price and package figures from lib/config', () => {
@@ -270,14 +285,15 @@ describe('P2 #16 — /for-employers discloses the pricing terms', () => {
         // with its end date and the dated ladder while it runs, the plain
         // price list once it has ended.
         const promo = forEmployersCopy(DURING_PROMO);
+        const pack = `or buy ${pricingConfig.packPosts} posts for ${pricingConfig.formatDollars(pricingConfig.packPrice)}`;
         expect(promo.headline).toBe(`Free through ${pricingConfig.promoEndsLabel}`);
         expect(promo.receiptStamp).toBe(promo.headline);
         expect(promo.ladder).toBe(
-            `From ${pricingConfig.ladderStartsLabel}: your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}.`,
+            `From ${pricingConfig.ladderStartsLabel}: your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}, ${pack}.`,
         );
         const ladder = forEmployersCopy(LADDER_START);
         expect(ladder.ladder).toBe(
-            `Your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}.`,
+            `Your first post is $${pricingConfig.introPrice}, every post after that is $${pricingConfig.postingPrice}, ${pack}.`,
         );
         expect(ladder.receiptTotal).toBe(`From $${pricingConfig.introPrice}`);
         // The receipt and the pricing card print that sentence, and the
@@ -302,8 +318,10 @@ describe('P2 #16 — /for-employers discloses the pricing terms', () => {
     });
 
     it('states the real refund policy in the FAQ (which also feeds the JSON-LD)', () => {
-        expect(employers).toMatch(/generally non-refundable/);
-        expect(employers).toContain('review the request case by case');
+        // The shared all-sales-final answer (lib/pricing-copy.ts), Terms §8 in plain words.
+        expect(employers).toContain('a: `${REFUND_ANSWER} Hiring for several roles at once? Email us.`');
+        expect(REFUND_ANSWER).toMatch(ALL_SALES_FINAL);
+        expect(employersCode).not.toMatch(RETIRED_REFUND_POSTURE);
     });
 });
 
@@ -344,11 +362,11 @@ describe('P2 #16 — the comparison table is honest', () => {
         expect(comparisonCode).not.toContain('First Post Free');
     });
 
-    it('states the 2027 ladder from config tokens in the flat-pricing row', () => {
+    it('states the 2027 ladder and the 5-post pack from config tokens in the flat-pricing row', () => {
         const rows = comparison.slice(comparison.indexOf('const INVENTORY_ROW'));
         const flatRow = rows.split('\n').find((l) => l.includes('Flat Per-Post Pricing, No Bidding'));
         expect(flatRow).toBeDefined();
-        expect(flatRow).toContain('From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after. Others bill per click or per day');
+        expect(flatRow).toContain('From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or ${config.packPosts} posts for ${config.formatDollars(config.packPrice)}. Others bill per click or per day');
         const durationRow = rows.split('\n').find((l) => l.includes('-Day Listing Duration'));
         expect(durationRow).toContain('Every post runs ${config.durationDays} days. Competitor durations vary by plan');
         expect(comparisonCode).not.toMatch(PRICE_LITERAL);
@@ -363,7 +381,7 @@ describe('P2 #16 — the comparison table is honest', () => {
         expect(after.map((r) => r.feature).join('\n')).not.toMatch(/Free Posting/);
         expect(after).toHaveLength(during.length - 1);
         const flat = after.find((r) => r.feature === 'Flat Per-Post Pricing, No Bidding');
-        expect(flat?.note).toBe(`$${pricingConfig.introPrice} first post, $${pricingConfig.postingPrice} after. Others bill per click or per day`);
+        expect(flat?.note).toBe(`$${pricingConfig.introPrice} first post, $${pricingConfig.postingPrice} after, or ${pricingConfig.packPosts} posts for ${pricingConfig.formatDollars(pricingConfig.packPrice)}. Others bill per click or per day`);
         expect(JSON.stringify(after)).not.toContain(pricingConfig.promoEndsLabel);
         expect(JSON.stringify(after)).not.toContain(pricingConfig.ladderStartsLabel);
     });
@@ -414,9 +432,12 @@ describe('P2 #16 — the comparison table renders as English', () => {
         comparisonCode.indexOf('const INVENTORY_ROW'),
     );
 
-    /** Evaluate a source template literal against the real config objects. */
+    /**
+     * Evaluate a source template literal against the real config objects and
+     * the shared refund sentence the evergreen FAQ prints (lib/pricing-copy.ts).
+     */
     const render = (tpl: string): string =>
-        new Function('brand', 'config', `return \`${tpl}\`;`)(brand, pricingConfig) as string;
+        new Function('brand', 'config', 'REFUND_ANSWER', `return \`${tpl}\`;`)(brand, pricingConfig, REFUND_ANSWER) as string;
 
     const cells: string[] = [
         ...[...rowsBlock.matchAll(/feature: `([^`]*)`/g)].map((m) => render(m[1])),

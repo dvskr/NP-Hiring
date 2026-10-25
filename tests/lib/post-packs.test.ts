@@ -6,8 +6,10 @@
  *   - packExpiresAt: config.packValidityMonths calendar months in UTC, at the
  *     same time of day, clamped to the last day of the target month;
  *   - a credit is usable while the pack is 'paid', unexpired and has one left;
- *     the status is read across the account's usable packs, and the pack that
- *     expires first is the one a post spends;
+ *     the status is read across the account's current packs ('paid' and
+ *     unexpired), so a used-up pack still reports its totals ("5 of 5 used",
+ *     a code review fix of phase 3), and the pack that expires first among
+ *     those with a credit left is the one a post spends;
  *   - spending is one conditional decrement inside the caller's transaction:
  *     no usable pack, or a pack another request emptied first, refuses
  *     (PackCreditUnavailableError) and never goes below zero;
@@ -23,6 +25,7 @@ import { config } from '@/lib/config';
 import {
     PackCreditUnavailableError,
     countPaidPacksForDomain,
+    currentPackWhere,
     freezePack,
     getPackCreditStatus,
     packExpiresAt,
@@ -76,12 +79,16 @@ describe('packExpiresAt: 12 calendar months in UTC, clamped to the month', () =>
     });
 });
 
-describe('getPackCreditStatus: what the account can spend now', () => {
+describe('getPackCreditStatus: what the account holds and can spend now', () => {
     it('a credit is usable while the pack is paid, unexpired and has one left', () => {
         expect(usablePackWhere(USER, NOW)).toEqual({ userId: USER, status: 'paid', expiresAt: { gt: NOW }, creditsRemaining: { gt: 0 } });
     });
 
-    it('sums the usable packs, and names the expiry of the pack a post spends first', async () => {
+    it("the status reads the account's current packs: paid and unexpired, whether or not a credit is left", () => {
+        expect(currentPackWhere(USER, NOW)).toEqual({ userId: USER, status: 'paid', expiresAt: { gt: NOW } });
+    });
+
+    it('sums the current packs, and names the expiry of the pack a post spends first', async () => {
         vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([
             pack({ id: 'soon', creditsRemaining: 2, expiresAt: new Date('2027-06-01T00:00:00.000Z') }),
             pack({ id: 'later', creditsRemaining: 5, expiresAt: new Date('2028-01-01T00:00:00.000Z') }),
@@ -89,24 +96,49 @@ describe('getPackCreditStatus: what the account can spend now', () => {
 
         const status = await getPackCreditStatus(USER, NOW);
 
-        expect(status).toEqual({ usable: true, remaining: 7, total: 10, expiresAt: new Date('2027-06-01T00:00:00.000Z') });
+        expect(status).toEqual({ usable: true, remaining: 7, used: 3, total: 10, expiresAt: new Date('2027-06-01T00:00:00.000Z') });
         expect(prisma.employerPostPack.findMany).toHaveBeenCalledWith({
-            where: usablePackWhere(USER, NOW),
+            where: currentPackWhere(USER, NOW),
             select: { creditsRemaining: true, creditsTotal: true, creditsRevoked: true, expiresAt: true },
             orderBy: [{ expiresAt: 'asc' }, { purchasedAt: 'asc' }],
         });
     });
 
-    it('counts the credits a pack still holds: revoked ones are not part of its total', async () => {
+    it('a used-up pack still reports its totals, so a page can say "5 of 5 used" (review fix)', async () => {
+        const expiresAt = new Date('2028-01-01T00:00:00.000Z');
+        vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([pack({ creditsRemaining: 0, expiresAt })] as never);
+
+        expect(await getPackCreditStatus(USER, NOW)).toEqual({ usable: false, remaining: 0, used: config.packPosts, total: config.packPosts, expiresAt });
+    });
+
+    it('skips a used-up pack for the next spend: the expiry named is the pack a post spends from', async () => {
+        vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([
+            pack({ id: 'used-up', creditsRemaining: 0, expiresAt: new Date('2027-06-01T00:00:00.000Z') }),
+            pack({ id: 'next', creditsRemaining: 4, expiresAt: new Date('2028-01-01T00:00:00.000Z') }),
+        ] as never);
+
+        expect(await getPackCreditStatus(USER, NOW)).toEqual({ usable: true, remaining: 4, used: 6, total: 10, expiresAt: new Date('2028-01-01T00:00:00.000Z') });
+    });
+
+    it('with every current pack used up, names the last of them to expire', async () => {
+        vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([
+            pack({ id: 'first', creditsRemaining: 0, expiresAt: new Date('2027-06-01T00:00:00.000Z') }),
+            pack({ id: 'second', creditsRemaining: 0, expiresAt: new Date('2028-01-01T00:00:00.000Z') }),
+        ] as never);
+
+        expect(await getPackCreditStatus(USER, NOW)).toMatchObject({ usable: false, remaining: 0, used: 10, total: 10, expiresAt: new Date('2028-01-01T00:00:00.000Z') });
+    });
+
+    it('counts the credits a pack still holds: revoked ones are neither used nor part of its total', async () => {
         vi.mocked(prisma.employerPostPack.findMany).mockResolvedValue([pack({ creditsRemaining: 1, creditsRevoked: 1 })] as never);
 
-        expect(await getPackCreditStatus(USER, NOW)).toMatchObject({ remaining: 1, total: 4 });
+        expect(await getPackCreditStatus(USER, NOW)).toMatchObject({ remaining: 1, used: 3, total: 4 });
     });
 
     it('has nothing usable without a pack, and reads nothing without an account', async () => {
-        expect(await getPackCreditStatus(USER, NOW)).toEqual({ usable: false, remaining: 0, total: 0, expiresAt: null });
+        expect(await getPackCreditStatus(USER, NOW)).toEqual({ usable: false, remaining: 0, used: 0, total: 0, expiresAt: null });
         vi.mocked(prisma.employerPostPack.findMany).mockClear();
-        expect(await getPackCreditStatus(null, NOW)).toEqual({ usable: false, remaining: 0, total: 0, expiresAt: null });
+        expect(await getPackCreditStatus(null, NOW)).toEqual({ usable: false, remaining: 0, used: 0, total: 0, expiresAt: null });
         expect(prisma.employerPostPack.findMany).not.toHaveBeenCalled();
     });
 

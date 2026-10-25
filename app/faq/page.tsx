@@ -8,7 +8,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import { Mail, HelpCircle } from 'lucide-react';
 import { config } from '@/lib/config';
-import { RENEWAL_LINE } from '@/lib/pricing-copy';
+import { REFUND_ANSWER, RENEWAL_LINE } from '@/lib/pricing-copy';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { CEU_GUIDE_SLUG, CEU_GUIDE_TITLE } from '@/lib/blog-ceu-guide';
 import { employerPricingFaqs } from './faq-employer-copy';
@@ -127,8 +127,11 @@ export default function FAQPage() {
       answer: `Check your confirmation email for a dashboard link. The dashboard allows you to view analytics, edit your posting, browse candidates, and manage all your job postings in one place. If you have lost the link, contact us at ${brand.email.support}.`
     },
     {
+      // All sales are final (owner decision 2026-10-25): the shared answer
+      // /pricing and /for-employers print, which /terms section 8 states in
+      // its own words.
       question: "Do you offer refunds?",
-      answer: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Promo posts involve no payment to refund.`
+      answer: REFUND_ANSWER
     },
   ];
 

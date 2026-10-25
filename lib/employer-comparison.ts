@@ -72,10 +72,10 @@ export interface ComparisonRow {
 const INVENTORY_ROW: ComparisonRow = { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened and removed when flagged out of scope` };
 /** Only while the launch promo runs. */
 const FREE_POSTING_ROW: ComparisonRow = { feature: `Free Posting Through ${config.promoEndsLabel}`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post is free during our launch period; others offer limited free listings` };
-/** While the launch promo runs: the ladder is announced for its start date. */
-const FLAT_PRICING_ROW_PROMO: ComparisonRow = { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after. Others bill per click or per day` };
+/** While the launch promo runs: the ladder and the 5-post pack are announced for its start date. */
+const FLAT_PRICING_ROW_PROMO: ComparisonRow = { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or ${config.packPosts} posts for ${config.formatDollars(config.packPrice)}. Others bill per click or per day` };
 /** Once the ladder is live: the same prices, stated as they are. */
-const FLAT_PRICING_ROW_LADDER: ComparisonRow = { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `$${config.introPrice} first post, $${config.postingPrice} after. Others bill per click or per day` };
+const FLAT_PRICING_ROW_LADDER: ComparisonRow = { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `$${config.introPrice} first post, $${config.postingPrice} after, or ${config.packPosts} posts for ${config.formatDollars(config.packPrice)}. Others bill per click or per day` };
 
 const SHARED_ROWS: readonly ComparisonRow[] = [
     { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post runs ${config.durationDays} days. Competitor durations vary by plan` },

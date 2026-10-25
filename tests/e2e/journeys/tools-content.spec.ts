@@ -1104,17 +1104,22 @@ test.describe('/tools/private-practice-revenue-calculator', () => {
  * WORKED EXAMPLE — from cost-per-hire-model.ts with lib/config pricing on this
  * HEAD and STAT_SOURCES.averageSalary $132,300 (BLS OEWS, May 2025).
  *
- * Our side has two ways to buy (the Employer plan was retired on 2026-10-24),
- * and the widget's #cph-flat-mode select is the observable authority on which
- * one it opens with (defaultInputs(phase) opens on 'promo' while
- * config.isPromoActive(), on 'per-post' afterwards, when the promo is not
- * offered at all; backlog 2.1). Every assertion below reads that control
- * rather than a calendar date, so the suite stays true on both sides of the
- * promo:
+ * Our side has the promo while it runs, and two ways to buy: per post and the
+ * 5-post pack (the Employer plan was retired on 2026-10-24; the pack mode is
+ * offered dated "from January 1, 2027" while the promo runs). The widget's
+ * #cph-flat-mode select is the observable authority on which one it opens
+ * with (defaultInputs(phase) opens on 'promo' while config.isPromoActive(),
+ * on 'per-post' afterwards, when the promo is not offered at all; backlog
+ * 2.1). Every assertion below reads that control rather than a calendar date,
+ * so the suite stays true on both sides of the promo:
  *   promo    — every post $0; a promo post renews at $199 (the base price)
  *   per-post — the FIRST PAID post per employer email domain is $249, every
  *              post after it $349; the intro post renews at $199, every later
  *              post at $249 (the pro price); 60-day window, 25 unlocks
+ *   pack     — a $1,245 pack for every 5 roles, the rest at $349 or one more
+ *              pack when that costs less; with the intro price on, the cheaper
+ *              of that and a $249 intro post bought first; pack posts renew
+ *              at $199 (tests/regressions/cost-per-hire-pack-mode-widget.test.ts)
  *
  * Per-post, roles 3, renewals 1/role, intro price on, 1 hire/role, 25 applicants/role:
  *   intro 249 + featured 2 × 349 = 947; renewals 1 × 199 + 2 × 249 = 697; total 1,644
@@ -1174,7 +1179,9 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         const panel = page.locator('section[aria-labelledby="tool-assumptions-heading"]');
         await expect(panel).toContainText('one intro-priced post at $249 per employer email domain, lifetime, shared across everyone at your organization');
         await expect(panel).toContainText('every post after that is $349');
-        await expect(panel).toContainText('Renewals add 60 days: $199 for a promo or intro post, $249 for a $349 post.');
+        await expect(panel).toContainText('Renewals add 60 days: $199 for a promo, intro or pack post, $249 for a $349 post.');
+        // The 5-post pack is a way to buy in both phases (dated while the promo runs).
+        await expect(page.locator('#cph-flat-mode option[value="pack"]')).toHaveCount(1);
         await expectNoRenderedDashes(page, `${PATH} (defaults)`);
     });
 
