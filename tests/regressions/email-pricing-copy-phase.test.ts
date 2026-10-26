@@ -5,8 +5,9 @@
  * Before:
  *   - pricingCopyForNow's ladder branch printed the LADDER_LINE constant,
  *     "From January 1, 2027: your first post is $199, ...", so every
- *     employer welcome and plan-paused email sent after that date announced
- *     a start date already in the past;
+ *     employer welcome email (and the plan-paused email, deleted with the
+ *     retired Employer plan's code) sent after that date announced a start
+ *     date already in the past;
  *   - lib/email-service.ts redefined PROMO_HEADLINE and PROMO_SUB instead of
  *     taking them from lib/pricing-copy.ts, so the copies could drift;
  *   - the employer welcome preheader, body and subject carried em dashes.
@@ -55,15 +56,6 @@ async function employerWelcomeAt(now: Date): Promise<Sent> {
     vi.setSystemTime(now);
     const { sendSignupWelcomeEmail } = await import('@/lib/email-service');
     const result = await sendSignupWelcomeEmail('owner@clinic.example', 'Dana', 'employer');
-    expect(result.success).toBe(true);
-    return lastSent();
-}
-
-/** The plan-paused notice (payment failed), sent with the clock at `now`. */
-async function planPausedAt(now: Date): Promise<Sent> {
-    vi.setSystemTime(now);
-    const { sendPlanPausedEmail } = await import('@/lib/email-service');
-    const result = await sendPlanPausedEmail('owner@clinic.example', { reason: 'past_due', pausedCount: 2 });
     expect(result.success).toBe(true);
     return lastSent();
 }
@@ -126,23 +118,6 @@ describe('employer welcome email', () => {
             expect(sent.text).not.toMatch(DASHES);
             expect(sent.text).toContain(`connect with qualified ${brand.niche.long}s, all from one dashboard.`);
         }
-    });
-});
-
-describe('plan paused notice: the "what you can do instead" pricing card', () => {
-    it('after the promo it states the ladder in the present tense', async () => {
-        for (const now of [LADDER_START, LATER]) {
-            const sent = await planPausedAt(now);
-            expect(sent.text).toContain(LADDER_PRICES);
-            expect(sent.text).not.toContain(config.ladderStartsLabel);
-            expect(sent.text).not.toMatch(/free during our launch period|free through|no credit card/i);
-        }
-    });
-
-    it('while the promo runs it carries the promo package', async () => {
-        const sent = await planPausedAt(DURING_PROMO);
-        expect(sent.text).toContain(PROMO_SUB);
-        expect(sent.text).not.toContain(LADDER_PRICES);
     });
 });
 

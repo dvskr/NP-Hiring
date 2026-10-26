@@ -26,19 +26,22 @@
  *
  * 2027 re-price, Phase 1 (owner decision 2026-10-24): $249 first post, $349
  * after, a renewal priced by the post it renews ($199, or $249 for a post
- * bought at $349), and the Employer plan retired from every surface. The
- * plan code stays, dormant, so the plan sections (2e, 2f and the section 12
- * diagram) are marked retired but still describe the code as it runs.
+ * bought at $349), and the Employer plan retired from every surface.
  *
  * Phase 3 (owner decisions 2026-10-25): the 5-post pack's pages and copy,
  * and all sales final. Section 1c quotes the pack sentences and the refund
  * answer with their config tokens, and the money-path list names the pack's
  * purchase, credit and admin suites.
+ *
+ * Phase 4 (2026-10-27): the plan's dormant code is deleted. Sections 2e, 2f
+ * and the section 12 diagram are short history notes; 2e describes the guard
+ * the webhook keeps (a subscription-mode session alerted for a refund), 9b
+ * the 7 events and the key permissions that are left, and 11 the deprecated
+ * table that stays.
  */
 import path from 'node:path';
-import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { config } from '@/lib/config';
-import { isPlanEntitled, mapStripeSubscriptionStatus } from '@/lib/employer-plan';
 import { PROMO_SWITCH_PATHS } from '@/app/api/sitemaps/lastmod';
 import { pricingPageCopy } from '@/app/pricing/pricing-page-copy';
 import { forEmployersCopy } from '@/app/for-employers/for-employers-copy';
@@ -54,9 +57,10 @@ const section1c = between(doc, '### 1c. Helpers', '### 1d. What happens');
 const section1d = between(doc, '### 1d. What happens', '## 2. End-to-end flows');
 const section2a = between(doc, '### 2a. Promo post', '### 2b. Plan post');
 const section2c = between(doc, '### 2c. Intro / Featured checkout', '### 2d. Renewal');
-const section2d = between(doc, '### 2d. Renewal', '### 2e. Employer plan lifecycle');
-const section2e = between(doc, '### 2e. Employer plan lifecycle', '### 2f. Plan-lapse job');
+const section2d = between(doc, '### 2d. Renewal', '### 2e. Employer plan');
+const section2e = between(doc, '### 2e. Employer plan', '### 2f. Plan-lapse job');
 const section2f = between(doc, '### 2f. Plan-lapse job', '### 2g. Expiry');
+const section2g = between(doc, '### 2g. Expiry', '### 2h. 5-post pack');
 const section3a = between(doc, '### 3a. Source-of-truth files', '### 3b. API routes');
 const section3b = between(doc, '### 3b. API routes', '### 3c. UI surfaces');
 const section3c = between(doc, '### 3c. UI surfaces', '## 4. Database schema');
@@ -91,7 +95,9 @@ describe('docs/pricing-system.md: every link, path and name it gives exists', ()
         const declared = new Set([...readRepo('lib/env.ts').matchAll(/^\s+([A-Z][A-Z0-9_]+): z\./gm)].map((match) => match[1]));
         expect(declared.has('STRIPE_SECRET_KEY')).toBe(true);
         const named = [...new Set([...doc.matchAll(/\b((?:NEXT_PUBLIC_)?STRIPE_[A-Z_]*(?:KEY|SECRET|LINK))\b/g)].map((match) => match[1]))];
-        expect(named.length).toBeGreaterThanOrEqual(4);
+        // The secret key, the webhook secret and the publishable key (the plan's
+        // Payment Link variable went with the plan code, 2026-10-27).
+        expect(named.length).toBeGreaterThanOrEqual(3);
         expect(named.filter((name) => !declared.has(name)), 'variables nothing reads').toEqual([]);
     });
 });
@@ -212,57 +218,16 @@ describe('section 1: the copy and the switch at config.promoEndsAt', () => {
     });
 });
 
-describe('section 1d and the register: what the flag opens without the Stripe key', () => {
-    const LINK = 'https://buy.stripe.com/abc123';
-    // The check loads lib/env and lib/employer-plan-link on a fresh module
-    // graph, which can outlast vitest's 5 second default when a full run
-    // saturates the workers. Both are loaded once here, on the hook's own
-    // budget, so their cold load is not charged to the test (as in
-    // tests/regressions/paid-posting-checkout-gate.test.ts).
-    const FRESH_IMPORT_TIMEOUT_MS = 20_000;
-
-    beforeAll(async () => {
-        await import('@/lib/env');
-        await import('@/lib/employer-plan-link');
-    }, 60_000);
-
-    afterEach(() => {
-        vi.unstubAllEnvs();
-        vi.resetModules();
+describe('section 1d: no plan sale can open, and no plan variable is named', () => {
+    it('the plan Payment Link variable is gone from lib/env.ts, and section 1d says nothing reads it', () => {
+        // The plan-sale ratchet (register 2.16) checked whether the plan sale
+        // opened without the Stripe key; the sale and its variable are gone.
+        expect(readRepo('lib/env.ts')).not.toMatch(/STRIPE_PLAN_\w+/);
+        expect(doc).not.toMatch(/STRIPE_PLAN_\w+/);
+        expect(pending).not.toMatch(/STRIPE_PLAN_\w+/);
+        expect(lineWith(section1d, "**The retired plan's Payment Link variable**")).toMatch(/nothing reads it/);
+        expect(lineWith(section1d, '`ENABLE_PAID_POSTING=true`')).not.toMatch(/plan sales open/);
     });
-
-    it('states plan sales as the code opens them, and the register tracks the gap while it is open', async () => {
-        // The real lib/env and lib/employer-plan-link, on a fresh module graph
-        // (getEnv caches its first parse): the flag on, a valid Payment Link,
-        // no secret key, the promo over.
-        vi.stubEnv('ENABLE_PAID_POSTING', 'true');
-        vi.stubEnv('STRIPE_SECRET_KEY', '');
-        vi.stubEnv('STRIPE_PLAN_PAYMENT_LINK', LINK);
-        vi.stubEnv('CRON_SECRET', 'unit-test-cron-secret');
-        vi.resetModules();
-        const env = await import('@/lib/env');
-        const planLink = await import('@/lib/employer-plan-link');
-
-        // The environment parsed: a failed parse would also read as "closed".
-        expect(env.getEnv().STRIPE_PLAN_PAYMENT_LINK).toBe(LINK);
-        expect(env.getPaidPostingStatus()).toEqual({ enabled: true, stripeConfigured: false, available: false });
-        expect(planLink.isPlanSaleOpen(PROMO_RUNNING)).toBe(false);
-        const opensWithoutKey = planLink.isPlanSaleOpen(LADDER_LIVE);
-
-        const flagBullet = lineWith(section1d, '`ENABLE_PAID_POSTING=true`');
-        const registerItem = '**2.16 Plan sales do not check the Stripe key.**';
-        if (opensWithoutKey) {
-            // Checkout answers 503 without the key, but the plan can be bought
-            // and the webhook (503 without the key or its secret) cannot record it.
-            expect(flagBullet).not.toMatch(/Until both are set/);
-            expect(flagBullet).toContain('plan sales open as soon as `STRIPE_PLAN_PAYMENT_LINK` is valid');
-            expect(flagBullet).toMatch(/the webhook answers 503 until `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are both set/);
-            expect(pending, 'the open gap belongs in the register').toContain(registerItem);
-        } else {
-            expect(flagBullet, 'isPlanSaleOpen now needs the key: drop the warning from section 1d').not.toContain('plan sales open as soon as');
-            expect(pending, 'isPlanSaleOpen now needs the key: close 2.16 in docs/PENDING_WORK.md').not.toContain(registerItem);
-        }
-    }, FRESH_IMPORT_TIMEOUT_MS);
 });
 
 describe('section 2: the flows', () => {
@@ -309,112 +274,82 @@ describe('section 2: the flows', () => {
         expect(section2d).not.toMatch(/\$179|17900/);
     });
 
-    it('2e, 3b and 12: the plan is retired, no page links its routes, and the dormant subscribe route is described as it runs', () => {
+    it('2e, 2f, 3b, 3c and 12: the plan code is deleted, every plan route is gone, and the sections say so', () => {
         const pricingPage = withoutComments(readRepo('app/pricing/page.tsx'));
         expect(pricingPage, 'a page links the plan again: update 2e, 12 and this check').not.toContain('/api/employer/plan/subscribe');
         expect(pricingPage).not.toContain('isPlanSaleOpen');
+        for (const deleted of [
+            'lib/employer-plan.ts',
+            'lib/employer-plan-link.ts',
+            'app/api/employer/plan/route.ts',
+            'app/api/employer/plan/subscribe/route.ts',
+            'app/api/employer/billing-portal/route.ts',
+            'app/api/webhooks/stripe/plan-checkout.ts',
+            'app/api/webhooks/stripe/plan-subscription.ts',
+            'lib/inngest/functions/plan-lapse.ts',
+            'lib/inngest/functions/plan-reconciliation.ts',
+            'app/api/admin/employer-plans/route.ts',
+            'app/admin/employer-plans/page.tsx',
+        ]) {
+            expect(existsInRepo(deleted), deleted).toBe(false);
+        }
+        const inngest = withoutComments(readRepo('app/api/inngest/route.ts'));
+        expect(inngest).not.toMatch(/planLapse|planReconciliation/);
 
-        // 2e, 2f and the section 12 diagram are marked retired.
+        // 2e, 2f and the section 12 diagram are history notes now.
         for (const [name, section] of [['2e', section2e], ['2f', section2f], ['12', planDiagram]] as const) {
             expect(section, name).toMatch(/Retired 2026-10-24/);
+            expect(section, name).toMatch(/deleted/);
         }
-        expect(section2e).toMatch(/no page links/i);
-        expect(section2e).not.toContain('href = process.env.STRIPE_PLAN_PAYMENT_LINK');
-        expect(planDiagram).not.toMatch(/\/pricing →/);
-
-        // The subscribe route sends an employer with an entitled OR a pending plan to the dashboard.
-        const subscribe = withoutComments(readRepo('app/api/employer/plan/subscribe/route.ts'));
-        expect(subscribe).toContain("isPlanEntitled(plan) || plan.status === 'pending'");
-        expect(lineWith(section3b, '`/api/employer/plan/subscribe`')).toMatch(/entitled or pending plan/);
-        expect(section2e).toMatch(/entitled or pending plan/);
+        // No route, page or admin row of the plan is listed as if it still ran.
+        expect(section3b).not.toMatch(/`\/api\/employer\/plan|`\/api\/employer\/billing-portal`|`\/api\/admin\/employer-plans/);
+        expect(section3c).not.toContain('/admin/employer-plans');
+        // Nothing is described as dormant code that still runs.
+        expect(doc).not.toMatch(/\(dormant\b|\bDormant[:(]|code stays, dormant/);
     });
 
-    it('2e prints the plan widget response as GET /api/employer/plan builds it', () => {
-        const route = withoutComments(readRepo('app/api/employer/plan/route.ts'));
-        const body = between(route, 'NextResponse.json({', '});');
-        const inner = /\?\s*\{([\s\S]*?)\}\s*:\s*null/.exec(body);
-        expect(inner).not.toBeNull();
-        const keys = (text: string): string[] => [...text.matchAll(/^\s*(\w+):/gm)].map((match) => match[1]);
-        const planKeys = keys(inner![1]);
-        const topKeys = keys(body.replace(inner![0], 'null')).filter((key) => key !== 'plan');
-        expect(planKeys).toContain('canManageBilling');
+    it('2e: a subscription-mode session is alerted for a refund and acknowledged, before the pack and per-post paths', () => {
+        const route = withoutComments(readRepo('app/api/webhooks/stripe/route.ts'));
+        const paid = between(route, 'async function handleCheckoutSessionPaid(', '\n}\n');
+        const guard = paid.indexOf("if (session.mode === 'subscription')");
+        expect(guard, 'the subscription-mode guard').toBeGreaterThan(-1);
+        expect(guard).toBeLessThan(paid.indexOf('POST_PACK_CHECKOUT_TYPE'));
+        expect(guard).toBeLessThan(paid.indexOf('session.metadata?.jobId'));
+        expect(route).toContain("await alertWebhookFailure('Employer plan retired: refund it in Stripe'");
+        expect(route).toContain("return NextResponse.json({ received: true, plan: 'retired' });");
+        expect(route).not.toMatch(/subscriptions\.\w+\(/);
 
-        const shape = /\{ plan: \{([^}]*)\} \| null,([^}]*)\}/.exec(section2e);
-        expect(shape, 'the response shape line').not.toBeNull();
-        const names = (list: string): string[] => list.split(',').map((item) => item.split(':')[0].trim()).filter(Boolean);
-        expect(names(shape![1])).toEqual(planKeys);
-        expect(names(shape![2])).toEqual(topKeys);
+        expect(section2e).toContain("alertWebhookFailure('Employer plan retired: refund it in Stripe'");
+        expect(section2e).toContain("200 { received: true, plan: 'retired' }");
+        expect(section2e).toMatch(/checked FIRST, before the 5-post pack branch and the per-post paths/);
+        // The operator is told what the alert means.
+        expect(lineWith(section9c, 'Employer plan retired: refund it in Stripe')).toMatch(/refund the payment, cancel the subscription/i);
+        // And the loophole table no longer lists the unattached plan checkout.
+        expect(section8).not.toContain('Unattached plan checkout');
     });
 
-    it('2e and 8: a plan is attached by the account reference, never by the checkout email', () => {
-        const checkoutSource = readRepo('app/api/webhooks/stripe/plan-checkout.ts');
-        const checkout = withoutComments(checkoutSource);
-        // The code: the attached account comes from the server-issued reference alone.
-        expect(checkout).toContain('const userId = await resolveReferencedEmployer(session);');
-        const resolver = between(checkout, 'async function resolveReferencedEmployer', 'async function emailMatchesEmployer');
-        expect(resolver).toContain('session.client_reference_id');
-        expect(resolver).toContain('session.metadata?.userId');
-        expect(resolver).not.toMatch(/email/i);
-        expect(checkout).toContain('mapStripeSubscriptionStatus(subscription.status)');
-        expect(checkout).toContain('{ detached: true }');
+    it('2b, 2d and 2g: a legacy plan row is refused a renewal and a republish, and offered a repost', () => {
+        const renewal = withoutComments(readRepo('app/api/create-renewal-checkout/route.ts'));
+        expect(renewal).toMatch(/paymentStatus === 'plan'\)\s*\{\s*return NextResponse\.json\([\s\S]*?status: 409/);
+        const toggle = withoutComments(readRepo('app/api/employer/jobs/[jobId]/toggle-publish/route.ts'));
+        expect(toggle).toContain("new Set(['paid', 'free', 'promo', 'pack'])");
+        expect(toggle).not.toMatch(/republishPlanPost|'plan'/);
 
-        // The document says the same.
-        expect(section2e).toContain('client_reference_id or metadata.userId');
-        expect(section2e).toMatch(/never used to attach/);
-        expect(section2e).not.toContain('userProfile.findFirst({ email');
-        expect(section2e).not.toContain("status:'active'");
-        expect(section2e).toContain('mapStripeSubscriptionStatus(subscription.status)');
-        expect(section2e).toMatch(/'pending' while the session is unpaid/);
-        expect(section2e).toMatch(/stored detached/);
-        const emails = [...new Set([...checkout.matchAll(/\b(send\w+Email)\b/g)].map((match) => match[1]))];
-        expect(emails.length).toBeGreaterThanOrEqual(2);
-        for (const email of emails) expect(section2e, email).toContain(email);
-
-        const loophole = lineWith(section8, 'plan checkout**');
-        expect(loophole).not.toContain('Payment Links cannot carry our user id');
-        expect(loophole).toMatch(/never attaches/);
-        expect(loophole).toContain('client_reference_id');
-        // A detached duplicate is unattached too, so the monitor row names both.
-        expect(lineWith(section9c, '`user_id IS NULL`')).toMatch(/no account reference/);
-        expect(lineWith(section9c, '`user_id IS NULL`')).toMatch(/detached/);
+        expect(lineWith(section2d, "paymentStatus 'plan' (legacy)")).toMatch(/no Renew \(409/);
+        expect(section2g).toMatch(/a legacy 'plan' row included/);
+        expect(section2g).not.toMatch(/republishPlanPost|resumePlanPosts|freed slot for a plan post/);
     });
 
-    it('2e status map is the one mapStripeSubscriptionStatus applies, fallback included', () => {
-        const planLib = readRepo('lib/employer-plan.ts');
-        const mapper = between(planLib, 'export function mapStripeSubscriptionStatus', '\n}\n');
-        const stripeStatuses = [...mapper.matchAll(/case '(\w+)':/g)].map((match) => match[1]);
-        expect(stripeStatuses.length).toBeGreaterThanOrEqual(8);
+    it('4b and the glossary: the EmployerPlan model is kept, deprecated, and nothing reads or writes the table', () => {
+        const schema = readRepo('prisma/schema.prisma');
+        const comment = between(schema, '/// DEPRECATED. The Employer plan', 'model EmployerPlan {');
+        expect(comment).toMatch(/nothing reads or writes this table/);
+        const sources = [...walk('app', isSource), ...walk('lib', isSource), ...walk('components', isSource)];
+        expect(sources.filter((file) => /\bemployerPlan\./.test(withoutComments(readRepo(file)))), 'a source reads or writes employer_plans again').toEqual([]);
 
-        const line = lineWith(section2e, 'status map:');
-        const documented = new Map<string, string>();
-        let fallback: string | undefined;
-        for (const entry of line.slice(line.indexOf('status map:') + 'status map:'.length).split(';')) {
-            const parsed = /^(.+?) → '(\w+)'$/.exec(entry.trim());
-            expect(parsed, `unreadable status map entry: ${entry}`).not.toBeNull();
-            if (/^any other status/.test(parsed![1])) fallback = parsed![2];
-            else for (const status of parsed![1].split('|')) documented.set(status.trim(), parsed![2]);
-        }
-        expect([...documented.keys()].sort()).toEqual([...stripeStatuses].sort());
-        for (const status of stripeStatuses) expect(documented.get(status), status).toBe(mapStripeSubscriptionStatus(status));
-        expect(fallback).toBe(mapStripeSubscriptionStatus('a_status_stripe_adds_later'));
-    });
-
-    it('2f, 4b and the glossary state entitlement as isPlanEntitled decides it', () => {
-        const future = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-        const longPast = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        // A cancelled plan keeps its paid-through period; a pending one is never entitled.
-        expect(isPlanEntitled({ status: 'cancelled', currentPeriodEnd: future })).toBe(true);
-        expect(isPlanEntitled({ status: 'cancelled', currentPeriodEnd: longPast })).toBe(false);
-        expect(isPlanEntitled({ status: 'pending', currentPeriodEnd: future })).toBe(false);
-
-        for (const statement of [lineWith(section4, 'Entitled = '), lineWith(glossary, '**Entitled plan**')]) {
-            expect(statement).toMatch(/'cancelled'/);
-            expect(statement).toMatch(/'pending'/);
-        }
-        // So a cancelled plan is not lapsed until its period has ended, and a pending one always is.
-        expect(section2f).not.toContain("(status 'cancelled', or currentPeriodEnd + grace < now)");
-        expect(section2f).toMatch(/'cancelled' once currentPeriodEnd has passed/);
-        expect(section2f).toMatch(/'pending' always/);
+        expect(lineWith(section4, '### 4b. EmployerPlan')).toMatch(/deprecated/);
+        expect(section4).not.toContain('Entitled = ');
+        expect(glossary).not.toContain('**Entitled plan**');
     });
 });
 
@@ -459,16 +394,18 @@ describe('section 3: the surfaces that follow the promo clock', () => {
         expect(lineWith(section3c, '`postJobCta(now)`')).toContain(`(../app${guideRoute}/page.tsx)`);
     });
 
-    it('3c: the plan-paused email prints the label and the body of the pricing copy, the welcome email all three', () => {
-        const emails = readRepo('lib/email-service.ts');
+    it('3c: the welcome email prints all three parts of the pricing copy, and is its one caller since the plan emails went', () => {
+        const emails = withoutComments(readRepo('lib/email-service.ts'));
         const used = (body: string): string[] => ['label', 'headline', 'body'].filter((part) => body.includes(`pricing.${part}`));
         const welcome = between(emails, 'export async function sendSignupWelcomeEmail(', '\nexport async function sendConfirmationEmail(');
-        const paused = between(emails, 'export async function sendPlanPausedEmail(', '\nasync function sendPlanNotice(');
         expect(used(welcome)).toEqual(['label', 'headline', 'body']);
-        expect(used(paused)).toEqual(['label', 'body']);
+        // The definition and the welcome email's call: no other email reads it.
+        expect(emails.match(/\bpricingCopyForNow\(/g)).toHaveLength(2);
+        expect(emails).not.toMatch(/export async function sendPlan\w*Email/);
 
         const row = lineWith(section3c, '| Employer emails');
-        expect(row).toMatch(/plan-paused email prints that copy's label and body only/);
+        expect(row).toMatch(/its one caller since the plan emails were deleted/);
+        expect(row).not.toMatch(/plan-paused/);
     });
 });
 
@@ -572,8 +509,11 @@ describe('sections 8 and 9: what an operator is told to do', () => {
         const route = readRepo('app/api/webhooks/stripe/route.ts');
         const processEvent = between(route, 'async function processEvent(', '\n}\n');
         const handled = [...processEvent.matchAll(/case '([a-z_.]+)':/g)].map((match) => match[1]);
-        expect(processEvent).toContain('customer.subscription.created is intentionally a no-op');
-        const required = new Set([...handled, 'customer.subscription.created']);
+        // The retired plan's subscription and dunning events went with its code
+        // (2026-10-27): the endpoint needs exactly the 7 events the route handles.
+        expect(handled.filter((event) => /^customer\.subscription\.|^invoice\.payment_failed$/.test(event))).toEqual([]);
+        expect(handled).toHaveLength(7);
+        const required = new Set(handled);
 
         const EVENT = /(?:checkout|invoice|charge|customer)\.[a-z_.]*[a-z]/;
         const bullet = lineWith(section9b, 'Webhook endpoint');
@@ -616,13 +556,20 @@ describe('sections 8 and 9: what an operator is told to do', () => {
         }
         if (expandsPaymentIntent && !needs.has('Payment Intents')) needs.set('Payment Intents', 'Read');
         if (expandsCharge) needs.set('Charges', 'Read');
-        expect(needs.size).toBeGreaterThanOrEqual(5);
+        // Checkout Sessions, Payment Intents, Charges and Invoices (Subscriptions
+        // and the Customer portal went with the plan code, 2026-10-27).
+        expect(needs.size).toBeGreaterThanOrEqual(4);
 
         const list = between(section9b, 'Restricted live key', '\n- [ ]');
         for (const [label, level] of needs) {
             expect(list, label).toContain(`${label}: ${level}`);
         }
         expect(list).toContain('webhooks.constructEvent');
+        // A permission no call needs is not asked for (the retired plan's
+        // Subscriptions and Customer portal, since its code was deleted).
+        for (const label of Object.values(LABELS).filter((name) => !needs.has(name))) {
+            expect(list, label).not.toMatch(new RegExp(`${label}: (?:Read|Write)`));
+        }
     });
 });
 
@@ -638,15 +585,10 @@ describe('sections 10 and 11: the test map', () => {
         'tests/lib/renewal-price.test.ts',
         'tests/api/webhooks-stripe-c2.test.ts',
         'tests/api/webhooks-stripe-refund-dispute.test.ts',
-        'tests/api/webhooks-stripe-subscription.test.ts',
-        'tests/api/webhooks-stripe-subscription-live-read.test.ts',
+        // The retired Employer plan's guard: a subscription-mode session is alerted for a refund, never fulfilled.
+        'tests/api/webhooks-stripe-subscription-retired.test.ts',
         'tests/api/webhooks-stripe-archived-post.test.ts',
         'tests/api/apply-renewal-sibling-sessions.test.ts',
-        'tests/inngest/plan-lapse.test.ts',
-        'tests/inngest/plan-reconciliation.test.ts',
-        'tests/lib/employer-plan.test.ts',
-        'tests/lib/employer-plan-link.test.ts',
-        'tests/lib/employer-plan-stale-write.test.ts',
         'tests/lib/renewal-checkout-sessions.test.ts',
         'tests/lib/pricing.test.ts',
         'tests/lib/email-change-policy.test.ts',
@@ -681,6 +623,15 @@ describe('sections 10 and 11: the test map', () => {
         const audit20 = lineWith(section11, '| Audit #20');
         expect(audit20).not.toContain('Webhook + checkout + plan integration tests');
         expect(audit20).toMatch(/real database/);
+    });
+
+    it('11: the plan code removal is done, and only the deprecated table is left, for a separate migration', () => {
+        expect(section11).not.toContain('| Plan code removal');
+        const table = lineWith(section11, '| Plan table removal');
+        expect(table).toMatch(/deleted on 2026-10-27/);
+        expect(table).toMatch(/separate, deliberate migration/);
+        // The migration that would drop it does not exist.
+        expect(walk('prisma/migrations', (name) => name === 'migration.sql').filter((file) => /drop.*employer_plans|employer_plans.*drop/i.test(readRepo(file)))).toEqual([]);
     });
 
     it('credits the checkout banner to the suite that renders it in both phases', () => {

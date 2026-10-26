@@ -33,12 +33,11 @@
  *     sitemaps filter on isPublished, not archivedAt (lib/filters.ts,
  *     lib/pseo/listing-where.ts, lib/active-job-filter.ts), so the unpublish
  *     is what takes the post off the board. The flag is what keeps
- *     fp-recovery, which has no archive filter, and resumePlanPosts (every
- *     plan renewal), once the post is restored, from reviving it.
+ *     fp-recovery, which has no archive filter, once the post is restored,
+ *     from reviving it.
  *   - Restoring clears archivedAt and nothing else. It does not republish and
  *     the flag stays, so the post waits for the employer to republish it
- *     through toggle-publish, which runs the expiry, payment and plan slot
- *     checks.
+ *     through toggle-publish, which runs the expiry and payment checks.
  *   - Repeating a toggle: one that reads the post archived restores it, still
  *     unpublished; two that both read it live both archive it. No run of
  *     repeats puts a post live.
@@ -386,9 +385,9 @@ describe('archiving', () => {
         );
     });
 
-    it('flags a post the plan had paused, so a plan renewal cannot revive it once restored', async () => {
-        // pausePlanPosts unpublishes without the flag, and resumePlanPosts
-        // revives only plan posts that are unflagged and unarchived.
+    it('archives an unpublished legacy plan post like any other, with the flag', async () => {
+        // The Employer plan is retired and its code deleted; an old 'plan'
+        // row archives on the same terms as every other post.
         seed({ jobs: [jobRow({ isPublished: false })], employerJobs: [ownedBy(OWNER, { paymentStatus: 'plan' })] });
 
         await patchArchive();

@@ -44,7 +44,9 @@ describe('docs/PENDING_WORK.md: paths, names and house style', () => {
     it('every Stripe key, secret and link variable it names is one lib/env.ts declares', () => {
         const declared = new Set([...readRepo('lib/env.ts').matchAll(/^\s+([A-Z][A-Z0-9_]+): z\./gm)].map((match) => match[1]));
         const named = [...new Set([...pending.matchAll(/\b((?:NEXT_PUBLIC_)?STRIPE_[A-Z_]*(?:KEY|SECRET|LINK))\b/g)].map((match) => match[1]))];
-        expect(named.length).toBeGreaterThanOrEqual(4);
+        // The secret key, the webhook secret and the publishable key (the plan's
+        // Payment Link variable went with the plan code, 2026-10-27).
+        expect(named.length).toBeGreaterThanOrEqual(3);
         expect(named.filter((name) => !declared.has(name)), 'variables nothing reads').toEqual([]);
     });
 
@@ -214,11 +216,25 @@ describe('the 2027 re-price in the register (owner decisions and defaults of 202
         for (const line of [d3, d11, renewalRow]) expect(line).not.toMatch(/\$(?:179|299|399)\b/);
     });
 
-    it('1.1 and 1.2 ask for no plan Price, Payment Link or Customer Portal, and keep the link unset', () => {
+    it('1.1 and 1.2 ask for no plan Price, Payment Link or Customer Portal, and name no plan variable', () => {
         const stripeSetup = between(pending, '**1.1 Stripe live mode.**', '**1.3 Google Analytics.**');
         expect(stripeSetup).toMatch(/no Price, Payment Link or Customer Portal/);
         expect(stripeSetup).not.toContain('$399');
-        expect(stripeSetup).toContain('`STRIPE_PLAN_PAYMENT_LINK` is not set');
-        expect(stripeSetup).not.toMatch(/Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,\s*`STRIPE_PLAN_PAYMENT_LINK`/);
+        // The plan code and its Payment Link variable were deleted on 2026-10-27.
+        expect(stripeSetup).not.toMatch(/STRIPE_PLAN_\w+/);
+        expect(stripeSetup).toMatch(/Payment Link variable is gone from the code/);
+        expect(stripeSetup).not.toMatch(/all 11 events/);
+    });
+
+    it('1.1 asks for exactly the events the webhook handles, and 2.27 lists phase 4 as closed', () => {
+        const route = readRepo('app/api/webhooks/stripe/route.ts');
+        const processEvent = between(route, 'async function processEvent(', '\n}\n');
+        const handled = [...processEvent.matchAll(/case '([a-z_.]+)':/g)].map((match) => match[1]);
+        const stripeSetup = between(pending, '**1.1 Stripe live mode.**', '**1.2 Vercel Production env');
+        expect(stripeSetup).toContain(`with its ${handled.length} events`);
+
+        const item = between(pending, '**2.27 The 2027 re-price build.**', '**2.29');
+        expect(item).not.toMatch(/- phase 4: delete the dormant plan code/);
+        expect(closed).toMatch(/^- 2\.27 phase 4 \(2026-10-27\): the retired Employer plan's dormant code is deleted/m);
     });
 });

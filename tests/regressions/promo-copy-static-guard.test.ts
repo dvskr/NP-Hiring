@@ -92,11 +92,6 @@ const TRUE_IN_BOTH_PHASES: readonly BothPhases[] = [
         why: 'the label of the freeOffer template, printed only for the templates the server page lists, and availableOutreachTemplates(now) lists freeOffer only while the promo runs',
     },
     {
-        file: 'app/api/webhooks/stripe/plan-checkout.ts',
-        under: '!planSalesOpen()',
-        why: 'an operator alert naming why plan sales are closed; no employer sees it',
-    },
-    {
         file: 'app/tools/cost-per-hire-calculator/cost-per-hire-copy.ts',
         within: 'costPerHireAssumptions',
         text: 'launch promo',

@@ -146,7 +146,8 @@ flag. It ends at 2027-01-01 10:00 UTC (`config.promoEndsAt`, midnight Hawaii tim
 and from that instant the ladder starts on its own: $249 for a company's first paid
 post and $349 for every later post (see [pricing-system.md](pricing-system.md)). A
 renewal adds 60 days for $199, or $249 for a post bought at $349. The Employer plan
-is retired (owner decision, 2026-10-24), so there is nothing to set up for it.
+is retired (owner decision, 2026-10-24) and its code was deleted on 2026-10-27, so
+there is nothing to set up for it.
 Everything below must be live in production before then, or employers hit a 503 on
 their first paid post.
 
@@ -161,32 +162,30 @@ only renewals become purchasable.
 
 - [ ] Activate the account. Set the statement descriptor (NPHIRING), public details,
       branding and customer emails.
-- [ ] No Product, Price or Payment Link to create: each post and renewal checkout
-      prices its own session from `lib/config.ts`, and the Employer plan is retired.
-- [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` with **all 11**
+- [ ] No Product, Price or Payment Link to create: each post, renewal and pack
+      checkout prices its own session from `lib/config.ts`, and the Employer plan is
+      retired.
+- [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` with **all 7**
       events below (the list in `.env.example`; `processEvent` in
-      `app/api/webhooks/stripe/route.ts` handles every one except
-      `customer.subscription.created`, a deliberate no-op). Set its API version to
+      `app/api/webhooks/stripe/route.ts` handles every one). Set its API version to
       `2026-08-26.dahlia`, the version `lib/stripe.ts` pins, so the events arrive
       in the shapes the webhook reads. Copy its signing secret.
 
 | Event | What the site does with it |
 |---|---|
-| `checkout.session.completed` | Publishes a paid post or applies a renewal |
+| `checkout.session.completed` | Publishes a paid post, applies a renewal or records a 5-post pack; a subscription-mode session (the retired plan) is alerted for a refund |
 | `checkout.session.async_payment_succeeded` | Same, once a delayed payment settles |
 | `checkout.session.async_payment_failed` | Alerts |
 | `invoice.paid` | Refreshes invoice PDF links |
-| `invoice.payment_failed` | Dormant: the retired plan's dunning email |
 | `charge.refunded` | Ledger update; a full refund takes the post down |
 | `charge.dispute.created` | Takes the post down on a chargeback |
 | `charge.dispute.closed` | Restores the post on a won dispute |
-| `customer.subscription.created` | No-op |
-| `customer.subscription.updated` | Dormant: the retired plan's status and paid-through date |
-| `customer.subscription.deleted` | Dormant: the retired plan's cancellation |
 
-The four plan events (`invoice.payment_failed` and the three `customer.subscription.*`)
-stay on the endpoint until the dormant plan code is deleted; with no plan sold, their
-handlers have nothing to act on.
+The retired plan's four events (`invoice.payment_failed` and the three
+`customer.subscription.*`) are not needed: their handlers were deleted with the plan
+code on 2026-10-27, and the webhook acknowledges them and does nothing. Leave them off
+the live endpoint, and drop them from the test endpoint. In test mode, archive the
+plan's Product, Price and Payment Link.
 
 - [ ] Settings, Payment methods: choose what per-post Checkout offers. Sessions do not
       pin cards, and delayed methods are safe because fulfilment waits for payment.
@@ -202,14 +201,13 @@ handlers have nothing to act on.
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | live publishable key | No page reads it today, but `npm run fork:preflight` fails without it while the flag is on |
 | `NEXT_PUBLIC_BASE_URL` | `https://nphiring.com` | Checkout return URLs and email links |
 
-Do not set `STRIPE_PLAN_PAYMENT_LINK`: the Employer plan is retired, and while the
-variable is unset no plan can be sold (`lib/employer-plan-link.ts`).
-`npm run fork:preflight` still prints a warning for it; ignore that warning.
+The retired plan's Payment Link variable is gone from the code (2026-10-27): nothing
+reads it and `npm run fork:preflight` no longer checks it, so it needs no value.
 
 Keep these set: `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` (the daily payment
-reconciliation runs on Inngest, and so do the dormant plan jobs; sync it as in
-section 6 step 4), `DISCORD_WEBHOOK_URL` (payment webhook alerts, including "refund
-required"), `SENTRY_DSN`.
+reconciliation runs on Inngest; sync it as in section 6 step 4), `DISCORD_WEBHOOK_URL`
+(payment webhook alerts, including "refund required" and "Employer plan retired:
+refund it in Stripe"), `SENTRY_DSN`.
 
 Redeploy after any change: Vercel applies env changes only to new deployments, and
 `NEXT_PUBLIC_` values are baked in at build, so turn the build cache off for that
@@ -218,7 +216,7 @@ redeploy. **After 2027-01-01, no test-mode key may remain in Production.**
 ### 8c. Verify
 
 - [ ] `https://nphiring.com/api/create-checkout/availability` returns `{"available":true}`.
-- [ ] Stripe, Webhooks: the endpoint lists the 11 events and a test event returns 200.
+- [ ] Stripe, Webhooks: the endpoint lists the 7 events and a test event returns 200.
 - [ ] After the promo ends, /pricing shows the two post prices ($249 first post, $349
       after) and no plan, and a signed-in employer whose company has no paid post is
       quoted $249. Renewing a post bought at $349 opens Checkout at $249; any other

@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     // STRIPE_WEBHOOK_SECRET POST /api/webhooks/stripe answers 503 to every
     // event, so a post paid for here would publish only through the success
     // page or the daily sweep, and its refunds and disputes would never reach
-    // it. Same rule as lib/employer-plan-link.ts#isPlanSaleOpen and
+    // it. Same rule as lib/post-pack-sale.ts#packSaleClosedReason and
     // /api/create-checkout/availability
     // (tests/regressions/paid-posting-checkout-gate.test.ts).
     if (!getEnv().STRIPE_WEBHOOK_SECRET) {

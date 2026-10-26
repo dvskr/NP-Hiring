@@ -13,9 +13,10 @@ export interface DashboardJobRow {
 }
 
 /**
- * paymentStatus values that never renew: a plan post runs its days and then
- * frees its slot, a pending row was never paid, and a refunded row has
- * nothing left to renew.
+ * paymentStatus values that never renew: a legacy plan post (the retired
+ * Employer plan never renewed its posts, and the renewal checkout answers 409
+ * for one), a pending row was never paid, and a refunded row has nothing
+ * left to renew.
  */
 const NON_RENEWABLE_STATUSES: ReadonlySet<string> = new Set(['plan', 'pending', 'refunded']);
 

@@ -344,8 +344,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Unpublish job (soft delete). isManuallyUnpublished marks it as the
-    // employer's choice, so resumePlanPosts never revives a plan post on the
-    // next plan renewal.
+    // employer's choice, so fp-recovery never revives it.
     await prisma.job.update({
       where: { id: employerJob.jobId },
       data: {

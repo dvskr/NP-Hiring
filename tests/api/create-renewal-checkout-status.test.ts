@@ -9,8 +9,8 @@
  *   409      'pending' (never completed), 'expired' (an abandoned checkout the
  *            reconciliation sweep retired: never paid, so a renewal must not
  *            publish it at the renewal price), legacy 'free' (unchanged message),
- *            'refunded' (moderation gate), 'disputed' (chargeback), 'plan' (plan posts stay live while
- *            the plan is active — re-post from a slot instead)
+ *            'refunded' (moderation gate), 'disputed' (chargeback), a legacy 'plan'
+ *            row (plan posts were never renewed, and the plan is retired: post again)
  *
  * Also pins that metadata.tier carries the ROW's own rung so the renewal
  * webhook (which writes pricingTier = metadata.tier) cannot rewrite an
@@ -144,12 +144,12 @@ describe('renewable rows', () => {
 });
 
 describe('blocked rows (409, no Stripe call)', () => {
-    it("'plan' — plan posts are not renewed; each runs its 60 days, then re-post into the freed slot", async () => {
+    it("a legacy 'plan' row — never renewed; the plan is retired, so post the role again (no slot is promised)", async () => {
         row('plan', 'plan');
         const { res, json } = await post();
         expect(res.status).toBe(409);
-        expect(json.error).toMatch(/plan slot/i);
-        expect(json.error).toMatch(/Employer plan/);
+        expect(json.error).toBe('Employer plan posts are not renewed, and the Employer plan is retired. Post the role again as a new job.');
+        expect(json.error).not.toMatch(/slot|subscribed|no extra charge/i);
         expect(sessionsCreate).not.toHaveBeenCalled();
     });
 

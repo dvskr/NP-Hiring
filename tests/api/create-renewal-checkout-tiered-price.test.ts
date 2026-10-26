@@ -265,7 +265,7 @@ describe('the query that finds the rung', () => {
 
 describe('the rung is decided after every refusal', () => {
     it.each([
-        ['plan', { paymentStatus: 'plan', pricingTier: 'plan', bought: true }, /plan slot/i],
+        ['plan', { paymentStatus: 'plan', pricingTier: 'plan', bought: true }, /Employer plan posts are not renewed/],
         ['refunded', { paymentStatus: 'refunded', pricingTier: 'pro', bought: true }, /refunded/i],
         ['disputed', { paymentStatus: 'disputed', pricingTier: 'pro', bought: true }, /payment dispute/i],
         ['pending', { paymentStatus: 'pending', pricingTier: 'pro', bought: true }, /never completed/i],

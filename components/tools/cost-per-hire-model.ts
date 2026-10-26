@@ -127,8 +127,8 @@ export const INTRO_PRICE_SCOPE_NOTE =
  * The renewal rule as one sentence: the shared one every pricing surface
  * prints (lib/pricing-copy.ts#RENEWAL_LINE), which names both renewal prices
  * by the post each one renews. Renewal is sold for promo, intro and featured
- * posts only: create-renewal-checkout answers 409 for the dormant plan posts,
- * so "renew any post" would over-promise.
+ * posts only: create-renewal-checkout answers 409 for a legacy plan post (the
+ * retired Employer plan's), so "renew any post" would over-promise.
  */
 export const RENEWAL_SCOPE_NOTE = RENEWAL_LINE;
 

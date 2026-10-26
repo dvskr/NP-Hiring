@@ -42,10 +42,10 @@
  *   2. "Free for Job Seekers" (yes, yes, Limited). Was "Completely Free for
  *      Job Seekers", with a note naming LinkedIn.
  *      Us: every Stripe Checkout session the code opens buys an employer
- *      post or a renewal (app/api/create-checkout,
- *      app/api/create-renewal-checkout), the employer plan is a Stripe
- *      Payment Link behind /api/employer/plan/subscribe, and the Terms price
- *      list covers postings, renewals and that plan only. The autofill
+ *      post, a renewal or a 5-post pack (app/api/create-checkout,
+ *      app/api/create-renewal-checkout, app/api/create-pack-checkout), and
+ *      the Terms price list covers postings, renewals and packs only (the
+ *      Employer plan is retired and its code deleted). The autofill
  *      extension code defines pro and premium tiers
  *      (app/api/autofill/_lib/quota.ts), but no account can hold one: the
  *      only roles are job_seeker, employer and admin.

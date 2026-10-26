@@ -11,7 +11,7 @@
  *     younger than 2h is left alone;
  *   - renewal sessions never feed the new-post activation path.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 
 type StepRun = <T>(name: string, fn: () => Promise<T>) => Promise<T>;
@@ -58,6 +58,13 @@ async function run() {
     const fn = mod.paymentReconciliationSweep as unknown as CapturedFunction;
     return fn.handler({ step: { run: (async (_n: string, cb: () => Promise<unknown>) => cb()) as StepRun } });
 }
+
+// Load the sweep's module graph once, outside the first test's 5 second
+// budget: a cold import under a loaded full run outlasted it (the first case
+// timed out, and its late run then consumed the next case's mocks).
+beforeAll(async () => {
+    await import('@/lib/inngest/functions/payment-reconciliation');
+}, 60_000);
 
 beforeEach(() => {
     vi.clearAllMocks();

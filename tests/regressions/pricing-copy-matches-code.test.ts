@@ -16,11 +16,11 @@
  *      posting was created, and apply-renewal.ts only moves the end date.
  *
  * 2027 re-price (owner decision 2026-10-24): the Employer plan is retired.
- * No surface offers it any more, so no copy rests on the plan facts; they
- * stay pinned in their own block only because the plan code stays, dormant,
- * until it is deleted. A renewal now has two prices (lib/renewal-price.ts),
- * which lib/pricing-copy.ts#RENEWAL_LINE names on every surface that states
- * both.
+ * No surface offers it any more, and its code was deleted in phase 4
+ * (2026-10-27); its own block now pins what that leaves: a legacy plan row
+ * is still refused a renewal and a republish, and no page links a plan
+ * route. A renewal now has two prices (lib/renewal-price.ts), which
+ * lib/pricing-copy.ts#RENEWAL_LINE names on every surface that states both.
  *
  * The first block pins the code facts, so a behaviour change fails here and
  * forces the copy to be re-checked. The rest pins the copy: the banned claims
@@ -162,25 +162,29 @@ describe('the code facts the pricing copy rests on', () => {
 });
 
 /**
- * The retired Employer plan's code stays, dormant, until it is deleted. No
- * copy describes it any more; these pin the behaviour that code keeps.
+ * The retired Employer plan's code was deleted in phase 4 of the 2027
+ * re-price. No copy describes it; these pin what is left for a legacy plan
+ * row, and that nothing links the deleted routes.
  */
-describe('the retired Employer plan: the dormant code it leaves', () => {
-    it('refuses to renew a plan post', () => {
+describe('the retired Employer plan: what deleting its code leaves', () => {
+    it('refuses to renew a legacy plan post', () => {
         const renewal = read('app/api/create-renewal-checkout/route.ts');
         expect(renewal).toMatch(/paymentStatus === 'plan'\)\s*\{\s*return NextResponse\.json\([\s\S]*?status: 409/);
     });
 
-    it('takes plan posts down when the plan lapses, and frees a slot when a post ends or is closed', () => {
-        const plan = read('lib/employer-plan.ts');
-        expect(plan).toMatch(/export async function pausePlanPosts[\s\S]*?paymentStatus: 'plan'[\s\S]*?data: \{ isPublished: false \}/);
-        // A slot is in use only while its post is published and unexpired.
-        expect(plan).toMatch(/export async function countActivePlanPosts[\s\S]*?paymentStatus: 'plan',\s*job: \{ isPublished: true, OR: \[\{ expiresAt: null \}, \{ expiresAt: \{ gt: now \} \}\] \}/);
+    it('refuses to republish one: toggle-publish answers 402 to every status it does not list', () => {
+        const toggle = read('app/api/employer/jobs/[jobId]/toggle-publish/route.ts');
+        const statuses = /DIRECTLY_REPUBLISHABLE_STATUSES: ReadonlySet<string> = new Set\(\[([^\]]*)\]\)/.exec(toggle);
+        expect(statuses, 'the republishable status set').not.toBeNull();
+        expect(statuses![1]).not.toContain("'plan'");
+        expect(toggle).toMatch(/willPublish && !DIRECTLY_REPUBLISHABLE_STATUSES\.has\(ps\)[\s\S]*?status: 402/);
     });
 
-    it('keeps the Stripe Customer Portal route, which no page links any more', () => {
-        expect(read('app/api/employer/billing-portal/route.ts')).toContain('stripe.billingPortal.sessions.create(');
-        for (const rel of [PRICING, 'components/employer/UsageWidget.tsx']) {
+    it('the plan, subscribe and Customer Portal routes are gone, and no page links them', () => {
+        for (const rel of ['app/api/employer/plan/route.ts', 'app/api/employer/plan/subscribe/route.ts', 'app/api/employer/billing-portal/route.ts', 'lib/employer-plan.ts', 'lib/employer-plan-link.ts']) {
+            expect(fs.existsSync(path.join(ROOT, rel)), rel).toBe(false);
+        }
+        for (const rel of [PRICING, 'components/employer/UsageWidget.tsx', 'components/employer/EmployerDashboardClient.tsx']) {
             expect(read(rel), rel).not.toMatch(/\/api\/employer\/(?:billing-portal|plan)\b/);
         }
     });

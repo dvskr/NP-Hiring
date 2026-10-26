@@ -6,10 +6,10 @@
  *     methods; every fulfilment path gates on payment_status === 'paid');
  *   - every server Stripe client comes from lib/stripe.ts (pinned apiVersion);
  *   - the bootstrap webhook event list includes the events the webhook now
- *     handles, and the Payment Link collects billing address + tax ID;
+ *     handles;
  *   - /pricing sells no plan (the Employer plan is retired, owner decision
- *     2026-10-24) and never reads the raw Payment Link, and the dormant plan
- *     endpoint still builds an account-bound link server-side;
+ *     2026-10-24, and its code, Payment Link variable and routes were
+ *     deleted on 2026-10-27);
  *   - token-authenticated invoice/receipt routes are rate-limited;
  *   - the bearer dashboardToken is never written into Stripe metadata.
  */
@@ -28,9 +28,9 @@ const STRIPE_CLIENT_FILES = [
   'app/api/verify-renewal-session/route.ts',
   'app/api/employer/invoice/route.ts',
   'app/api/employer/receipt/route.ts',
-  'app/api/employer/billing-portal/route.ts',
+  'app/api/create-pack-checkout/route.ts',
+  'app/api/verify-pack-session/route.ts',
   'lib/inngest/functions/payment-reconciliation.ts',
-  'lib/inngest/functions/plan-reconciliation.ts',
 ];
 
 describe('Checkout Sessions', () => {
@@ -70,37 +70,37 @@ describe('Stripe client construction', () => {
 const BOOTSTRAP = 'tmp/stripe-bootstrap.js';
 const hasBootstrap = fs.existsSync(path.join(ROOT, BOOTSTRAP));
 
-describe.skipIf(!hasBootstrap)('Stripe bootstrap (webhook events + Payment Link)', () => {
+// The events the webhook needs on the endpoint (processEvent in
+// app/api/webhooks/stripe/route.ts; the full list is held to .env.example and
+// docs/pricing-system.md 9b by docs-pricing-system-matches-code.test.ts).
+describe.skipIf(!hasBootstrap)('Stripe bootstrap (webhook events)', () => {
   const src = hasBootstrap ? read(BOOTSTRAP) : '';
 
   it.each([
     'checkout.session.async_payment_succeeded',
     'checkout.session.async_payment_failed',
-    'invoice.payment_failed',
     'charge.dispute.closed',
   ])('enables %s on the endpoint', (evt) => {
     expect(src).toContain(`'${evt}'`);
   });
-
-  it('collects billing address and tax ID on the plan Payment Link', () => {
-    expect(src).toContain("billing_address_collection: 'required'");
-    expect(src).toContain('tax_id_collection: { enabled: true }');
-  });
 });
 
-describe('plan purchase surfaces', () => {
-  it('/pricing offers no plan: no subscribe route, no plan-sale gate, never the raw Payment Link', () => {
+describe('plan purchase surfaces (the Employer plan is retired, its code deleted)', () => {
+  it('/pricing offers no plan: no subscribe route, no plan-sale gate, no Payment Link', () => {
     const src = read('app/pricing/page.tsx');
     expect(src).not.toContain('/api/employer/plan/subscribe');
     expect(src).not.toContain('isPlanSaleOpen');
     expect(src).not.toContain('employer-plan-link');
-    expect(src).not.toContain('process.env.STRIPE_PLAN_PAYMENT_LINK');
+    expect(src).not.toContain('STRIPE_PLAN_PAYMENT_LINK');
   });
 
-  it('the plan endpoint builds the account-bound link server-side', () => {
-    const src = read('app/api/employer/plan/route.ts');
-    expect(src).toContain('buildPlanPaymentLink(');
-    expect(src).not.toContain('process.env.STRIPE_PLAN_PAYMENT_LINK');
+  it('nothing reads the plan Payment Link variable, and lib/env.ts no longer declares it', () => {
+    expect(read('lib/env.ts')).not.toContain('STRIPE_PLAN_PAYMENT_LINK');
+    expect(read('.env.example')).not.toContain('STRIPE_PLAN_PAYMENT_LINK');
+    expect(read('scripts/fork-preflight.ts')).not.toContain('STRIPE_PLAN_PAYMENT_LINK');
+    for (const rel of ['app/api/employer/plan/route.ts', 'app/api/employer/plan/subscribe/route.ts', 'lib/employer-plan-link.ts']) {
+      expect(fs.existsSync(path.join(ROOT, rel)), rel).toBe(false);
+    }
   });
 });
 

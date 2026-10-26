@@ -14,10 +14,11 @@ const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 describe('Stripe webhook failure alerting', () => {
-  // The helper lives in webhook-support.ts (shared with the plan / renewal
+  // The helper lives in webhook-support.ts (shared with the renewal and pack
   // modules the webhook delegates to); call sites span the webhook directory.
+  // The retired Employer plan's two modules were deleted with its code.
   const src = read('app/api/webhooks/stripe/webhook-support.ts');
-  const WEBHOOK_MODULES = ['route.ts', 'plan-checkout.ts', 'plan-subscription.ts', 'post-pack-checkout.ts', 'post-pack-refunds.ts'];
+  const WEBHOOK_MODULES = ['route.ts', 'post-pack-checkout.ts', 'post-pack-refunds.ts'];
   const allSrc = WEBHOOK_MODULES.map((f) => read(`app/api/webhooks/stripe/${f}`)).join('\n');
 
   it('imports both alert channels', () => {
@@ -43,6 +44,10 @@ describe('Stripe webhook failure alerting', () => {
   it('the dedupe-rollback failure (silently-dropped-retry case) alerts', () => {
     const idx = read('app/api/webhooks/stripe/route.ts').indexOf('Dedupe rollback failed');
     expect(idx).toBeGreaterThan(-1);
+  });
+
+  it('a subscription-mode session (the retired Employer plan) is alerted for a refund', () => {
+    expect(read('app/api/webhooks/stripe/route.ts')).toContain("await alertWebhookFailure('Employer plan retired: refund it in Stripe'");
   });
 
   it('the 5-post pack modules alert through the same helper, on every money event', () => {

@@ -11,8 +11,9 @@
  *   - after the promo, the saving is measured against each employer's own
  *     next new-post price (intro vs. post price, 0 with a usable 5-post pack
  *     credit), looked up once per (quota domain, employer);
- *   - plan rows are never offered a renewal: each runs config.durationDays
- *     and its slot is free when it ends;
+ *   - a legacy plan row is never offered a renewal (the Employer plan is
+ *     retired and its code deleted); after the promo it is offered a paid
+ *     repost like any row the renewal checkout refuses;
  *   - (2027 re-price, phase 2) a 5-post pack post ('pack' row) is renewed and
  *     warned like any paid post, at the base renewal price;
  *   - (backlog 2.1) every free-posting line is judged at the run's own clock,
@@ -278,15 +279,18 @@ describe('after the promo with paid posting on', () => {
         expect(logger.warn).toHaveBeenCalled();
     });
 
-    it('a plan post that ended frees its slot: no renewal, post again at no extra charge', async () => {
-        seed([], [row('plan', { status: 'plan', expiresInDays: -1 })]);
+    it('a legacy plan post that ended (the plan is retired) is offered a paid repost, never a renewal or a plan slot', async () => {
+        seed([], [row('plan', { status: 'plan', pricingTier: 'plan', expiresInDays: -1 })]);
 
         await runCron();
 
         const html = postExpiryHtml('plan');
         expect(html).not.toContain(`$${config.renewalPrice}`);
-        expect(html).toContain(`Each plan post runs ${config.durationDays} days, so this one has ended and its slot is free again. Post a job into it at no extra charge while you're subscribed.`);
-        expect(html).not.toMatch(/plan slots? —|stay live while/);
+        expect(html).toContain(`You can post this role again as a fresh ${config.durationDays}-day listing. ${LADDER_PRICES} Your stats and applicants stay attached to the expired posting.`);
+        expect(html).not.toMatch(/plan post|Employer plan|slot|subscribed/i);
+        // Still a published row, so the post-expiry pass still selects it.
+        const where = vi.mocked(prisma.job.findMany).mock.calls[1][0]?.where as { employerJobs: { paymentStatus: { in: string[] } } };
+        expect(where.employerJobs.paymentStatus.in).toContain('plan');
     });
 });
 

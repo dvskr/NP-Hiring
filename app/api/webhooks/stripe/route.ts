@@ -11,8 +11,6 @@ import { logger } from '@/lib/logger';
 import { POST_PACK_CHECKOUT_TYPE } from '@/lib/post-pack-sale';
 import { activatePaidJobCheckout } from './activate-paid-job';
 import { applyRenewalCheckout } from './apply-renewal';
-import { handlePlanAsyncPaymentFailed, handlePlanCheckout } from './plan-checkout';
-import { applySubscriptionEvent, handlePlanInvoicePaymentFailed, type SubscriptionEventType } from './plan-subscription';
 import { fulfilPostPackCheckout, refreshPackInvoice } from './post-pack-checkout';
 import {
   applyPackDisputeClosed,
@@ -26,6 +24,7 @@ import {
   claimEmailSend,
   prismaErrorCode,
   releaseEmailClaim,
+  stripeIdOf,
 } from './webhook-support';
 
 /**
@@ -35,15 +34,17 @@ import {
  *   apply-renewal.ts      — renewals
  *   post-pack-checkout.ts — 5-post pack purchases (and their invoice.paid)
  *   post-pack-refunds.ts  — 5-post pack refunds and chargebacks
- *   plan-checkout.ts      — Employer plan checkout
- *   plan-subscription.ts  — Employer plan subscription lifecycle + dunning
  *   webhook-support.ts    — alerting (Sentry + Discord), email claims, helpers
  *
- * Required endpoint events (tmp/stripe-bootstrap.js EVENTS, .env.example):
+ * Required endpoint events (the list in .env.example; processEvent handles
+ * each one):
  *   checkout.session.completed, checkout.session.async_payment_succeeded,
- *   checkout.session.async_payment_failed, invoice.paid,
- *   invoice.payment_failed, charge.refunded, charge.dispute.created,
- *   charge.dispute.closed, customer.subscription.created/updated/deleted.
+ *   checkout.session.async_payment_failed, invoice.paid, charge.refunded,
+ *   charge.dispute.created, charge.dispute.closed.
+ * The retired Employer plan's code is deleted (2026-10-27): a Checkout
+ * Session in subscription mode is alerted for a refund and acknowledged
+ * (handleCheckoutSessionPaid), and its subscription and dunning events are
+ * no longer needed on the endpoint.
  */
 
 // The handler makes several Stripe + DB round trips and an email send before
@@ -195,13 +196,8 @@ async function processEvent(stripe: Stripe, event: Stripe.Event, cleanupDedupe: 
       return handleCheckoutSessionPaid(stripe, event, event.data.object as Stripe.Checkout.Session, cleanupDedupe);
     case 'checkout.session.async_payment_failed':
       return handleCheckoutSessionPaymentFailed(event, event.data.object as Stripe.Checkout.Session, cleanupDedupe);
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
-      return handleSubscriptionEvent(stripe, event, event.data.object as Stripe.Subscription, cleanupDedupe);
     case 'invoice.paid':
       return handleInvoicePaid(event, event.data.object as Stripe.Invoice, cleanupDedupe);
-    case 'invoice.payment_failed':
-      return handleInvoicePaymentFailed(event, event.data.object as Stripe.Invoice, cleanupDedupe);
     case 'charge.refunded':
       return handleChargeRefunded(stripe, event, event.data.object as Stripe.Charge, cleanupDedupe);
     case 'charge.dispute.created':
@@ -209,10 +205,36 @@ async function processEvent(stripe: Stripe, event: Stripe.Event, cleanupDedupe: 
     case 'charge.dispute.closed':
       return handleDisputeClosed(stripe, event, event.data.object as Stripe.Dispute, cleanupDedupe);
     default:
-      // customer.subscription.created is intentionally a no-op: the checkout
-      // session creates the plan row from the retrieved subscription.
+      // Any other event is acknowledged and ignored: among them the retired
+      // Employer plan's customer.subscription.* and invoice.payment_failed,
+      // should an endpoint still send them. Nothing reads them since the
+      // plan code was deleted.
       return NextResponse.json({ received: true });
   }
+}
+
+/**
+ * The Employer plan is retired (owner decision 2026-10-24) and its code is
+ * deleted, so nothing sells a subscription. A Checkout Session in
+ * subscription mode can still arrive, from a plan Payment Link left active
+ * in Stripe: nothing is granted, written or read back from Stripe. A human
+ * refunds the payment and cancels the subscription, and the 200 keeps the
+ * dedupe row, so Stripe does not retry an event no retry can improve. The
+ * session is alerted whether or not its payment has settled, because the
+ * subscription exists either way.
+ */
+async function acknowledgeRetiredPlanCheckout(event: Stripe.Event, session: Stripe.Checkout.Session): Promise<NextResponse> {
+  logger.warn('[Stripe] Checkout Session in subscription mode: the Employer plan is retired, nothing granted', {
+    eventId: event.id, sessionId: session.id, paymentStatus: session.payment_status,
+  });
+  await alertWebhookFailure('Employer plan retired: refund it in Stripe', null, {
+    eventId: event.id,
+    sessionId: session.id,
+    subscriptionId: stripeIdOf(session.subscription) ?? undefined,
+    paymentStatus: session.payment_status,
+    amountCents: session.amount_total ?? undefined,
+  });
+  return NextResponse.json({ received: true, plan: 'retired' });
 }
 
 /**
@@ -227,18 +249,11 @@ async function handleCheckoutSessionPaid(
   session: Stripe.Checkout.Session,
   cleanupDedupe: CleanupDedupe,
 ): Promise<NextResponse> {
-  // Employer plan (Payment Link, subscription mode). Checked FIRST: these
-  // sessions carry no jobId, so they must never reach the "Missing job ID"
-  // 400 below or the per-post paths. The plan handler applies its own
-  // payment_status rule (unsettled → 'pending', never entitled).
+  // The retired Employer plan (a Payment Link in subscription mode). Checked
+  // FIRST: such a session carries no jobId, and whatever its metadata says
+  // it must never be fulfilled as a 5-post pack or a post.
   if (session.mode === 'subscription') {
-    try {
-      const result = await handlePlanCheckout(stripe, session, { eventId: event.id, eventCreated: event.created });
-      return NextResponse.json({ received: true, plan: result.outcome });
-    } catch (planErr) {
-      logger.error('[Stripe] Employer plan checkout processing failed', planErr, { sessionId: session.id });
-      return failAndRetry(cleanupDedupe, 'Employer plan checkout failed', planErr, { eventId: event.id, sessionId: session.id }, 'Failed to activate employer plan');
-    }
+    return acknowledgeRetiredPlanCheckout(event, session);
   }
 
   // 5-post pack: carries no jobId either, so it is routed before the
@@ -381,8 +396,9 @@ async function handleRenewalPaid(
 /**
  * checkout.session.async_payment_failed — a delayed payment never arrived.
  * Per-post rows stay 'pending' (the dashboard's "Complete payment" action
- * and the reconciliation sweep's expiry both still apply); plan rows stay
- * non-entitled. Always surfaced to a human.
+ * and the reconciliation sweep's expiry both still apply); a 5-post pack or
+ * a session in subscription mode (the retired Employer plan) was never
+ * recorded. Always surfaced to a human.
  */
 async function handleCheckoutSessionPaymentFailed(
   event: Stripe.Event,
@@ -390,47 +406,16 @@ async function handleCheckoutSessionPaymentFailed(
   cleanupDedupe: CleanupDedupe,
 ): Promise<NextResponse> {
   try {
-    if (session.mode === 'subscription') {
-      const result = await handlePlanAsyncPaymentFailed(session, event.id);
-      return NextResponse.json({ received: true, plan: result.outcome });
-    }
     logger.warn('[Stripe] delayed checkout payment failed — posting left unpaid', {
-      sessionId: session.id, jobId: session.metadata?.jobId, type: session.metadata?.type,
+      sessionId: session.id, jobId: session.metadata?.jobId, type: session.metadata?.type, mode: session.mode,
     });
     await alertWebhookFailure('Delayed checkout payment failed — nothing fulfilled', null, {
-      eventId: event.id, sessionId: session.id, jobId: session.metadata?.jobId, type: session.metadata?.type ?? 'new',
+      eventId: event.id, sessionId: session.id, jobId: session.metadata?.jobId, type: session.metadata?.type ?? 'new', mode: session.mode,
     });
     return NextResponse.json({ received: true });
   } catch (failedErr) {
     logger.error('[Stripe] Error handling async_payment_failed', failedErr, { sessionId: session.id });
     return failAndRetry(cleanupDedupe, 'checkout.session.async_payment_failed handler failed', failedErr, { eventId: event.id }, 'Failed to handle failed payment');
-  }
-}
-
-/**
- * customer.subscription.updated / .deleted. The plan takes the LIVE
- * subscription, re-read from Stripe, not this payload: event.created has
- * one-second precision, so same-second events cannot be ordered by it
- * (plan-subscription.ts#applySubscriptionEvent). A failed read throws into
- * the catch below: 500 and the dedupe row is dropped, so Stripe retries.
- */
-async function handleSubscriptionEvent(
-  stripe: Stripe,
-  event: Stripe.Event,
-  subscription: Stripe.Subscription,
-  cleanupDedupe: CleanupDedupe,
-): Promise<NextResponse> {
-  try {
-    const result = await applySubscriptionEvent(
-      stripe,
-      subscription,
-      event.type as SubscriptionEventType,
-      { eventId: event.id },
-    );
-    return NextResponse.json({ received: true, plan: result.outcome, status: result.status });
-  } catch (subErr) {
-    logger.error('[Stripe] Error handling subscription webhook', subErr, { eventType: event.type });
-    return failAndRetry(cleanupDedupe, `${event.type} handler failed`, subErr, { eventId: event.id }, 'Failed to update employer plan');
   }
 }
 
@@ -448,7 +433,7 @@ async function handleInvoicePaid(event: Stripe.Event, invoice: Stripe.Invoice, c
     }
     const jobCharge = await prisma.jobCharge.findFirst({ where: { stripeInvoiceId: invoiceId }, select: { id: true } });
     if (!jobCharge) {
-      // A 5-post pack's invoice, or one with no row of ours (plan invoices, one-offs).
+      // A 5-post pack's invoice, or one with no row of ours (a one-off).
       if (await refreshPackInvoice(invoice)) {
         logger.info('5-post pack invoice URLs refreshed after invoice.paid', { invoiceId });
         return NextResponse.json({ received: true });
@@ -469,17 +454,6 @@ async function handleInvoicePaid(event: Stripe.Event, invoice: Stripe.Invoice, c
   } catch (invErr) {
     logger.error('Error handling invoice.paid webhook', invErr);
     return failAndRetry(cleanupDedupe, 'invoice.paid handler failed', invErr, { eventId: event.id }, 'Failed to refresh invoice URLs');
-  }
-}
-
-/** invoice.payment_failed — dunning notice for Employer plan subscriptions; per-post invoices are ignored. */
-async function handleInvoicePaymentFailed(event: Stripe.Event, invoice: Stripe.Invoice, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
-  try {
-    const result = await handlePlanInvoicePaymentFailed(invoice);
-    return NextResponse.json({ received: true, plan: result.outcome });
-  } catch (failErr) {
-    logger.error('Error handling invoice.payment_failed webhook', failErr);
-    return failAndRetry(cleanupDedupe, 'invoice.payment_failed handler failed', failErr, { eventId: event.id }, 'Failed to handle invoice payment failure');
   }
 }
 

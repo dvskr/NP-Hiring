@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ── Auth FIRST — the signup email is the canonical identity for every
-    // per-domain rule (promo cap, intro price, plan slots).
+    // per-domain rule (promo cap, intro price).
     // Audit #26: previously the FREE_EMAIL_DOMAINS check + quota count both keyed off
     // the form-submitted contactEmail, which let an attacker submit each free post with
     // a different `bob@example<N>.com` and bypass the per-domain cap. Now we anchor

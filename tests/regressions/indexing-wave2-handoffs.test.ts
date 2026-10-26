@@ -129,8 +129,9 @@ describe('CQ-14: one predicate per category outside the landing pages', () => {
 });
 
 describe('fixSoon 5: every revival stamps contentChangedAt', () => {
-    // The employer republish and the plan resume are pinned behaviourally in
-    // tests/api/employer-toggle-publish.test.ts and tests/lib/employer-plan.test.ts.
+    // The employer republish is pinned behaviourally in
+    // tests/api/employer-toggle-publish.test.ts (the plan resume went with
+    // the retired Employer plan's code).
     it('the NULL backfill script is a dry run by default and never moves updatedAt', () => {
         // Read as text: importing it would load the repo .env (production).
         const src = read('scripts/indexing-fixes/backfill-content-changed-at.ts');

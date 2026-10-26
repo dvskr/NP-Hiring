@@ -13,7 +13,7 @@
  * The webhook secret: POST /api/webhooks/stripe answers 503 without
  * STRIPE_WEBHOOK_SECRET, so a post or renewal paid for then is never
  * recorded by the webhook, and its refunds and disputes never reach it. The
- * same rule closes plan sales (lib/employer-plan-link.ts#isPlanSaleOpen);
+ * same rule closes pack sales (lib/post-pack-sale.ts#packSaleClosedReason);
  * tests/regressions/paid-checkout-requires-stripe-webhook.test.ts holds the
  * availability signal to the real webhook.
  */

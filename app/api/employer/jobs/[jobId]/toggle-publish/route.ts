@@ -1,77 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { Prisma } from '@prisma/client';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { inngest } from '@/lib/inngest/client';
-import { republishPlanPost, type PlanRepublishOutcome } from '@/lib/employer-plan';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 
 /**
  * paymentStatus values whose paused posts the owner may republish directly:
  * a paid post, a legacy free post, a launch promo post (the promo row
  * replaced 'free' and is republished on exactly the same terms) and a 5-post
- * pack post (paid for by its pack). A 'plan' post is republished only
- * through the Employer plan gate below. Anything else ('pending',
- * 'refunded', 'disputed', 'expired', unknown) is refused with 402.
+ * pack post (paid for by its pack). Anything else is refused with 402:
+ * 'pending', 'refunded', 'disputed', 'expired', unknown values, and a legacy
+ * 'plan' post, which only an Employer plan could put back live (the plan is
+ * retired and its code deleted, phase 4 of the 2027 re-price).
  */
 const DIRECTLY_REPUBLISHABLE_STATUSES: ReadonlySet<string> = new Set(['paid', 'free', 'promo', 'pack']);
-
-/** Prisma's code for a Serializable transaction that lost a concurrent-write race. */
-const SERIALIZATION_FAILURE_CODE = 'P2034';
-
-function isSerializationFailure(error: unknown): boolean {
-    return (error as { code?: unknown } | null)?.code === SERIALIZATION_FAILURE_CODE;
-}
-
-/**
- * Put a paused 'plan' post back live, or explain why it cannot go live.
- * Returns null on success (the write is done) or the refusal response.
- */
-async function republishUnderPlan(
-    ownerUserId: string | null,
-    jobId: string,
-    data: Prisma.JobUpdateInput,
-): Promise<NextResponse | null> {
-    let outcome: PlanRepublishOutcome;
-    try {
-        outcome = await republishPlanPost(ownerUserId, jobId, data);
-    } catch (error) {
-        if (!isSerializationFailure(error)) throw error;
-        logger.info('Plan post republish lost a concurrent slot check', { jobId, userId: ownerUserId ?? undefined });
-        return NextResponse.json(
-            {
-                error: 'Plan slot check conflict',
-                message: 'Another change to your Employer plan posts was saved at the same moment. Please try again.',
-            },
-            { status: 409 },
-        );
-    }
-    if (outcome.ok) return null;
-    if (outcome.reason === 'plan_inactive') {
-        return NextResponse.json(
-            {
-                error: 'Employer plan inactive',
-                message: 'This post runs under your Employer plan, which is not active right now. You can republish it once your plan is active.',
-                planInactive: true,
-                paymentStatus: 'plan',
-            },
-            { status: 403 },
-        );
-    }
-    return NextResponse.json(
-        {
-            error: 'Employer plan slots full',
-            message: `All ${outcome.slots} of your Employer plan slots are in use. Pause or archive one of your live plan posts to free a slot, then republish this one.`,
-            planSlotsFull: true,
-            paymentStatus: 'plan',
-            slots: outcome.slots,
-            used: outcome.used,
-        },
-        { status: 409 },
-    );
-}
 
 /**
  * PATCH /api/employer/jobs/[jobId]/toggle-publish
@@ -139,12 +83,11 @@ export async function PATCH(
         // 'pending'. Without this guard they could republish via the
         // dashboard's pause/unpause button and get a Live + Featured post
         // for free. Block republish unless payment cleared (paid, legacy
-        // free, launch promo). 'plan' passes here and is checked against the
-        // Employer plan (entitlement + free slot) right before the write.
+        // free, launch promo, a pack credit).
         if (employerJob) {
             const ps = employerJob.paymentStatus;
             const willPublish = !employerJob.job.isPublished;
-            if (willPublish && ps !== 'plan' && !DIRECTLY_REPUBLISHABLE_STATUSES.has(ps)) {
+            if (willPublish && !DIRECTLY_REPUBLISHABLE_STATUSES.has(ps)) {
                 return NextResponse.json(
                     {
                         error: 'Payment required',
@@ -176,8 +119,7 @@ export async function PATCH(
 
         // An archived listing is never live (archive/route.ts unpublishes in
         // the same write). Republishing one here would leave it archived and
-        // live at once, and a plan post would take back the slot the employer
-        // freed by archiving it. Restore first, then republish.
+        // live at once. Restore first, then republish.
         if (!job.isPublished && job.archivedAt) {
             return NextResponse.json(
                 {
@@ -227,17 +169,10 @@ export async function PATCH(
             updateData.contentChangedAt = new Date();
         }
 
-        if (newPublishedState && employerJob?.paymentStatus === 'plan') {
-            // Plan post: live only while the plan is entitled and a slot is
-            // free; the check and the write share one Serializable transaction.
-            const refusal = await republishUnderPlan(employerJob.userId, job.id, updateData);
-            if (refusal) return refusal;
-        } else {
-            await prisma.job.update({
-                where: { id: job.id },
-                data: updateData,
-            });
-        }
+        await prisma.job.update({
+            where: { id: job.id },
+            data: updateData,
+        });
 
         logger.info('Job publish status toggled', {
             jobId: job.id,

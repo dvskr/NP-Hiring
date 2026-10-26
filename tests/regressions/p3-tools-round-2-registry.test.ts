@@ -687,7 +687,8 @@ describe('cost per hire — prices come from the pricing config', () => {
       expect(code).not.toContain(String(config.proRenewalPrice));
       expect(code).not.toContain(String(config.packPrice));
       expect(code).not.toContain(config.formatDollars(config.packPrice).slice(1));
-      expect(code).not.toContain(String(config.planPrice));
+      // The retired Employer plan's $399 a month: no longer in config (phase 4).
+      expect(code).not.toContain('399');
       expect(code).not.toMatch(/config\.plan(?:Price|Slots)/);
     }
   });
@@ -957,7 +958,7 @@ describe('cost per hire — the renewal rule is stated from one string, and pric
     expect(RENEWAL_SCOPE_NOTE).toBe(
       `Renewals add ${config.durationDays} days: $${config.renewalPrice} for a promo, intro or pack post, $${config.proRenewalPrice} for a $${config.postingPrice} post.`,
     );
-    // The renewal checkout still refuses the dormant plan posts it never sold a renewal for.
+    // The renewal checkout still refuses a legacy plan post (the retired Employer plan's), which never had a renewal.
     const renewalRoute = read('app/api/create-renewal-checkout/route.ts');
     expect(renewalRoute).toMatch(/paymentStatus === 'plan'\)\s*\{\s*return NextResponse\.json\([\s\S]*?status: 409/);
   });

@@ -49,7 +49,6 @@ vi.mock('@/lib/resume-storage', () => ({
     extractRequestContext: vi.fn(() => ({ ip: null, userAgent: null })),
 }));
 vi.mock('@/lib/inngest/client', () => ({ inngest: { send: vi.fn(async () => undefined) } }));
-vi.mock('@/lib/employer-plan', () => ({ republishPlanPost: vi.fn() }));
 vi.mock('@/lib/auth/protect', () => ({ requireEmployer: vi.fn(async () => undefined) }));
 vi.mock('next/navigation', () => ({
     redirect: vi.fn((url: string) => {

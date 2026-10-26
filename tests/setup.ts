@@ -187,16 +187,14 @@ vi.mock('@/lib/prisma', () => {
                 count: vi.fn(),
                 deleteMany: vi.fn(),
             },
-            // Employer plan rows (2026-09-12 launch promo + ladder) — lib/employer-plan.ts
+            // The deprecated employer_plans table: the Employer plan is retired
+            // and its code deleted (phase 4 of the 2027 re-price), so nothing
+            // reads or writes it. The reads stay mocked for the guards that
+            // assert a route never touches it; a write would throw here.
             employerPlan: {
                 findUnique: vi.fn(),
                 findFirst: vi.fn(),
                 findMany: vi.fn(),
-                create: vi.fn(),
-                update: vi.fn(),
-                // upsertPlan's rejectStale compare-and-set: one row matched, so the
-                // write applied. A test of a refused (stale) write answers { count: 0 }.
-                updateMany: vi.fn().mockResolvedValue({ count: 1 }),
                 count: vi.fn(),
             },
             // 5-post pack rows (2027 re-price, phase 2): lib/post-packs.ts and
@@ -250,12 +248,6 @@ vi.mock('@/lib/email-service', () => {
         sendRenewalConfirmationEmail: vi.fn().mockResolvedValue({ success: true }),
         sendExpiryWarningEmail: vi.fn().mockResolvedValue({ success: true }),
         sendDraftSavedEmail: vi.fn().mockResolvedValue({ success: true }),
-        // Employer plan lifecycle emails (2026-09-12) — imported by the Stripe
-        // webhook, the plan-lapse Inngest job and the admin plan routes.
-        sendPlanActivatedEmail: vi.fn().mockResolvedValue({ success: true }),
-        sendPlanPausedEmail: vi.fn().mockResolvedValue({ success: true }),
-        sendPlanPaymentFailedEmail: vi.fn().mockResolvedValue({ success: true }),
-        sendPlanLinkPendingEmail: vi.fn().mockResolvedValue({ success: true }),
         // 5-post pack purchase notice (2027 re-price, phase 2): the pack webhook.
         sendPostPackPurchasedEmail: vi.fn().mockResolvedValue({ success: true }),
     };

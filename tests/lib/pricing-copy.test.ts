@@ -153,6 +153,8 @@ describe('the refund answer (owner decision 2026-10-25: all sales are final)', (
 });
 
 describe('the Employer plan is retired from the shared sentences', () => {
+    /** The retired plan's monthly price: config no longer holds it (phase 4 deleted the plan code). */
+    const RETIRED_PLAN_PRICE = '$399';
     /** Every exported sentence, the clock-dependent ones on both sides of the switch. */
     const sentences = Object.entries(pricingCopy).flatMap(([name, value]) =>
         typeof value === 'function'
@@ -164,7 +166,7 @@ describe('the Employer plan is retired from the shared sentences', () => {
         expect(sentences.length).toBeGreaterThanOrEqual(8);
         for (const [name, text] of sentences) {
             expect(text, name).not.toMatch(/\bplan\b|\/month|\bslots?\b|active jobs/i);
-            expect(text, name).not.toContain(`$${config.planPrice}`);
+            expect(text, name).not.toContain(RETIRED_PLAN_PRICE);
         }
     });
 

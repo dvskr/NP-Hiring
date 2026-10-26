@@ -8,23 +8,23 @@
  *     'paid' | 'free', so every promo post an employer paused (or archived and
  *     restored) could never come back. A 5-post pack post ('pack', paid for
  *     by its pack) republishes on the same terms.
- *   - 'plan' posts republish only through lib/employer-plan.ts
- *     republishPlanPost (plan entitled AND a free slot, checked in the same
- *     Serializable transaction as the write). A refusal says why in plain
- *     words: 403 plan inactive, 409 all slots in use, 409 retry on a lost
- *     concurrent slot check.
+ *   - A legacy 'plan' post is refused with the 402 like any status that
+ *     cannot go live: the Employer plan is retired and its republish path was
+ *     deleted with the plan code (phase 4 of the 2027 re-price), so no plan
+ *     can entitle it. Pausing a live one still works.
  *   - 'pending', 'refunded', 'expired' and unknown statuses keep the 402.
  *   - The expiry, ownership and pause paths are unchanged.
  *   - Every refusal carries a `message`, which the dashboard shows first
  *     (components/employer/EmployerDashboardClient.tsx performTogglePublish).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const mocks = vi.hoisted(() => ({
     getUser: vi.fn(),
-    republishPlanPost: vi.fn(),
     inngestSend: vi.fn(),
 }));
 
@@ -36,7 +36,6 @@ vi.mock('@/lib/rate-limit', () => ({
     RATE_LIMITS: { employer: { limit: 30, windowSeconds: 60 } },
 }));
 vi.mock('@/lib/inngest/client', () => ({ inngest: { send: mocks.inngestSend } }));
-vi.mock('@/lib/employer-plan', () => ({ republishPlanPost: mocks.republishPlanPost }));
 
 import { PATCH } from '@/app/api/employer/jobs/[jobId]/toggle-publish/route';
 
@@ -45,6 +44,7 @@ const JOB_ID = 'job-1';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const future = () => new Date(Date.now() + 10 * DAY_MS);
 const past = () => new Date(Date.now() - DAY_MS);
+const CANNOT_REPUBLISH = 'This posting cannot be republished (refunded or invalid payment state).';
 
 function employerJobRow(paymentStatus: string, job: Partial<{ isPublished: boolean; expiresAt: Date | null; archivedAt: Date | null }> = {}) {
     return {
@@ -88,7 +88,6 @@ describe('republish of a paused post by paymentStatus', () => {
             where: { id: JOB_ID },
             data: { isPublished: true, isManuallyUnpublished: false, contentChangedAt: expect.any(Date) },
         });
-        expect(mocks.republishPlanPost).not.toHaveBeenCalled();
         expect(mocks.inngestSend).toHaveBeenCalledWith({ name: 'embedding.refresh.job', data: { jobId: JOB_ID } });
     });
 
@@ -124,17 +123,15 @@ describe('republish of a paused post by paymentStatus', () => {
         expect(res.status).toBe(402);
         expect(res.body).toMatchObject({
             error: 'Payment required',
-            message: 'This posting cannot be republished (refunded or invalid payment state).',
+            message: CANNOT_REPUBLISH,
             paymentStatus: status,
         });
         expect(prisma.job.update).not.toHaveBeenCalled();
-        expect(mocks.republishPlanPost).not.toHaveBeenCalled();
     });
 
-    it.each(['promo', 'free', 'paid', 'pack', 'plan'])("refuses to republish an archived '%s' post until it is restored", async (status) => {
+    it.each(['promo', 'free', 'paid', 'pack'])("refuses to republish an archived '%s' post until it is restored", async (status) => {
         // Archive unpublishes in the same write; republishing without a
-        // restore would leave the post archived and live at once, and a plan
-        // post would take back the slot the employer freed by archiving it.
+        // restore would leave the post archived and live at once.
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow(status, { archivedAt: past() }) as never);
 
         const res = await toggle();
@@ -146,7 +143,6 @@ describe('republish of a paused post by paymentStatus', () => {
             archived: true,
         });
         expect(prisma.job.update).not.toHaveBeenCalled();
-        expect(mocks.republishPlanPost).not.toHaveBeenCalled();
     });
 
     it('still answers 404 to an employer who does not own the post', async () => {
@@ -159,116 +155,52 @@ describe('republish of a paused post by paymentStatus', () => {
     });
 });
 
-describe("republish of a paused 'plan' post goes through the Employer plan gate", () => {
-    it('writes through republishPlanPost with the owner, the job and the republish fields', async () => {
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan') as never);
-        mocks.republishPlanPost.mockResolvedValue({ ok: true });
+describe("a legacy 'plan' post (the Employer plan is retired, its code deleted)", () => {
+    it.each([
+        ['paused', {}],
+        ['paused and archived', { archivedAt: past() }],
+        ['paused and past its run', { expiresAt: past() }],
+    ])('answers the 402 when %s, and writes nothing', async (_state, job) => {
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan', job) as never);
 
         const res = await toggle();
 
-        expect(res.status).toBe(200);
-        expect(res.body).toMatchObject({ success: true, isPublished: true, message: 'Job is now live' });
-        expect(mocks.republishPlanPost).toHaveBeenCalledWith(USER_ID, JOB_ID, { isPublished: true, isManuallyUnpublished: false, contentChangedAt: expect.any(Date) });
-        // The only write is the one inside the plan transaction.
-        expect(prisma.job.update).not.toHaveBeenCalled();
-        expect(mocks.inngestSend).toHaveBeenCalledWith({ name: 'embedding.refresh.job', data: { jobId: JOB_ID } });
-    });
-
-    it('answers 403 with a plain reason when the plan is not active', async () => {
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan') as never);
-        mocks.republishPlanPost.mockResolvedValue({ ok: false, reason: 'plan_inactive' });
-
-        const res = await toggle();
-
-        expect(res.status).toBe(403);
-        expect(res.body).toMatchObject({
-            error: 'Employer plan inactive',
-            message: 'This post runs under your Employer plan, which is not active right now. You can republish it once your plan is active.',
-            planInactive: true,
-        });
+        expect(res.status).toBe(402);
+        expect(res.body).toMatchObject({ error: 'Payment required', message: CANNOT_REPUBLISH, paymentStatus: 'plan' });
         expect(prisma.job.update).not.toHaveBeenCalled();
         expect(mocks.inngestSend).not.toHaveBeenCalled();
     });
 
-    it('answers 409 with a plain reason when every plan slot is in use', async () => {
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan') as never);
-        mocks.republishPlanPost.mockResolvedValue({ ok: false, reason: 'slots_full', used: 5, slots: 5 });
-
-        const res = await toggle();
-
-        expect(res.status).toBe(409);
-        expect(res.body).toMatchObject({
-            error: 'Employer plan slots full',
-            message: 'All 5 of your Employer plan slots are in use. Pause or archive one of your live plan posts to free a slot, then republish this one.',
-            planSlotsFull: true,
-            slots: 5,
-            used: 5,
-        });
-        expect(prisma.job.update).not.toHaveBeenCalled();
-    });
-
-    it('answers 409 "try again" when a concurrent republish won the slot check (P2034)', async () => {
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan') as never);
-        mocks.republishPlanPost.mockRejectedValue(Object.assign(new Error('could not serialize access'), { code: 'P2034' }));
-
-        const res = await toggle();
-
-        expect(res.status).toBe(409);
-        expect(res.body.message).toBe('Another change to your Employer plan posts was saved at the same moment. Please try again.');
-        expect(prisma.job.update).not.toHaveBeenCalled();
-    });
-
-    it('answers 500 for any other failure inside the plan transaction', async () => {
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan') as never);
-        mocks.republishPlanPost.mockRejectedValue(new Error('connection reset'));
-
-        const res = await toggle();
-
-        expect(res.status).toBe(500);
-        expect(res.body.error).toBe('Failed to update job status');
-    });
-
-    it('keeps the expiry guard ahead of the plan check', async () => {
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan', { expiresAt: past() }) as never);
-
-        const res = await toggle();
-
-        expect(res.status).toBe(400);
-        expect(mocks.republishPlanPost).not.toHaveBeenCalled();
-    });
-
-    it('pauses a live plan post without touching the plan gate', async () => {
+    it('can still be paused', async () => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan', { isPublished: true }) as never);
 
         const res = await toggle({ reason: 'filled' });
 
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ success: true, isPublished: false });
-        expect(mocks.republishPlanPost).not.toHaveBeenCalled();
         expect(prisma.job.update).toHaveBeenCalledWith({
             where: { id: JOB_ID },
             data: expect.objectContaining({ isPublished: false, isManuallyUnpublished: true, unpublishReason: 'filled' }),
         });
     });
+
+    it('the route has no plan path left: no plan module, no slot check', () => {
+        const src = fs.readFileSync(path.join(process.cwd(), 'app/api/employer/jobs/[jobId]/toggle-publish/route.ts'), 'utf8');
+        expect(src).not.toMatch(/employer-plan|republishPlanPost|planSlotsFull|planInactive/);
+    });
 });
 
 describe('refusal copy follows the house style', () => {
     it('no refusal message uses an em dash, an en dash or a spaced hyphen', async () => {
-        const outcomes = [
-            { ok: false, reason: 'plan_inactive' },
-            { ok: false, reason: 'slots_full', used: 5, slots: 5 },
-        ];
         const messages: string[] = [];
-        for (const outcome of outcomes) {
-            vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan') as never);
-            mocks.republishPlanPost.mockResolvedValueOnce(outcome);
+        for (const status of ['pending', 'plan', 'refunded']) {
+            vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow(status) as never);
             messages.push(String((await toggle()).body.message));
         }
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('plan') as never);
-        mocks.republishPlanPost.mockRejectedValueOnce(Object.assign(new Error('conflict'), { code: 'P2034' }));
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue(employerJobRow('promo', { archivedAt: past() }) as never);
         messages.push(String((await toggle()).body.message));
 
-        expect(messages).toHaveLength(3);
+        expect(messages).toHaveLength(4);
         for (const message of messages) {
             expect(message.length).toBeGreaterThan(0);
             expect(message).not.toMatch(/[–—]| - /);

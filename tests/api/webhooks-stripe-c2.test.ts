@@ -33,8 +33,6 @@ vi.mock('@/lib/email-service', () => ({
     sendRenewalConfirmationEmail: vi.fn().mockResolvedValue(undefined),
     sendRefundConfirmationEmail: vi.fn().mockResolvedValue(undefined),
     getOrCreateUnsubToken: vi.fn().mockResolvedValue('utok'),
-    sendPlanActivatedEmail: vi.fn().mockResolvedValue({ success: true }),
-    sendPlanPausedEmail: vi.fn().mockResolvedValue({ success: true }),
 }));
 vi.mock('@/lib/search-indexing', () => ({
     pingAllSearchEngines: vi.fn().mockResolvedValue(undefined),

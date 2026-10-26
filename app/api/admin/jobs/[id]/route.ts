@@ -205,9 +205,10 @@ export async function PATCH(
  *          quotes 'intro' whenever a domain has ZERO 'paid' rows, so
  *          cascading one away would re-open config.introPrice for the
  *          whole company domain.
- * 'promo' and 'plan' rows are not anchors (the promo cap and plan slots
- * count LIVE posts only, and soft-delete already unpublishes), so admins
- * can still hard-delete those. Nor are 'pack' rows: a 5-post pack's
+ * 'promo' rows are not anchors (the promo cap counts LIVE posts only, and
+ * soft-delete already unpublishes), and neither are legacy 'plan' rows (the
+ * Employer plan is retired and its code deleted), so admins can still
+ * hard-delete those. Nor are 'pack' rows: a 5-post pack's
  * credits are a counter on the pack's own row (lib/post-packs.ts), so a
  * deleted post hands no credit back, and the intro rule counts the pack,
  * not its posts.

@@ -2,9 +2,10 @@
  * lib/post-pack-sale.ts — whether the 5-post pack can be sold right now,
  * and the identifiers its checkout, webhook and GA event share.
  *
- * The same gate the Employer plan sale used (lib/employer-plan-link.ts
- * isPlanSaleOpen, backlog 2.16), without the Payment Link: the pack is sold
- * through a Checkout Session the server creates (/api/create-pack-checkout).
+ * The same gate the retired Employer plan's sale used (backlog 2.16; its
+ * code was deleted in phase 4 of the 2027 re-price), without the Payment
+ * Link: the pack is sold through a Checkout Session the server creates
+ * (/api/create-pack-checkout).
  * Closed unless every one holds, checked in this order:
  *   - paid posting is on (ENABLE_PAID_POSTING);
  *   - the Stripe key and STRIPE_WEBHOOK_SECRET are set: without the secret

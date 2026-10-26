@@ -53,11 +53,17 @@ const code = (src: string) =>
     src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 /**
+ * The retired Employer plan's monthly price. Config no longer holds it (the
+ * plan code went in phase 4 of the 2027 re-price), and no point of sale may
+ * print it either.
+ */
+const RETIRED_PLAN_PRICE = 399;
+
+/**
  * Every dollar figure config prices something at: the two post prices, the
- * two renewal prices, the 5-post pack, and the retired plan's monthly price,
- * which no point of sale may print either. A typed literal of any of them
- * goes stale the day config changes. The pack price is matched as digits and
- * as copy prints it ($1,245).
+ * two renewal prices and the 5-post pack, plus the retired plan's price. A
+ * typed literal of any of them goes stale the day config changes. The pack
+ * price is matched as digits and as copy prints it ($1,245).
  */
 const CONFIG_PRICES = [...new Set([
     pricingConfig.introPrice,
@@ -65,7 +71,7 @@ const CONFIG_PRICES = [...new Set([
     pricingConfig.renewalPrice,
     pricingConfig.proRenewalPrice,
     pricingConfig.packPrice,
-    pricingConfig.planPrice,
+    RETIRED_PLAN_PRICE,
 ])];
 const PRICE_SPELLINGS = [...new Set(CONFIG_PRICES.flatMap((price) => [String(price), pricingConfig.formatDollars(price).slice(1)]))];
 const PRICE_LITERAL = new RegExp(`\\$(?:${PRICE_SPELLINGS.join('|')})(?!\\d|,\\d)`);

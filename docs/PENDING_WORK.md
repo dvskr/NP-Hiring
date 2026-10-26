@@ -1,11 +1,12 @@
 # Pending Work
 
-> The single list of everything still open, checked against the code on 2026-10-26 (after the auth hotfix
+> The single list of everything still open, checked against the code on 2026-10-27 (after the auth hotfix
 > `e78f037`, the security and register batch `8d32e1e` of 2026-10-20, the sweep follow-ups `a8f1d4b`, the alert
 > salary rule `4a445ce` and the Stripe SDK upgrade `85116c1` of 2026-10-22, the content follow-ups of
 > 2026-10-23, the edit token hotfix `3574809` and its follow-ups `862b8af` of 2026-10-24, the CI fixes and the
-> 2027 re-price `8ac1d66` of 2026-10-25, and the 5-post pack `08f2e33` of 2026-10-26; all are live, and `main`
-> is the only branch). Shipped work is at the end.
+> 2027 re-price `8ac1d66` of 2026-10-25, the 5-post pack `08f2e33` of 2026-10-26, and the deletion of the
+> retired Employer plan's code of 2026-10-27, phase 4 of 2.27; all are live but that last change, which goes
+> live with its deploy, and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -35,16 +36,19 @@
 ## 1. Owner setup (OWNER)
 
 **1.1 Stripe live mode.** Activate the account and set the statement descriptor, then create the live
-webhook with all 11 events. There is no Price, Payment Link or Customer Portal to create, and no failed-payment
-retry setting to change: you retired the Employer plan on 2026-10-24, and every post and renewal checkout
-prices itself from `lib/config.ts`.
+webhook with its 7 events (the retired plan's four subscription and dunning events are no longer needed).
+There is no Price, Payment Link or Customer Portal to create, and no failed-payment retry setting to change:
+you retired the Employer plan on 2026-10-24, its code was deleted on 2026-10-27, and every post, renewal and
+pack checkout prices itself from `lib/config.ts`. In test mode, archive the plan's Product, Price and
+Payment Link, and drop the four plan events from the test endpoint: a session from that link is alerted
+for a refund and never fulfilled.
 - Why: nothing can be sold without it. Hard deadline 2027-01-01, or about 2026-11-21 if renewals should sell for the first expiry warnings.
 - Where: Stripe Dashboard, live mode. Step list with exact values: `docs/LAUNCH_RUNBOOK.md` section 8a.
 
 **1.2 Vercel Production env for paid posting.** Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `ENABLE_PAID_POSTING=true` and `NEXT_PUBLIC_BASE_URL=https://nphiring.com`.
-`STRIPE_PLAN_PAYMENT_LINK` is not set: the plan is retired, and while the variable is unset no plan can be
-sold (`npm run fork:preflight` warns about it; ignore that). Keep `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`,
+The retired plan's Payment Link variable is gone from the code (2026-10-27): nothing reads it, and
+`npm run fork:preflight` no longer checks it. Keep `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`,
 `DISCORD_WEBHOOK_URL` and `SENTRY_DSN` set.
 - Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 to every Stripe event until both are set. After 2027-01-01, no test-mode key may stay in Production.
 - Where: Vercel, then redeploy. Table: `docs/LAUNCH_RUNBOOK.md` section 8b. A restricted live key can stand in for the secret key; its permissions are in `docs/pricing-system.md` section 9b.
@@ -200,10 +204,7 @@ card, Settings, Billing, the wizard captions, the emails, the GA events and the 
 with all sales final on /terms and in every refund answer, D38), and the code and security review fixes
 (e0e9d4e). The deploy applied migration `20261025000000_add_employer_post_packs`; the eight pages carry
 2026-10-26 in `PAGE_CONTENT_DATES`. The pack sells only once the ladder starts (2027-01-01) and paid posting
-is on. Left:
-- phase 4: delete the dormant plan code (docs/pricing-system.md §11) once there is still no plan row. Read
-  only: `select count(*) from employer_plans;` and `select count(*) from employer_jobs where payment_status =
-  'plan';` should both answer 0 (both did on 2026-10-24).
+is on. Phase 4, the deletion of the retired plan's code, is under Closed (2026-10-27). Left:
 - known gaps the reviews left open: no real-Postgres concurrency test (no non-production database, 1.8); if the
   verify page or the sweep wins a post's claim and then fails the ledger write, nothing backfills it unless
   Stripe is still retrying; the pack checkout return page names "ready" for a pack recorded refunded or
@@ -274,7 +275,7 @@ change any of them.
 
 | # | Question | Today | Where |
 |---|---|---|---|
-| D5 | After enough reports take a job down, may the employer put it back up? | 3 distinct reports unpublish a job (only `isPublished` changes). The employer can republish it from the dashboard, because the republish route checks payment status, not why the post came down. A reported plan post also comes back at the next plan renewal. Setting `isManuallyUnpublished` would stop that revival (and pin reported aggregator jobs against ingest renewal) but would not stop the employer's own republish; that needs the takedown marker in D6 | `app/api/jobs/report/route.ts` |
+| D5 | After enough reports take a job down, may the employer put it back up? | 3 distinct reports unpublish a job (only `isPublished` changes). The employer can republish it from the dashboard, because the republish route checks payment status, not why the post came down. Setting `isManuallyUnpublished` would pin reported aggregator jobs against ingest renewal but would not stop the employer's own republish; that needs the takedown marker in D6 | `app/api/jobs/report/route.ts` |
 | D6 | Admin takedown vs employer pause | Both write the same fields, so an employer can unpause a post an admin took down. Telling them apart needs a schema change, for example an `unpublishedBy` column | `app/api/admin/jobs/_lib/job-input.ts` |
 | D7 | Should republishing a paused promo post count against the promo cap? | It does not re-check `config.promoMaxActivePostsPerDomain` (10 live promo posts per domain) | `app/api/employer/jobs/[jobId]/toggle-publish/route.ts` |
 | D16 | Should a new account inherit the unclaimed posts filed under its sign-in email? | It does. One rule, `employerJobOwnershipBranches`, decides what the dashboard lists: the rows this user claimed (`userId` is their Supabase id) plus the unclaimed ones (`userId` null) whose `contactEmail` equals the sign-in email. A row another account already claimed stays off the page even on the same contact email (P5.A). So whoever signs up with the address a pre-account post was filed under gets that post, its applicant counts and its edit token, with no separate claim step. Keep it (it is how pre-account posters reach their posts), or require a claim you approve, as company claims already work? | `lib/employer-ownership.ts`, `app/employer/dashboard/page.tsx` |
@@ -391,13 +392,14 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
+- 2.27 phase 4 (2026-10-27): the retired Employer plan's dormant code is deleted. Production had no `employer_plans` row and no `'plan'` post (both read only, 2026-10-26). Gone: the plan, subscribe and Customer Portal routes, the plan checkout and subscription webhook handlers with the dunning notice on `invoice.payment_failed`, the daily plan-lapse and plan reconciliation jobs, the admin plan page, its API and its sidebar link, the four plan emails and their EmailTypes, the plan expiry copy and confirmation mode, `config.planPrice`, `planSlots` and `planGraceDays`, the `'plan'` tier, the Payment Link variable, and the plan-only test suites. Kept as guards: a Checkout Session in subscription mode is alerted ("Employer plan retired: refund it in Stripe") and answered 200 with nothing granted; a legacy `'plan'` row is refused a renewal (409) and a republish (402), and the dashboard still never offers it Renew. The EmployerPlan model and the `employer_plans` table stay, deprecated; dropping them is a separate, deliberate migration (`docs/pricing-system.md` section 11). The webhook needs 7 events now, and a restricted key no Subscriptions or Customer portal permission (1.1, `docs/pricing-system.md` section 9b).
 - 1.14 Security checks (done 2026-10-23 to 2026-10-24; you asked Claude to run the read-only ones): no planted admin account (both queries empty; no admin role exists at all); the leaked audit test password belonged to the PMHNP Hiring project, not this one, and was replaced there on 2026-10-23 with an unseen random one, its sessions ended; Supabase Authentication checked on screen (Site URL `https://nphiring.com`, no `*.vercel.app` redirect, Confirm email on); all 4 profile pictures are the account's own upload or Google photo; no unconfirmed employer owns an unclaimed post. The comparison table stays as it is: Indeed's own help page says it no longer supports its paid Career Services, and its California and Texas NP articles are still indexed. You chose to leave the indexing key (1.4).
 - 2.28 Pricing review follow-ups: the renewal price can no longer be computed from a row loaded without its charges, a failed first-post ledger write makes Stripe retry, and the long test file was split (`00282e6`, `e0e9d4e`).
 - 2.31 AI in production: production had no `OPENAI_API_KEY` until you added it on 2026-10-24, so every AI call had failed since launch (555 calls, 485 of them the site's own daily eval). Since the redeploy every call succeeds; the 2026-10-25 08:00 UTC eval made 5 of 5 scoring calls (about $0.25 a month). One application from 2026-10-23 still has no AI score; scoring it is a production write, so it waits for your OK.
 - 2.30 (part) CI: every workflow failed on every push in October. `9e1a154`, `ff42e8f` and `0ad137e` fixed the installs (a placeholder `DIRECT_URL` for prisma generate), the PII scan (the resume parser's do-not-extract list), SEO Guard's base address, and run the AI evals dry without the OpenAI key secret. The migration workflow now skips with a notice without `PROD_DIRECT_DATABASE_URL` (the Vercel build applies migrations).
 - Edit token hotfix (2026-10-24): `POST /api/jobs/update` read the edit token from the JSON body into a non-unique Prisma query, so a filter object matched any post; it and the renewal checkout now accept only a plain string (`lib/request-body.ts`, `3574809`). A read-only look at all 13 employer posts found no sign it was used. Six low cases of the same kind followed in `862b8af`.
 
-- D1 Plan posts, 60 days each or live for the whole subscription: moot. You retired the Employer plan on 2026-10-24 (3.1b); no page offers it and none is sold, and its code stays dormant until it is deleted.
+- D1 Plan posts, 60 days each or live for the whole subscription: moot. You retired the Employer plan on 2026-10-24 (3.1b); no page offers it and none is sold, and its code was deleted on 2026-10-27 (2.27 phase 4).
 - 1.3 Google Analytics: live since 2026-09-28.
 - 1.4 Search Console and Google indexing: sitemap index submitted 2026-10-01, Indexing API and Search Console API on, service account is an Owner, health check passes (key rotation and the first month's watch remain, 1.4).
 - 1.5 Bing and IndexNow: verified, key file served (`96f035e`), first run accepted 165 of 165.
@@ -412,7 +414,7 @@ tests fail until every side agrees:
 - The content release's open item "sitemap lastmod for changed tools": `PAGE_CONTENT_DATES` now dates all 33 pages the plain copy pass or the content release changed to 2026-10-13, the UTC day both went live; /terms, /privacy and /sub-processors kept their dates. The /compare hub is 2.22.
 - Ship-day review of the content release (2026-10-13): 195 time-bound claims in the ten new posts and the refreshed surfaces were re-checked at their sources. 189 held. Four were corrected: the student loan post counted three open federal cases where the dockets show at least five (in the body and in one FAQ answer), the fellowship post said every VA site names a program director, and the noncompete post described Maine's statute page as the text before the 2026 amendment. Two, on the residency consortium's federal recognition, could not be confirmed because the Department's pages refuse automated requests, so that sentence now says so. Follow-ups: 2.23 to 2.25, D24, D25, 1.13.
 - Prisma migrations: applied, most recently `20261025000000_add_employer_post_packs` on 2026-10-26 (by the Vercel build, checked read-only afterwards).
-- 2.16 Plan sales and the Stripe key: `isPlanSaleOpen` (`lib/employer-plan-link.ts`) now also requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. The /pricing plan card and `/api/employer/plan/subscribe` send no buyer to Stripe while the webhook would answer 503 and could not record the plan. The per post checkout and renewal routes and the availability endpoint apply the same rule (2026-10-20).
+- 2.16 Plan sales and the Stripe key: the plan sale also required `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, so no buyer went to Stripe while the webhook would answer 503 and could not record the plan. The per post checkout and renewal routes and the availability endpoint apply the same rule (2026-10-20), and so does the 5-post pack's sale (`lib/post-pack-sale.ts`). The plan's own code was deleted on 2026-10-27.
 - Route authorization sweep (2026-10-13): all 193 API routes read, every finding checked by two skeptics. The three critical holes (sign-up metadata could grant admin, the anonymous alert signup answered with the alert's token, and reset links could point at any vercel.app host) shipped as `e78f037` on 2026-10-17. The rest shipped in the 2026-10-20 batch: resume and avatar paths held to the owner's folder at every writer and reader; the applications and dashboard answers stopped sending employer notes and AI scores to candidates; saved candidates, candidate search, candidate alerts and the alert cron follow the talent pool rules; employer messages, replies and candidate messages refuse recipients the employer may not contact or deleted accounts; employer testimonials need an employer account; newsletter opt-out and status need a matching session; the autofill quota no longer trusts the client; admin and job list parameters are bounded; checkout resume ownership matches the employer rule; the welcome email's unsubscribe links work; new alert tokens are UUIDs and the three alert token routes are rate limited; message attachment keys are matched whole; the alert digest escapes the alert's own criteria and the welcome email the first name; employers see a signed link to an applicant's cover letter, and a cover letter upload no longer replaces the profile resume. Owner checks: 1.14. Follow-ups: 2.26, D26 to D33.
 - 1.13 Salary guide PDF: regenerated on 2026-10-13 from live, read-only counts (491 postings with pay from 65 employers in 43 states) with the 41% and 100 million+ figures and a cited quick answer.
 - 2.19 Employer analytics: a job the caller does not own answers 404, and `days` is held to 1 to 365.

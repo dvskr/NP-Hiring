@@ -138,8 +138,12 @@ describe('config.priceCentsForTier — Stripe unit_amount per rung', () => {
         expect(config.stripePriceInCents).toBe(config.postingPrice * 100);
     });
 
-    it("'plan' is never charged through per-post Checkout", () => {
-        expect(config.priceCentsForTier('plan')).toBe(0);
+    it("a legacy 'plan' value is no rung since the plan code was deleted: it prices like any unknown value", () => {
+        // The Employer plan is retired; a legacy row may still carry 'plan',
+        // which now falls back to the posting price like every unknown value
+        // (never below it). No path prices a plan row: it is never pending.
+        expect(config.priceCentsForTier('plan')).toBe(config.stripePriceInCents);
+        expect(config.priceDollarsForTier('plan')).toBe(config.postingPrice);
     });
 
     it("'pack' is never charged per post: the pack itself was the payment", () => {
@@ -265,7 +269,6 @@ describe('config.getTierLabel', () => {
         ['intro', 'Intro'],
         ['pro', 'Pro'],
         ['pack', 'Pack'],
-        ['plan', 'Plan'],
     ])("labels '%s' as %s", (tier, label) => {
         expect(config.getTierLabel(tier)).toBe(label);
     });
@@ -273,6 +276,9 @@ describe('config.getTierLabel', () => {
     it("renders legacy / unknown values as 'Pro' (every legacy row was sold as a featured post)", () => {
         expect(config.getTierLabel(undefined)).toBe('Pro');
         expect(config.getTierLabel('starter')).toBe('Pro');
+        // The retired Employer plan's tier is no longer a rung (its rows are
+        // labelled by their paymentStatus where a page shows them).
+        expect(config.getTierLabel('plan')).toBe('Pro');
     });
 });
 
@@ -289,10 +295,12 @@ describe('ladder invariants the copy surfaces depend on', () => {
         expect(config.stripeRenewalPriceInCents).toBe(config.renewalPrice * 100);
     });
 
-    it('the plan is priced per month for a fixed slot count with a grace window', () => {
-        expect(config.planSlots).toBeGreaterThan(0);
-        expect(config.planGraceDays).toBeGreaterThan(0);
-        expect(config.planPrice).toBeGreaterThan(config.postingPrice);
+    it('the retired Employer plan left no price, slot count or grace window in config', () => {
+        // Deleted with the plan code (phase 4 of the 2027 re-price): no surface
+        // may print a plan price, and nothing reads one.
+        for (const key of ['planPrice', 'planSlots', 'planGraceDays']) {
+            expect(key in config, key).toBe(false);
+        }
     });
 
     it('the legacy invoice fallback is decoupled from the live ladder', () => {

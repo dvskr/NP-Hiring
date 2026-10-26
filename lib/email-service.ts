@@ -101,19 +101,6 @@ const RENEWAL_CAP_LINE = `Renewals can extend a post to at most ${config.renewal
 const UNLOCKED_ACCESS_CLAUSE = 'for as long as they keep their profile visible and open to opportunities';
 
 /**
- * The Employer plan terms, parameterised on the slot count because an admin
- * grant can carry a non-default `slots`. Worded to match what the code does
- * (and the /pricing plan copy): the slots last while the plan is entitled,
- * every plan post runs config.durationDays like any other post (post-free
- * writes the same expiry), plan posts are never renewed, and a post that
- * ends stops counting against the slots (countActivePlanPosts), so the
- * employer posts again into that slot without a new charge.
- */
-function planTerms(slots: number = config.planSlots): string {
-  return `${slots} active job slot${slots === 1 ? '' : 's'} while you're subscribed. Each plan post runs ${config.durationDays} days. When one ends, post again into the free slot at no extra charge. Cancel any time.`;
-}
-
-/**
  * The pricing sentence an employer-facing email should carry right now:
  * the promo pitch while the launch period runs, the ladder afterwards.
  * Evaluated per send (not at module load) so the switch-over on
@@ -132,7 +119,7 @@ function pricingCopyForNow(now: Date = new Date()): { label: string; headline: s
  * (a 5-post pack credit) names the pack and the credits the post left, with
  * no invoice block: the pack itself was invoiced when it was bought.
  */
-export type ConfirmationMode = 'promo' | 'pack' | 'plan' | 'paid';
+export type ConfirmationMode = 'promo' | 'pack' | 'paid';
 
 /** What a pack post left on the account (POST /api/jobs/post-free reads it in its transaction). */
 export interface PackPostCredits {
@@ -186,11 +173,6 @@ export type EmailType =
   | 'recommendation_digest'
   | 'account_purge_warning'
   | 'pd_outreach'
-  // Employer plan lifecycle (Stripe subscription webhook + plan-lapse cron).
-  | 'plan_activated'
-  | 'plan_paused'
-  | 'plan_payment_failed'
-  | 'plan_link_pending'
   // 5-post pack bought (Stripe webhook, app/api/webhooks/stripe/post-pack-checkout.ts).
   | 'post_pack_purchased';
 
@@ -541,8 +523,6 @@ export interface InvoiceLinks {
  *
  * `mode` (2026-09-12 pricing change) selects the one sentence that differs:
  *   'promo' → free during our launch period through config.promoEndsLabel
- *   'plan'  → posted under your Employer plan: runs `durationDays`, then its
- *             slot is free for another post at no extra charge
  *   'pack'  → posted with the 5-post pack, the credits it left (`pack`, slot
  *             9) and the date to use them by, then today's wording
  *   'paid' / undefined → today's wording, with `durationDays`
@@ -587,17 +567,13 @@ export async function sendConfirmationEmail(
     const modeSentence =
       mode === 'promo'
         ? `It is free during our launch period through ${config.promoEndsLabel} and will remain active for ${durationDays} days.`
-        : mode === 'plan'
-          ? `It was posted under your Employer plan and runs ${durationDays} days. When it ends, post again into the free slot at no extra charge while you're subscribed.`
-          : mode === 'pack'
-            ? `${packConfirmationSentence(pack)} The listing will remain active for ${durationDays} days.`
-            : `The listing will remain active for ${durationDays} days.`;
+        : mode === 'pack'
+          ? `${packConfirmationSentence(pack)} The listing will remain active for ${durationDays} days.`
+          : `The listing will remain active for ${durationDays} days.`;
     const modeNote =
       mode === 'promo'
         ? `<p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Launch offer: every post is free through ${config.promoEndsLabel}. No credit card required.</p>`
-        : mode === 'plan'
-          ? `<p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Plan slot: swap this job for another any time from your dashboard.</p>`
-          : '';
+        : '';
 
     const invoiceBlock = (invoice?.invoicePdfUrl || invoice?.hostedInvoiceUrl)
       ? `
@@ -750,9 +726,9 @@ export async function sendRenewalConfirmationEmail(
 interface ExpiryWarningContext {
   /**
    * EmployerJob.paymentStatus of the expiring row. The renewal checkout
-   * refuses 'plan' rows (each plan post runs config.durationDays and frees
-   * its slot when it ends) and legacy 'free' rows, so neither is ever offered
-   * a renewal here.
+   * refuses legacy 'plan' rows (the plan they were posted under is retired)
+   * and legacy 'free' rows, so neither is ever offered a renewal here: they
+   * get the repost offers instead.
    */
   paymentStatus?: string;
   /**
@@ -795,7 +771,7 @@ export type ExpiryWarningOptions = ExpiryWarningContext & (
 const NOT_RENEWABLE_STATUSES = new Set(['plan', 'free', 'pending', 'refunded', 'disputed']);
 
 /** Which offer an expiry warning carries: see expiryWarningCopy. */
-export type ExpiryWarningOffer = 'plan' | 'renew' | 'promo_repost' | 'paid_repost' | 'none';
+export type ExpiryWarningOffer = 'renew' | 'promo_repost' | 'paid_repost' | 'none';
 
 interface ExpiryWarningCopy {
   offer: ExpiryWarningOffer;
@@ -829,19 +805,6 @@ interface ExpiryCopyContext {
  * time, on the offer.promoActive branches below; never print it elsewhere.
  */
 const PROMO_REPOST_LINE = `Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`;
-
-function planExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
-  return {
-    offer: 'plan',
-    subject: `⏰ Your plan post reaches its ${config.durationDays}-day limit in ${dayCount(c.days)}`,
-    preheader: `Your plan post reaches the end of its ${config.durationDays}-day run in ${dayCount(c.days)}. When it ends, post again into the free slot at no extra charge.`,
-    lead: `Your plan post for ${c.title} reaches the end of its ${config.durationDays}-day run on ${c.expiryDateStr}.`,
-    cardLabel: 'Employer plan post',
-    cardBody: `Each plan post runs ${config.durationDays} days. When this one ends, post a new job into its slot at no extra charge while you're subscribed, with ${c.fresh}.`,
-    ctaLabel: 'Go to Your Dashboard',
-    ctaUrl: c.dashboardUrl,
-  };
-}
 
 function renewExpiryCopy(c: ExpiryCopyContext, offer: RenewalOffer): ExpiryWarningCopy {
   const saving = offer.savings ? renewalSavingsLabel(offer.savings) : null;
@@ -908,7 +871,6 @@ function noOfferExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
 /**
  * The words of an expiry warning, decided from what the employer can
  * actually do next:
- *   plan         — plan post: runs config.durationDays, then its slot is free
  *   renew        — a renewal can be bought; a saving is named only when it is
  *                  true for this reader (lib/pricing#resolveRenewalOffer)
  *   promo_repost — no renewal on sale, launch promo running: post it again free
@@ -929,7 +891,6 @@ function expiryWarningCopy(jobTitle: string, expiryDateStr: string, days: number
     fresh: `a fresh ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails`,
     now,
   };
-  if (options.paymentStatus === 'plan') return planExpiryCopy(context);
   const renewable = !NOT_RENEWABLE_STATUSES.has(options.paymentStatus ?? '');
   const offer = renewable && options.renewalPurchasable === true
     ? resolveRenewalOffer({ purchasable: true, renewalPrice: options.renewalPrice, nextPostPrice: options.nextPostPrice, now })
@@ -1148,275 +1109,13 @@ export async function sendPostPackPurchasedEmail(to: string, opts: PostPackPurch
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 6c. EMPLOYER PLAN — ACTIVATED (Stripe subscription checkout / admin grant)
+// 6c. RETIRED-PLAN EMAILS — removed
 // ═══════════════════════════════════════════════════════════════════════════════
-//
-// Both plan emails are transactional billing notices, so — like the
-// confirmation and renewal emails — they do NOT honour marketing
-// suppression, but they DO mint a real per-recipient unsubscribe token so
-// the footer link and the List-Unsubscribe header both work.
-
-/** Long-form date for billing copy: "Thursday, January 1, 2027". */
-function formatBillingDate(d: Date): string {
-  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-export interface PlanActivatedEmailOptions {
-  /** Concurrent job slots the plan carries (config.planSlots unless an admin granted otherwise). */
-  slots: number;
-  /** End of the current paid period (Stripe current_period_end or the admin-set date). */
-  currentPeriodEnd: Date;
-}
-
-export async function sendPlanActivatedEmail(
-  to: string,
-  opts: PlanActivatedEmailOptions,
-): Promise<EmailResult> {
-  const { slots, currentPeriodEnd } = opts;
-  try {
-    const unsubToken = await getOrCreateUnsubToken(to);
-    const periodEndStr = formatBillingDate(currentPeriodEnd);
-
-    const html = emailShellV2(`
-      ${headerBlockV2('Your Employer Plan Is Active', '')}
-      ${spacerV2(12)}
-      ${bodyTextV2(`Your Employer plan is live with <strong>${slots} active job slot${slots === 1 ? '' : 's'}</strong>. Every slot is a Featured post with the same placement and candidate tools as any other listing.`)}
-      ${spacerV2(20)}
-      ${infoCardV2(`
-          ${sectionLabelV2('Plan terms', V2.teal)}
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${planTerms(slots)}</p>
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Your current period runs through ${periodEndStr}.</p>`)}
-      ${spacerV2(12)}
-      ${infoCardV2(`
-          ${sectionLabelV2('Every slot includes', V2.teal)}
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${FEATURES_LINE}</p>`)}
-      ${spacerV2(28)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2('Post a Job', `${BASE_URL}/post-job`)}
-      </td></tr>
-      ${spacerV2(16)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;"><p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textMuted};line-height:1.6;">Manage your slots from your <a href="${BASE_URL}/employer/dashboard" style="color:${V2.teal};text-decoration:underline;">dashboard</a>. Questions? Reply to this email or contact <a href="mailto:${brand.email.support}" style="color:${V2.teal};text-decoration:underline;">${brand.email.support}</a>.</p></td></tr>
-      ${spacerV2(48)}
-      ${closeContentV2()}`,
-      unsubscribeFooterV2(unsubToken),
-      `Your Employer plan is active: ${slots} active job slot${slots === 1 ? '' : 's'} while you're subscribed.`
-    );
-
-    await sendAndLog({
-      from: EMAIL_FROM,
-      to,
-      subject: `✅ Your ${brand.name} Employer plan is active: ${slots} job slot${slots === 1 ? '' : 's'}`,
-      html,
-    }, 'plan_activated', { slots, currentPeriodEnd: currentPeriodEnd.toISOString() }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
-
-    logger.info('Plan activated email sent', { email: to, slots });
-    return { success: true };
-  } catch (error) {
-    logger.error('Error sending plan activated email', error, { email: to });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send plan activated email',
-    };
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 6d. EMPLOYER PLAN — PAUSED (subscription cancelled / payment past due)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export type PlanPausedReason = 'cancelled' | 'past_due';
-
-export interface PlanPausedEmailOptions {
-  reason: PlanPausedReason;
-  /** How many 'plan' posts pausePlanPosts just unpublished. */
-  pausedCount: number;
-  /**
-   * Cancellation notice sent BEFORE anything is paused: the plan was
-   * cancelled but stays entitled through this paid-through date, when the
-   * daily lapse sweep pauses the posts. Only meaningful with reason 'cancelled'.
-   */
-  liveUntil?: Date;
-}
-
-export async function sendPlanPausedEmail(
-  to: string,
-  opts: PlanPausedEmailOptions,
-): Promise<EmailResult> {
-  const { reason, pausedCount } = opts;
-  if (reason === 'cancelled' && opts.liveUntil) {
-    return sendPlanCancelledNoticeEmail(to, opts.liveUntil);
-  }
-  try {
-    const unsubToken = await getOrCreateUnsubToken(to);
-    const isCancelled = reason === 'cancelled';
-    const postsPhrase =
-      pausedCount === 1 ? '1 plan post has' : `${pausedCount} plan posts have`;
-    // What the employer can do instead — the same send-time pricing copy
-    // the welcome email uses, so the numbers can never drift from config.
-    const pricing = pricingCopyForNow();
-
-    const headline = isCancelled ? 'Your Employer Plan Has Ended' : 'Action Needed: Plan Payment Failed';
-    const lead = isCancelled
-      ? `Your Employer plan has been cancelled, so ${postsPhrase} been paused and ${pausedCount === 1 ? 'is' : 'are'} no longer visible to candidates.`
-      : `We could not collect your Employer plan payment, so ${postsPhrase} been paused and ${pausedCount === 1 ? 'is' : 'are'} no longer visible to candidates.`;
-    const nextStep = isCancelled
-      ? `Resubscribe to bring them back: posts that have not yet reached their ${config.durationDays}-day limit are re-published automatically, newest first, up to your plan's slots.`
-      : `Update your payment method to resume the plan. Once payment succeeds, posts that have not yet reached their ${config.durationDays}-day limit come back automatically, newest first, up to your plan's slots.`;
-
-    const html = emailShellV2(`
-      ${headerBlockV2(headline, '')}
-      ${spacerV2(12)}
-      ${bodyTextV2(lead)}
-      ${spacerV2(20)}
-      ${infoCardV2(`
-          ${sectionLabelV2(isCancelled ? 'Bring your posts back' : 'Resume your plan', V2.teal)}
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${nextStep}</p>
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Candidates you have already unlocked stay in your dashboard ${UNLOCKED_ACCESS_CLAUSE}, and your applicants and stats stay attached to each posting.</p>`)}
-      ${spacerV2(12)}
-      ${infoCardV2(`
-          ${sectionLabelV2(pricing.label, V2.teal)}
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${pricing.body}</p>`)}
-      ${spacerV2(28)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2(isCancelled ? 'Manage Your Plan' : 'Update Payment', `${BASE_URL}/employer/dashboard`)}
-      </td></tr>
-      ${spacerV2(16)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;"><p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textMuted};line-height:1.6;">Need a hand? Reply to this email or contact <a href="mailto:${brand.email.support}" style="color:${V2.teal};text-decoration:underline;">${brand.email.support}</a>.</p></td></tr>
-      ${spacerV2(48)}
-      ${closeContentV2()}`,
-      unsubscribeFooterV2(unsubToken),
-      isCancelled
-        ? `Your Employer plan has ended, so ${postsPhrase} been paused.`
-        : `Your Employer plan payment failed, so ${postsPhrase} been paused.`
-    );
-
-    await sendAndLog({
-      from: EMAIL_FROM,
-      to,
-      subject: isCancelled
-        ? `Your ${brand.name} Employer plan has ended: ${pausedCount} post${pausedCount === 1 ? '' : 's'} paused`
-        : `Action needed: ${brand.name} Employer plan payment failed, ${pausedCount} post${pausedCount === 1 ? '' : 's'} paused`,
-      html,
-    }, 'plan_paused', { reason, pausedCount }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
-
-    logger.info('Plan paused email sent', { email: to, reason, pausedCount });
-    return { success: true };
-  } catch (error) {
-    logger.error('Error sending plan paused email', error, { email: to, reason });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send plan paused email',
-    };
-  }
-}
-
-interface PlanNoticeContent {
-  subject: string;
-  headline: string;
-  lead: string;
-  cardLabel: string;
-  cardBody: string;
-  buttonLabel: string;
-  preview: string;
-}
-
-/** Shared body for the short plan billing notices below. */
-async function sendPlanNotice(
-  to: string,
-  emailType: EmailType,
-  content: PlanNoticeContent,
-  logContext: Record<string, unknown>,
-): Promise<EmailResult> {
-  try {
-    const unsubToken = await getOrCreateUnsubToken(to);
-    const html = emailShellV2(`
-      ${headerBlockV2(content.headline, '')}
-      ${spacerV2(12)}
-      ${bodyTextV2(content.lead)}
-      ${spacerV2(20)}
-      ${infoCardV2(`
-          ${sectionLabelV2(content.cardLabel, V2.teal)}
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${content.cardBody}</p>`)}
-      ${spacerV2(28)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2(content.buttonLabel, `${BASE_URL}/employer/dashboard`)}
-      </td></tr>
-      ${spacerV2(16)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;"><p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textMuted};line-height:1.6;">Need a hand? Reply to this email or contact <a href="mailto:${brand.email.support}" style="color:${V2.teal};text-decoration:underline;">${brand.email.support}</a>.</p></td></tr>
-      ${spacerV2(48)}
-      ${closeContentV2()}`,
-      unsubscribeFooterV2(unsubToken),
-      content.preview,
-    );
-    await sendAndLog({ from: EMAIL_FROM, to, subject: content.subject, html }, emailType, logContext, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
-    logger.info('Plan notice email sent', { emailType, ...logContext });
-    return { success: true };
-  } catch (error) {
-    logger.error('Error sending plan notice email', error, { emailType });
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to send plan notice email' };
-  }
-}
-
-/**
- * Cancellation notice: the plan is cancelled but the paid period is honoured
- * — posts stay live through `liveUntil`, then the lapse sweep pauses them.
- */
-async function sendPlanCancelledNoticeEmail(to: string, liveUntil: Date): Promise<EmailResult> {
-  const dateStr = formatBillingDate(liveUntil);
-  return sendPlanNotice(to, 'plan_paused', {
-    subject: `Your ${brand.name} Employer plan is cancelled: your paid period runs through ${dateStr}`,
-    headline: 'Your Employer Plan Is Cancelled',
-    lead: `Your Employer plan has been cancelled and you will not be charged again. Plan posts still inside their ${config.durationDays}-day run stay live through <strong>${dateStr}</strong>, the end of the period you already paid for. After that they are paused and hidden from candidates.`,
-    cardLabel: 'Changed your mind?',
-    cardBody: `Resubscribe any time: paused posts that have not reached their ${config.durationDays}-day limit come back automatically, newest first, up to your plan's slots.`,
-    buttonLabel: 'Manage Your Plan',
-    preview: `Your Employer plan is cancelled. Your paid period runs through ${dateStr}.`,
-  }, { reason: 'cancelled', liveUntil: liveUntil.toISOString() });
-}
-
-export interface PlanPaymentFailedEmailOptions {
-  /** Stripe's next automatic retry (invoice.next_payment_attempt), if any. */
-  nextPaymentAttempt: Date | null;
-  /** When the plan stops entitling posts if the payment is not fixed. */
-  entitledUntil: Date | null;
-}
-
-/**
- * Dunning notice while Smart Retries are still running — the window in which
- * the employer can still fix the card before plan posts are paused.
- */
-export async function sendPlanPaymentFailedEmail(to: string, opts: PlanPaymentFailedEmailOptions): Promise<EmailResult> {
-  const retry = opts.nextPaymentAttempt ? ` We will try again on ${formatBillingDate(opts.nextPaymentAttempt)}.` : '';
-  const deadline = opts.entitledUntil
-    ? `Update your card before ${formatBillingDate(opts.entitledUntil)} to keep your plan posts live.`
-    : 'Update your card to keep your plan posts live.';
-  return sendPlanNotice(to, 'plan_payment_failed', {
-    subject: `Action needed: your ${brand.name} Employer plan payment failed`,
-    headline: 'Your Plan Payment Failed',
-    lead: `We could not collect your Employer plan payment.${retry} Your plan posts stay live while we retry.`,
-    cardLabel: 'Update your payment method',
-    cardBody: `${deadline} Open your dashboard and choose <strong>Manage billing</strong> to update the card on file.`,
-    buttonLabel: 'Update Payment Method',
-    preview: 'Your Employer plan payment failed. Update your card to keep your posts live.',
-  }, { nextPaymentAttempt: opts.nextPaymentAttempt?.toISOString() ?? null });
-}
-
-/**
- * The plan was paid for but could not be tied to an employer account (no
- * account reference on the checkout). A human links it; tell the payer the
- * money was received instead of welcoming them to a plan they cannot use yet.
- */
-export async function sendPlanLinkPendingEmail(to: string): Promise<EmailResult> {
-  return sendPlanNotice(to, 'plan_link_pending', {
-    subject: `We received your ${brand.name} Employer plan payment`,
-    headline: 'We Received Your Payment',
-    lead: 'Thank you. Your Employer plan payment went through, and we are linking it to your employer account now.',
-    cardLabel: 'What happens next',
-    cardBody: `You will get a confirmation as soon as your plan is active. To speed things up, reply with the email address you use to sign in to ${brand.name}.`,
-    buttonLabel: 'Go to Your Dashboard',
-    preview: 'We received your Employer plan payment and are linking it to your account.',
-  }, {});
-}
+// The four billing notices of the retired monthly subscription (activated,
+// paused, payment failed, payment received but not linked) and their
+// EmailTypes were deleted with its code on 2026-10-27 (phase 4 of the 2027
+// re-price). Historical EmailSend rows keep their emailType strings; nothing
+// sends them any more.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 7. DRAFT SAVED EMAIL — removed

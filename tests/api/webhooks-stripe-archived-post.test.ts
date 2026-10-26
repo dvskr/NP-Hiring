@@ -43,8 +43,6 @@ vi.mock('@/lib/email-service', () => ({
   sendRenewalConfirmationEmail: vi.fn().mockResolvedValue({ success: true }),
   sendRefundConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   getOrCreateUnsubToken: vi.fn().mockResolvedValue('utok'),
-  sendPlanActivatedEmail: vi.fn().mockResolvedValue({ success: true }),
-  sendPlanPausedEmail: vi.fn().mockResolvedValue({ success: true }),
 }));
 vi.mock('@/lib/job-page-indexing', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/job-page-indexing')>()),

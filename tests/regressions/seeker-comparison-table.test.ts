@@ -271,7 +271,7 @@ describe('D25: each brand cell stays tied to the code it rests on', () => {
     it('row 2: every Stripe Checkout session the code opens sells an employer post, a renewal or a 5-post pack', () => {
         // A new checkout fails here until someone confirms it charges an
         // employer and not a job seeker, and adds it to this list. (The
-        // employer plan is a Payment Link behind /api/employer/plan/subscribe.)
+        // retired Employer plan's Payment Link and its code are gone.)
         // The 5-post pack (2026-10-25): /api/create-pack-checkout sells only to
         // the signed-in employer account, 403 for any other role.
         const CALL = '.checkout.sessions.create(';

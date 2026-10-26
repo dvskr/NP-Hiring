@@ -21,8 +21,6 @@ import { broadcastFunctions } from '@/lib/inngest/functions/broadcast-send';
 import { enrichThinJdsFunctions } from '@/lib/inngest/functions/enrich-thin-jds';
 import { autofillTelemetryRetentionFunctions } from '@/lib/inngest/functions/autofill-telemetry-retention';
 import { cronWatchdogFunctions } from '@/lib/inngest/functions/cron-watchdog';
-import { planLapseFunctions } from '@/lib/inngest/functions/plan-lapse';
-import { planReconciliationFunctions } from '@/lib/inngest/functions/plan-reconciliation';
 
 export const { GET, POST, PUT } = serve({
     client: inngest,
@@ -37,7 +35,5 @@ export const { GET, POST, PUT } = serve({
         ...enrichThinJdsFunctions,
         ...autofillTelemetryRetentionFunctions,
         ...cronWatchdogFunctions,
-        ...planLapseFunctions,
-        ...planReconciliationFunctions,
     ],
 });

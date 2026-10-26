@@ -28,12 +28,12 @@
  *                 at the base renewal. Sold only while
  *                 lib/post-pack-sale.ts#isPackSaleOpen: after the promo,
  *                 with paid posting and the Stripe webhook configured.
- *   Employer plan — RETIRED (owner decision, 2026-10-24). No page, email,
- *                 FAQ, checkout rail or calculator offers it, and plan
- *                 posts stay non-renewable (create-renewal-checkout 409s
- *                 them). `planPrice`, `planSlots`, `planGraceDays` and the
- *                 'plan' tier remain only because dormant plan code still
- *                 reads them; they go when that code does.
+ *   Employer plan — RETIRED (owner decision, 2026-10-24); its code, its
+ *                 config values and its 'plan' tier were deleted on
+ *                 2026-10-27 (phase 4 of the 2027 re-price). A legacy
+ *                 'plan' row stays non-renewable (create-renewal-checkout
+ *                 409s it) and cannot be republished (toggle-publish 402s
+ *                 it). The EmployerPlan model and its table stay, unused.
  *
  * Every post, whatever it cost, gets the SAME features. The ladder is
  * purely price + billing shape; there is no stripped-down tier.
@@ -46,14 +46,16 @@
  *     for-employers / faq / terms / emails). Change a number here and
  *     revisit the copy surfaces listed in docs/pricing-system.md.
  *   - EmployerJob.pricingTier records which ladder rung a row was sold at:
- *     'intro' | 'pro' | 'pack' | 'plan'. Legacy rows carry 'pro'.
+ *     'intro' | 'pro' | 'pack'. Legacy rows carry 'pro', and a legacy
+ *     Employer plan row may still carry 'plan' (no longer a PricingTier: the
+ *     mappings below read it as an unknown value).
  *   - EmployerJob.paymentStatus: 'promo' (launch-free) | 'pack' (a 5-post
- *     pack credit) | 'pending' | 'paid' | 'plan' (posted under an active
- *     Employer plan) | 'refunded' | 'disputed' | 'expired' | legacy 'free' /
- *     'free_renewed' / 'free_upgraded'.
+ *     pack credit) | 'pending' | 'paid' | 'refunded' | 'disputed' |
+ *     'expired' | legacy 'free' / 'free_renewed' / 'free_upgraded' / 'plan'
+ *     (posted under the retired Employer plan; none in production).
  */
 
-export type PricingTier = 'intro' | 'pro' | 'pack' | 'plan';
+export type PricingTier = 'intro' | 'pro' | 'pack';
 
 /**
  * What the employer's NEXT post will be, as reported by
@@ -110,7 +112,7 @@ export const config = {
   stripeRenewalPriceInCents: 19900,
   proRenewalPrice: 249,       // dollars — a post bought at the posting price
   stripeProRenewalPriceInCents: 24900,
-  /** Listing duration for EVERY post (promo, pack, intro, pro, plan) and every renewal. */
+  /** Listing duration for EVERY post (promo, pack, intro, pro) and every renewal. */
   durationDays: 60,
   /**
    * A renewal never pushes a post's expiry past this many days after the post
@@ -126,12 +128,6 @@ export const config = {
   packPrice: 1245,            // dollars, one time: $249 a post
   stripePackPriceInCents: 124500,
   packValidityMonths: 12,     // calendar months from purchase (lib/post-packs.ts#packExpiresAt)
-
-  // ─── Employer plan (effective January 1, 2027) ───
-  planPrice: 399,             // dollars per month
-  planSlots: 5,               // concurrent active postings included (each runs durationDays, never renewed)
-  /** Days after currentPeriodEnd before plan posts are paused (covers Stripe Smart Retries). */
-  planGraceDays: 3,
 
   // Every post is featured (no differentiation between rungs)
   isFeatured: true,
@@ -173,26 +169,24 @@ export const config = {
   isPromoActive: (now: Date = new Date()): boolean => now.getTime() < Date.parse(PROMO_ENDS_AT_ISO),
 
   /**
-   * Stripe unit_amount for a ladder rung. 'plan' is billed by Stripe
-   * Billing (subscription), never through per-post Checkout, and a 'pack'
-   * post was paid for by its pack, so both map to 0.
+   * Stripe unit_amount for a ladder rung. A 'pack' post was paid for by its
+   * pack, so it maps to 0; anything else (legacy and unknown values) is the
+   * posting price.
    */
   priceCentsForTier: (tier: PricingTier | string | null | undefined): number => {
     switch (tier) {
       case 'intro': return config.stripeIntroPriceInCents;
-      case 'pack':
-      case 'plan': return 0;
+      case 'pack': return 0;
       case 'pro':
       default: return config.stripePriceInCents;
     }
   },
 
-  /** Dollar price for a ladder rung (0 for 'pack' and 'plan'). */
+  /** Dollar price for a ladder rung (0 for 'pack'). */
   priceDollarsForTier: (tier: PricingTier | string | null | undefined): number => {
     switch (tier) {
       case 'intro': return config.introPrice;
-      case 'pack':
-      case 'plan': return 0;
+      case 'pack': return 0;
       case 'pro':
       default: return config.postingPrice;
     }
@@ -215,7 +209,6 @@ export const config = {
     switch (tier) {
       case 'intro': return 'Intro';
       case 'pack': return 'Pack';
-      case 'plan': return 'Plan';
       default: return 'Pro';
     }
   },

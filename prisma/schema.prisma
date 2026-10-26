@@ -421,16 +421,18 @@ model JobCharge {
   @@map("job_charges")
 }
 
-/// Employer plan ($399/month — config.planPrice): `slots` concurrent job
-/// postings, live while subscribed. Posts created under it are EmployerJob
-/// rows with paymentStatus 'plan' / pricingTier 'plan'.
+/// DEPRECATED. The Employer plan ($399/month, `slots` concurrent job
+/// postings) was retired on 2026-10-24 and its code deleted on 2026-10-27
+/// (phase 4 of the 2027 re-price): nothing reads or writes this table any
+/// more. Posts created under it were EmployerJob rows with paymentStatus
+/// 'plan' / pricingTier 'plan'; production had no row of either. The model,
+/// the table and its RLS stay until a separate, deliberate migration drops
+/// them.
 ///
-/// Written ONLY by lib/employer-plan.ts#upsertPlan, called from the Stripe
-/// subscription webhook (Payment Link in subscription mode) and the admin
-/// grant API. `userId` is the Supabase auth id held loosely (no FK), the
+/// `userId` is the Supabase auth id held loosely (no FK), the
 /// company_claims.claimant_user_id precedent: account deletion must not
-/// cascade away the billing trail. It is NULL when a Stripe checkout email
-/// matched no employer account; `email` lets an admin attach it later.
+/// cascade away the billing trail. It was NULL when a Stripe checkout email
+/// matched no employer account.
 model EmployerPlan {
   id                   String   @id @default(uuid())
   userId               String?  @unique @map("user_id")
@@ -442,12 +444,10 @@ model EmployerPlan {
   stripeCustomerId     String?  @map("stripe_customer_id")
   stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
   source               String   @default("stripe") // 'stripe' | 'admin'
-  // When the state last applied to this row was observed; an older observation
-  // is ignored. Subscription events and the reconciliation sweep write the
-  // time their live read of the subscription was sent (this server's clock,
-  // milliseconds: plan-subscription.ts#applySubscriptionEvent). Plan checkout
-  // writes the Stripe event's `created` (Stripe's clock, whole seconds). Stamp
-  // a manual repair with the current time, never with an event's `created`.
+  // When the state last applied to this row was observed; an older
+  // observation was ignored. The deleted subscription handlers wrote the time
+  // their live read of the subscription was sent (this server's clock,
+  // milliseconds), the plan checkout the Stripe event's `created`.
   lastStripeEventAt    DateTime? @map("last_stripe_event_at")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")

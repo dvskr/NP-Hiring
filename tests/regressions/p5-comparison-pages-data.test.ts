@@ -305,7 +305,8 @@ describe('compare-data: our price statements follow the launch-promo clock (back
         for (const profile of competitorProfiles(now)) {
             const ours = [pricingCell(profile), pricingBody(profile), ...profile.guidance.useUs].join('\n');
             expect(ours, profile.slug).not.toMatch(/Employer plan|\/month|active jobs|\bslots?\b/i);
-            expect(ours, profile.slug).not.toContain(`$${config.planPrice}/`);
+            // The retired plan's "$399/month" (no longer in config since phase 4).
+            expect(ours, profile.slug).not.toContain('$399/');
         }
         // AANP's $399 single posting is their published price, not our retired plan's.
         const aanp = profileFor('np-hiring-vs-aanp-jobcenter', now);

@@ -523,18 +523,17 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   };
 
   // Which rows can buy a renewal (mirrors the dashboard and
-  // /api/create-renewal-checkout): 'plan' posts run config.durationDays and
-  // are never renewed (their slot frees when they end); 'pending' (unpaid)
-  // and 'refunded' rows are never renewable. Legacy 'free' rows still open
+  // /api/create-renewal-checkout): a legacy 'plan' post (the Employer plan
+  // is retired, and plan posts were never renewed), 'pending' (unpaid) and
+  // 'refunded' rows are never renewable. Legacy 'free' rows still open
   // the "can't be renewed" modal below, so they stay "renewable" here.
   // Nothing is renewable while no renewal can be bought (paid posting off);
   // during the launch promo the page offers a free repost instead.
   // An archived post is not renewable either until it is restored: a renewal
   // republishes, so /api/create-renewal-checkout answers 409 for one and the
   // dashboard hides Renew on it (lib/employer-dashboard-rules.ts).
-  const isPlanPost = employerJob?.paymentStatus === 'plan';
   const isArchived = !!job?.archivedAt;
-  const renewableStatus = !isPlanPost
+  const renewableStatus = employerJob?.paymentStatus !== 'plan'
     && employerJob?.paymentStatus !== 'pending'
     && employerJob?.paymentStatus !== 'refunded';
   const canRenew = renewableStatus && !isArchived;
@@ -548,7 +547,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   // Where Renew would be offered but for the archive, the page says to
   // restore the post first; it never shows a Renew that can only fail.
   const restoreToRenew = renewableStatus && isArchived && renewalPurchasable;
-  const offerPromoRepost = !isPlanPost && !offerRenewal && !restoreToRenew && paidPostingAvailable !== null && promoActive;
+  const offerPromoRepost = !offerRenewal && !restoreToRenew && paidPostingAvailable !== null && promoActive;
   // What this post pays to renew, from the edit API: the pro price for a post
   // bought at the posting price, the base price for every other one.
   const renewalPrice = employerJob?.renewalPrice ?? config.renewalPrice;
@@ -689,17 +688,13 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                   {expired
                     ? `Expired on ${expiryDate}. It is no longer visible to candidates.`
                     : `Expires on ${expiryDate}.`}
-                  {isPlanPost
-                    ? (expired
-                      ? ` Each plan post runs ${config.durationDays} days and isn't renewed: post again into the free slot at no extra charge while you're subscribed.`
-                      : ` Each plan post runs ${config.durationDays} days and isn't renewed. When it ends, post again into the free slot at no extra charge while you're subscribed.`)
-                    : offerRenewal
-                      ? (expired ? ' Renew to relist it.' : ' Renew now to keep it visible.')
-                      : restoreToRenew
-                        ? ' This post is archived. Restore it from the Archived tab of your dashboard before you renew it.'
-                        : offerPromoRepost
-                          ? ` Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`
-                          : ''}
+                  {offerRenewal
+                    ? (expired ? ' Renew to relist it.' : ' Renew now to keep it visible.')
+                    : restoreToRenew
+                      ? ' This post is archived. Restore it from the Archived tab of your dashboard before you renew it.'
+                      : offerPromoRepost
+                        ? ` Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`
+                        : ''}
                 </p>
                 {offerRenewal ? (
                   <button
@@ -725,14 +720,14 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                   }}>
                     Go to your dashboard
                   </Link>
-                ) : (isPlanPost || offerPromoRepost) ? (
+                ) : offerPromoRepost ? (
                   <Link href="/post-job" style={{
                     ...clayBtn,
                     background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                     border: 'none', textDecoration: 'none',
                     boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                   }}>
-                    {isPlanPost ? 'Post a New Job' : 'Post a New Job for Free'}
+                    Post a New Job for Free
                   </Link>
                 ) : null}
               </div>

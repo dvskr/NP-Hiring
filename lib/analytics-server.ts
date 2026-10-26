@@ -60,10 +60,6 @@
  *   would say nothing whatsoever about it. The warning says whether ids were
  *   supplied at all, which separates "buyer declined" from "ids arrived and
  *   were unusable".
- *
- *   The Employer plan is sold through a Stripe Payment Link and fires no
- *   purchase event at all, so GA4 records nothing for it; see the note on
- *   gaCheckoutMetadata.
  */
 
 import { after, type NextRequest } from 'next/server';
@@ -323,31 +319,6 @@ function requestAllowsAnalytics(request: CheckoutRequest): boolean {
  * parseGaCookieHeader only emits well formed ids, and trackServerPurchase
  * stays the single trust boundary on the way out, because Stripe metadata is
  * an external string store whatever wrote it.
- *
- * Not used for the Employer plan, which today reaches GA4 as nothing at all:
- *   - No purchase event fires for it, server side or in the browser.
- *     app/api/webhooks/stripe/plan-checkout.ts calls no tracker, and
- *     lib/analytics.ts has no purchase event.
- *   - The return from Stripe is no substitute. This repository never sets
- *     the link's after completion page (the link is created in Stripe and
- *     only read here from STRIPE_PLAN_PAYMENT_LINK). If that page is a
- *     dashboard URL with a flag such as `?plan=activated`, the flag is
- *     dropped by lib/analytics.ts#ANALYTICS_QUERY_ALLOWLIST, so the hit reads
- *     as an ordinary dashboard page view.
- * The ids cannot ride inside the link. A Payment Link session takes its
- * metadata from the link object, which is the same for every buyer. The one
- * per visitor field, client_reference_id, already carries the account id,
- * and plan-checkout.ts#resolveReferencedEmployer matches it exactly against
- * an employer profile, so appending anything to it would stop the plan
- * attaching to the account: a change to the purchase flow, not to analytics.
- * Attribution is still possible without touching how the plan is bought.
- * /api/employer/plan/subscribe and /api/employer/plan both run on a same
- * origin request that carries the GA cookies just before the buyer leaves
- * for Stripe, so either could call this function and store the result
- * against the account id, and the plan webhook could read it back and send
- * a purchase. That needs new storage (a migration), a plan purchase type and
- * a decision on whether monthly renewals count as purchases, so it is an
- * owner decision rather than a default.
  */
 export function gaCheckoutMetadata(request: CheckoutRequest): Record<string, string> {
   if (!requestAllowsAnalytics(request)) return {};

@@ -9,9 +9,10 @@
  * only here: the Stripe webhook settles them.
  *
  * The use-by date is set as the employer reads it ("Use by June 30, 2028"),
- * lib/pricing-copy.ts converts it. Follows app/admin/employer-plans/page.tsx:
- * one client component, inline admin styles, fetch, table, and a PATCH that
- * replaces the row with the pack as it now stands. Prices come from config.
+ * lib/pricing-copy.ts converts it. Built like the Employer plan page it
+ * replaced (deleted with the plan code in phase 4): one client component,
+ * inline admin styles, fetch, table, and a PATCH that replaces the row with
+ * the pack as it now stands. Prices come from config.
  */
 
 import { useState, useEffect } from 'react';
@@ -21,7 +22,7 @@ import { packDateLabel, packUseByValue } from '@/lib/pricing-copy';
 import { packCreditsLine, packInvoiceHref, packStatusLine, type PostPackState } from '@/lib/post-pack-view';
 import type { AdminPackView, PackAdminAction } from '@/lib/post-pack-admin';
 
-/* ─── Styles (matched to admin/employer-plans) ─── */
+/* ─── Styles (the admin back office's inline style set) ─── */
 const card: React.CSSProperties = { backgroundColor: '#FAFBF9', border: '1px solid rgba(255,255,255,0.7)', borderRadius: '18px', boxShadow: '8px 8px 20px rgba(0,0,0,0.05), -6px -6px 16px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(0,0,0,0.02)', overflow: 'hidden' };
 const heading: React.CSSProperties = { color: '#1A2E35', fontWeight: 700 };
 const sub: React.CSSProperties = { color: '#6B7F8A', fontSize: '14px' };

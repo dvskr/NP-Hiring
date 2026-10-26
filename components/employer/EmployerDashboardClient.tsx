@@ -52,9 +52,9 @@ interface EmployerDashboardClientProps {
  * EmployerJob.paymentStatus buckets (see lib/config.ts header).
  *   - LEGACY_FREE: pre-ladder free-trial rows. Never written again; they keep
  *     the original "can't be renewed" modal and the free-quota archive note.
- *   - Plan rows ('plan') run config.durationDays like any post and are never
- *     renewed; when one ends its slot is free, and the employer posts again
- *     into it at no extra charge while subscribed.
+ *   - Legacy plan rows ('plan', posted under the retired Employer plan; none
+ *     in production) keep their "Plan slot" badge, are never renewed, and
+ *     cannot be republished (toggle-publish answers 402).
  *   - 'pending' (unpaid checkout) and 'refunded' rows are not renewable
  *     either; pending rows get the "Complete payment" action instead.
  * Everything else ('promo', 'paid', legacy free_renewed / free_upgraded)
@@ -141,8 +141,8 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
     // posting on and Stripe configured), so the dashboard never offers a
     // renewal the checkout would refuse with a 503; any failure counts as
     // unavailable. The quota status is this employer's own next new-post
-    // price (0 with a free plan slot), the comparison for the renewal's
-    // savings line; null when it cannot be read.
+    // price (0 with a usable 5-post pack credit), the comparison for the
+    // renewal's savings line; null when it cannot be read.
     const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
     const [nextPostPrice, setNextPostPrice] = useState<number | null>(null);
     useEffect(() => {
@@ -274,9 +274,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
             const detail = err instanceof Error && err.message && !err.message.startsWith('Request failed')
                 ? ` ${err.message}`
                 : '';
-            // A server message says what to do (for example "All 5 of your
-            // Employer plan slots are in use"), so "try again" is only added
-            // when there is none: retrying a full plan does not help.
+            // A server message says what to do (for example "Complete
+            // checkout to publish"), so "try again" is only added when there
+            // is none: retrying a refused republish does not help.
             toast(
                 job.isPublished
                     ? `Couldn’t pause this job. Please try again.${detail}`
@@ -1035,20 +1035,6 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 <span>Pausing hides the listing but doesn&apos;t extend it. Your {config.durationDays}-day window keeps counting.</span>
                                             </div>
                                         )}
-
-                                        {/* Plan rows have no Renew button: each runs its
-                                            {config.durationDays} days, then its slot is free and
-                                            the employer posts again into it at no extra charge. */}
-                                        {mounted && job.paymentStatus === 'plan' && !job.archivedAt && (isExpired(job) || isExpiringSoon(job)) && (
-                                            <div style={{
-                                                display: 'flex', alignItems: 'flex-start', gap: '6px',
-                                                fontSize: '11px', color: '#8A9BA6', margin: '10px 0 0',
-                                                lineHeight: 1.5,
-                                            }}>
-                                                <Info size={13} style={{ flexShrink: 0, marginTop: '1px', color: '#B0BEC5' }} />
-                                                <span>Each plan post runs {config.durationDays} days and isn&apos;t renewed. When this one ends, post again into the free slot at no extra charge while you&apos;re subscribed.</span>
-                                            </div>
-                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -1058,10 +1044,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                     </>
                 )}
 
-                {/* ═══ Archive Confirmation Modal — branches by legacy-free / plan / everything else ═══ */}
+                {/* ═══ Archive Confirmation Modal — branches by legacy-free / everything else ═══ */}
                 {archiveTarget && (() => {
                     const isFreePost = LEGACY_FREE_STATUSES.has(archiveTarget.paymentStatus);
-                    const isPlanPost = archiveTarget.paymentStatus === 'plan';
                     return (
                         <div style={{
                             position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1113,7 +1098,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     </ul>
                                 </div>
 
-                                {/* Branch — legacy free-quota note / plan-slot note / expiry note */}
+                                {/* Branch — legacy free-quota note / expiry note */}
                                 {isFreePost ? (
                                     <div style={{
                                         background: '#FFF8E1', border: '1px solid rgba(245,158,11,0.18)',
@@ -1121,15 +1106,6 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     }}>
                                         <p style={{ fontSize: '12px', color: '#92400E', margin: 0, lineHeight: 1.5 }}>
                                             <strong>Please note:</strong> this is a free trial post. Archiving doesn&apos;t refund the credit. Your organization&apos;s free quota stays at the same count.
-                                        </p>
-                                    </div>
-                                ) : isPlanPost ? (
-                                    <div style={{
-                                        background: '#EFF6FF', border: '1px solid rgba(29,78,216,0.18)',
-                                        borderRadius: '12px', padding: '12px 14px', marginBottom: '20px',
-                                    }}>
-                                        <p style={{ fontSize: '12px', color: '#1E40AF', margin: 0, lineHeight: 1.5 }}>
-                                            Archiving frees this Employer plan slot right away, so you can post another role into it at no extra charge. Republishing this post later takes a plan slot again.
                                         </p>
                                     </div>
                                 ) : (

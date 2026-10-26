@@ -6,7 +6,6 @@
  * export HTTP handlers and segment config — the activate-paid-job.ts
  * precedent.
  */
-import type Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { captureException } from '@/lib/sentry';
@@ -108,36 +107,4 @@ export function prismaErrorCode(err: unknown): string | undefined {
 export function stripeIdOf(ref: string | { id: string } | null | undefined): string | null {
   if (!ref) return null;
   return typeof ref === 'string' ? ref : ref.id;
-}
-
-/**
- * Read a subscription period boundary as a Date.
- *
- * Stripe moved `current_period_start/end` off the Subscription object and
- * onto each SubscriptionItem in API version 2025-03-31 (the `stripe` v20
- * types only declare them on items). Older API versions still return them at
- * the root, so read both. Null when neither is present — callers fall back
- * to the value they already hold rather than guessing a period length.
- */
-function subscriptionPeriodBoundary(
-  sub: Stripe.Subscription,
-  field: 'current_period_start' | 'current_period_end',
-): Date | null {
-  const rootValue = (sub as unknown as Record<string, unknown>)[field];
-  const itemValue = sub.items?.data?.[0]?.[field];
-  const unixSeconds = typeof rootValue === 'number' ? rootValue : itemValue;
-  return typeof unixSeconds === 'number' && Number.isFinite(unixSeconds) ? new Date(unixSeconds * 1000) : null;
-}
-
-export function subscriptionPeriodEnd(sub: Stripe.Subscription): Date | null {
-  return subscriptionPeriodBoundary(sub, 'current_period_end');
-}
-
-/**
- * Start of the current period. For a subscription whose renewal invoice is
- * unpaid, Stripe has ALREADY advanced the period, so the start of the current
- * period is the end of the last PAID period — the correct entitlement anchor.
- */
-export function subscriptionPeriodStart(sub: Stripe.Subscription): Date | null {
-  return subscriptionPeriodBoundary(sub, 'current_period_start');
 }

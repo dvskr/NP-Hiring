@@ -495,12 +495,17 @@ describe('client surfaces use the shared rule', () => {
         for (const src of [dashboard, edit]) expect(src).not.toContain('new bucket of');
     });
 
-    it('plan wording on both pages: each post runs its days, then post again into the free slot', () => {
+    it('neither page promises a plan slot: the Employer plan is retired and its code deleted', () => {
+        // A legacy 'plan' row stays non-renewable on both pages (the
+        // dashboard's rule in lib/employer-dashboard-rules.ts, the edit page's
+        // renewableStatus), but nothing tells its owner to post into a free
+        // slot, and toggle-publish answers 402 to a republish.
         const dashboard = read('components/employer/EmployerDashboardClient.tsx');
         const edit = read('app/jobs/edit/[token]/page.tsx');
-        expect(dashboard).toContain('Each plan post runs {config.durationDays} days and isn&apos;t renewed. When this one ends, post again into the free slot at no extra charge while you&apos;re subscribed.');
-        expect(edit).toContain("When it ends, post again into the free slot at no extra charge while you're subscribed.");
+        expect(edit).toContain("const renewableStatus = employerJob?.paymentStatus !== 'plan'");
         for (const src of [dashboard, edit]) {
+            expect(src).not.toMatch(/free slot|plan slot again|Employer plan slot|while you(?:&apos;|')re subscribed/);
+            expect(src).not.toContain('Each plan post runs');
             expect(src).not.toContain('from a plan slot');
             expect(src).not.toMatch(/live while (the|your) (Employer )?plan/);
         }

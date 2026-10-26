@@ -2,10 +2,9 @@
  * lib/post-pack-sale.ts — whether the 5-post pack can be sold right now
  * (2027 re-price, phase 2: the backend ships dark).
  *
- * The same gate the Employer plan sale used (lib/employer-plan-link.ts
- * isPlanSaleOpen, backlog 2.16), without the Payment Link: the pack is sold
- * through a Checkout Session the server creates. Closed unless every one
- * holds:
+ * The same gate the retired Employer plan's sale used (backlog 2.16), without
+ * the Payment Link: the pack is sold through a Checkout Session the server
+ * creates. Closed unless every one holds:
  *   - the launch promo is over: every post is free until config.promoEndsAt,
  *     so a pack would buy nothing (owner decision: sold only once the ladder
  *     is live);

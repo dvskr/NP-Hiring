@@ -15,8 +15,9 @@
  *   'refunded' — pulled by refund/moderation; must not relist at a discount
  *   'disputed' — charged back; a renewal must not re-publish it or erase the
  *                dispute marker (the renewal webhook re-checks this too)
- *   'plan'     — each plan post runs config.durationDays; the employer posts
- *                again into the freed plan slot rather than buying a renewal
+ *   'plan'     — a legacy Employer plan post: plan posts were never renewed,
+ *                and the plan is retired (its code deleted in phase 4 of the
+ *                2027 re-price), so the employer posts the role again
  * Everything else (legacy 'free_renewed' / 'free_upgraded') keeps today's
  * behaviour and falls through to Checkout. An archived post is blocked with
  * 409 too (a status refused above keeps its own message): a renewal
@@ -228,13 +229,13 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    // Plan posts are not renewed per-post: each runs config.durationDays
-    // while the plan is active, and the employer re-posts into the freed
-    // plan slot afterwards. Buying a renewal here would
-    // convert the row to 'paid' and confuse both the slot count and billing.
+    // A legacy Employer plan post: plan posts were never renewed per post,
+    // and the plan is retired, so there is no slot to post into either.
+    // Buying a renewal here would convert the row to 'paid' at the renewal
+    // price. Kept as a guard for any old row (production had none).
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
-        { error: `Employer plan posts are not renewed. Each runs ${config.durationDays} days. When this one ends, post again into your free plan slot at no extra charge.` },
+        { error: 'Employer plan posts are not renewed, and the Employer plan is retired. Post the role again as a new job.' },
         { status: 409 }
       );
     }
@@ -262,7 +263,7 @@ export async function POST(request: NextRequest) {
 
     // Carry the row's own rung through metadata so the renewal webhook
     // (which writes pricingTier = metadata.tier) doesn't rewrite an 'intro'
-    // row, or a 5-post pack post, as 'pro'. Never 'plan' — blocked above.
+    // row, or a 5-post pack post, as 'pro'. A legacy 'plan' row was refused above.
     const tier: PricingTier = asRenewalTier(employerJob.pricingTier);
 
     // The renewal cap: what this renewal would add, computed exactly as the

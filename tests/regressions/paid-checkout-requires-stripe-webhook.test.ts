@@ -9,7 +9,8 @@
  * answers 503 without that secret, so a buyer could pay for a post or a
  * renewal that the webhook never recorded, and whose refunds and disputes it
  * would never see. Backlog 2.16 closed the same gap for the Employer plan
- * (tests/regressions/plan-sale-requires-stripe-webhook.test.ts).
+ * (since retired: its code and that test were deleted in phase 4 of the
+ * 2027 re-price), and lib/post-pack-sale.ts applies it to the 5-post pack.
  *
  * Each case sets one environment and asks both sides, through the real
  * lib/env: the availability signal and the real webhook route. Checkout may

@@ -24,7 +24,7 @@ export async function GET() {
         // Without the webhook secret POST /api/webhooks/stripe answers 503,
         // so no surface may offer a checkout the two checkout routes refuse
         // and the webhook could not record (same rule as
-        // lib/employer-plan-link.ts#isPlanSaleOpen;
+        // lib/post-pack-sale.ts#packSaleClosedReason;
         // tests/regressions/paid-checkout-requires-stripe-webhook.test.ts).
         if (status.available && !!getEnv().STRIPE_WEBHOOK_SECRET) {
             return NextResponse.json({ available: true });

@@ -35,8 +35,7 @@ import { employerJobOwnershipBranches, type EmployerJobOwner } from '@/lib/emplo
  *     (archive is not delete): a 'paid' row still marks the domain's intro
  *     price as used, and a legacy 'free' row still counts against the old
  *     quota. Because archiving unpublishes, an archived 'promo' post no
- *     longer counts toward the launch-promo cap and an archived 'plan' post
- *     frees its plan slot — that is the intended way to swap jobs on a plan.
+ *     longer counts toward the launch-promo cap.
  *
  * Unarchiving simply clears archived_at — but does NOT auto-republish. The
  * employer must republish manually so they can decide whether the post is
@@ -161,8 +160,7 @@ async function settleArchiveState(job: ArchivableJob, archive: boolean, userId: 
             // Archiving hides the listing — force-unpublish in the same write.
             // Unarchiving leaves isPublished alone; employer republishes manually.
             // isManuallyUnpublished marks it as the employer's choice, as a
-            // pause does, so lib/employer-plan.ts resumePlanPosts (run on
-            // every plan renewal) and fp-recovery never bring it back.
+            // pause does, so fp-recovery never brings it back.
             ...(newArchivedAt !== null && { isPublished: false, isManuallyUnpublished: true }),
         },
     });

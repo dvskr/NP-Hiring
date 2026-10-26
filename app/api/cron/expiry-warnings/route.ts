@@ -31,15 +31,16 @@ const POST_EXPIRY_LOOKBACK_DAYS = 3
 // config.proRenewalPrice for a post bought at the posting price: see
 // renewalInputsFor), and only while paid posting is on (see RenewalContext).
 // A 5-post pack post ('pack') renews at the base price like a promo post.
-// 'plan' rows are deliberately excluded: each plan post runs
-// config.durationDays and its slot frees when it ends, so the employer posts
-// again into that slot instead of renewing (the renewal checkout 409s them).
-// Legacy free-quota rows re-enter via the dashboard's own path (unchanged).
+// Legacy 'plan' rows are deliberately excluded: the renewal checkout 409s
+// them (the Employer plan they were posted under is retired), so they are
+// offered a repost like any other row that cannot be renewed. Legacy
+// free-quota rows re-enter via the dashboard's own path (unchanged).
 const RENEWABLE_STATUSES = new Set(['promo', 'pack', 'paid'])
 
 // Statuses whose expiry is worth an email at all — everything that was
-// actually published. Never-published checkouts ('pending'/'expired') have
-// nothing to mourn; refunded and disputed rows were pulled deliberately.
+// actually published, legacy 'plan' rows included. Never-published checkouts
+// ('pending'/'expired') have nothing to mourn; refunded and disputed rows
+// were pulled deliberately.
 const NOTIFIABLE_STATUSES = ['free', 'free_renewed', 'free_upgraded', 'promo', 'pack', 'plan', 'paid']
 
 /**
@@ -123,7 +124,6 @@ async function renewalInputsFor(
  * email offers the renewal, a paid repost at the ladder price, or nothing.
  */
 function postExpiryOffer(
-  employerJob: EmployerJob,
   offer: RenewalOffer,
   ctx: RenewalContext,
   dashboardUrl: string,
@@ -141,13 +141,6 @@ function postExpiryOffer(
       ctaUrl: dashboardUrl,
     }
   }
-  if (employerJob.paymentStatus === 'plan') {
-    return {
-      line: `Each plan post runs ${config.durationDays} days, so this one has ended and its slot is free again. Post a job into it at no extra charge while you're subscribed. Your stats and applicants stay attached to this posting.`,
-      ctaLabel: 'Go to Your Dashboard',
-      ctaUrl: dashboardUrl,
-    }
-  }
   if (offer.promoActive) {
     return {
       line: `Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge. Your stats and applicants stay attached to the expired posting.`,
@@ -155,8 +148,9 @@ function postExpiryOffer(
       ctaUrl: `${BASE_URL}/post-job`,
     }
   }
-  // Promo over and this row cannot be renewed (a legacy free row), but a new
-  // post can be bought: ctx.purchasable is the paid-posting check itself.
+  // Promo over and this row cannot be renewed (a legacy free or plan row),
+  // but a new post can be bought: ctx.purchasable is the paid-posting check
+  // itself.
   if (ctx.purchasable) {
     return {
       line: `You can post this role again as a fresh ${config.durationDays}-day listing. ${ladderLine(ctx.now)} Your stats and applicants stay attached to the expired posting.`,
@@ -188,7 +182,7 @@ async function sendPostExpiryEmail(
     const unsubToken = await getOrCreateUnsubToken(employerJob.contactEmail)
     const inputs = await renewalInputsFor(employerJob, ctx)
     const offer = resolveRenewalOffer({ ...inputs, now: ctx.now })
-    const { line: relistLine, ctaLabel, ctaUrl } = postExpiryOffer(employerJob, offer, ctx, dashboardUrl)
+    const { line: relistLine, ctaLabel, ctaUrl } = postExpiryOffer(offer, ctx, dashboardUrl)
 
     const html = emailShellV2(`
       ${headerBlockV2('Your Listing Has Expired', '')}
@@ -291,12 +285,12 @@ export async function GET(request: NextRequest) {
               job.applyClickCount || 0,
               employerJob.dashboardToken || employerJob.editToken,
               null, // unsubscribeToken — sendExpiryWarningEmail will mint one if null
-              // paymentStatus drops the renewal for 'plan' rows (each runs
-              // config.durationDays, then its slot is free); the renewal is
-              // offered only while it can be bought, with a saving named only
-              // when it is true against this employer's next new post. After
-              // the promo a row that cannot be renewed is offered a paid
-              // repost, only while new posts can be bought.
+              // paymentStatus drops the renewal for a row the renewal checkout
+              // refuses (legacy free and plan rows); the renewal is offered
+              // only while it can be bought, with a saving named only when it
+              // is true against this employer's next new post. After the
+              // promo a row that cannot be renewed is offered a paid repost,
+              // only while new posts can be bought.
               {
                 paymentStatus: employerJob.paymentStatus,
                 renewalPurchasable: renewal.purchasable,

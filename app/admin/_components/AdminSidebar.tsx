@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2, CreditCard, Package } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2, Package } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -28,15 +28,10 @@ const navItems = [
   // Without an entry here the human-classification loop never starts and the
   // candidate-side employer-type filter stays permanently empty.
   { name: 'Companies', href: '/admin/companies', icon: Building2 },
-  // The Employer plan back office. The Stripe Payment Link identifies a
-  // subscriber by checkout email only; rows the webhook cannot match land
-  // unattached (paid, cannot post) and ONLY this page attaches them. It is
-  // also the only way to grant a plan without Stripe.
-  { name: 'Employer Plans', href: '/admin/employer-plans', icon: CreditCard },
   // The 5-post pack back office, the only place a pack is changed by hand:
   // revoke unused posts (a partial refund issued in Stripe, which the
   // webhook only alerts on), move the use-by date, restore a post spent in
-  // error. Replaces Employer Plans once phase 4 removes the plan code.
+  // error. It replaced the Employer plan page, deleted with the plan code.
   { name: 'Post Packs', href: '/admin/post-packs', icon: Package },
   { name: 'Job Health', href: '/admin/health', icon: HeartPulse },
   { name: 'Cron & Triggers', href: '/admin/cron', icon: Activity },

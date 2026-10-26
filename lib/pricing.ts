@@ -15,14 +15,14 @@
  * AS A POST (paymentStatus 'paid' with a 'new' JobCharge, or a legacy paid
  * row that predates the ledger), or by a paid 5-post pack bought through
  * Stripe at the domain (owner decision 2026-10-24: the pack is the company's
- * paid purchase). Promo posts, pack posts, legacy free posts, plan posts,
+ * paid purchase). Promo posts, pack posts, legacy free and plan posts,
  * abandoned 'pending' checkouts, refunded, disputed or admin-comped packs
  * never consume it, and neither does a promo post that was later renewed:
  * the renewal webhook flips it to 'paid', but its only ledger entry is a
  * 'renewal' charge and a renewal is not a post.
  *
- * The Employer plan mode went in phase 2 of the 2027 re-price (no plan row
- * exists in production); the dormant plan code no longer reaches posting.
+ * The Employer plan mode went in phase 2 of the 2027 re-price and the plan
+ * code in phase 4 (no plan row exists in production).
  */
 import type { Prisma } from '@prisma/client';
 import { prisma, type Db } from '@/lib/prisma';
@@ -33,10 +33,9 @@ export type PaidTier = Extract<PricingTier, 'intro' | 'pro'>;
 
 /**
  * Narrow an untrusted value (Stripe session metadata, request body) to a
- * per-post ladder rung. Anything else — including 'plan', which is billed
- * by Stripe Billing and never through per-post Checkout, and 'pack', whose
- * posts are paid for by the pack — falls back to 'pro' so a tampered or
- * legacy metadata value can never under-charge.
+ * per-post ladder rung. Anything else — including 'pack', whose posts are
+ * paid for by the pack, and a legacy 'plan' value — falls back to 'pro' so
+ * a tampered or legacy metadata value can never under-charge.
  */
 export function asPaidTier(value: unknown): PaidTier {
   return value === 'intro' ? 'intro' : 'pro';

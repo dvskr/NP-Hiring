@@ -449,7 +449,7 @@ function PostJobContent() {
         if (cancelled) return;
         // Only employers who would be routed to PAID checkout are gated:
         // eligible and quoted a paid rung (intro / pro). Employers whose next
-        // post is free — launch promo or an Employer-plan slot — proceed, as
+        // post is free — launch promo or a 5-post pack credit — proceed, as
         // do edge cases the quota API rejects for other reasons; their path
         // never reaches Stripe.
         const nextPostRequiresPayment = quota?.eligible === true && quota?.willBeFree === false;

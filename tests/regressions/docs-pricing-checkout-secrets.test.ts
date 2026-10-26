@@ -2,14 +2,14 @@
  * docs/pricing-system.md, section 1d, tells the owner what paid checkout
  * needs besides ENABLE_PAID_POSTING, and why the Stripe key and the webhook
  * secret go in before the flag. Backlog 2.16 made plan sales wait for both
- * secrets (lib/employer-plan-link.ts#isPlanSaleOpen). A sibling change made
- * POST /api/create-checkout, POST /api/create-renewal-checkout and
- * GET /api/create-checkout/availability refuse without the webhook secret
- * too (tests/regressions/paid-checkout-requires-stripe-webhook.test.ts), and
- * the section went on telling the owner that "the two checkout routes do not
- * check the webhook secret". Nothing failed:
- * docs-pricing-system-matches-code.test.ts pins only the plan half of that
- * bullet.
+ * secrets (the Employer plan has since been retired and its code deleted).
+ * A sibling change made POST /api/create-checkout, POST
+ * /api/create-renewal-checkout and GET /api/create-checkout/availability
+ * refuse without the webhook secret too
+ * (tests/regressions/paid-checkout-requires-stripe-webhook.test.ts), and the
+ * section went on telling the owner that "the two checkout routes do not
+ * check the webhook secret". Nothing failed: the plan half of that bullet was
+ * the only one pinned.
  *
  * As in that suite, the fact comes from the code (whether the three routes
  * read STRIPE_WEBHOOK_SECRET outside comments) and the document has to say
