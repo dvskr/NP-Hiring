@@ -150,13 +150,20 @@
  *     SEEKER_COMPARISON_CHECKED_ON and SEEKER_COMPARISON_CHECKED_MONTH with
  *     every re-check.
  *
- * NOT CHECKABLE FROM HERE (a person, a browser or production access):
- *   - The Indeed Career Guide state articles behind row 3 (HTTP 403 to
- *     automated fetch): open them before relying on the Limited cell.
- *   - https://www.indeed.com/career-services (HTTP 403): if Indeed still
- *     sells a paid job seeker service, its row 2 cell becomes Limited.
+ * CHECKED OUTSIDE THE CODE (2026-10-24, owner walkthrough):
+ *   - Row 3: Indeed's California and Texas NP articles answer HTTP 403 to
+ *     automated fetch but were still listed by search engines on 2026-10-24,
+ *     so the Limited cell stands. Re-check them with each review.
+ *   - Row 2: Indeed's own help article says it no longer supports Career
+ *     Services (https://support.indeed.com/hc/en-us/articles/4418646538765-What-Are-Indeed-s-Career-Services,
+ *     and https://www.indeed.com/job-search-services/career-services-update:
+ *     the paid resume and coaching services were wound down in 2026), so the
+ *     cell stays yes. If Indeed sells a paid job seeker service again, it
+ *     becomes Limited.
  *   - Row 5 needs OPENAI_API_KEY in production and no admin override that
- *     turns ai.candidate.resume_parser off. If either is off, drop the row.
+ *     turns ai.candidate.resume_parser off. The key went into production on
+ *     2026-10-24, no override exists and no kill switch is set, and AI calls
+ *     succeed since. If either is ever off, drop the row.
  */
 import type { ComparisonRow } from '@/lib/employer-comparison';
 import { brand } from '@/config/brand';

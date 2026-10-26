@@ -15,6 +15,12 @@ name: Migrate prod database
 # This workflow does NOT run application builds, tests, or deployments —
 # Vercel handles those on its own pipeline. It is solely responsible for
 # applying schema changes.
+#
+# Vercel's build also applies migrations (`npm run build` runs `prisma
+# migrate deploy`), so this workflow is a second path. Without the
+# PROD_DIRECT_DATABASE_URL secret it skips every step and posts a notice
+# instead of failing (2026-10-26: the secret is not set, and the pack
+# migration 20261025000000 went in through the Vercel build).
 
 on:
   push:
@@ -44,20 +50,25 @@ jobs:
     env:
       # prisma.config.ts reads `DIRECT_URL` for the migration datasource.
       DIRECT_URL: ${{ secrets.PROD_DIRECT_DATABASE_URL }}
+      # 'true' or 'false'. Secrets cannot be read in a step `if`.
+      HAS_PROD_URL: ${{ secrets.PROD_DIRECT_DATABASE_URL != '' }}
 
     steps:
+      - name: Skipped without the production database secret
+        if: env.HAS_PROD_URL != 'true'
+        run: echo "::notice title=Migrations skipped::PROD_DIRECT_DATABASE_URL is not set, so this workflow applies nothing. The Vercel build applies migrations (npm run build runs prisma migrate deploy)."
+
       - uses: actions/checkout@v4
+        if: env.HAS_PROD_URL == 'true'
 
       - uses: actions/setup-node@v4
+        if: env.HAS_PROD_URL == 'true'
         with:
           node-version: 20
 
-      - name: Verify required secret is present
+      - name: Verify the secret points at the direct connection
+        if: env.HAS_PROD_URL == 'true'
         run: |
-          if [ -z "$DIRECT_URL" ]; then
-            echo "::error::PROD_DIRECT_DATABASE_URL secret is not set in repo settings"
-            exit 1
-          fi
           # Refuse to run against the pooler (port 6543) — DDL inside a
           # transaction is incompatible with transaction-mode pgbouncer.
           if echo "$DIRECT_URL" | grep -qE ':6543/'; then
@@ -66,6 +77,7 @@ jobs:
           fi
 
       - name: Install dependencies
+        if: env.HAS_PROD_URL == 'true'
         # --legacy-peer-deps because some peer-dep conflicts in the project
         # tree (e.g. inngest <-> @prisma/client major versions) reject the
         # default `npm ci` resolution but install fine with the legacy
@@ -73,6 +85,7 @@ jobs:
         run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Baseline migration history (idempotent)
+        if: env.HAS_PROD_URL == 'true'
         # The prod DB was originally bootstrapped with `prisma db push`,
         # which never created `_prisma_migrations`. The first time this
         # workflow runs successfully it must mark the pre-existing schema
@@ -86,12 +99,15 @@ jobs:
           npx prisma migrate resolve --applied 20260215_add_source_site || true
 
       - name: Show pending migrations
+        if: env.HAS_PROD_URL == 'true'
         run: npx prisma migrate status || true
 
       - name: Apply pending migrations
+        if: env.HAS_PROD_URL == 'true'
         run: npx prisma migrate deploy
 
       - name: Verify schema is up to date
+        if: env.HAS_PROD_URL == 'true'
         run: |
           OUTPUT=$(npx prisma migrate status 2>&1) || true
           echo "$OUTPUT"

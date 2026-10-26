@@ -1,10 +1,11 @@
 # Pending Work
 
-> The single list of everything still open, checked against the code on 2026-10-23 (after the auth hotfix
+> The single list of everything still open, checked against the code on 2026-10-26 (after the auth hotfix
 > `e78f037`, the security and register batch `8d32e1e` of 2026-10-20, the sweep follow-ups `a8f1d4b`, the alert
-> salary rule `4a445ce` and the Stripe SDK upgrade `85116c1` of 2026-10-22, and the content follow-ups of
-> 2026-10-23, which follow the sister board links `71236b5`, the plain copy pass `a74a4d5` and the SEO, AEO and
-> GEO content release `6263323`; all are live, and `main` is the only branch). Shipped work is at the end.
+> salary rule `4a445ce` and the Stripe SDK upgrade `85116c1` of 2026-10-22, the content follow-ups of
+> 2026-10-23, the edit token hotfix `3574809` and its follow-ups `862b8af` of 2026-10-24, the CI fixes and the
+> 2027 re-price `8ac1d66` of 2026-10-25, and the 5-post pack `08f2e33` of 2026-10-26; all are live, and `main`
+> is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -13,11 +14,9 @@
 
 | When | What happens | What must be done by then |
 |---|---|---|
-| Now | The route sweep found sign-ups could make themselves admin (closed in `e78f037`), and a test account password sits in the public repo history | OWNER runs the checks in 1.14 |
-| Now | The Google indexing service account key was pasted into a chat | OWNER rotates it, 1.4 |
 | 2026-10-01 to about 2026-10-29 | Google and Bing make their first passes over the submitted sitemap | OWNER watches Search Console weekly (1.4); submit nothing else |
 | Since about 2026-10-21 | The Department of Education's decision on the NP residency consortium's recognition was due (90 days after the July advisory committee meeting). The committee's recommendation is in the fellowship post; the decision letter is in a system that refuses automated requests | Open it in a browser, then CLAUDE states the outcome in the fellowship post (2.24) |
-| About 2026-10-29 | Four weeks after the sitemap submission | DECISION D12: re-admit the specialty and setting by state pages if indexing looks healthy |
+| About 2026-10-29 | Four weeks after the sitemap submission | DECISION D12: re-admit the specialty and setting by state pages if indexing looks healthy. Claude's advice from the 2026-10-25 exports (1.4): wait, Google passed on 178 crawled pages and had not fetched 586 more |
 | 2026-10-30 | ANCC's new FNP test content outline takes effect | CLAUDE rewords the three posts that say it is about to change (2.24) |
 | 2026-10-30 | Plaintiffs' reply in the Massachusetts student loan case | CLAUDE re-checks that docket, whether the government's 2026-10-16 motion is also a cross motion for summary judgment, and Federal Student Aid for an announcement carrying out the Oregon injunction (2.24) |
 | 2026-11-06 | Government cross motions in AANP v. McMahon; the Department's reply closes briefing in the Maryland case | CLAUDE updates the student loan post's case table and confirms the states' 2026-10-16 reply (2.24) |
@@ -54,18 +53,25 @@ sold (`npm run fork:preflight` warns about it; ignore that). Keep `INNGEST_EVENT
 (plus `GA_MEASUREMENT_ID` if it differs) for server-side purchase events once paid posting is on.
 
 **1.4 Search Console follow-through.** The sitemap index is submitted (Success), the Indexing API and the
-Search Console API are on, and the health check passes. Three things are left:
-1. **Rotate the service account key now.** Its JSON was pasted into a chat. In Google Cloud, IAM, Service
-   accounts, `nphiring-indexing@np-hiring.iam.gserviceaccount.com`, Keys: delete the key whose id starts
-   `87bf15c7`, create a new JSON key, paste it into `GOOGLE_INDEXING_CREDENTIALS` in Vercel (and into
-   `GSC_SERVICE_ACCOUNT_KEY` if you used the same key there), then redeploy.
-2. If not done yet, Request indexing (URL Inspection) on the 10 hub URLs, about 10 a day, and paste the
-   same list into Bing's URL Submission: home, /jobs, /jobs/remote, /jobs/state/california,
-   /jobs/state/texas, /salary-guide, /scope-of-practice, /companies, /tools and /blog.
-3. Once a week for four weeks, read Pages, Job postings and Sitemaps. Submit nothing else: never
-   `/sitemap.xml` on its own, never the image sitemap.
-- Why: the key is a credential that can submit URLs as nphiring.com; the first month decides how Google rates the site.
-- Where: Google Cloud console, Search Console, Vercel.
+Search Console API are on, and the health check passes. Left:
+1. If not done yet, Request indexing (URL Inspection) on the 10 hub URLs: home, /jobs, /jobs/remote,
+   /jobs/state/california, /jobs/state/texas, /salary-guide, /scope-of-practice, /companies, /tools and /blog.
+   All ten answered 200, `index, follow` and a self canonical on 2026-10-24. Bing gets them through IndexNow.
+2. Once a week, read Pages, Job postings and Sitemaps, and send Claude the three drilldown exports (Crawled,
+   Discovered, Not found) when the chart moves. Submit nothing else: never `/sitemap.xml` on its own, never
+   the image sitemap.
+3. The service account key whose JSON was pasted into a chat (id starting `87bf15c7`): you chose on
+   2026-10-23 to leave it. It can still submit URLs as nphiring.com. To rotate it later: Google Cloud, IAM,
+   Service accounts, `nphiring-indexing@np-hiring.iam.gserviceaccount.com`, Keys: delete that key, create a new
+   JSON key, paste it into `GOOGLE_INDEXING_CREDENTIALS` in Vercel (and `GSC_SERVICE_ACCOUNT_KEY` if it is the
+   same key), then redeploy.
+- What the 2026-10-25 exports showed (data to 2026-10-16): 524 pages indexed, 1,160 not. Not found 308, all
+  expired jobs (now 410) or retired listing pages, none in the sitemap. Discovered but never fetched 586,
+  among them /jobs, /companies, /blog, 23 state hubs and 340 live jobs. Crawled but not indexed 178: 126 job
+  pages, 17 posts (13 state license guides), 12 company pages. Job postings: 9 valid, 0 errors, although the
+  Indexing API accepted every job URL sent since 2026-10-07. The limit is crawl attention for a young site;
+  the levers are links from other sites and more unique content (2.32).
+- Where: Search Console, Bing Webmaster Tools.
 
 **1.5 Bing.** Done 2026-10-01: verified (imported from Search Console), `INDEXNOW_KEY` set, the key file is
 served, and IndexNow accepted all 165 URLs of the first run. Optional: `BING_WEBMASTER_API_KEY` for the
@@ -114,47 +120,14 @@ dry run first and then with `--apply` in one transaction:
    left), correct-location-and-pay (73), collapse-duplicate-jobs (none; the 32 look-alike groups are
    different postings), rederive-job-type (145) and retag-category-tags (375), then the aggregate-pseo refresh.
 3. **Still open:** `scripts/backfill-remote-flags.ts` was not previewed in this pass. Run it as a dry run (or ask Claude
-   to), then `--apply`, then `--check` (exit 0 when clean). Until then, /jobs/remote can list a job whose own
+   to: its read-only `--check` on 2026-10-24 was blocked by auto mode, so approve that run or turn auto mode
+   off), then `--apply`, then `--check` (exit 0 when clean). Until then, /jobs/remote can list a job whose own
    page does not call it Remote; the daily job-posting-integrity cron reports those rows. Once `--check`
    passes, CLAUDE moves `scripts/indexing-fixes/sql/work-mode-check-constraints.sql` into `prisma/migrations`.
 4. `scripts/indexing-fixes/populate-company-website-logo.ts` filled 23 companies. **Still open:** fill the
    other 72 by hand on /admin/companies.
 - Why: the code fixes stop new bad rows; these repair the rows already stored.
 - Where: a terminal on a trusted machine. The repo `.env` is the production database.
-
-**1.14 Security checks only you can do (urgent).** The route sweep of 2026-10-13 found three holes inherited from
-the template's first commit (2026-07-02) and live since launch; `e78f037` closed them on 2026-10-17. Claude cannot
-read production, so these are yours.
-- Planted admin accounts. Any sign-up could make itself an admin until `e78f037`. In the Supabase SQL editor
-  (read only): `select id, email, created_at, raw_user_meta_data->>'role' from auth.users where
-  coalesce(raw_user_meta_data->>'role', '') not in ('', 'job_seeker', 'employer');` and `select supabase_id,
-  email, role, created_at from public.user_profiles where role not in ('job_seeker', 'employer');`. Any row in
-  the first, or any row in the second that is not your own admin, means the hole was used: demote it and tell
-  Claude, who will trace what it did.
-- Supabase dashboard, Authentication: Site URL `https://nphiring.com`; Redirect URLs list no `*.vercel.app` or
-  `**` entry (the reset route now allows only this site's hosts, but the dashboard list is the last gate for
-  every auth email); Confirm email ON. Several session email checks rely on Confirm email being on.
-- Rotate the audit employer test account's password. `docs/AUDIT_RUNBOOK.md` printed it in plain text from the
-  first commit, and the GitHub repo is public, so it is in the public history. The doc now shows a placeholder;
-  only a new password fixes it.
-- The rebuilt job seeker comparison table (`lib/seeker-comparison.ts`) rests on pages Claude could not open:
-  Indeed's state NP career guide articles (403 to automated requests), and whether Indeed sells a paid job seeker
-  service (if so, its "Completely free" cell becomes partial). Also confirm `OPENAI_API_KEY` is set in production
-  and no database override turns the AI resume parser off; if either is off, drop that row.
-- Avatars stored before 2026-10-20. Since the batch, a profile picture is stored only from the account's own
-  upload folder or, for a Google sign-in, Google's picture host, but older values still render to employers and
-  candidates. In the SQL editor (read only), with your project URL in place of `<project>`:
-  `select supabase_id, avatar_url from public.user_profiles where avatar_url is not null and avatar_url !~
-  ('^https://<project>\.supabase\.co/storage/v1/object/public/avatars/[A-Za-z0-9_-]+/' || supabase_id ||
-  '/[A-Za-z0-9._-]+$') and avatar_url !~ '^https://lh3\.googleusercontent\.com/';`. Each row is a picture
-  the account did not upload itself. Clear them with the same condition (`update public.user_profiles set
-  avatar_url = null where ...`), or tell Claude what they are.
-- Employers with an unconfirmed email. Since 2026-10-22 an unclaimed post filed under an email belongs to a
-  session only once that email is confirmed. With Confirm email ON nobody unconfirmed can sign in, so this
-  should find nothing. In the SQL editor (read only): `select u.email, count(ej.id) from auth.users u join
-  public.employer_jobs ej on ej.user_id is null and ej.contact_email = u.email where u.email_confirmed_at is
-  null group by u.email;`. Any row is an employer who loses those posts and their applicants until the address
-  is confirmed (resend the confirmation from Authentication, Users).
 
 ## 2. Engineering (CLAUDE)
 
@@ -218,7 +191,7 @@ re-checked against its sources that day; the dates table at the top lists the ne
 
 **2.26 Follow-ups from the 2026-10 security sweep.** All but one shipped on 2026-10-22 (see Closed). Left:
 `lib/compare-data.ts` says Indeed's licensure guidance was not found (2026-08-06), while the job seeker table
-marks it limited; settle it at the quarterly /compare review (section 6). The avatar cleanup is yours (1.14).
+marks it limited; settle it at the quarterly /compare review (section 6). The avatar check found nothing to clean (2026-10-24, 1.14 under Closed).
 
 **2.27 The 2027 re-price build.** Phase 1 (the new ladder, both renewal prices, and the Employer plan taken off
 every page) is live since 2026-10-25 (8ac1d66). Phases 2 and 3 shipped together on 2026-10-26: the 5-post
@@ -235,6 +208,35 @@ is on. Left:
   verify page or the sweep wins a post's claim and then fails the ledger write, nothing backfills it unless
   Stripe is still retrying; the pack checkout return page names "ready" for a pack recorded refunded or
   disputed before fulfilment (the pack list below it is right).
+
+**2.29 Security follow-ups from the 2026-10-24 sweep.** The sweep that followed the edit token hotfix
+(`3574809`, `862b8af`) read all 91 routes that parse a request body and found no other critical or high hole.
+Left, all low:
+- An edit token never expires for editing or unpublishing (`app/api/jobs/update/route.ts`), while the edit
+  page (`app/api/jobs/edit/[token]/route.ts`) allows 30 days.
+- The paid checkout (`app/api/create-checkout/route.ts`) stores benefits, setting and population without the
+  validators the free post uses (`app/api/jobs/post-free/_lib/job-attributes.ts`), and both store the logo
+  address without `sanitizeUrl`.
+- A new post deletes any saved draft filed under the same client supplied contact email
+  (`app/api/jobs/post-free/route.ts`), even another employer's.
+- A lint rule (no unsafe assignment or member access) would flag every `const body: T = await
+  request.json()`, the pattern behind the edit token hole.
+
+**2.30 Monitoring that reports the wrong thing.** CI is green again since 2026-10-25 (Closed). Left:
+- The daily Search Console snapshot (`gsc_snapshots`, written by the gsc-health-check cron) has saved all
+  zeros since at least 2026-10-15, so its "indexing dropped" alert can never fire. Find why (credentials, the
+  property, or no coverage API: B40) and either read real data or stop writing zero rows.
+- The daily indexing cron (`app/api/cron/index-urls/route.ts`) reports every Bing Webmaster submission as
+  failed while `BING_WEBMASTER_API_KEY` is unset (1.5); it should say skipped. IndexNow already reaches Bing.
+
+**2.32 Grow what Google will index.** Today the sitemaps list about 1,000 URLs (781 jobs, 213 others) by
+design: a listing page needs 5 jobs from 3 employers, a company page 5 live jobs, and the specialty by state
+pages wait on D12. Waiting on your go:
+- More jobs: every live job is a page, and they fill city, specialty and company pages until those pass the
+  listing floor on their own. Find the NP employers and job sources the ingest misses.
+- Make job pages say what the employer's own posting does not (state practice authority, licensure, pay
+  context): Google passed on 126 job pages.
+- Make the state license guides more distinct: 13 of them sit in "Crawled, currently not indexed".
 
 ## 3. Decisions (DECISION)
 
@@ -389,6 +391,12 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
+- 1.14 Security checks (done 2026-10-23 to 2026-10-24; you asked Claude to run the read-only ones): no planted admin account (both queries empty; no admin role exists at all); the leaked audit test password belonged to the PMHNP Hiring project, not this one, and was replaced there on 2026-10-23 with an unseen random one, its sessions ended; Supabase Authentication checked on screen (Site URL `https://nphiring.com`, no `*.vercel.app` redirect, Confirm email on); all 4 profile pictures are the account's own upload or Google photo; no unconfirmed employer owns an unclaimed post. The comparison table stays as it is: Indeed's own help page says it no longer supports its paid Career Services, and its California and Texas NP articles are still indexed. You chose to leave the indexing key (1.4).
+- 2.28 Pricing review follow-ups: the renewal price can no longer be computed from a row loaded without its charges, a failed first-post ledger write makes Stripe retry, and the long test file was split (`00282e6`, `e0e9d4e`).
+- 2.31 AI in production: production had no `OPENAI_API_KEY` until you added it on 2026-10-24, so every AI call had failed since launch (555 calls, 485 of them the site's own daily eval). Since the redeploy every call succeeds; the 2026-10-25 08:00 UTC eval made 5 of 5 scoring calls (about $0.25 a month). One application from 2026-10-23 still has no AI score; scoring it is a production write, so it waits for your OK.
+- 2.30 (part) CI: every workflow failed on every push in October. `9e1a154`, `ff42e8f` and `0ad137e` fixed the installs (a placeholder `DIRECT_URL` for prisma generate), the PII scan (the resume parser's do-not-extract list), SEO Guard's base address, and run the AI evals dry without the OpenAI key secret. The migration workflow now skips with a notice without `PROD_DIRECT_DATABASE_URL` (the Vercel build applies migrations).
+- Edit token hotfix (2026-10-24): `POST /api/jobs/update` read the edit token from the JSON body into a non-unique Prisma query, so a filter object matched any post; it and the renewal checkout now accept only a plain string (`lib/request-body.ts`, `3574809`). A read-only look at all 13 employer posts found no sign it was used. Six low cases of the same kind followed in `862b8af`.
+
 - D1 Plan posts, 60 days each or live for the whole subscription: moot. You retired the Employer plan on 2026-10-24 (3.1b); no page offers it and none is sold, and its code stays dormant until it is deleted.
 - 1.3 Google Analytics: live since 2026-09-28.
 - 1.4 Search Console and Google indexing: sitemap index submitted 2026-10-01, Indexing API and Search Console API on, service account is an Owner, health check passes (key rotation and the first month's watch remain, 1.4).
@@ -403,7 +411,7 @@ tests fail until every side agrees:
 - 2.9 Worktree housekeeping: done on 2026-10-13. Every merged worktree and branch is gone, here and on GitHub, and the main checkout is on `main`. Each worktree's `.next` held links into the shared `node_modules`; they were removed first, link by link, and the shared folder was checked before and after. Two old stashes were left alone (a July work in progress and the Clay 2.0 redesign you asked to keep), and so was an untracked file named `text` in the main checkout (a saved state board rule page from license research).
 - The content release's open item "sitemap lastmod for changed tools": `PAGE_CONTENT_DATES` now dates all 33 pages the plain copy pass or the content release changed to 2026-10-13, the UTC day both went live; /terms, /privacy and /sub-processors kept their dates. The /compare hub is 2.22.
 - Ship-day review of the content release (2026-10-13): 195 time-bound claims in the ten new posts and the refreshed surfaces were re-checked at their sources. 189 held. Four were corrected: the student loan post counted three open federal cases where the dockets show at least five (in the body and in one FAQ answer), the fellowship post said every VA site names a program director, and the noncompete post described Maine's statute page as the text before the 2026 amendment. Two, on the residency consortium's federal recognition, could not be confirmed because the Department's pages refuse automated requests, so that sentence now says so. Follow-ups: 2.23 to 2.25, D24, D25, 1.13.
-- Prisma migrations: applied, most recently `20260928000000_job_content_changed_at` on 2026-09-30.
+- Prisma migrations: applied, most recently `20261025000000_add_employer_post_packs` on 2026-10-26 (by the Vercel build, checked read-only afterwards).
 - 2.16 Plan sales and the Stripe key: `isPlanSaleOpen` (`lib/employer-plan-link.ts`) now also requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. The /pricing plan card and `/api/employer/plan/subscribe` send no buyer to Stripe while the webhook would answer 503 and could not record the plan. The per post checkout and renewal routes and the availability endpoint apply the same rule (2026-10-20).
 - Route authorization sweep (2026-10-13): all 193 API routes read, every finding checked by two skeptics. The three critical holes (sign-up metadata could grant admin, the anonymous alert signup answered with the alert's token, and reset links could point at any vercel.app host) shipped as `e78f037` on 2026-10-17. The rest shipped in the 2026-10-20 batch: resume and avatar paths held to the owner's folder at every writer and reader; the applications and dashboard answers stopped sending employer notes and AI scores to candidates; saved candidates, candidate search, candidate alerts and the alert cron follow the talent pool rules; employer messages, replies and candidate messages refuse recipients the employer may not contact or deleted accounts; employer testimonials need an employer account; newsletter opt-out and status need a matching session; the autofill quota no longer trusts the client; admin and job list parameters are bounded; checkout resume ownership matches the employer rule; the welcome email's unsubscribe links work; new alert tokens are UUIDs and the three alert token routes are rate limited; message attachment keys are matched whole; the alert digest escapes the alert's own criteria and the welcome email the first name; employers see a signed link to an applicant's cover letter, and a cover letter upload no longer replaces the profile resume. Owner checks: 1.14. Follow-ups: 2.26, D26 to D33.
 - 1.13 Salary guide PDF: regenerated on 2026-10-13 from live, read-only counts (491 postings with pay from 65 employers in 43 states) with the 41% and 100 million+ figures and a cited quick answer.
@@ -432,3 +440,7 @@ tests fail until every side agrees:
 - `71236b5` Psychiatric job seekers and employers are pointed to the sister board from the homepage, the psychiatric landing page and the post-job form.
 - `a74a4d5` Plain UI copy, email subjects without dashes, and explanatory text removed site-wide.
 - `6263323` The SEO, AEO and GEO content release (2026-10-13): ten new posts, 18 refreshed, the 2025 to 2035 growth figure and the HRSA floor, the full practice quick answer on /scope-of-practice, retitled tools, the ClaudeBot sitemap carve-out and rebuilt llms files.
+- `3574809`, `862b8af` (2026-10-24) Request body values reach Prisma only as plain strings (the edit token hotfix and its six follow-ups).
+- `9e1a154`, `ff42e8f`, `0ad137e` (2026-10-25) CI green again.
+- `8ac1d66` (2026-10-25) The 2027 re-price: $249 first post, $349 after, renewals $199 or $249 by post, the Employer plan retired from every page.
+- `00282e6`, `1d3e18b`, `e0e9d4e`, `08f2e33` (2026-10-26) The one-time 5-post pack for $1,245 (backend, pages, emails, admin), all sales final, and the code and security review fixes; migration `20261025000000_add_employer_post_packs` applied by the build.
