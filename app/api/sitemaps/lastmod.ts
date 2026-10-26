@@ -108,16 +108,16 @@ export async function latestJobContentDate(where: Prisma.JobWhereInput): Promise
  * the day their copy changed: $249 first post and $349 after, two renewal
  * prices, and no Employer plan.
  *
- * 2026-10-25 (2027 re-price, Phase 3): the same eight pages changed again for
- * the 5-post pack and the owner's all sales final decision, both of that day:
- * the pack in the ladder lines, the pack card, answer and calculator mode,
- * /terms sections 6 to 8, and every refund answer. Their dates stay on that
- * ship day; a later ship day moves all eight to it.
+ * 2026-10-26 (2027 re-price, Phases 2 and 3): the same eight pages changed
+ * again for the 5-post pack and the owner's all sales final decision: the
+ * pack in the ladder lines, the pack card, answer and calculator mode,
+ * /terms sections 6 to 8, and every refund answer. All eight moved to that
+ * ship day.
  */
 export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // 2026-10-25 (2027 re-price): the ladder and renewal lines, the plan FAQ and the refund answer's plan sentence;
-  // then (Phase 3) the 5-post pack answer and the all sales final refund answer.
-  '/for-employers': '2026-10-25',
+  // 2026-10-26 (Phase 3): the 5-post pack answer and the all sales final refund answer.
+  '/for-employers': '2026-10-26',
   // 2026-10-20 (security and register batch): the comparison table is rebuilt
   // from audited cells (lib/seeker-comparison.ts, register D25), its
   // surrounding cards say only what the board does, and the "how it works"
@@ -126,16 +126,16 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/about': '2026-10-13',
   '/editorial-policy': '2026-10-13',
   // 2026-10-25 (2027 re-price): the cost, features, renewal and refund answers, and no plan answer;
-  // then (Phase 3) the 5-post pack answer and the all sales final refund answer.
-  '/faq': '2026-10-25',
+  // 2026-10-26 (Phase 3): the 5-post pack answer and the all sales final refund answer.
+  '/faq': '2026-10-26',
   '/contact': '2026-10-13',
   // 2026-10-25 (2027 re-price): §6 to §8 state the new prices and both renewal prices, drop the plan, and "Last updated" moved;
-  // then (Phase 3) §6 and §7 add the 5-post pack and §8 says all sales are final.
-  '/terms': '2026-10-25',
+  // 2026-10-26 (Phase 3): §6 and §7 add the 5-post pack and §8 says all sales are final.
+  '/terms': '2026-10-26',
   '/privacy': '2026-09-15',
   // 2026-10-25 (2027 re-price): two ladder cards, the ladder and renewal lines, and no plan card, CTA or FAQ;
-  // then (Phase 3) the 5-post pack card and answer, and the all sales final refund answer.
-  '/pricing': '2026-10-25',
+  // 2026-10-26 (Phase 3): the 5-post pack card and answer, and the all sales final refund answer.
+  '/pricing': '2026-10-26',
   // 2026-10-04 (backlog 2.2): the program guide card now resolves through
   // lib/blog.ts, which serves the guide from code, so the card renders; it
   // read the empty blog_posts table and never rendered before.
@@ -172,8 +172,8 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/tools/specialty-finder': '2026-10-23',
   '/tools/private-practice-revenue-calculator': '2026-10-23',
   // 2026-10-25 (2027 re-price): no plan mode or months field; renewals priced by the post they renew;
-  // then (Phase 3) the 5-post pack mode, its method note and the pack in the ladder lines.
-  '/tools/cost-per-hire-calculator': '2026-10-25',
+  // 2026-10-26 (Phase 3): the 5-post pack mode, its method note and the pack in the ladder lines.
+  '/tools/cost-per-hire-calculator': '2026-10-26',
   '/for-employers/resources': '2026-10-13',
   // 2026-10-20 (register 2.23): the credential checklist and the first FAQ
   // answer name the certifying body AANPCB.
@@ -197,8 +197,8 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // GEO release moved, and the plain copy pass trimmed the shared template
   // (app/compare/comparison-shared.tsx). COMPARE_REVIEW_DATE still stays.
   // 2026-10-25 (2027 re-price): our price cell and pricing paragraph state the new ladder and no plan;
-  // then (Phase 3) they add the 5-post pack.
-  '/compare/np-hiring-vs-indeed': '2026-10-25',
+  // 2026-10-26 (Phase 3): they add the 5-post pack.
+  '/compare/np-hiring-vs-indeed': '2026-10-26',
   // 2026-10-04 (backlog 2.1): the "comparing published prices" line dates
   // only the AANP price to the review (it read "both public, as of" the
   // review, five weeks before our promo and ladder went public), and the
@@ -206,15 +206,15 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // 2026-10-13: the salary row prints the moved stats review date and the
   // shared template was trimmed, as on the Indeed page above.
   // 2026-10-25 (2027 re-price): our price cell and pricing paragraph state the new ladder and no plan; AANP's own price stays;
-  // then (Phase 3) they add the 5-post pack.
-  '/compare/np-hiring-vs-aanp-jobcenter': '2026-10-25',
+  // 2026-10-26 (Phase 3): they add the 5-post pack.
+  '/compare/np-hiring-vs-aanp-jobcenter': '2026-10-26',
   // 2026-10-04 (backlog 2.1): "hiring an NP" (it read "a NP"). CQ-13 had
   // relinked its licensure row on 2026-09-29, like the Indeed page's.
   // 2026-10-13: the salary row prints the moved stats review date and the
   // shared template was trimmed, as on the Indeed page above.
   // 2026-10-25 (2027 re-price): our price cell and pricing paragraph state the new ladder and no plan;
-  // then (Phase 3) they add the 5-post pack.
-  '/compare/np-hiring-vs-enp-network': '2026-10-25',
+  // 2026-10-26 (Phase 3): they add the 5-post pack.
+  '/compare/np-hiring-vs-enp-network': '2026-10-26',
   // Every specialty salary page renders from one template: the specialty
   // config and content were rewritten on 2026-09-29 (specialty-config.ts,
   // specialty-content.ts), and the plain copy pass removed the related

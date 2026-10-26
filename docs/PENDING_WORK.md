@@ -221,16 +221,20 @@ re-checked against its sources that day; the dates table at the top lists the ne
 marks it limited; settle it at the quarterly /compare review (section 6). The avatar cleanup is yours (1.14).
 
 **2.27 The 2027 re-price build.** Phase 1 (the new ladder, both renewal prices, and the Employer plan taken off
-every page) is live since 2026-10-25 (8ac1d66). Phases 2 and 3 ship together: phase 2 is the 5-post pack's
-backend (00282e6, kept dark), and phase 3 its pages and copy (`/employer/post-pack`, the /pricing card, the
-dashboard card, Settings, Billing, the wizard captions, the emails, the GA events and the admin page
-`/admin/post-packs`), with all sales final on /terms and in every refund answer (D38). Left, in order:
-- the backend fixes queued from the code review, before phases 2 and 3 ship;
-- the ship itself: if it lands after 2026-10-25 (UTC), move the eight 2026-10-25 entries of
-  `PAGE_CONTENT_DATES` in `app/api/sitemaps/lastmod.ts` and the /terms "Last updated" line to the ship day;
-- phase 4: delete the dormant plan code (docs/pricing-system.md §11) once you confirm there is still no plan
-  row. In the Supabase SQL editor (read only): `select count(*) from employer_plans;` and
-  `select count(*) from employer_jobs where payment_status = 'plan';` should both answer 0.
+every page) is live since 2026-10-25 (8ac1d66). Phases 2 and 3 shipped together on 2026-10-26: the 5-post
+pack's backend (00282e6), its pages and copy (1d3e18b: `/employer/post-pack`, the /pricing card, the dashboard
+card, Settings, Billing, the wizard captions, the emails, the GA events and the admin page `/admin/post-packs`,
+with all sales final on /terms and in every refund answer, D38), and the code and security review fixes
+(e0e9d4e). The deploy applied migration `20261025000000_add_employer_post_packs`; the eight pages carry
+2026-10-26 in `PAGE_CONTENT_DATES`. The pack sells only once the ladder starts (2027-01-01) and paid posting
+is on. Left:
+- phase 4: delete the dormant plan code (docs/pricing-system.md §11) once there is still no plan row. Read
+  only: `select count(*) from employer_plans;` and `select count(*) from employer_jobs where payment_status =
+  'plan';` should both answer 0 (both did on 2026-10-24).
+- known gaps the reviews left open: no real-Postgres concurrency test (no non-production database, 1.8); if the
+  verify page or the sweep wins a post's claim and then fails the ledger write, nothing backfills it unless
+  Stripe is still retrying; the pack checkout return page names "ready" for a pack recorded refunded or
+  disputed before fulfilment (the pack list below it is right).
 
 ## 3. Decisions (DECISION)
 

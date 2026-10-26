@@ -97,7 +97,7 @@ export default function TermsPage() {
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px 0', lineHeight: 1.15 }}>
                 Terms of <span style={{ color: '#0284C7' }}>Service</span>
               </h1>
-              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: October 25, 2026</p>
+              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: October 26, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Image src="/images/terms/hero.webp" alt="Terms of Service" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
