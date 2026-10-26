@@ -97,7 +97,8 @@ describe('POST /api/jobs/update', () => {
         const { POST } = await import('@/app/api/jobs/update/route');
         const res = await POST(post('http://localhost:3000/api/jobs/update', JSON.stringify({ token: VALID_TOKEN, jobData: JOB_DATA })));
         expect(res.status).toBe(401);
-        expect(prisma.employerJob.findFirst).toHaveBeenCalledWith({ where: { editToken: VALID_TOKEN } });
+        // The lookup also loads the job state the edit window reads (lib/edit-token-window.ts).
+        expect(prisma.employerJob.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { editToken: VALID_TOKEN } }));
     });
 });
 

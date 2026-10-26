@@ -27,7 +27,9 @@ describe('B78 — create-checkout resume mode', () => {
   const src = read(CHECKOUT_ROUTE);
 
   it('branches into resumeAbandonedCheckout when resumeJobId is supplied', () => {
-    expect(src).toMatch(/resumeJobId\?: string/);
+    // The body is a JSON object of unknown values (lib/request-body.ts,
+    // register 2.29), so resumeJobId is used only once it is checked as text.
+    expect(src).toContain('const rawBody = await readJsonObject(request);');
     expect(src).toMatch(/typeof rawBody\.resumeJobId === 'string'/);
     // gaMetadata carries the consented GA client and session ids so a resumed
     // checkout keeps its attribution (tests/regressions/checkout-ga-attribution.test.ts

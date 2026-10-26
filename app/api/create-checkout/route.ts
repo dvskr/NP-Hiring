@@ -37,11 +37,10 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { gaCheckoutMetadata, idempotencyKeyWithGaIds } from '@/lib/analytics-server';
 import {
   sanitizeJobPosting,
-  sanitizeUrl,
-  sanitizeEmail,
   sanitizeText,
   normalizeContentWhitespace,
 } from '@/lib/sanitize';
+import { readJsonObject } from '@/lib/request-body';
 import { createClient } from '@/lib/supabase/server';
 import { getBaseUrl, getEnv, isFeatureEnabled } from '@/lib/env';
 import { normalizeSalary } from '@/lib/salary-normalizer';
@@ -50,46 +49,41 @@ import { computeQualityScore } from '@/lib/utils/quality-score';
 import { parseLocation } from '@/lib/location-parser';
 import { summarizeForMeta } from '@/lib/description-cleaner';
 import { normalizeExperienceFromInput } from '@/lib/experience-label';
+import {
+  validateBenefits,
+  validateSetting,
+  validatePopulation,
+  sanitizeLogoUrl,
+} from '@/app/api/jobs/post-free/_lib/job-attributes';
 
-interface CheckoutRequestBody {
-  /**
-   * B78 — resume an abandoned checkout. When set, every other field is
-   * ignored: the already-persisted Job + EmployerJob are re-used and a
-   * fresh Stripe session is minted for them instead of creating duplicates.
-   */
-  resumeJobId?: string;
-  title: string;
-  companyName: string;
-  companyWebsite?: string;
-  contactEmail: string;
-  location: string;
-  mode: string;
-  jobType: string;
-  salaryMin?: number | null;
-  salaryMax?: number | null;
-  salaryPeriod?: string;
-  salaryCompetitive?: boolean;
-  description: string;
-  applyUrl?: string;
-  applyOnPlatform?: boolean;
-  pricingTier?: PricingTier; // ignored — single tier, kept for backward compat
-  benefits?: string[];
-  setting?: string;
-  population?: string;
-  companyLogoUrl?: string;
-  // Phase 1 experience picker — see lib/experience-label.ts.
-  minYearsExperience?: number | null;
-  maxYearsExperience?: number | null;
-  newGradFriendly?: boolean;
-  experienceQualifier?: string | null;
-  screeningQuestions?: {
-    text: string;
-    type: string;
-    options?: string[];
-    required?: boolean;
-    knockout?: boolean;
-    knockoutAnswer?: string;
-  }[];
+/*
+ * The body is untrusted JSON, read as an object of unknown values
+ * (lib/request-body.ts) and narrowed where each value is used, never
+ * annotated with the shape it should have (register 2.29): a number or an
+ * object where text belongs reads as missing. Fields: resumeJobId (B78,
+ * resume an abandoned checkout; every other field is then ignored and the
+ * persisted Job and EmployerJob are re-used), title, companyName,
+ * companyWebsite, contactEmail, location, mode, jobType, salaryMin,
+ * salaryMax, salaryPeriod, description, applyUrl, applyOnPlatform, benefits,
+ * setting, population (the free post's validators), companyLogoUrl
+ * (sanitizeUrl), the experience picker (minYearsExperience, newGradFriendly,
+ * experienceQualifier; lib/experience-label.ts) and screeningQuestions. A
+ * pricingTier in the body is ignored: the rung is priced server side.
+ */
+
+/** The value when it is text, else ''. */
+function textField(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+/** The value when it is text, else undefined. */
+function optionalTextField(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+/** A salary figure as sent, a number or numeric text, else undefined. */
+function salaryField(value: unknown): string | number | undefined {
+  return typeof value === 'string' || typeof value === 'number' ? value : undefined;
 }
 
 export async function POST(request: NextRequest) {
@@ -147,7 +141,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const rawBody: CheckoutRequestBody = await request.json();
+    const rawBody = await readJsonObject(request);
+    if (!rawBody) {
+      return NextResponse.json({ error: 'Request body must be a JSON object' }, { status: 400 });
+    }
 
     // Auth — paid posts still must be tied to an authenticated employer.
     // The SIGNUP email domain (not the form's contactEmail) anchors the
@@ -210,18 +207,18 @@ export async function POST(request: NextRequest) {
 
     // Sanitize core fields
     const sanitized = sanitizeJobPosting({
-      title: rawBody.title || '',
-      employer: rawBody.companyName || '',
-      location: rawBody.location || '',
-      description: normalizeContentWhitespace(rawBody.description ?? ''),
-      applyLink: rawBody.applyUrl || null,
-      contactEmail: rawBody.contactEmail || '',
-      mode: rawBody.mode,
-      jobType: rawBody.jobType,
-      companyWebsite: rawBody.companyWebsite,
-      minSalary: rawBody.salaryMin ?? undefined,
-      maxSalary: rawBody.salaryMax ?? undefined,
-      salaryPeriod: rawBody.salaryPeriod,
+      title: textField(rawBody.title),
+      employer: textField(rawBody.companyName),
+      location: textField(rawBody.location),
+      description: normalizeContentWhitespace(textField(rawBody.description)),
+      applyLink: optionalTextField(rawBody.applyUrl) || null,
+      contactEmail: textField(rawBody.contactEmail),
+      mode: optionalTextField(rawBody.mode),
+      jobType: optionalTextField(rawBody.jobType),
+      companyWebsite: optionalTextField(rawBody.companyWebsite),
+      minSalary: salaryField(rawBody.salaryMin),
+      maxSalary: salaryField(rawBody.salaryMax),
+      salaryPeriod: optionalTextField(rawBody.salaryPeriod),
     });
 
     const applyOnPlatform = !!rawBody.applyOnPlatform;
@@ -242,6 +239,21 @@ export async function POST(request: NextRequest) {
         { error: `Missing required fields: ${missing.join(', ')}` },
         { status: 400 }
       );
+    }
+
+    // The free post's validators and 400s (register 2.29): benefits must be
+    // a short list of text, setting and population listed wizard values.
+    const benefitsResult = validateBenefits(rawBody.benefits);
+    if (!benefitsResult.ok) {
+      return NextResponse.json({ error: benefitsResult.error }, { status: 400 });
+    }
+    const settingResult = validateSetting(rawBody.setting);
+    if (!settingResult.ok) {
+      return NextResponse.json({ error: settingResult.error }, { status: 400 });
+    }
+    const populationResult = validatePopulation(rawBody.population);
+    if (!populationResult.ok) {
+      return NextResponse.json({ error: populationResult.error }, { status: 400 });
     }
 
     // Ladder rung: 'intro' until this company domain has one paid post,
@@ -339,9 +351,9 @@ export async function POST(request: NextRequest) {
           // never left NULL (indexing audit fixSoon 5).
           contentChangedAt: new Date(),
           qualityScore,
-          benefits: Array.isArray(rawBody.benefits) ? rawBody.benefits : [],
-          setting: rawBody.setting || null,
-          population: rawBody.population || null,
+          benefits: benefitsResult.value,
+          setting: settingResult.value,
+          population: populationResult.value,
           ...(() => {
             const sanitizedQualifier =
               typeof rawBody.experienceQualifier === 'string'
@@ -373,7 +385,7 @@ export async function POST(request: NextRequest) {
           employerName: sanitized.employer,
           contactEmail: sanitized.contactEmail,
           companyWebsite: sanitized.companyWebsite || null,
-          companyLogoUrl: rawBody.companyLogoUrl || null,
+          companyLogoUrl: sanitizeLogoUrl(rawBody.companyLogoUrl),
           jobId: created.id,
           editToken,
           dashboardToken,

@@ -26,6 +26,15 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
     } catch {
         return null;
     }
+    return asJsonObject(parsed);
+}
+
+/**
+ * A parsed JSON value when it is an object, else null (null, an array or a
+ * bare primitive). For a route that has to read the body as text first, for
+ * example to cap its size before parsing it.
+ */
+export function asJsonObject(parsed: unknown): Record<string, unknown> | null {
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
     return parsed as Record<string, unknown>;
 }

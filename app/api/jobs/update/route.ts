@@ -5,6 +5,7 @@ import { summarizeForMeta } from '@/lib/description-cleaner';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { readJsonObject, stringField } from '@/lib/request-body';
+import { EDIT_WINDOW_JOB_SELECT, editWindowClosedResponse, isEditWindowClosed } from '@/lib/edit-token-window';
 import { inngest } from '@/lib/inngest/client';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
@@ -18,6 +19,7 @@ import {
   validateSetting,
   validatePopulation,
   classifyEmployerJob,
+  sanitizeLogoUrl,
 } from '../post-free/_lib/job-attributes';
 
 interface ScreeningQuestionInput {
@@ -104,6 +106,7 @@ export async function POST(request: NextRequest) {
     // Verify token
     const employerJob = await prisma.employerJob.findFirst({
       where: { editToken: token },
+      include: { job: { select: EDIT_WINDOW_JOB_SELECT } },
     });
 
     if (!employerJob) {
@@ -111,6 +114,12 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid or expired edit token' },
         { status: 401 }
       );
+    }
+
+    // The edit form's window (register 2.29): a post unpublished more than
+    // 30 days past its expiry no longer takes its edit token.
+    if (isEditWindowClosed(employerJob.job)) {
+      return editWindowClosedResponse('jobs-update', token, employerJob.jobId);
     }
 
     // The stored values of every rendered field this edit can write, so the
@@ -271,7 +280,7 @@ export async function POST(request: NextRequest) {
           contactEmail: jobData.contactEmail || employerJob.contactEmail,
           companyWebsite: jobData.companyWebsite || employerJob.companyWebsite,
           ...(rawJobData.companyLogoUrl !== undefined
-            ? { companyLogoUrl: rawJobData.companyLogoUrl ? sanitizeUrl(rawJobData.companyLogoUrl) : null }
+            ? { companyLogoUrl: sanitizeLogoUrl(rawJobData.companyLogoUrl) }
             : {}),
         },
       });
@@ -320,6 +329,10 @@ export async function POST(request: NextRequest) {
 
 // Unpublish job endpoint
 export async function DELETE(request: NextRequest) {
+  // The same bucket as the save: both take the edit token as their only credential.
+  const rateLimitResult = await rateLimit(request, 'jobs-update', RATE_LIMITS.general);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
@@ -334,6 +347,7 @@ export async function DELETE(request: NextRequest) {
     // Verify token
     const employerJob = await prisma.employerJob.findFirst({
       where: { editToken: token },
+      include: { job: { select: EDIT_WINDOW_JOB_SELECT } },
     });
 
     if (!employerJob) {
@@ -341,6 +355,10 @@ export async function DELETE(request: NextRequest) {
         { error: 'Invalid or expired edit token' },
         { status: 401 }
       );
+    }
+
+    if (isEditWindowClosed(employerJob.job)) {
+      return editWindowClosedResponse('jobs-update', token, employerJob.jobId);
     }
 
     // Unpublish job (soft delete). isManuallyUnpublished marks it as the

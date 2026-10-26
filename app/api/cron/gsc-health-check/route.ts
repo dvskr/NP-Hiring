@@ -13,6 +13,7 @@ import {
     GSC_DIMENSION_ROW_LIMIT,
     type GscDimensionRow,
     type GscSitemapEntry,
+    type SearchAnalyticsAggregate,
 } from '@/lib/gsc-client';
 
 export const maxDuration = 60;
@@ -39,10 +40,21 @@ export const maxDuration = 60;
  * Steps 2 and 3 degrade independently: a dimension or sitemaps failure is
  * recorded in metrics but never blocks the core snapshot (step 1).
  *
+ * A run that read nothing writes no row (register 2.30): no Search Analytics
+ * row for either day, no query or page rows and no sitemaps. It logs once and
+ * alerts Discord once per such streak (again on the next run if the alert was
+ * not delivered). Before, it saved a row of zeros every day. A day Search Console answers no row for (yesterday
+ * usually: its data lags about two days behind the 09:30 UTC run) is reported
+ * as not read, never as zero traffic, and the drop alerts compare only two
+ * days it answered for (tests/api/gsc-health-check-snapshot.test.ts).
+ *
  * NOTE: the GSC coverage BREAKDOWN (crawled-not-indexed etc.) has no public
  * API — that still comes from UI bulk exports (seed-deindex-queue.ts).
  * Renderable/indexable coverage in admin/seo-health is computed from our
- * own pseoStats instead (lib/gsc-coverage.ts).
+ * own pseoStats instead (lib/gsc-coverage.ts). So the coverage columns of
+ * gsc_snapshots (indexedTotal and the rest) are never written and keep their
+ * default 0 on every row; dropping them or filling them from an export is
+ * decision B40.
  *
  * Auth required:
  *   GSC_SERVICE_ACCOUNT_KEY env var = JSON-stringified service account JSON
@@ -66,7 +78,7 @@ export async function GET(request: NextRequest) {
     const startTime = Date.now();
 
     try {
-        return await withCronTracking('gsc-health-check', async () => {
+        return await withCronTracking(CRON_NAME, async () => {
         // Record the skip as a real (skipped) run so cron_runs shows the cron is
         // firing — an unconfigured GSC key shouldn't make it look like it never ran.
         const config = getGscConfig();
@@ -90,13 +102,10 @@ export async function GET(request: NextRequest) {
         const yesterday = isoDate(daysAgo(1));
         const last7DaysAgo = isoDate(daysAgo(7));
 
+        // null: Search Console answered no row for that day (not processed
+        // yet, or no impressions), which is not a day of zero traffic.
         const todayRow = await fetchSearchAnalyticsAggregate(accessToken, siteUrl, yesterday, yesterday);
         const weekAgoRow = await fetchSearchAnalyticsAggregate(accessToken, siteUrl, last7DaysAgo, last7DaysAgo);
-
-        const todayClicks = todayRow?.clicks ?? 0;
-        const todayImpressions = todayRow?.impressions ?? 0;
-        const weekAgoClicks = weekAgoRow?.clicks ?? 0;
-        const weekAgoImpressions = weekAgoRow?.impressions ?? 0;
 
         // ── 2. Dimension windows for week-over-week movers (best-effort).
         // current: yesterday-6 … yesterday; previous: the 7 days before that.
@@ -144,6 +153,35 @@ export async function GET(request: NextRequest) {
             console.error('[CRON:gsc-health-check] Sitemaps list failed (snapshot continues):', err);
         }
 
+        const readErrors = {
+            ...(dimensionError ? { dimensionError } : {}),
+            ...(sitemapError ? { sitemapError } : {}),
+        };
+
+        // Nothing read, nothing written (register 2.30): a row here would be
+        // zeros Search Console never reported.
+        if (!readAnything({ todayRow, weekAgoRow, dimensions, sitemaps })) {
+            const message =
+                `Search Console returned no Search Analytics row for ${yesterday} or ${last7DaysAgo}, ` +
+                `no query or page rows and no sitemaps, so no snapshot was written for ${yesterday}.`;
+            console.warn(`[CRON:gsc-health-check] ${message}`);
+            const { alertSent, streakAlerted } = await alertNoDataOnce(message, readErrors);
+            return {
+                response: NextResponse.json({
+                    success: true,
+                    skipped: true,
+                    reason: NO_DATA_REASON,
+                    capturedOn: yesterday,
+                    message,
+                    alertSent,
+                    ...readErrors,
+                    duration: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+                    timestamp: new Date().toISOString(),
+                }),
+                metrics: { snapshotSkipped: true, reason: NO_DATA_REASON, capturedOn: yesterday, alertSent, streakAlerted, ...readErrors },
+            };
+        }
+
         // Persist a snapshot row. Stringify+parse to coerce the typed
         // payload into Prisma's structural InputJsonValue.
         const rawPayload = JSON.parse(
@@ -159,18 +197,25 @@ export async function GET(request: NextRequest) {
             create: { capturedOn: new Date(yesterday), raw: rawPayload },
         });
 
-        // Regression detection.
+        // Regression detection, only between two days Search Console answered
+        // for: a day it has not processed yet is not a drop to zero.
         const alerts: string[] = [];
-        if (weekAgoClicks > 0) {
-            const clickDelta = (todayClicks - weekAgoClicks) / weekAgoClicks;
-            if (clickDelta < -0.20) {
-                alerts.push(`📉 GSC clicks dropped ${(clickDelta * 100).toFixed(1)}% week-over-week (${weekAgoClicks} → ${todayClicks})`);
+        if (todayRow && weekAgoRow) {
+            const todayClicks = todayRow.clicks;
+            const todayImpressions = todayRow.impressions;
+            const weekAgoClicks = weekAgoRow.clicks;
+            const weekAgoImpressions = weekAgoRow.impressions;
+            if (weekAgoClicks > 0) {
+                const clickDelta = (todayClicks - weekAgoClicks) / weekAgoClicks;
+                if (clickDelta < -0.20) {
+                    alerts.push(`📉 GSC clicks dropped ${(clickDelta * 100).toFixed(1)}% week-over-week (${weekAgoClicks} → ${todayClicks})`);
+                }
             }
-        }
-        if (weekAgoImpressions > 0) {
-            const imprDelta = (todayImpressions - weekAgoImpressions) / weekAgoImpressions;
-            if (imprDelta < -0.15) {
-                alerts.push(`📉 GSC impressions dropped ${(imprDelta * 100).toFixed(1)}% week-over-week (${weekAgoImpressions} → ${todayImpressions})`);
+            if (weekAgoImpressions > 0) {
+                const imprDelta = (todayImpressions - weekAgoImpressions) / weekAgoImpressions;
+                if (imprDelta < -0.15) {
+                    alerts.push(`📉 GSC impressions dropped ${(imprDelta * 100).toFixed(1)}% week-over-week (${weekAgoImpressions} → ${todayImpressions})`);
+                }
             }
         }
 
@@ -202,8 +247,9 @@ export async function GET(request: NextRequest) {
         return {
             response: NextResponse.json({
                 success: true,
-                today: { clicks: todayClicks, impressions: todayImpressions },
-                weekAgo: { clicks: weekAgoClicks, impressions: weekAgoImpressions },
+                // null: not read (see readAnything), never a reported zero.
+                today: todayRow ? { clicks: todayRow.clicks, impressions: todayRow.impressions } : null,
+                weekAgo: weekAgoRow ? { clicks: weekAgoRow.clicks, impressions: weekAgoRow.impressions } : null,
                 alerts,
                 sitemaps: sitemaps
                     ? {
@@ -215,29 +261,29 @@ export async function GET(request: NextRequest) {
                     : null,
                 sitemapAlerts,
                 dimensionsCaptured: dimensions !== null,
-                ...(dimensionError ? { dimensionError } : {}),
-                ...(sitemapError ? { sitemapError } : {}),
+                ...readErrors,
                 duration: `${duration}s`,
                 timestamp: new Date().toISOString(),
             }),
             metrics: {
-                todayClicks,
-                todayImpressions,
-                weekAgoClicks,
-                weekAgoImpressions,
+                todayRead: todayRow !== null,
+                weekAgoRead: weekAgoRow !== null,
+                todayClicks: todayRow?.clicks ?? null,
+                todayImpressions: todayRow?.impressions ?? null,
+                weekAgoClicks: weekAgoRow?.clicks ?? null,
+                weekAgoImpressions: weekAgoRow?.impressions ?? null,
                 alertCount: alerts.length,
                 sitemapCount: sitemaps?.length ?? 0,
                 sitemapErrorCount: sitemaps?.reduce((sum, s) => sum + s.errors, 0) ?? 0,
                 sitemapAlertCount: sitemapAlerts.length,
                 queryRows: dimensions?.queries.current.length ?? 0,
                 pageRows: dimensions?.pages.current.length ?? 0,
-                ...(dimensionError ? { dimensionError } : {}),
-                ...(sitemapError ? { sitemapError } : {}),
+                ...readErrors,
             },
         };
         });
     } catch (error) {
-        await sendCronFailureAlert('gsc-health-check', error);
+        await sendCronFailureAlert(CRON_NAME, error);
         console.error('[CRON:gsc-health-check] Error:', error);
         return NextResponse.json(
             {
@@ -252,6 +298,81 @@ export async function GET(request: NextRequest) {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+/** cron_runs.name for this cron. */
+const CRON_NAME = 'gsc-health-check';
+
+/** The reason a run that read nothing records, in its answer and its metrics. */
+const NO_DATA_REASON = 'no data';
+
+interface SnapshotReads {
+    todayRow: SearchAnalyticsAggregate | null;
+    weekAgoRow: SearchAnalyticsAggregate | null;
+    dimensions: {
+        queries: { current: GscDimensionRow[]; previous: GscDimensionRow[] };
+        pages: { current: GscDimensionRow[]; previous: GscDimensionRow[] };
+    } | null;
+    sitemaps: GscSitemapEntry[] | null;
+}
+
+/** True when Search Console answered something worth storing. */
+function readAnything({ todayRow, weekAgoRow, dimensions, sitemaps }: SnapshotReads): boolean {
+    if (todayRow !== null || weekAgoRow !== null) return true;
+    const dimensionRows = dimensions
+        ? [dimensions.queries.current, dimensions.queries.previous, dimensions.pages.current, dimensions.pages.previous]
+        : [];
+    if (dimensionRows.some((rows) => rows.length > 0)) return true;
+    return (sitemaps?.length ?? 0) > 0;
+}
+
+/**
+ * True when stored run metrics are those of a run that read nothing, in a
+ * streak whose alert was delivered (by that run or an earlier one).
+ */
+function streakAlreadyAlerted(metrics: unknown): boolean {
+    if (typeof metrics !== 'object' || metrics === null || Array.isArray(metrics)) return false;
+    const stored = metrics as Record<string, unknown>;
+    return stored.snapshotSkipped === true && stored.streakAlerted === true;
+}
+
+/**
+ * Alert Discord once per no-data streak. The newest successful run before
+ * this one (withCronTracking's row for this run is not marked successful yet)
+ * says whether the streak's alert was already delivered; each skipped run
+ * carries that forward as streakAlerted, so an alert that was not delivered is
+ * tried again on the next run. A failed read alerts anyway: a second alert
+ * costs less than a silent outage.
+ */
+async function alertNoDataOnce(
+    message: string,
+    readErrors: { dimensionError?: string; sitemapError?: string },
+): Promise<{ alertSent: boolean; streakAlerted: boolean }> {
+    try {
+        const last = await prisma.cronRun.findFirst({
+            where: { name: CRON_NAME, success: true },
+            orderBy: { startedAt: 'desc' },
+            select: { metrics: true },
+        });
+        if (streakAlreadyAlerted(last?.metrics)) return { alertSent: false, streakAlerted: true };
+    } catch (err) {
+        console.error('[CRON:gsc-health-check] Could not read the previous run, alerting anyway:', err);
+    }
+    const lines = [
+        message,
+        ...(readErrors.dimensionError ? [`Query and page rows failed: ${readErrors.dimensionError}`] : []),
+        ...(readErrors.sitemapError ? [`Sitemaps failed: ${readErrors.sitemapError}`] : []),
+        'Later runs log this until Search Console answers again.',
+    ];
+    const sent = await sendDiscordMessage('', [
+        {
+            title: 'GSC Health Check: no data, snapshot not written',
+            description: lines.join('\n').slice(0, 1900),
+            color: 0xFFAA00,
+            timestamp: new Date().toISOString(),
+        },
+    ]);
+    return { alertSent: sent, streakAlerted: sent };
+}
 
 function daysAgo(n: number): Date {
     const d = new Date();

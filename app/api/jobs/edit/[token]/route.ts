@@ -5,6 +5,7 @@ import { NEW_POST_CHARGE_SELECT } from '@/lib/pricing';
 import { renewalRungForRow } from '@/lib/renewal-price';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { editWindowClosedResponse, isEditWindowClosed } from '@/lib/edit-token-window';
 
 /**
  * GET /api/jobs/edit/[token]
@@ -77,27 +78,12 @@ export async function GET(
       );
     }
 
-    // P5.A fix (2026-06-01): runbook flagged that the edit token never
-    // expires — once a confirmation email leaks (forwarded, archived,
-    // breached) anyone can edit/unpublish the posting indefinitely.
-    // Bound the validity window: the token is honored while the job is
-    // published OR within 30 days of its expiresAt cutoff. Anything past
-    // that is rejected so an old leaked email can't reach a years-old
-    // record. Renewal/repost flows mint fresh tokens (see the webhook).
-    const EDIT_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
-    const expiresAt = employerJob.job.expiresAt;
-    if (!employerJob.job.isPublished) {
-      const ageMs = expiresAt ? Date.now() - new Date(expiresAt).getTime() : Number.POSITIVE_INFINITY;
-      if (ageMs > EDIT_GRACE_MS) {
-        logger.warn('[jobs-edit] edit-token rejected: job too far past expiry', {
-          tokenPrefix: token.slice(0, 4),
-          jobId: employerJob.job.id,
-        });
-        return NextResponse.json(
-          { error: 'Edit window has closed for this posting. See your options in your dashboard.' },
-          { status: 401 }
-        );
-      }
+    // P5.A fix (2026-06-01): the token is honored while the job is published
+    // or until 30 days past its expiresAt, so an old leaked confirmation email
+    // cannot reach a long dead post. The save and the unpublish
+    // (/api/jobs/update) apply the same rule (lib/edit-token-window.ts).
+    if (isEditWindowClosed(employerJob.job)) {
+      return editWindowClosedResponse('jobs-edit', token, employerJob.job.id);
     }
 
     return NextResponse.json({

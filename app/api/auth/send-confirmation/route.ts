@@ -10,6 +10,7 @@ import {
 import { sendAndLog } from '@/lib/email-service'
 import { brand } from '@/config/brand'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
+import { readJsonObject } from '@/lib/request-body'
 
 import { getConfirmationEligibility, isValidEmailAddress } from './confirmation-eligibility'
 
@@ -33,12 +34,8 @@ export async function POST(request: NextRequest) {
   })
   if (rateLimitResult) return rateLimitResult
 
-  let body: { email?: unknown; next?: unknown } | null
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Email is required' }, { status: 400 })
-  }
+  // Malformed JSON, or a body that is not an object, reads as null: no email.
+  const body = await readJsonObject(request)
 
   const email = body?.email
   if (!email || typeof email !== 'string') {

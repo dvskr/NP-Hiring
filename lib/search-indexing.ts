@@ -25,6 +25,13 @@ interface IndexResult {
     engine: string;
     url: string;
     success: boolean;
+    /**
+     * True when the channel was never asked because it is not configured
+     * (today only Bing Webmaster without BING_WEBMASTER_API_KEY, which is
+     * optional: IndexNow reaches Bing). Reporters count these as skipped,
+     * not failed (register 2.30). `error` still says why.
+     */
+    skipped?: boolean;
     error?: string;
 }
 
@@ -530,10 +537,18 @@ export async function pingGoogle(
 
 // ─── Bing URL Submission API ─────────────────────────────────────────────────
 
+/** IndexResult.error of a Bing submission skipped for want of BING_WEBMASTER_API_KEY. */
+export const BING_NOT_CONFIGURED = 'BING_WEBMASTER_API_KEY not set';
+
+/** The result for a URL the Bing Webmaster API was never asked about. */
+function bingSkipped(url: string): IndexResult {
+    return { engine: 'Bing', url, success: false, skipped: true, error: BING_NOT_CONFIGURED };
+}
+
 export async function pingBing(url: string): Promise<IndexResult> {
     const apiKey = process.env.BING_WEBMASTER_API_KEY;
     if (!apiKey) {
-        return { engine: 'Bing', url, success: false, error: 'BING_WEBMASTER_API_KEY not set' };
+        return bingSkipped(url);
     }
 
     try {
@@ -559,7 +574,7 @@ export async function pingBing(url: string): Promise<IndexResult> {
 export async function pingBingBatch(urls: string[]): Promise<IndexResult[]> {
     const apiKey = process.env.BING_WEBMASTER_API_KEY;
     if (!apiKey) {
-        return urls.map(url => ({ engine: 'Bing', url, success: false, error: 'BING_WEBMASTER_API_KEY not set' }));
+        return urls.map(bingSkipped);
     }
 
     const results: IndexResult[] = [];

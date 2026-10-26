@@ -37,7 +37,6 @@ import { paidPackWhere } from '@/lib/post-packs';
 import { logger } from '@/lib/logger';
 import { sendConfirmationEmail } from '@/lib/email-service';
 import { pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
-import { anonymizeEmail } from '@/lib/server-utils';
 import { trackServerPurchase, type PurchaseParams } from '@/lib/analytics-server';
 
 /** How sendPurchaseEvent made sure the purchase POST leaves. Returned for tests. */
@@ -421,18 +420,22 @@ export async function activatePaidJobCheckout(
     });
   }
 
-  // Clean up any job drafts for this email (no longer needed)
-  try {
-    const deletedDrafts = await prisma.jobDraft.deleteMany({
-      where: { email: employerJob.contactEmail },
-    });
-    if (deletedDrafts.count > 0) {
-      const anonymizedEmail = anonymizeEmail(employerJob.contactEmail);
-      logger.debug('Deleted drafts', { count: deletedDrafts.count, email: anonymizedEmail });
+  // Clear the buyer's own saved draft. A draft belongs to the account that
+  // saved it (JobDraft.userId, app/api/job-draft/route.ts), never to the
+  // contact email the checkout form carried, which can be anyone's address
+  // (register 2.29). A legacy row no account claimed clears nothing.
+  if (employerJob.userId) {
+    try {
+      const deletedDrafts = await prisma.jobDraft.deleteMany({
+        where: { userId: employerJob.userId },
+      });
+      if (deletedDrafts.count > 0) {
+        logger.debug('Deleted drafts', { count: deletedDrafts.count, jobId });
+      }
+    } catch (draftError) {
+      logger.error('Failed to delete job drafts', draftError, { jobId });
+      // Don't throw - job already activated
     }
-  } catch (draftError) {
-    logger.error('Failed to delete job drafts', draftError, { jobId });
-    // Don't throw - job already activated
   }
 
   if (published) logger.info('Job published', { jobId });

@@ -12,10 +12,14 @@
  *   (lib/pseo/category-tagger.ts), so the category classifier can trust them.
  * - professionClass is assigned by the same deterministic classifier the
  *   ingestion pipeline uses.
+ * - companyLogoUrl goes through sanitizeUrl, as the edit stores it.
+ *
+ * POST /api/create-checkout (the paid post) runs the same validators, so the
+ * two create paths answer the same 400 for the same input (register 2.29).
  */
 import { EMPLOYER_SETTING_TAGS, EMPLOYER_POPULATION_TAGS } from '@/lib/pseo/category-tagger';
 import { classifyProfession, type ProfessionClass } from '@/lib/profession-classifier';
-import { sanitizeText } from '@/lib/sanitize';
+import { sanitizeText, sanitizeUrl } from '@/lib/sanitize';
 
 export const WORK_MODES = ['Remote', 'Hybrid', 'In-Person'] as const;
 export type WorkMode = (typeof WORK_MODES)[number];
@@ -102,6 +106,21 @@ export function validateSetting(input: unknown, storedValue?: string | null): Va
 
 export function validatePopulation(input: unknown, storedValue?: string | null): Validated<string | null> {
   return validateRegistryValue('population', EMPLOYER_POPULATION_TAGS, input, storedValue);
+}
+
+/**
+ * The logo address to store: the sent text through sanitizeUrl (http, https,
+ * mailto or a site path, trimmed). An address it refuses (javascript:,
+ * data:text/html, protocol relative, any other scheme), a site path with a
+ * backslash (browsers read "/\host" as the protocol relative "//host"), a value
+ * that is not text, or a blank stores no logo. The create paths and the edit
+ * (POST /api/jobs/update) store it the same way.
+ */
+export function sanitizeLogoUrl(input: unknown): string | null {
+  if (typeof input !== 'string' || input.trim() === '') return null;
+  const url = sanitizeUrl(input);
+  if (url.startsWith('/') && url.includes('\\')) return null;
+  return url || null;
 }
 
 export interface ProfessionFields {

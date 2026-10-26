@@ -210,25 +210,32 @@ is on. Phase 4, the deletion of the retired plan's code, is under Closed (2026-1
   Stripe is still retrying; the pack checkout return page names "ready" for a pack recorded refunded or
   disputed before fulfilment (the pack list below it is right).
 
-**2.29 Security follow-ups from the 2026-10-24 sweep.** The sweep that followed the edit token hotfix
-(`3574809`, `862b8af`) read all 91 routes that parse a request body and found no other critical or high hole.
-Left, all low:
-- An edit token never expires for editing or unpublishing (`app/api/jobs/update/route.ts`), while the edit
-  page (`app/api/jobs/edit/[token]/route.ts`) allows 30 days.
-- The paid checkout (`app/api/create-checkout/route.ts`) stores benefits, setting and population without the
-  validators the free post uses (`app/api/jobs/post-free/_lib/job-attributes.ts`), and both store the logo
-  address without `sanitizeUrl`.
-- A new post deletes any saved draft filed under the same client supplied contact email
-  (`app/api/jobs/post-free/route.ts`), even another employer's.
-- A lint rule (no unsafe assignment or member access) would flag every `const body: T = await
-  request.json()`, the pattern behind the edit token hole.
+**2.29 Security follow-ups from the 2026-10-24 sweep.** The four parts the sweep listed shipped on 2026-10-27
+(Closed). Left, found on the way, all low:
+- Two casts the new guard does not reach, of a body value already read as unknown: `jobDataInput as
+  UpdateJobData` in `app/api/jobs/update/route.ts`, where a field that is not text answers 500 to the token's
+  holder (reading each field as text needs required field rules that the live edit form and legacy posts
+  meet), and `parsed as CreateAlertBody` in `app/api/job-alerts/route.ts`, whose values go through
+  `sanitizeJobAlert`, which takes unknowns.
+- The paid checkout still skips three steps the free post runs: the work mode check (`normalizeWorkMode`),
+  remote and hybrid from the mode (`deriveWorkModeFlags`), and the profession classifier. A paid post stores its
+  mode as sent, takes remote and hybrid from the location text, and has no profession class. It sells only once
+  paid posting is on.
+- The invoice and receipt links (`app/api/employer/invoice/route.ts`, `app/api/employer/receipt/route.ts`) take
+  the edit token, like the dashboard token, with no window. They only read.
+- Nothing deletes expired drafts: the job-draft route drops one only when its owner reads it, and the purge
+  drops a deleted account's. Drafts saved before 2026-05-14 with no account, which the contact email cleanup
+  used to clear by chance, stay. A daily delete of rows past `expiresAt` would do it.
 
-**2.30 Monitoring that reports the wrong thing.** CI is green again since 2026-10-25 (Closed). Left:
-- The daily Search Console snapshot (`gsc_snapshots`, written by the gsc-health-check cron) has saved all
-  zeros since at least 2026-10-15, so its "indexing dropped" alert can never fire. Find why (credentials, the
-  property, or no coverage API: B40) and either read real data or stop writing zero rows.
-- The daily indexing cron (`app/api/cron/index-urls/route.ts`) reports every Bing Webmaster submission as
-  failed while `BING_WEBMASTER_API_KEY` is unset (1.5); it should say skipped. IndexNow already reaches Bing.
+**2.30 Monitoring that reports the wrong thing.** CI (2026-10-25), the Search Console snapshot and the
+index-urls Bing count (2026-10-27) are Closed. Left:
+- The snapshot's "today" is yesterday, which Search Console has usually not processed when the
+  gsc-health-check cron runs at 09:30 UTC (its data lags about two days), so the week over week drop alert
+  seldom has two answered days to compare. Reading the newest day Search Console has processed (a query by
+  the `date` dimension) would make it fire.
+- `app/api/cron/index-pseo/route.ts` still counts a Bing submission skipped for want of
+  `BING_WEBMASTER_API_KEY` as failed. `lib/search-indexing.ts` now marks those results `skipped`, so it needs
+  the same count index-urls has.
 
 **2.32 Grow what Google will index.** Today the sitemaps list about 1,000 URLs (781 jobs, 213 others) by
 design: a listing page needs 5 jobs from 3 employers, a company page 5 live jobs, and the specialty by state
@@ -397,6 +404,28 @@ tests fail until every side agrees:
 - 2.28 Pricing review follow-ups: the renewal price can no longer be computed from a row loaded without its charges, a failed first-post ledger write makes Stripe retry, and the long test file was split (`00282e6`, `e0e9d4e`).
 - 2.31 AI in production: production had no `OPENAI_API_KEY` until you added it on 2026-10-24, so every AI call had failed since launch (555 calls, 485 of them the site's own daily eval). Since the redeploy every call succeeds; the 2026-10-25 08:00 UTC eval made 5 of 5 scoring calls (about $0.25 a month). One application from 2026-10-23 still has no AI score; scoring it is a production write, so it waits for your OK.
 - 2.30 (part) CI: every workflow failed on every push in October. `9e1a154`, `ff42e8f` and `0ad137e` fixed the installs (a placeholder `DIRECT_URL` for prisma generate), the PII scan (the resume parser's do-not-extract list), SEO Guard's base address, and run the AI evals dry without the OpenAI key secret. The migration workflow now skips with a notice without `PROD_DIRECT_DATABASE_URL` (the Vercel build applies migrations).
+- 2.30 (part) The Search Console snapshot and the Bing count (2026-10-27): every `gsc_snapshots` row read as
+  zeros because its coverage columns are never written (no API for coverage, B40) and because its "today" is a
+  day Search Console has usually not processed yet, which the cron stores as null and which its drop alerts
+  and the admin SEO health page (`app/admin/seo-health/page.tsx`) read as zero traffic. The key and the
+  property were right (a wrong one fails the run). A run that reads nothing at all now writes no row, logs
+  once and alerts Discord once per such streak. A run that reads anything still writes it, and in production
+  the sitemap list is always read, so a row is still written every day; what changes is that a day with no
+  answer reads as not read: the admin page prints N/A and no change for it, and the drop alerts compare only
+  two answered days. The daily index-urls cron reports Bing Webmaster submissions as skipped (`bing.skipped`,
+  `bingSkipped` in cron_runs), not failed, while `BING_WEBMASTER_API_KEY` is unset.
+- 2.29 Security follow-ups from the 2026-10-24 sweep (2026-10-27), the four parts it listed, all low: the save
+  and the unpublish (`app/api/jobs/update/route.ts`) now refuse an edit token the edit form refuses, by one
+  rule in `lib/edit-token-window.ts` (a post unpublished more than 30 days past its expiry, or with no expiry,
+  answers the edit form's 401), and the unpublish is rate limited like the save; the paid checkout runs the
+  free post's benefits, setting and population validators with the same 400s, and both create paths and the
+  edit store the logo address through `sanitizeUrl` (one helper, which also refuses a "/\host" path); a new
+  post, free or paid (`app/api/webhooks/stripe/activate-paid-job.ts` did the same), clears only its author's
+  saved draft, by account, never by the contact email, which let one employer delete another's draft; and
+  `tests/regressions/json-body-type-annotation.test.ts` fails when an API route annotates or casts what
+  `request.json()`, or JSON.parse of the request text, returns with a type other than unknown, the pattern
+  behind the edit token hole. It found 4 such routes (the paid checkout, send-confirmation, job-draft and
+  toggle-publish); all 4 now read the body as unknown, so its allow list is empty. Left: 2.29.
 - Edit token hotfix (2026-10-24): `POST /api/jobs/update` read the edit token from the JSON body into a non-unique Prisma query, so a filter object matched any post; it and the renewal checkout now accept only a plain string (`lib/request-body.ts`, `3574809`). A read-only look at all 13 employer posts found no sign it was used. Six low cases of the same kind followed in `862b8af`.
 
 - D1 Plan posts, 60 days each or live for the whole subscription: moot. You retired the Employer plan on 2026-10-24 (3.1b); no page offers it and none is sold, and its code was deleted on 2026-10-27 (2.27 phase 4).

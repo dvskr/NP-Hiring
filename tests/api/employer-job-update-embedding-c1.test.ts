@@ -28,6 +28,9 @@ vi.mock('@/lib/description-cleaner', () => ({
   summarizeForMeta: vi.fn().mockReturnValue('summary'),
 }));
 
+/** A live post, so the edit window is open (lib/edit-token-window.ts). */
+const LIVE_JOB = { isPublished: true, expiresAt: new Date(Date.now() + 10 * 86_400_000) };
+
 function makeUpdateRequest(overrides: Record<string, unknown> = {}): NextRequest {
   return new NextRequest('http://localhost:3000/api/jobs/update', {
     method: 'POST',
@@ -53,6 +56,7 @@ describe('C1 — employer job update emits embedding.refresh.job', () => {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
       id: 'ej-1', jobId: 'job-abc', contactEmail: 'employer@example.com',
       companyWebsite: null, companyLogoUrl: null, editToken: 'valid-token-abc',
+      job: LIVE_JOB,
     } as never);
     // The route now reads the stored mode/setting/population before validating.
     vi.mocked(prisma.job.findUnique).mockResolvedValue({ mode: 'In-Person', setting: null, population: null } as never);
@@ -78,6 +82,7 @@ describe('C1 — employer job update emits embedding.refresh.job', () => {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
       id: 'ej-2', jobId: 'job-xyz', contactEmail: 'employer@example.com',
       companyWebsite: null, companyLogoUrl: null, editToken: 'valid-token-abc',
+      job: LIVE_JOB,
     } as never);
     // The route now reads the stored mode/setting/population before validating.
     vi.mocked(prisma.job.findUnique).mockResolvedValue({ mode: 'In-Person', setting: null, population: null } as never);

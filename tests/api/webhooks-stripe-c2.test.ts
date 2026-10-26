@@ -394,7 +394,7 @@ describe('Stripe webhook: the new-post ledger write', () => {
     });
 
     it('a failed write still runs the steps the retry never runs, then answers 500 (code review M3)', async () => {
-        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejL', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: 'clinic.example' } as never);
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejL', userId: 'user-L', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: 'clinic.example' } as never);
         vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
         vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
         vi.mocked(prisma.jobCharge.create).mockRejectedValue(new Error('connection reset'));
@@ -412,7 +412,8 @@ describe('Stripe webhook: the new-post ledger write', () => {
         // The intro race detector, the email, the draft cleanup and the GA purchase all ran before the error.
         expect(prisma.employerJob.count).toHaveBeenCalled();
         expect(sendConfirmationEmail).toHaveBeenCalledTimes(1);
-        expect(prisma.jobDraft.deleteMany).toHaveBeenCalledWith({ where: { email: 'x@y.com' } });
+        // The buyer's own draft, by account (register 2.29), never by the contact email.
+        expect(prisma.jobDraft.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-L' } });
         expect(trackServerPurchase).toHaveBeenCalledTimes(1);
         // The error rethrown is the ledger write's.
         expect(JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls)).toContain('connection reset');

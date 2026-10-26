@@ -27,6 +27,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { asJsonObject } from '@/lib/request-body';
 import { createClient } from '@/lib/supabase/server';
 
 const MAX_BODY_BYTES = 200_000; // 200 KB — generous for a JD plus form metadata.
@@ -60,35 +61,40 @@ export async function POST(request: NextRequest) {
   const userId = await getEmployerUserId();
   if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
-  let body: { formData?: Record<string, unknown>; email?: string };
+  // The size is capped before parsing, so the body is read as text first. The
+  // parsed value is unknown until checked (register 2.29): a JSON null body
+  // used to throw here and answer 500.
+  let parsed: unknown;
   try {
     const text = await request.text();
     if (text.length > MAX_BODY_BYTES) {
       return NextResponse.json({ error: 'Draft too large' }, { status: 413 });
     }
-    body = JSON.parse(text);
+    parsed = JSON.parse(text);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  if (!body.formData || typeof body.formData !== 'object') {
+  const body = asJsonObject(parsed);
+  const formData = body?.formData;
+  if (!formData || typeof formData !== 'object') {
     return NextResponse.json({ error: 'Missing formData' }, { status: 400 });
   }
 
-  const email = typeof body.email === 'string' ? body.email : null;
+  const email = typeof body?.email === 'string' ? body.email : null;
 
   try {
     const draft = await prisma.jobDraft.upsert({
       where: { userId },
       update: {
-        formData: body.formData as Prisma.InputJsonValue,
+        formData: formData as Prisma.InputJsonValue,
         email,
         expiresAt: thirtyDaysFromNow(),
       },
       create: {
         userId,
         email,
-        formData: body.formData as Prisma.InputJsonValue,
+        formData: formData as Prisma.InputJsonValue,
         expiresAt: thirtyDaysFromNow(),
       },
       select: { id: true, updatedAt: true },

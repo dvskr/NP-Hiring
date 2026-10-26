@@ -76,6 +76,7 @@ import {
   validateSetting,
   validatePopulation,
   classifyEmployerJob,
+  sanitizeLogoUrl,
 } from './_lib/job-attributes';
 
 /** Modes this route can fulfil without a charge. Paid modes 403 to checkout. */
@@ -496,7 +497,7 @@ export async function POST(request: NextRequest) {
             employerName: sanitized.employer,
             contactEmail: sanitized.contactEmail,
             companyWebsite: sanitized.companyWebsite || null,
-            companyLogoUrl: companyLogoUrl || null,
+            companyLogoUrl: sanitizeLogoUrl(companyLogoUrl),
             jobId: created.id,
             editToken,
             dashboardToken,
@@ -592,14 +593,17 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if email fails
     }
 
-    // Clean up any saved drafts for this email
+    // Clear the poster's own saved draft. A draft belongs to the account that
+    // saved it (JobDraft.userId, app/api/job-draft/route.ts), never to the
+    // contact email the form carries: that is whatever the poster typed, so
+    // filtering on it let one employer delete another's draft (register 2.29).
     try {
       await prisma.jobDraft.deleteMany({
-        where: { email: sanitized.contactEmail },
+        where: { userId },
       });
-    } catch {
-      // Ignore - draft may not exist
-      logger.debug('No draft to clean up');
+    } catch (draftError) {
+      // The post is live, so a failed cleanup is logged, not answered.
+      logger.warn('Failed to clear the poster\'s saved draft', { userId, error: String(draftError) });
     }
 
     logger.info('Job posted without charge', {

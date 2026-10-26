@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { readJsonObject } from '@/lib/request-body';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { inngest } from '@/lib/inngest/client';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
@@ -45,15 +46,17 @@ export async function PATCH(
         type UnpublishReason = typeof ALLOWED_REASONS[number];
         let providedReason: UnpublishReason | null = null;
         let providedNote: string | null = null;
-        try {
-            const body = await req.json().catch(() => null) as { reason?: string; note?: string } | null;
-            if (body?.reason && (ALLOWED_REASONS as readonly string[]).includes(body.reason)) {
-                providedReason = body.reason as UnpublishReason;
-                if (typeof body.note === 'string' && body.note.trim().length > 0) {
-                    providedNote = body.note.trim().slice(0, 1000);
-                }
+        // The body is optional and untrusted (register 2.29): a missing or
+        // malformed body, or a reason or note that is not text, is no reason.
+        const body = await readJsonObject(req);
+        const reason = body?.reason;
+        if (typeof reason === 'string' && (ALLOWED_REASONS as readonly string[]).includes(reason)) {
+            providedReason = reason as UnpublishReason;
+            const note = body?.note;
+            if (typeof note === 'string' && note.trim().length > 0) {
+                providedNote = note.trim().slice(0, 1000);
             }
-        } catch { /* body optional — toggling without a reason is allowed */ }
+        }
 
         const profile = await prisma.userProfile.findUnique({
             where: { supabaseId: user.id },

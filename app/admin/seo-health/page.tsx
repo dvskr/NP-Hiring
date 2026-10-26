@@ -25,21 +25,13 @@ import {
     type SettingStateCoverageRow,
 } from '@/lib/gsc-coverage';
 import { MIN_JOBS_FOR_CATEGORY_CITY } from '@/lib/pseo/render-gate';
+import { snapshotDay } from '@/lib/gsc-snapshot-days';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
-interface SearchAnalyticsRow {
-    clicks?: number;
-    impressions?: number;
-    ctr?: number;
-    position?: number;
-}
-
-function asAnalytics(value: unknown): SearchAnalyticsRow {
-    if (!value || typeof value !== 'object') return {};
-    return value as SearchAnalyticsRow;
-}
+/** What a figure shows for a day Search Console returned no row for (register 2.30). */
+const NOT_READ = 'N/A';
 
 /**
  * Stored `raw.sitemaps` was serialized from GscSitemapEntry[] by the cron —
@@ -306,12 +298,13 @@ const th: React.CSSProperties = {
 export default async function SeoHealthPage() {
     const data = await getData();
 
-    // Compute today vs week-ago from latest 2 snapshots that have searchAnalytics
+    // Today vs week-ago from the latest snapshot. A day Search Console returned
+    // no row for is not read: no figure, and no change measured from it.
     const latest = data.snapshots[0];
-    const todaySa = latest ? asAnalytics((latest.raw as { searchAnalytics?: { today?: unknown } } | null)?.searchAnalytics?.today) : {};
-    const wkAgoSa = latest ? asAnalytics((latest.raw as { searchAnalytics?: { weekAgo?: unknown } } | null)?.searchAnalytics?.weekAgo) : {};
-    const clicksDelta = deltaPct(todaySa.clicks ?? 0, wkAgoSa.clicks ?? 0);
-    const imprDelta = deltaPct(todaySa.impressions ?? 0, wkAgoSa.impressions ?? 0);
+    const todaySa = latest ? snapshotDay(latest.raw, 'today') : null;
+    const wkAgoSa = latest ? snapshotDay(latest.raw, 'weekAgo') : null;
+    const clicksDelta = todaySa && wkAgoSa ? deltaPct(todaySa.clicks, wkAgoSa.clicks) : null;
+    const imprDelta = todaySa && wkAgoSa ? deltaPct(todaySa.impressions, wkAgoSa.impressions) : null;
 
     const queueByStatusMap = new Map(data.queueByStatus.map((r) => [r.status, r._count._all]));
     const queueTotal = Array.from(queueByStatusMap.values()).reduce((a, b) => a + b, 0);
@@ -358,25 +351,29 @@ export default async function SeoHealthPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                             <div>
                                 <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Clicks (yesterday)</div>
-                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{(todaySa.clicks ?? 0).toLocaleString('en-US')}</div>
-                                <div style={{ fontSize: '12px', color: clicksDelta.color, fontWeight: 600 }}>
-                                    {clicksDelta.arrow} {Math.abs(clicksDelta.pct).toFixed(1)}% vs 7d ago
-                                </div>
+                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{todaySa ? todaySa.clicks.toLocaleString('en-US') : NOT_READ}</div>
+                                {clicksDelta && (
+                                    <div style={{ fontSize: '12px', color: clicksDelta.color, fontWeight: 600 }}>
+                                        {clicksDelta.arrow} {Math.abs(clicksDelta.pct).toFixed(1)}% vs 7d ago
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Impressions (yesterday)</div>
-                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{(todaySa.impressions ?? 0).toLocaleString('en-US')}</div>
-                                <div style={{ fontSize: '12px', color: imprDelta.color, fontWeight: 600 }}>
-                                    {imprDelta.arrow} {Math.abs(imprDelta.pct).toFixed(1)}% vs 7d ago
-                                </div>
+                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{todaySa ? todaySa.impressions.toLocaleString('en-US') : NOT_READ}</div>
+                                {imprDelta && (
+                                    <div style={{ fontSize: '12px', color: imprDelta.color, fontWeight: 600 }}>
+                                        {imprDelta.arrow} {Math.abs(imprDelta.pct).toFixed(1)}% vs 7d ago
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CTR</div>
-                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{((todaySa.ctr ?? 0) * 100).toFixed(2)}%</div>
+                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{todaySa ? `${(todaySa.ctr * 100).toFixed(2)}%` : NOT_READ}</div>
                             </div>
                             <div>
                                 <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Position</div>
-                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{(todaySa.position ?? 0).toFixed(1)}</div>
+                                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1A2E35' }}>{todaySa ? todaySa.position.toFixed(1) : NOT_READ}</div>
                             </div>
                         </div>
 
@@ -393,14 +390,14 @@ export default async function SeoHealthPage() {
                             </thead>
                             <tbody>
                                 {data.snapshots.map((s) => {
-                                    const sa = asAnalytics((s.raw as { searchAnalytics?: { today?: unknown } } | null)?.searchAnalytics?.today);
+                                    const sa = snapshotDay(s.raw, 'today');
                                     return (
                                         <tr key={s.id}>
                                             <td style={td}>{s.capturedOn.toISOString().slice(0, 10)}</td>
-                                            <td style={td}>{(sa.clicks ?? 0).toLocaleString('en-US')}</td>
-                                            <td style={td}>{(sa.impressions ?? 0).toLocaleString('en-US')}</td>
-                                            <td style={td}>{((sa.ctr ?? 0) * 100).toFixed(2)}%</td>
-                                            <td style={td}>{(sa.position ?? 0).toFixed(1)}</td>
+                                            <td style={td}>{sa ? sa.clicks.toLocaleString('en-US') : NOT_READ}</td>
+                                            <td style={td}>{sa ? sa.impressions.toLocaleString('en-US') : NOT_READ}</td>
+                                            <td style={td}>{sa ? `${(sa.ctr * 100).toFixed(2)}%` : NOT_READ}</td>
+                                            <td style={td}>{sa ? sa.position.toFixed(1) : NOT_READ}</td>
                                         </tr>
                                     );
                                 })}

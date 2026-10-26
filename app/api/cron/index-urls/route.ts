@@ -32,7 +32,9 @@ const BASE_URL = brand.baseUrl;
  *   lib/search-indexing.ts), newest first; pingAllSearchEnginesBatch enforces
  *   both, and the rest of a large day waits for the sitemap and Google's own
  *   crawl
- * - Bing: batch up to 500 at once
+ * - Bing: batch up to 500 at once. BING_WEBMASTER_API_KEY is optional
+ *   (IndexNow reaches Bing); without it the batch is never sent and the run
+ *   counts it as skipped, not failed (tests/regressions/index-urls-bing-skipped.test.ts)
  * - IndexNow: batch up to 10,000 at once
  *
  * Every successful run records its window end in cron_runs.metrics, including
@@ -118,7 +120,11 @@ export async function GET(request: NextRequest) {
             const googleSuccess = results.google.filter((r) => r.success).length;
             const googleFailed = results.google.filter((r) => !r.success).length;
             const bingSuccess = results.bing.filter((r) => r.success).length;
-            const bingFailed = results.bing.filter((r) => !r.success).length;
+            // Without BING_WEBMASTER_API_KEY (optional: IndexNow reaches Bing)
+            // the Bing Webmaster API is never asked: skipped, not failed
+            // (register 2.30).
+            const bingSkipped = results.bing.filter((r) => !r.success && r.skipped === true).length;
+            const bingFailed = results.bing.filter((r) => !r.success && r.skipped !== true).length;
             const indexNowSuccess = results.indexNow.filter((r) => r.success).length;
             const indexNowFailed = results.indexNow.filter((r) => !r.success).length;
 
@@ -130,7 +136,7 @@ export async function GET(request: NextRequest) {
                 skippedNoJobPosting,
                 window: windowSummary(window),
                 google: { submitted: googleSuccess, failed: googleFailed },
-                bing: { submitted: bingSuccess, failed: bingFailed },
+                bing: { submitted: bingSuccess, failed: bingFailed, skipped: bingSkipped },
                 indexNow: { submitted: indexNowSuccess, failed: indexNowFailed },
                 duration: `${duration}s`,
                 timestamp: new Date().toISOString(),
@@ -148,6 +154,7 @@ export async function GET(request: NextRequest) {
                     googleFailed,
                     bingSubmitted: bingSuccess,
                     bingFailed,
+                    bingSkipped,
                     indexNowSubmitted: indexNowSuccess,
                     indexNowFailed,
                 },

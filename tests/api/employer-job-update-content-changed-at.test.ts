@@ -72,6 +72,8 @@ beforeEach(() => {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
         id: 'ej-1', jobId: 'job-1', contactEmail: 'employer@example.com',
         companyWebsite: null, companyLogoUrl: null, editToken: 'valid-token',
+        // A live post, so the edit window is open (lib/edit-token-window.ts).
+        job: { isPublished: true, expiresAt: new Date(Date.now() + 10 * 86_400_000) },
     } as never);
     vi.mocked(prisma.job.findUnique).mockResolvedValue(STORED as never);
     vi.mocked(prisma.job.update).mockResolvedValue({ id: 'job-1' } as never);
