@@ -238,6 +238,28 @@ async function acknowledgeRetiredPlanCheckout(event: Stripe.Event, session: Stri
 }
 
 /**
+ * invoice.paid for a subscription's invoice that no post or pack carries: the
+ * first charge of a retired-plan subscription (acknowledgeRetiredPlanCheckout)
+ * or a renewal of one nobody cancelled. Only the plan ever sold a
+ * subscription. The same alert as the checkout, raised at every paid invoice,
+ * so a subscription left running is raised again each month however the
+ * first alert fared (security review F1, 2026-10-27); nothing is written, and
+ * the 200 keeps the dedupe row.
+ */
+async function acknowledgeRetiredPlanInvoice(event: Stripe.Event, invoiceId: string, invoice: Stripe.Invoice, subscriptionId: string): Promise<NextResponse> {
+  logger.warn('[Stripe] Subscription invoice paid: the Employer plan is retired, nothing granted', {
+    eventId: event.id, invoiceId, subscriptionId,
+  });
+  await alertWebhookFailure('Employer plan retired: refund it in Stripe', null, {
+    eventId: event.id,
+    invoiceId,
+    subscriptionId,
+    amountCents: invoice.amount_paid,
+  });
+  return NextResponse.json({ received: true, plan: 'retired' });
+}
+
+/**
  * checkout.session.completed and checkout.session.async_payment_succeeded.
  * Delayed-notification payment methods complete the session while it is
  * still 'unpaid'; fulfilment waits for async_payment_succeeded (a different
@@ -422,7 +444,9 @@ async function handleCheckoutSessionPaymentFailed(
 /**
  * invoice.paid — refresh the JobCharge's invoice URLs. At
  * checkout.session.completed the invoice is still `open` (the PDF says "amount
- * due"); Stripe regenerates the PDF when it transitions to `paid`.
+ * due"); Stripe regenerates the PDF when it transitions to `paid`. A pack's
+ * invoice is refreshed the same way, and a subscription's invoice raises the
+ * retired-plan alert (acknowledgeRetiredPlanInvoice).
  */
 async function handleInvoicePaid(event: Stripe.Event, invoice: Stripe.Invoice, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
   try {
@@ -438,6 +462,8 @@ async function handleInvoicePaid(event: Stripe.Event, invoice: Stripe.Invoice, c
         logger.info('5-post pack invoice URLs refreshed after invoice.paid', { invoiceId });
         return NextResponse.json({ received: true });
       }
+      const subscriptionId = stripeIdOf(invoice.parent?.subscription_details?.subscription);
+      if (subscriptionId) return acknowledgeRetiredPlanInvoice(event, invoiceId, invoice, subscriptionId);
       logger.info('invoice.paid: no matching JobCharge — skipping', { invoiceId });
       return NextResponse.json({ received: true });
     }

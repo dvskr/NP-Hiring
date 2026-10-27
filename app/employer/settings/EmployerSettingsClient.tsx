@@ -674,8 +674,8 @@ export default function EmployerSettingsClient() {
                                         // No-charge rows have no invoice link: legacy free-trial
                                         // posts ('free*'), launch-promo posts ('promo'), 5-post
                                         // pack posts ('pack': the pack's own invoice, listed
-                                        // above, covers them) and Employer-plan slots ('plan',
-                                        // billed by the subscription, not per post). Paid posts
+                                        // above, covers them) and legacy posts of the retired
+                                        // Employer plan ('plan', never billed per post). Paid posts
                                         // get a "Download" button that hits our PDF generator.
                                         // `isFree` is the billing API's own flag; the status check
                                         // is belt-and-suspenders for a payload that predates the

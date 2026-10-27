@@ -96,10 +96,13 @@ export interface RenewalResult {
 }
 
 /**
- * Statuses a renewal must never be applied to: revoked postings, and
- * postings that were never paid for (see the file header).
+ * Statuses a renewal must never be applied to: revoked postings, postings
+ * that were never paid for (see the file header), and a legacy 'plan' post of
+ * the retired Employer plan. create-renewal-checkout already refuses that one
+ * (409); this refuses a payment for one that still arrives (security review
+ * F2, 2026-10-27).
  */
-const REFUSED_STATUSES = ['refunded', 'disputed', 'pending', 'expired'];
+const REFUSED_STATUSES = ['refunded', 'disputed', 'pending', 'expired', 'plan'];
 
 class RevokedPostingError extends Error {
   constructor() {

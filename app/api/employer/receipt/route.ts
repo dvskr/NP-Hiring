@@ -42,8 +42,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     let employerJob;
     if (token) {
+      // The dashboard token only, as the invoice route (security review
+      // LOW-1, 2026-10-27).
       employerJob = await prisma.employerJob.findFirst({
-        where: { jobId, OR: [{ dashboardToken: token }, { editToken: token }] },
+        where: { jobId, dashboardToken: token },
       });
     } else {
       const supabase = await createClient();
@@ -63,12 +65,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Receipt not found or access denied' }, { status: 404 });
     }
     // No charge → no receipt. Mirrors the invoice route: launch-promo
-    // posts, 5-post pack posts (the pack was the payment), Employer-plan
-    // posts (billed per period by Stripe Billing) and the legacy free-quota
-    // statuses never produced a per-post payment.
+    // posts, 5-post pack posts (the pack was the payment), legacy posts of
+    // the retired Employer plan (billed by subscription, never per post) and
+    // the legacy free-quota statuses never produced a per-post payment.
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
-        { error: 'Receipts are not available for Employer plan postings. Stripe sends your plan receipts each billing period.' },
+        { error: 'Receipts are not available for Employer plan postings because no payment was made for them.' },
         { status: 400 },
       );
     }

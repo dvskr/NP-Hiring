@@ -12,10 +12,8 @@
  *     about two days), so the API answers no row and the snapshot showed 0
  *     clicks and 0 impressions. A day it answers no row for was then compared
  *     with a day it did as if traffic had dropped to zero.
- *   - The credentials and the property are not it: production has the key and
- *     GSC_SITE_URL=sc-domain:nphiring.com with the service account an Owner,
- *     and a wrong key or property fails the run (OAuth error or 403) instead of
- *     writing a row.
+ *   - The credentials and the property are not it: a wrong key or property
+ *     fails the run (OAuth error or 403) instead of writing a row.
  * Now a run that read nothing (no Search Analytics row for either day, no
  * query or page rows, no sitemaps) writes no row, logs once, and alerts once
  * per such streak; a run that read anything still writes it, and the drop

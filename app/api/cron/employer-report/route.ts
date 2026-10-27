@@ -43,9 +43,11 @@ export async function GET(request: NextRequest) {
         }>()
 
         for (const ej of employerJobs) {
+            // The dashboard token only (never null): an emailed link never
+            // carries the edit token (security review LOW-5, 2026-10-27).
             const existing = employerMap.get(ej.contactEmail) || {
                 employerName: ej.employerName,
-                dashboardToken: ej.dashboardToken || ej.editToken,
+                dashboardToken: ej.dashboardToken,
                 jobs: [],
             }
 
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
                 views: ej.job.viewCount || 0,
                 applyClicks: ej.job.applyClickCount || 0,
                 applications: appCount,
-                dashboardToken: ej.dashboardToken || ej.editToken,
+                dashboardToken: ej.dashboardToken,
             })
 
             employerMap.set(ej.contactEmail, existing)

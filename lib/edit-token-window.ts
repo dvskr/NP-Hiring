@@ -1,13 +1,15 @@
 /**
  * How long a job's edit token keeps working (P5.A, 2026-06-01; register 2.29).
  *
- * The edit token is the bearer credential in the post confirmation email, so a
- * forwarded, archived or breached email carries it. It is honoured while the
- * job is published, and after that until EDIT_TOKEN_GRACE_MS past the job's
- * expiresAt. An unpublished job further past its expiry than that, or one with
- * no expiry at all (or one that does not parse), refuses it, so an old email
- * cannot reach a long dead post. No flow mints a new token: a renewal puts the
- * post live again, which reopens the window.
+ * The edit token is a bearer credential in the edit page's address
+ * (/jobs/edit/<token>), so a shared link, a browser history or a request log
+ * can carry it; no email does (the emails link the dashboard token). It is
+ * honoured while the job is published, and after that until
+ * EDIT_TOKEN_GRACE_MS past the job's expiresAt. An unpublished job further
+ * past its expiry than that, or one with no expiry at all (or one that does
+ * not parse), refuses it, so an old link cannot reach a long dead post. The
+ * invoice and receipt links do not take it at all. No flow mints a new token:
+ * a renewal puts the post live again, which reopens the window.
  *
  * Every route that takes the token applies this one rule and gives the same
  * answer: GET /api/jobs/edit/[token] (the edit form), POST /api/jobs/update

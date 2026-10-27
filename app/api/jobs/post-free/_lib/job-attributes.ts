@@ -108,18 +108,24 @@ export function validatePopulation(input: unknown, storedValue?: string | null):
   return validateRegistryValue('population', EMPLOYER_POPULATION_TAGS, input, storedValue);
 }
 
+/** The longest logo address stored, the settings logo's limit (app/api/employer/settings/validation.ts). */
+const MAX_LOGO_URL_LENGTH = 2048;
+
 /**
  * The logo address to store: the sent text through sanitizeUrl (http, https,
  * mailto or a site path, trimmed). An address it refuses (javascript:,
- * data:text/html, protocol relative, any other scheme), a site path with a
- * backslash (browsers read "/\host" as the protocol relative "//host"), a value
- * that is not text, or a blank stores no logo. The create paths and the edit
+ * data:text/html, protocol relative, any other scheme), an address holding a
+ * control character, a space or a backslash anywhere (browsers drop tabs and
+ * newlines from a URL and read a backslash as a slash, so "/\host" and
+ * "/<tab>/host" both become the protocol relative "//host"; security review
+ * LOW-2, 2026-10-27), one longer than MAX_LOGO_URL_LENGTH, a value that is not
+ * text, or a blank stores no logo. The create paths and the edit
  * (POST /api/jobs/update) store it the same way.
  */
 export function sanitizeLogoUrl(input: unknown): string | null {
   if (typeof input !== 'string' || input.trim() === '') return null;
   const url = sanitizeUrl(input);
-  if (url.startsWith('/') && url.includes('\\')) return null;
+  if (url.length > MAX_LOGO_URL_LENGTH || /[\u0000-\u001F\u007F\s\\]/.test(url)) return null;
   return url || null;
 }
 

@@ -10,10 +10,11 @@
  *     or Stripe session exists.
  *   - Both stored companyLogoUrl as sent. It now goes through sanitizeUrl
  *     (lib/sanitize.ts), as POST /api/jobs/update stored it, in one helper
- *     the edit uses too (sanitizeLogoUrl): an address sanitizeUrl refuses, a
- *     site path with a backslash (browsers read "/\host" as "//host"), a value
- *     that is not text or a blank stores no logo. The edit answered 500 for a
- *     logo that was not text.
+ *     the edit uses too (sanitizeLogoUrl): an address sanitizeUrl refuses, an
+ *     address holding a control character, a space or a backslash anywhere
+ *     (browsers read "/\host" and "/<tab>/host" as "//host"), one longer than
+ *     2048 characters, a value that is not text or a blank stores no logo. The
+ *     edit answered 500 for a logo that was not text.
  *   - The paid checkout reads its body through lib/request-body.ts: a body
  *     that is not a JSON object is a 400 before the session is read, where
  *     malformed JSON and null used to answer 500.
@@ -190,6 +191,15 @@ const LOGOS: ReadonlyArray<[string, unknown, string | null]> = [
     ['a data: html address', 'data:text/html,<script>alert(1)</script>', null],
     ['a protocol relative address', '//evil.example/logo.png', null],
     ['a backslash path browsers read as protocol relative', '/\\evil.example/logo.png', null],
+    // Browsers drop a tab or a newline anywhere in a URL, so each of these
+    // resolves to https://evil.example (security review LOW-2, 2026-10-27).
+    ['a tab between the slashes', '/\t/evil.example/logo.png', null],
+    ['a newline between the slashes', '/\n/evil.example/logo.png', null],
+    ['a carriage return between the slashes', '/\r/evil.example/logo.png', null],
+    ['a header line after an https address', 'https://cdn.example/logo.png\r\nX-Evil: 1', null],
+    ['a space inside an address', 'https://cdn.example/logo.png onerror=alert(1)', null],
+    ['a backslash inside an https address', 'https://cdn.example\\logo.png', null],
+    ['an address longer than 2048 characters', `https://cdn.example/${'a'.repeat(2048)}.png`, null],
     ['an ftp address', 'ftp://files.example/logo.png', null],
     ['an object', { not: '' }, null],
     ['a blank', '', null],

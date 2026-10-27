@@ -4,9 +4,9 @@
 > `e78f037`, the security and register batch `8d32e1e` of 2026-10-20, the sweep follow-ups `a8f1d4b`, the alert
 > salary rule `4a445ce` and the Stripe SDK upgrade `85116c1` of 2026-10-22, the content follow-ups of
 > 2026-10-23, the edit token hotfix `3574809` and its follow-ups `862b8af` of 2026-10-24, the CI fixes and the
-> 2027 re-price `8ac1d66` of 2026-10-25, the 5-post pack `08f2e33` of 2026-10-26, and the deletion of the
-> retired Employer plan's code of 2026-10-27, phase 4 of 2.27; all are live but that last change, which goes
-> live with its deploy, and `main` is the only branch). Shipped work is at the end.
+> 2027 re-price `8ac1d66` of 2026-10-25, the 5-post pack `08f2e33` of 2026-10-26, and on 2026-10-27 the
+> deletion of the retired Employer plan's code (2.27 phase 4) with the 2.29 and 2.30 follow-ups and their
+> review fixes; all are live, and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -221,11 +221,33 @@ is on. Phase 4, the deletion of the retired plan's code, is under Closed (2026-1
   remote and hybrid from the mode (`deriveWorkModeFlags`), and the profession classifier. A paid post stores its
   mode as sent, takes remote and hybrid from the location text, and has no profession class. It sells only once
   paid posting is on.
-- The invoice and receipt links (`app/api/employer/invoice/route.ts`, `app/api/employer/receipt/route.ts`) take
-  the edit token, like the dashboard token, with no window. They only read.
 - Nothing deletes expired drafts: the job-draft route drops one only when its owner reads it, and the purge
   drops a deleted account's. Drafts saved before 2026-05-14 with no account, which the contact email cleanup
   used to clear by chance, stay. A daily delete of rows past `expiresAt` would do it.
+
+Found by the 2026-10-27 security review, all low:
+- The renewal checkout (`app/api/create-renewal-checkout/route.ts`) still takes the edit token with no window:
+  the dashboard's Renew sends it, and a renewal is for posts past the window. It should check the signed in
+  owner instead. It answers 503 while paid posting is off.
+- The new guard sees typed body reads only. 35 routes read the body into an untyped value it does not see (36
+  reads; the review traced every body read in `app/` and found none that puts a body object into a query
+  today). The lint rules
+  `no-unsafe-assignment` and `no-unsafe-member-access` on `app/api` would; `findUnique` on the unique token
+  columns (`app/api/jobs/update/route.ts`, `app/api/jobs/edit/[token]/route.ts`) would add Prisma's own
+  refusal of a filter object.
+- `POST /api/jobs/update` sanitizes the whole description, and throws on a field that is not text, before it
+  looks the token up: a caller with no token can make it work and answer 500. Look the token up first, and
+  cap the description before sanitizing it.
+- The full edit token is in addresses (the edit page, `DELETE /api/jobs/update?token=`), so request logs and
+  Sentry's request URLs can hold it. Take the unpublish token from the body, and scrub token paths in Sentry.
+- Drafts are deleted by account id, which is always set today, but Prisma reads an undefined filter as no
+  filter at all. A helper that refuses an empty id, or a delete on the unique `JobDraft.userId`, would stop a
+  later change from clearing every draft.
+- The paid checkout only checks that `contactEmail` is not empty: a value that is not an email address
+  creates the rows, then Stripe refuses it and the route answers 500, leaving a `'pending'` row. It also skips
+  the free post's swap of a reversed salary range, and writes screening questions outside its transaction.
+- Rows saved before 2026-10-27 may hold a logo address the new rule refuses (javascript:, data:, a tab). A
+  read only look at `employer_jobs.company_logo_url` would tell; it reads production, so it waits for your OK.
 
 **2.30 Monitoring that reports the wrong thing.** CI (2026-10-25), the Search Console snapshot and the
 index-urls Bing count (2026-10-27) are Closed. Left:
@@ -245,6 +267,24 @@ pages wait on D12. Waiting on your go:
 - Make job pages say what the employer's own posting does not (state practice authority, licensure, pay
   context): Google passed on 126 job pages.
 - Make the state license guides more distinct: 13 of them sit in "Crawled, currently not indexed".
+
+**2.33 Stripe checks to finish before paid posting goes on (by 2027-01-01).** Found by the 2026-10-27 security
+review of the plan deletion. None is reachable while paid posting is off, and none blocked that release:
+- Nothing refuses a test mode key in Production. A test key and its webhook secret left there after the ladder
+  starts would let anyone pay with a test card and get posts, renewals or packs; only the runbook warns (1.2).
+  Refuse `sk_test_` and `rk_test_` keys in production once the promo ends, and ignore or alert on an event whose
+  `livemode` is false.
+- A refund or dispute that arrives before its per post or renewal payment is fulfilled is acknowledged and
+  dropped, and the late fulfilment then publishes a refunded post. The 5-post pack already makes Stripe retry
+  until its record exists; tag the per post and renewal payment intents the same way, or read the charge before
+  activating.
+- The checkout and renewal return pages (`app/api/verify-checkout-session/route.ts`,
+  `app/api/verify-renewal-session/route.ts`) trust a cookie holding the plain session id, so whoever knows a
+  session id gets the post's dashboard token, which opens its invoice and receipt. Sign the cookie, or require
+  the signed in owner, as the pack's return page does.
+- Only the webhook refuses a Checkout Session in subscription mode. The three fulfilment functions it shares with
+  the return pages and the daily sweep do not; nothing can reach them that way today, since only the server and
+  a link made in Stripe set a session's metadata.
 
 ## 3. Decisions (DECISION)
 
@@ -399,7 +439,7 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
-- 2.27 phase 4 (2026-10-27): the retired Employer plan's dormant code is deleted. Production had no `employer_plans` row and no `'plan'` post (both read only, 2026-10-26). Gone: the plan, subscribe and Customer Portal routes, the plan checkout and subscription webhook handlers with the dunning notice on `invoice.payment_failed`, the daily plan-lapse and plan reconciliation jobs, the admin plan page, its API and its sidebar link, the four plan emails and their EmailTypes, the plan expiry copy and confirmation mode, `config.planPrice`, `planSlots` and `planGraceDays`, the `'plan'` tier, the Payment Link variable, and the plan-only test suites. Kept as guards: a Checkout Session in subscription mode is alerted ("Employer plan retired: refund it in Stripe") and answered 200 with nothing granted; a legacy `'plan'` row is refused a renewal (409) and a republish (402), and the dashboard still never offers it Renew. The EmployerPlan model and the `employer_plans` table stay, deprecated; dropping them is a separate, deliberate migration (`docs/pricing-system.md` section 11). The webhook needs 7 events now, and a restricted key no Subscriptions or Customer portal permission (1.1, `docs/pricing-system.md` section 9b).
+- 2.27 phase 4 (2026-10-27): the retired Employer plan's dormant code is deleted. Production had no `employer_plans` row and no `'plan'` post (both read only, 2026-10-26). Gone: the plan, subscribe and Customer Portal routes, the plan checkout and subscription webhook handlers with the dunning notice on `invoice.payment_failed`, the daily plan-lapse and plan reconciliation jobs, the admin plan page, its API and its sidebar link, the four plan emails and their EmailTypes, the plan expiry copy and confirmation mode, `config.planPrice`, `planSlots` and `planGraceDays`, the `'plan'` tier, the Payment Link variable, and the plan-only test suites. Kept as guards: a Checkout Session in subscription mode, and every paid invoice of a subscription, is alerted ("Employer plan retired: refund it in Stripe") and answered 200 with nothing granted; a legacy `'plan'` row is refused a renewal (409, and a renewal paid for one anyway is ledgered, not applied) and a republish (402), and the dashboard still never offers it Renew. The EmployerPlan model and the `employer_plans` table stay, deprecated; dropping them is a separate, deliberate migration (`docs/pricing-system.md` section 11). The webhook needs 7 events now, and a restricted key no Subscriptions or Customer portal permission (1.1, `docs/pricing-system.md` section 9b). Inngest drops the two deleted daily jobs at its next sync of `https://nphiring.com/api/inngest` (`docs/LAUNCH_RUNBOOK.md` section 6 step 4); until then it may record failed runs for them, which does no harm.
 - 1.14 Security checks (done 2026-10-23 to 2026-10-24; you asked Claude to run the read-only ones): no planted admin account (both queries empty; no admin role exists at all); the leaked audit test password belonged to the PMHNP Hiring project, not this one, and was replaced there on 2026-10-23 with an unseen random one, its sessions ended; Supabase Authentication checked on screen (Site URL `https://nphiring.com`, no `*.vercel.app` redirect, Confirm email on); all 4 profile pictures are the account's own upload or Google photo; no unconfirmed employer owns an unclaimed post. The comparison table stays as it is: Indeed's own help page says it no longer supports its paid Career Services, and its California and Texas NP articles are still indexed. You chose to leave the indexing key (1.4).
 - 2.28 Pricing review follow-ups: the renewal price can no longer be computed from a row loaded without its charges, a failed first-post ledger write makes Stripe retry, and the long test file was split (`00282e6`, `e0e9d4e`).
 - 2.31 AI in production: production had no `OPENAI_API_KEY` until you added it on 2026-10-24, so every AI call had failed since launch (555 calls, 485 of them the site's own daily eval). Since the redeploy every call succeeds; the 2026-10-25 08:00 UTC eval made 5 of 5 scoring calls (about $0.25 a month). One application from 2026-10-23 still has no AI score; scoring it is a production write, so it waits for your OK.
@@ -419,7 +459,10 @@ tests fail until every side agrees:
   rule in `lib/edit-token-window.ts` (a post unpublished more than 30 days past its expiry, or with no expiry,
   answers the edit form's 401), and the unpublish is rate limited like the save; the paid checkout runs the
   free post's benefits, setting and population validators with the same 400s, and both create paths and the
-  edit store the logo address through `sanitizeUrl` (one helper, which also refuses a "/\host" path); a new
+  edit store the logo address through `sanitizeUrl` (one helper, which also refuses an address with a control
+  character, a space or a backslash in it, such as "/\host" or a tab between the slashes, or one longer than
+  2048 characters); the invoice and receipt links open with the dashboard token only, never the edit token,
+  and no cron email falls back to the edit token; a new
   post, free or paid (`app/api/webhooks/stripe/activate-paid-job.ts` did the same), clears only its author's
   saved draft, by account, never by the contact email, which let one employer delete another's draft; and
   `tests/regressions/json-body-type-annotation.test.ts` fails when an API route annotates or casts what
@@ -475,3 +518,4 @@ tests fail until every side agrees:
 - `9e1a154`, `ff42e8f`, `0ad137e` (2026-10-25) CI green again.
 - `8ac1d66` (2026-10-25) The 2027 re-price: $249 first post, $349 after, renewals $199 or $249 by post, the Employer plan retired from every page.
 - `00282e6`, `1d3e18b`, `e0e9d4e`, `08f2e33` (2026-10-26) The one-time 5-post pack for $1,245 (backend, pages, emails, admin), all sales final, and the code and security review fixes; migration `20261025000000_add_employer_post_packs` applied by the build.
+- `4210512`, `b014700` and the review fixes on top (2026-10-27) The retired Employer plan's code deleted (2.27 phase 4), the 2.29 security follow-ups (edit token window on every route that edits, paid checkout validators, the logo rule, drafts cleared by account, the typed body guard) and the 2.30 monitoring fixes (no zero Search Console snapshots, Bing skips counted as skipped).

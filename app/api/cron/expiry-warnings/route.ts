@@ -178,7 +178,9 @@ async function sendPostExpiryEmail(
   ctx: RenewalContext,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const dashboardUrl = `${BASE_URL}/employer/dashboard/${employerJob.dashboardToken || employerJob.editToken}`
+    // The dashboard token only (never null): an emailed link never carries
+    // the edit token (security review LOW-5, 2026-10-27).
+    const dashboardUrl = `${BASE_URL}/employer/dashboard/${employerJob.dashboardToken}`
     const unsubToken = await getOrCreateUnsubToken(employerJob.contactEmail)
     const inputs = await renewalInputsFor(employerJob, ctx)
     const offer = resolveRenewalOffer({ ...inputs, now: ctx.now })
@@ -283,7 +285,7 @@ export async function GET(request: NextRequest) {
               job.expiresAt!,
               job.viewCount || 0,
               job.applyClickCount || 0,
-              employerJob.dashboardToken || employerJob.editToken,
+              employerJob.dashboardToken,
               null, // unsubscribeToken — sendExpiryWarningEmail will mint one if null
               // paymentStatus drops the renewal for a row the renewal checkout
               // refuses (legacy free and plan rows); the renewal is offered

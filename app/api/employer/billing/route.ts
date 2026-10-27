@@ -84,9 +84,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Rows that never produced a charge: launch-promo posts, 5-post pack posts
-    // (the pack was invoiced when it was bought), Employer-plan posts (billed
-    // by Stripe Billing, not per post) and the legacy free-quota statuses. The
-    // dashboard hides invoice links for these.
+    // (the pack was invoiced when it was bought), legacy posts of the retired
+    // Employer plan (billed by subscription, never per post) and the legacy
+    // free-quota statuses. The dashboard hides invoice links for these. A
+    // plan row's tier label reads 'Pro' since the 'plan' tier went (phase 4);
+    // Settings labels the row by its status, "Employer plan".
     const NO_CHARGE_STATUSES = new Set(['promo', 'pack', 'plan', 'free', 'free_renewed', 'free_upgraded']);
     const isFreeStatus = (status: string) => NO_CHARGE_STATUSES.has(status);
 

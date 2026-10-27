@@ -416,9 +416,10 @@ describe('Stripe webhook — renewal can never re-publish a refunded or disputed
         const res = await POST(makeRequest(renewalEvent('evt_ren_race')) as never);
 
         expect(res.status).toBe(200);
-        // The in-transaction guard refuses exactly the pre-check's states.
+        // The in-transaction guard refuses exactly the pre-check's states,
+        // a legacy 'plan' row among them (security review F2, 2026-10-27).
         expect(prisma.employerJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-            where: { id: 'ej1', paymentStatus: { notIn: ['refunded', 'disputed', 'pending', 'expired'] } },
+            where: { id: 'ej1', paymentStatus: { notIn: ['refunded', 'disputed', 'pending', 'expired', 'plan'] } },
         }));
         // The job write comes AFTER the guard inside the transaction — never reached.
         expect(prisma.job.update).not.toHaveBeenCalled();

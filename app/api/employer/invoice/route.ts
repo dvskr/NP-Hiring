@@ -43,15 +43,12 @@ export async function GET(request: NextRequest) {
     let employerJob;
 
     if (token) {
-      // Token-based access (from email links)
+      // Token-based access (from email links): the dashboard token only. The
+      // edit token, which the edit form refuses 30 days after the post
+      // expires, opens no billing document (security review LOW-1,
+      // 2026-10-27); no caller sends it.
       employerJob = await prisma.employerJob.findFirst({
-        where: {
-          jobId,
-          OR: [
-            { dashboardToken: token },
-            { editToken: token },
-          ],
-        },
+        where: { jobId, dashboardToken: token },
         include: {
           job: {
             select: { id: true, title: true, isFeatured: true, createdAt: true },
@@ -91,14 +88,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Block invoice generation for rows that never produced a charge:
-    // launch-promo posts, Employer-plan posts (the plan itself is invoiced by
-    // Stripe Billing, not per post), 5-post pack posts (the pack was invoiced
+    // launch-promo posts, legacy posts of the retired Employer plan (billed by
+    // subscription, never per post), 5-post pack posts (the pack was invoiced
     // when it was bought) and the legacy free-quota statuses.
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
         {
           error: 'Invoices are not available for Employer plan postings.',
-          message: 'This job was posted under your Employer plan. No per-post payment was made. Stripe sends your plan invoices each billing period.'
+          message: 'This job was posted under the Employer plan, so no payment was made for it.'
         },
         { status: 400 }
       );

@@ -53,8 +53,8 @@ describe('B87 — post-expiry notification pass', () => {
       expect(notifiable, `NOTIFIABLE_STATUSES excludes '${status}'`).not.toContain(`'${status}'`);
     }
     // The renewal CTA is offered only where a renewal can actually be bought:
-    // promo, pack and paid rows renew; plan rows re-post from a slot (the
-    // renewal checkout 409s them).
+    // promo, pack and paid rows renew; a legacy plan row of the retired
+    // Employer plan never does (the renewal checkout 409s it).
     expect(src).toMatch(/const RENEWABLE_STATUSES = new Set\(\['promo',\s*'pack',\s*'paid'\]\)/);
   });
 
@@ -67,8 +67,11 @@ describe('B87 — post-expiry notification pass', () => {
 
   it('sends via sendAndLog with the dedup metadata attached', () => {
     expect(src).toMatch(/\{\s*phase:\s*'post_expiry',\s*jobId:\s*job\.id,\s*jobTitle:\s*job\.title\s*\}/);
-    // Renewal CTA links to the token dashboard.
-    expect(src).toMatch(/\/employer\/dashboard\/\$\{employerJob\.dashboardToken \|\| employerJob\.editToken\}/);
+    // Renewal CTA links to the token dashboard, by the dashboard token only:
+    // an emailed link never carries the edit token (security review LOW-5,
+    // 2026-10-27).
+    expect(src).toMatch(/\/employer\/dashboard\/\$\{employerJob\.dashboardToken\}/);
+    expect(src).not.toMatch(/dashboardToken \|\| \w+\.editToken/);
   });
 
   it('reports post-expiry counts in the cron metrics', () => {

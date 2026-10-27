@@ -266,14 +266,20 @@ Stripe → webhook checkout.session.completed or checkout.session.async_payment_
   ├─ nothing is granted or written, and nothing is read back from Stripe
   └─ 200 { received: true, plan: 'retired' }; the dedupe row is kept, so Stripe does not retry
 checkout.session.async_payment_failed in subscription mode → the generic "nothing fulfilled" alert, 200
+invoice.paid of a subscription that no post or pack carries (its first charge, or a renewal nobody cancelled)
+  └─ the same alert with { eventId, invoiceId, subscriptionId, amountCents }, nothing written,
+     200 { received: true, plan: 'retired' }: raised again at every charge until the subscription is cancelled
 customer.subscription.created / .updated / .deleted and invoice.payment_failed → acknowledged and ignored
   (an endpoint can drop them, §9b)
-A legacy 'plan' row → renewal 409 (§2d) · republish 402 (§2g) · the repost offers in the expiry emails (§2g)
+A legacy 'plan' row → renewal 409 (§2d), and a renewal paid for one anyway is ledgered, not applied, with the
+  refund alert (apply-renewal.ts) · republish 402 (§2g) · the repost offers in the expiry emails (§2g)
 ```
+
+The guard is keyed on the session's mode, not on the plan: nothing else sells a subscription, so every subscription checkout and every paid subscription invoice on this Stripe account is treated as the retired plan's. A new subscription product would need its own branch ahead of it.
 
 ### 2f. Plan-lapse job and plan reconciliation: deleted
 
-Retired 2026-10-24 with the plan, they ran every day and found nothing to do (production had no plan row). Both daily Inngest functions were unregistered from app/api/inngest/route.ts and deleted on 2026-10-27, which also ended the reconciliation sweep's daily listing of Stripe subscriptions.
+Retired 2026-10-24 with the plan, they ran every day and found nothing to do (production had no plan row). Both daily Inngest functions were unregistered from app/api/inngest/route.ts and deleted on 2026-10-27, which also ended the reconciliation sweep's daily listing of Stripe subscriptions. Inngest drops them from its function list at the next sync of https://nphiring.com/api/inngest ([LAUNCH_RUNBOOK.md §6](./LAUNCH_RUNBOOK.md) step 4); until then it may still call them on their old schedules and record the runs as failed, which does no harm.
 
 ### 2g. Expiry (no money flow, but visible UX)
 
@@ -833,7 +839,7 @@ Applied via the deploy build (`prisma migrate deploy`) — never run migrations 
 The promo needs NOTHING from Stripe. Everything below must be live **before January 1, 2027** (see [LAUNCH_RUNBOOK.md §8](./LAUNCH_RUNBOOK.md)):
 
 - [ ] `ENABLE_PAID_POSTING=true` + `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` in Vercel. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 until both are set, and no checkout opens until then (§1d)
-- [ ] (Optional, recommended) Restricted live key in place of the standard secret key. `STRIPE_SECRET_KEY` takes either, and a restricted key can do only what it is given, so a leaked key cannot refund, pay out, or change products and prices (it can still read the checkout sessions it lists). Every Stripe call in the code needs exactly these permissions:
+- [ ] (Optional, recommended) Restricted live key in place of the standard secret key. `STRIPE_SECRET_KEY` takes either, and a restricted key can do only what it is given, so a leaked key cannot refund, pay out, or change products and prices (it can still create and expire checkout sessions, and read the buyer emails and addresses that sessions, payment intents and invoices carry). Every Stripe call in the code needs exactly these permissions:
   - Checkout Sessions: Write (create and expire a session; Write includes the retrieve and list calls)
   - Payment Intents: Read (the resume, verify and reconciliation paths retrieve a session with its `payment_intent` expanded; the 5-post pack's fulfilment reads its payment intent, and the refund and dispute handlers read the intent of a payment nothing matches, for its `post_pack` tag)
   - Charges: Read (the pack's fulfilment expands the payment intent's `latest_charge`, to see a refund or a dispute that came first)
@@ -856,7 +862,7 @@ Nothing for the retired Employer plan: no plan Product, Price or Payment Link, a
 | `processed_stripe_events` count vs Stripe Dashboard event count | Big divergence = webhook drops |
 | `job_charges` rows where `amount_cents ∉ {19900, 24900, 34900}` | Coupon used or manual price override — sanity check |
 | `job_charges` renewal rows at 24900 on a post with no `'new'` charge | Should never happen: the $249 renewal is only for a post bought at $349 (§1b, §2d). A row like this means the price rule broke |
-| Discord alert "Employer plan retired: refund it in Stripe" | A Checkout Session in subscription mode reached the webhook: a plan Payment Link is still active in Stripe and someone used it (§2e). Nothing was granted. Refund the payment, cancel the subscription and deactivate the link |
+| Discord alert "Employer plan retired: refund it in Stripe" | A Checkout Session in subscription mode, or a paid invoice of a subscription, reached the webhook: a plan Payment Link is still active in Stripe and someone used it, or a subscription one started is still charging (§2e). Nothing was granted. Refund the payment, cancel the subscription and deactivate the link |
 | `employer_plans` rows of any kind | Should stay empty: no code writes the deprecated table since 2026-10-27, and production had no row on 2026-10-26 |
 | Sentry error "Intro price charged twice for one domain" | Two concurrent first checkouts both got the $249 rung, or an intro checkout opened before the domain bought a pack was paid after it (§8): the domain paid $100 less than the ladder asks. Nothing is refunded; docs/PENDING_WORK.md D3 decides what to do about it |
 | `employer_post_packs` rows with no `user_id`, or a Discord alert that ends "refund it in Stripe" | A pack paid for with no account reference, by an account that is not an employer, or while pack sales were closed (§2h). The money is recorded; refund it in Stripe, and the refund revokes the pack |
@@ -1001,6 +1007,8 @@ Retired 2026-10-24 (owner decision); its code was deleted on 2026-10-27, so no p
 a plan Payment Link left active in Stripe → Stripe subscription checkout
   ↓ checkout.session.completed / async_payment_succeeded (mode=subscription)
 webhook → alert "Employer plan retired: refund it in Stripe" → 200 { received: true, plan: 'retired' }, nothing granted
+  ↓ invoice.paid of that subscription, at its first charge and at every renewal
+webhook → the same alert → 200, nothing written
   → a human refunds the payment, cancels the subscription and deactivates the link
 ```
 

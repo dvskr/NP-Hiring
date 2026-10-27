@@ -196,7 +196,10 @@ describe('a session without a total falls back to the price of the rung it was s
 });
 
 describe('a renewal that is only ledgered records the same amount', () => {
-  it.each(['refunded', 'disputed'])("a payment on a '%s' posting: the ledger row carries the rung price when Stripe sent no total", async (status) => {
+  // 'plan': a legacy post of the retired Employer plan. create-renewal-checkout
+  // refuses it (409); should a renewal payment for one still arrive, it is
+  // ledgered and refused here too (security review F2, 2026-10-27).
+  it.each(['refunded', 'disputed', 'plan'])("a payment on a '%s' posting: the ledger row carries the rung price when Stripe sent no total", async (status) => {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
       id: 'ej1', jobId: 'job1', paymentStatus: status, contactEmail: 'e@x.com', dashboardToken: 'tok',
     } as never);

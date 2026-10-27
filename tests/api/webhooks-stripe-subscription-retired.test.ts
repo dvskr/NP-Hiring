@@ -12,8 +12,15 @@
  *     nothing is granted, written or read from Stripe, and the dedupe row is
  *     kept, so Stripe does not retry an event that cannot get better;
  *   - the check comes first: a subscription session is never fulfilled as a
- *     5-post pack or a post, whatever its metadata says;
+ *     5-post pack or a post, whatever its metadata says; and it is keyed on
+ *     the mode, so the same empty metadata on a payment-mode session is still
+ *     the "Missing job ID" 400;
  *   - async_payment_failed for one is the generic "nothing fulfilled" alert;
+ *   - invoice.paid of a subscription that no post or pack carries (the first
+ *     charge of one, and each renewal nobody cancelled) raises the same alert,
+ *     naming the invoice and the subscription, and writes nothing (security
+ *     review F1, 2026-10-27); a one-off invoice of no row of ours is still
+ *     skipped quietly;
  *   - the plan's subscription and dunning events (customer.subscription.*,
  *     invoice.payment_failed), should an endpoint still send one, are
  *     acknowledged and ignored, with no Stripe call and no write;
@@ -100,6 +107,11 @@ function expectNothingWritten(): void {
     expect(prisma.employerPostPack.create).not.toHaveBeenCalled();
     expect(prisma.employerPostPack.updateMany).not.toHaveBeenCalled();
     expect(prisma.emailSend.create).not.toHaveBeenCalled();
+    // The deprecated employer_plans table is not even read.
+    expect(prisma.employerPlan.findUnique).not.toHaveBeenCalled();
+    expect(prisma.employerPlan.findFirst).not.toHaveBeenCalled();
+    expect(prisma.employerPlan.findMany).not.toHaveBeenCalled();
+    expect(prisma.employerPlan.count).not.toHaveBeenCalled();
 }
 
 // Load the webhook's module graph once, outside the first test's 5 second
@@ -163,6 +175,19 @@ describe('a subscription-mode Checkout Session: alerted for a refund, acknowledg
         expectNothingWritten();
     });
 
+    // The guard is keyed on the mode alone. The same empty metadata on a
+    // per-post (payment mode) session is still the "Missing job ID" 400, so a
+    // guard widened to "no jobId, so acknowledge" fails here (code review F2,
+    // 2026-10-27).
+    it('a payment-mode session with the same empty metadata is still refused 400 Missing job ID', async () => {
+        const { res, json } = await post(event('checkout.session.completed', subscriptionSession({ mode: 'payment', subscription: null })));
+
+        expect(res.status).toBe(400);
+        expect(json).toEqual({ error: 'Missing job ID' });
+        expect(alertReasons()).not.toContain(RETIRED_ALERT);
+        expectNothingWritten();
+    });
+
     it('a subscription session whose delayed payment failed gets the generic alert, nothing more', async () => {
         const { res, json } = await post(event('checkout.session.async_payment_failed', subscriptionSession({ payment_status: 'unpaid' })));
 
@@ -190,6 +215,75 @@ describe("the retired plan's subscription and dunning events are acknowledged an
         expect(discordMocks.sendDiscordMessage).not.toHaveBeenCalled();
         expectNothingWritten();
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+    });
+});
+
+describe('invoice.paid of a subscription nothing of ours carries: the retired-plan alert at every charge', () => {
+    /** A paid invoice a plan subscription generated: its first charge or a renewal. */
+    function subscriptionInvoice(overrides: Record<string, unknown> = {}) {
+        return {
+            id: 'in_sub_1',
+            object: 'invoice',
+            amount_paid: 39900,
+            billing_reason: 'subscription_cycle',
+            customer_email: 'owner@clinic.example',
+            invoice_pdf: null,
+            hosted_invoice_url: null,
+            number: null,
+            parent: { type: 'subscription_details', quote_details: null, subscription_details: { subscription: 'sub_1', metadata: null } },
+            ...overrides,
+        };
+    }
+
+    it('alerts for a refund, names the invoice and the subscription, writes nothing and answers 200', async () => {
+        const { res, json } = await post(event('invoice.paid', subscriptionInvoice(), 'evt_invoice_1'));
+
+        expect(res.status).toBe(200);
+        expect(json).toEqual({ received: true, plan: 'retired' });
+        expect(alertReasons()).toEqual([RETIRED_ALERT]);
+        const [, context] = vi.mocked(captureException).mock.calls[0] as [unknown, { extra: Record<string, unknown> }];
+        expect(context.extra).toMatchObject({ eventId: 'evt_invoice_1', invoiceId: 'in_sub_1', subscriptionId: 'sub_1', amountCents: 39900 });
+        expect(JSON.stringify(discordMocks.sendDiscordMessage.mock.calls)).not.toContain('owner@clinic.example');
+        expect(stripeMocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+        expect(prisma.jobCharge.update).not.toHaveBeenCalled();
+        // Acknowledged for good: a retry cannot do better.
+        expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+    });
+
+    it('an expanded subscription is named by its id', async () => {
+        const invoice = subscriptionInvoice({
+            parent: { type: 'subscription_details', quote_details: null, subscription_details: { subscription: { id: 'sub_2', object: 'subscription' }, metadata: null } },
+        });
+        await post(event('invoice.paid', invoice, 'evt_invoice_2'));
+
+        expect(alertReasons()).toEqual([RETIRED_ALERT]);
+        const [, context] = vi.mocked(captureException).mock.calls[0] as [unknown, { extra: Record<string, unknown> }];
+        expect(context.extra).toMatchObject({ invoiceId: 'in_sub_1', subscriptionId: 'sub_2' });
+    });
+
+    it('a one-off invoice of no row of ours is still skipped quietly', async () => {
+        const { res, json } = await post(event('invoice.paid', subscriptionInvoice({ parent: null }), 'evt_invoice_3'));
+
+        expect(res.status).toBe(200);
+        expect(json).toEqual({ received: true });
+        expect(captureException).not.toHaveBeenCalled();
+        expect(discordMocks.sendDiscordMessage).not.toHaveBeenCalled();
+    });
+
+    it("a post's invoice is refreshed as before and never alerted", async () => {
+        vi.mocked(prisma.jobCharge.findFirst).mockResolvedValueOnce({ id: 'charge-1' } as never);
+        const invoice = subscriptionInvoice({
+            parent: null, invoice_pdf: 'https://pay.stripe.com/invoice/pdf', hosted_invoice_url: 'https://invoice.stripe.com/i/1', number: 'NP-0001',
+        });
+        const { res, json } = await post(event('invoice.paid', invoice, 'evt_invoice_4'));
+
+        expect(res.status).toBe(200);
+        expect(json).toEqual({ received: true });
+        expect(prisma.jobCharge.update).toHaveBeenCalledWith({
+            where: { id: 'charge-1' },
+            data: { invoicePdfUrl: 'https://pay.stripe.com/invoice/pdf', hostedInvoiceUrl: 'https://invoice.stripe.com/i/1', invoiceNumber: 'NP-0001' },
+        });
+        expect(captureException).not.toHaveBeenCalled();
     });
 });
 

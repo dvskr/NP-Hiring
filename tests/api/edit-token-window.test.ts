@@ -5,8 +5,8 @@
  * GET /api/jobs/edit/[token] (the edit form) honoured the token while the post
  * was published, or until 30 days after its expiresAt, but POST
  * /api/jobs/update (save) and DELETE /api/jobs/update (unpublish) accepted it
- * forever, so a confirmation email that leaked long after the post ended could
- * still rewrite or take down the posting. The rule now lives in one place,
+ * forever, so an edit link that leaked long after the post ended could still
+ * rewrite or take down the posting. The rule now lives in one place,
  * lib/edit-token-window.ts, and the three routes give the same answer for the
  * same post: the 401 the edit form always gave.
  */
