@@ -133,6 +133,19 @@ dry run first and then with `--apply` in one transaction:
 - Why: the code fixes stop new bad rows; these repair the rows already stored.
 - Where: a terminal on a trusted machine. The repo `.env` is the production database.
 
+**1.15 The NP Hiring app in Claude and ChatGPT.** Built 2026-10-28 (`docs/ai-apps/README.md`). To switch it on
+and list it, in this order (steps and copy in `docs/ai-apps/submission.md`):
+1. Vercel: `MCP_OAUTH_SIGNING_SECRET` (48+ random characters), then redeploy. Until then only job search works.
+2. Sign up the reviewer account (email and password, no magic link), fill its profile, add a sample resume.
+3. Approve the production write of the three review sandbox jobs (`scripts/mcp-review-sandbox.ts --apply`) and
+   put the reviewer's user id in `MCP_REVIEWER_USER_IDS`.
+4. Try both apps yourself (submission.md 1.4).
+5. Claude: submit at claude.ai/directory/manage (Pro, Max, Team or Enterprise account).
+6. ChatGPT: business verification for Akari Labs LLC on platform.openai.com, the domain token in
+   `OPENAI_APPS_CHALLENGE_TOKEN`, the package, the five plus three test cases and a 1 to 2 minute demo video.
+- Why: the directories are where candidates find the app; a custom connector works for anyone today.
+- Where: Vercel, nphiring.com, claude.ai, platform.openai.com.
+
 ## 2. Engineering (CLAUDE)
 
 **2.3 Repair garbled city slugs.** `PseoStats` and the snippet tables still hold slugs such as
@@ -286,6 +299,16 @@ review of the plan deletion. None is reachable while paid posting is off, and no
   the return pages and the daily sweep do not; nothing can reach them that way today, since only the server and
   a link made in Stripe set a session's metadata.
 
+**2.34 AI apps follow-ups (after the 2026-10-28 build).**
+- Listing screenshots from the live app in both hosts (Claude: 3 to 5 PNGs at least 1000px wide with their
+  prompts), and the ChatGPT package: add the manifest `$schema` from OpenAI's packaging page, zip
+  `docs/ai-apps/openai-plugin/`, and fix whatever the upload dashboard reports.
+- Expired authorization codes and refresh tokens, and registered clients never used, are kept. A daily delete
+  of codes and tokens past `expires_at` (and of `oauth_clients` unused for 30 days) would keep the tables small.
+- ChatGPT can hand a widget a file (`openai/fileParams`); a resume picked in the chat could be uploaded for a
+  candidate without one. Claude has no such API yet, so the profile resume is the only source today.
+- Put the listing links in `config/ai-apps.ts` once each directory publishes them.
+
 ## 3. Decisions (DECISION)
 
 Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
@@ -370,6 +393,15 @@ change any of them.
 | D33 | Naming and token follow-ups | The FNP guide's title and tags keep "AANP vs ANCC" as a search phrase; the candidate settings list stores "AANP" as a certifying body (`config/niche/credentials.ts`); existing alert and unsubscribe tokens are cuid values. Rename, keep, rotate? | `content/blog/fnp-certification-aanp-vs-ancc.mdx`, `config/niche/credentials.ts` |
 | D34 | Newsletter consent that someone else can give | Since 2026-10-22 a new account joins the Beehiiv newsletter only when it opted in, but the email sign-up form and the exit popup tick the box for the person. US law allows that; a privacy reader, or a European visitor's law, counts a pre-ticked box as no choice. The opt-in is also whatever the sign-up form sent, so a stranger who signs up someone else's address opts it in once its owner clicks the confirmation link, and the anonymous newsletter and alert forms subscribe any typed address. Start both boxes unchecked, and send a Beehiiv double opt-in? | `components/auth/SignUpForm.tsx`, `components/ExitIntentPopup.tsx`, `app/api/newsletter/route.ts` |
 | D35 | What deleting a resume does to the applications sent with it | An application stores the key of the resume it was sent with, which is usually the profile resume itself. Deleting the resume removes that file even when an application names it, so the employer's resume link for that application stops working; since 2026-10-22 older files an application names are kept. Keep the file while an application names it, or remove every copy on delete? | `app/api/profile/resume/route.ts`, `app/api/applications/apply-direct/route.ts` |
+
+### 3.4d The AI apps for Claude and ChatGPT (recorded 2026-10-28)
+
+| # | Question | Today | Where |
+|---|---|---|---|
+| D43 | Should /ai-apps be in the sitemap and the footer? | Indexable but unlinked: only the directories, the consent page and the OAuth metadata point to it. Adding it to the sitemap or the footer changes those surfaces' copy dates | `app/sitemap.ts`, `components/Footer.tsx` |
+| D44 | Email candidates about the privacy policy change? | Section 9 of the policy says changes are announced by the "Last updated" date, email and a homepage notice. Section 17 (AI assistants) is new and narrows nothing, and only the date moved | `app/privacy/page.tsx` |
+| D45 | ChatGPT listing countries | Recommended `US` only: every listing is a US job | `docs/ai-apps/submission.md` 3.4 |
+| D46 | Should /terms mention the AI apps? | Not required by either directory; the privacy policy carries the data rules | `app/terms/page.tsx` |
 
 ### 3.5 Audit-era items (enterprise audit)
 

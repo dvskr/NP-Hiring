@@ -909,6 +909,7 @@ model UserProfile {
   savedByEmployers    SavedCandidate[]         @relation("SavedAsCandidate")
   savedCandidates     SavedCandidate[]         @relation("SavedByEmployer")
   candidateAlerts     EmployerCandidateAlert[]
+  oauthGrants         OauthGrant[]
 
   @@index([supabaseId])
   @@index([email])
@@ -2037,4 +2038,84 @@ model ShortLinkClick {
   // campaign yet?" — without this index the lookup full-scans the table.
   @@index([recipientLeadId, createdAt])
   @@map("shortlink_clicks")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OAuth for the NP Hiring app in Claude and ChatGPT (lib/oauth)
+// ═══════════════════════════════════════════════════════════════
+
+/// A client registered through Dynamic Client Registration
+/// (POST /oauth/register). A client whose client_id is an https URL (a
+/// Client ID Metadata Document) is never stored: lib/oauth/clients.ts
+/// fetches and caches its document instead.
+model OauthClient {
+  id           String    @id
+  clientName   String    @map("client_name")
+  redirectUris String[]  @map("redirect_uris")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastUsedAt   DateTime? @map("last_used_at")
+
+  @@map("oauth_clients")
+}
+
+/// One candidate's approval of one AI app, written when they press Allow on
+/// /oauth/authorize. Every token issued under it dies with it: access tokens
+/// are checked against revokedAt on each MCP request, and a refresh is
+/// refused once it is set. Revoked by the candidate (Settings, Connected
+/// apps), by the app (POST /oauth/revoke) or on a replayed code or refresh
+/// token. Deleting the profile deletes it.
+model OauthGrant {
+  id            String    @id @default(cuid())
+  /// The candidate's Supabase auth id (user_profiles.supabase_id).
+  userId        String    @map("user_id")
+  /// A DCR id (oauth_clients.id) or a client metadata document URL.
+  clientId      String    @map("client_id")
+  clientName    String    @map("client_name")
+  redirectUri   String    @map("redirect_uri")
+  scopes        String[]
+  /// The MCP endpoint URL the tokens are issued for (their audience).
+  resource      String
+  createdAt     DateTime  @default(now()) @map("created_at")
+  lastUsedAt    DateTime? @map("last_used_at")
+  revokedAt     DateTime? @map("revoked_at")
+  /// user_revoke | client_revoke | code_reuse | refresh_reuse
+  revokedReason String?   @map("revoked_reason")
+
+  user          UserProfile              @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+  codes         OauthAuthorizationCode[]
+  refreshTokens OauthRefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@map("oauth_grants")
+}
+
+/// A single-use authorization code. Only its SHA-256 is stored.
+model OauthAuthorizationCode {
+  codeHash      String    @id @map("code_hash")
+  grantId       String    @map("grant_id")
+  /// PKCE S256 challenge sent with the authorization request.
+  codeChallenge String    @map("code_challenge")
+  expiresAt     DateTime  @map("expires_at")
+  consumedAt    DateTime? @map("consumed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  grant OauthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@index([grantId])
+  @@map("oauth_authorization_codes")
+}
+
+/// A rotating refresh token. Only its SHA-256 is stored; consumedAt marks
+/// it used, and a second use revokes the whole grant.
+model OauthRefreshToken {
+  tokenHash  String    @id @map("token_hash")
+  grantId    String    @map("grant_id")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  grant OauthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@index([grantId])
+  @@map("oauth_refresh_tokens")
 }

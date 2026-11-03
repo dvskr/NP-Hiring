@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NP Hiring widget preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --host-page: #ffffff;
+        --host-text: #1c1c1a;
+        --host-muted: #6b6b65;
+        --host-line: rgba(28, 28, 26, 0.12);
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --host-page: #1f1f1e;
+        --host-text: #ededea;
+        --host-muted: #9d9d97;
+        --host-line: rgba(255, 255, 255, 0.12);
+      }
+      body {
+        margin: 0;
+        background: var(--host-page);
+        color: var(--host-text);
+        font: 13px/1.4 system-ui, sans-serif;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--host-line);
+      }
+      .toolbar label {
+        color: var(--host-muted);
+      }
+      body.shot .toolbar,
+      body.shot .log {
+        display: none;
+      }
+      #stage {
+        box-sizing: border-box;
+        padding: 16px;
+        background: var(--host-page);
+      }
+      #widget {
+        display: block;
+        width: 100%;
+        height: 120px;
+        border: 0;
+        background: transparent;
+      }
+      #stage[data-mode="fullscreen"] #widget {
+        height: calc(100vh - 32px);
+      }
+      body:not(.shot) #stage[data-mode="fullscreen"] #widget {
+        height: calc(100vh - 90px);
+      }
+      .log {
+        margin: 16px;
+        padding: 12px;
+        border: 1px solid var(--host-line);
+        border-radius: 8px;
+        color: var(--host-muted);
+        white-space: pre-wrap;
+        font: 12px/1.5 ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <label for="scenario">Scenario</label>
+      <select id="scenario"></select>
+      <label for="width">Width</label>
+      <select id="width">
+        <option value="320">320</option>
+        <option value="360">360</option>
+        <option value="520">520</option>
+        <option value="720">720</option>
+      </select>
+      <label for="vars">Host variables</label>
+      <select id="vars">
+        <option value="none">None (ChatGPT-like)</option>
+        <option value="claude">Claude-like</option>
+      </select>
+      <button id="theme" type="button">Toggle theme</button>
+      <button id="mode" type="button">Toggle fullscreen</button>
+      <button id="reload" type="button">Replay</button>
+    </div>
+    <div id="stage">
+      <iframe id="widget" title="NP Hiring widget" sandbox="allow-scripts"></iframe>
+    </div>
+    <pre class="log" id="log"></pre>
+    <script>
+      if (new URLSearchParams(location.search).get('shot') === '1') document.body.classList.add('shot');
+    </script>
+    <script type="module" src="/host.js"></script>
+  </body>
+</html>

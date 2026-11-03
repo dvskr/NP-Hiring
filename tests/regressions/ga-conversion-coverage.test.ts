@@ -109,6 +109,7 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const APPLY_BUTTON = 'components/ApplyButton.tsx';
 const APPLY_FORM = 'components/InPlatformApplyForm.tsx';
 const APPLY_ROUTE = 'app/api/applications/apply-direct/route.ts';
+const SUBMIT_ROUTINE = 'lib/applications/submit-direct-application.ts';
 const ALERT_ROUTE = 'app/api/job-alerts/route.ts';
 const SAVE_BUTTON = 'components/SaveJobButton.tsx';
 const ALERT_FORM = 'components/CreateAlertForm.tsx';
@@ -353,9 +354,13 @@ describe('gap 1: the apply route says whether this submit created the applicatio
   });
 
   it('source pin: the response carries the transaction answer, not a second read', () => {
+    // The locked transaction lives in the shared routine the route and the
+    // AI app's submit_application both call; the route only relays it.
+    const submit = read(SUBMIT_ROUTINE);
+    expect(submit).toContain('return { application: saved, isNew: existingApplication === null };');
+    expect(submit).toMatch(/applicationId: application\.id,\s*isNew,/);
     const route = read(APPLY_ROUTE);
-    expect(route).toContain('return { application: saved, isNew: existingApplication === null };');
-    expect(route).toMatch(/return NextResponse\.json\(\{\s*success: true,\s*applicationId: application\.id,[\s\S]*?\bisNew,/);
+    expect(route).toMatch(/return NextResponse\.json\(\{\s*success: true,\s*applicationId: outcome\.applicationId,[\s\S]*?\bisNew: outcome\.isNew,/);
   });
 });
 

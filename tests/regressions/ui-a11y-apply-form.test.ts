@@ -21,7 +21,8 @@ const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const FORM = 'components/InPlatformApplyForm.tsx';
-const API = 'app/api/applications/apply-direct/route.ts';
+// The cap lives in the submit routine the apply-direct route and the AI app share.
+const API = 'lib/applications/submit-direct-application.ts';
 
 describe('B58 — screening questions have client-side required validation', () => {
     const src = read(FORM);

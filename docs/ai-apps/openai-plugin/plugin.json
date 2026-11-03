@@ -1,0 +1,38 @@
+{
+  "name": "np-hiring",
+  "version": "1.0.0",
+  "description": "Search nurse practitioner jobs across the US, apply with Easy Apply and track your applications on NP Hiring.",
+  "author": { "name": "Akari Labs LLC", "url": "https://nphiring.com" },
+  "homepage": "https://nphiring.com/ai-apps",
+  "keywords": ["jobs", "nurse practitioner", "careers", "healthcare jobs"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "NP Hiring",
+        "shortDescription": "Nurse practitioner jobs",
+        "longDescription": "NP Hiring is a job board for nurse practitioners and APRNs across the United States. With the NP Hiring app you can search every NP job on the board by specialty, state or city, work mode, schedule, pay and posting date, and read any job in full without leaving the conversation.\n\nApplying is built in. For Easy Apply jobs, the app opens a review card with the resume on your NP Hiring profile, a cover letter you can edit, the employer's screening questions and the consent line. Nothing is sent until you submit it. Jobs that take applications on the employer's site come with the employer's link, and the app can add them to your application tracker.\n\nSigned in, you can see every application and where it stands, withdraw one, and keep a list of saved jobs. You can also check what a state's practice authority allows.\n\nSearching needs no account. Applying needs a free NP Hiring job seeker account; you sign in on an NP Hiring page and choose what the app may do, and you can remove its access at any time in Settings. The app never asks for NPI, DEA or Social Security numbers, license numbers or EEO details, and it does not receive your conversation.",
+        "developerName": "Akari Labs LLC",
+        "category": "Productivity",
+        "capabilities": [
+          "Search nurse practitioner and APRN jobs by specialty, location, work mode, schedule, pay and date",
+          "Read a job in full, including pay, setting, experience, benefits and how to apply",
+          "Apply to Easy Apply jobs after reviewing the resume, cover letter and screening answers",
+          "Track applications and their status, and withdraw an application",
+          "Save jobs and list saved jobs",
+          "Check a state's NP practice authority"
+        ],
+        "websiteURL": "https://nphiring.com",
+        "privacyPolicyURL": "https://nphiring.com/privacy",
+        "termsOfServiceURL": "https://nphiring.com/terms",
+        "defaultPrompt": [
+          "Find remote NP jobs in Texas that pay over $150k.",
+          "Show me Easy Apply family practice jobs in Florida and help me apply to one.",
+          "Which of my NP Hiring applications are still active?"
+        ],
+        "brandColor": "#BE185D",
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/icon.png"
+      }
+    }
+  }
+}

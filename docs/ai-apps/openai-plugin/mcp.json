@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "np-hiring": {
+      "type": "streamable-http",
+      "url": "https://nphiring.com/mcp/chatgpt",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "mixed",
+            "client": { "mode": "cimd" }
+          }
+        }
+      }
+    }
+  }
+}

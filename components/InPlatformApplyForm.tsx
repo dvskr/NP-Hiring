@@ -55,7 +55,7 @@ interface ScreeningQuestion {
     isRequired: boolean;
 }
 
-// Mirrors MAX_COVER_LETTER_LENGTH in app/api/applications/apply-direct/route.ts —
+// Mirrors MAX_COVER_LETTER_LENGTH in lib/applications/submit-direct-application.ts —
 // the server silently truncates past this, so the UI must stop input at the cap.
 const COVER_LETTER_MAX = 5000;
 

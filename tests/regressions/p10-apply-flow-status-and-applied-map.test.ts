@@ -55,8 +55,10 @@ describe('P10 defect 2: apply-direct status on re-apply', () => {
         expect(buildApplicationStatusFields(null, false, '', NOW)).toEqual({});
     });
 
-    it('the route spreads the status fields into both upsert branches', () => {
-        const src = read('app/api/applications/apply-direct/route.ts');
+    it('the submit routine spreads the status fields into both upsert branches', () => {
+        // The upsert moved from the apply-direct route to the routine it shares
+        // with the AI app's submit_application.
+        const src = read('lib/applications/submit-direct-application.ts');
         expect(src).toContain("import { buildApplicationStatusFields } from './status-fields'");
         expect(src.split('...statusFields,').length - 1).toBe(2);
         expect(src).toContain('withdrawnAt: null');

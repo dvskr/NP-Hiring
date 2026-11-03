@@ -241,9 +241,12 @@ function offsetOf(listIndex: string, mapIndexParam: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+// lib/mcp/widgets holds the Claude and ChatGPT widget, a separate Preact app
+// with its own JobCard that runs in the host's sandbox, where the site's GA
+// tag never loads, so it has no select_item to send.
 const ALL_TSX = ['app', 'lib', 'components']
   .flatMap((dir) => collectTsx(dir))
-  .filter((rel) => rel !== JOB_CARD);
+  .filter((rel) => rel !== JOB_CARD && !rel.startsWith('lib/mcp/widgets/'));
 const RENDERS = ALL_TSX.flatMap(cardRenders);
 const LIST_RENDERS = RENDERS.filter((r) => r.inMap);
 const SINGLE_RENDERS = RENDERS.filter((r) => !r.inMap);

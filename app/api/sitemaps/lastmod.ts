@@ -132,7 +132,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // 2026-10-25 (2027 re-price): §6 to §8 state the new prices and both renewal prices, drop the plan, and "Last updated" moved;
   // 2026-10-26 (Phase 3): §6 and §7 add the 5-post pack and §8 says all sales are final.
   '/terms': '2026-10-26',
-  '/privacy': '2026-09-15',
+  // 2026-11-03 (AI apps for Claude and ChatGPT): section 17 says what an
+  // assistant receives, what it never receives and how to remove its access.
+  '/privacy': '2026-11-03',
   // 2026-10-25 (2027 re-price): two ladder cards, the ladder and renewal lines, and no plan card, CTA or FAQ;
   // 2026-10-26 (Phase 3): the 5-post pack card and answer, and the all sales final refund answer.
   '/pricing': '2026-10-26',

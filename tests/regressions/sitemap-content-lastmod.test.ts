@@ -111,9 +111,17 @@ const CONTENT_RELEASE_DAY = '2026-10-13';
 
 /** The dated pages no release since has touched, with the copy dates they keep. */
 const UNTOUCHED_PAGE_DATES: Readonly<Record<string, string>> = {
-    '/privacy': '2026-09-15',
     '/sub-processors': '2026-09-12',
 };
+
+/**
+ * The UTC day the AI apps for Claude and ChatGPT shipped, and the page whose
+ * copy they changed: the privacy policy's new section 17 and its "Last
+ * updated" line. Same rule: move the constant and these entries together if
+ * the release ships on a later day.
+ */
+const AI_APPS_RELEASE_DAY = '2026-11-03';
+const AI_APPS_RELEASE_PAGES: readonly string[] = ['/privacy'];
 
 /**
  * The UTC day the security and register batch shipped, and the pages whose
@@ -354,16 +362,24 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
         }
         // No page sits in two release groups.
-        const grouped = [...SECURITY_BATCH_PAGES, ...FOLLOW_UPS_PAGES, ...PRICING_RELEASE_PAGES, ...Object.keys(UNTOUCHED_PAGE_DATES)];
+        const grouped = [
+            ...SECURITY_BATCH_PAGES,
+            ...FOLLOW_UPS_PAGES,
+            ...PRICING_RELEASE_PAGES,
+            ...AI_APPS_RELEASE_PAGES,
+            ...Object.keys(UNTOUCHED_PAGE_DATES),
+        ];
         expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = PRICING_RELEASE_PAGES.includes(pagePath)
+            const expected = AI_APPS_RELEASE_PAGES.includes(pagePath)
+                ? AI_APPS_RELEASE_DAY
+                : PRICING_RELEASE_PAGES.includes(pagePath)
                 ? PRICING_RELEASE_DAY
                 : FOLLOW_UPS_PAGES.includes(pagePath)
                     ? FOLLOW_UPS_DAY

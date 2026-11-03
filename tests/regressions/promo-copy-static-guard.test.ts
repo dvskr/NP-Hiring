@@ -379,13 +379,22 @@ function mayHoldPromoCopy(src: string, promoOnlyNames: ReadonlySet<string>): boo
     );
 }
 
+/**
+ * Machine-built bundles, skipped: lib/mcp/widgets/generated is minified from
+ * lib/mcp/widgets/src, which this guard scans, and its library identifiers
+ * (`$0`) read as prices.
+ */
+const GENERATED_DIRS: ReadonlySet<string> = new Set(['lib/mcp/widgets/generated']);
+
 function walk(dir: string): string[] {
     const abs = path.join(ROOT, dir);
     if (!fs.existsSync(abs)) return [];
     const out: string[] = [];
     for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
         const rel = `${dir}/${entry.name}`;
-        if (entry.isDirectory()) out.push(...walk(rel));
+        if (entry.isDirectory()) {
+            if (!GENERATED_DIRS.has(rel)) out.push(...walk(rel));
+        }
         else if (/\.tsx?$/.test(entry.name) && !/\.(?:d|test)\.tsx?$/.test(entry.name)) out.push(rel);
     }
     return out;

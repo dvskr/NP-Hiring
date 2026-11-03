@@ -604,7 +604,36 @@ const CRAWLER_LISTING_EDGE_CACHE = 'public, s-maxage=300, stale-while-revalidate
 // route with its own caching, and /companies/{slug} keeps its 410 gate above.
 const EDGE_CACHED_HUB_PATHS: ReadonlySet<string> = new Set(['/companies', '/blog']);
 
+// ── AI app machine endpoints (lib/mcp, lib/oauth) ────────────────────
+// The MCP endpoints, the OAuth token, registration and revocation endpoints
+// and their metadata documents are called by Claude's and ChatGPT's servers
+// with bearer tokens, never by a browser session. They skip everything below:
+// the host redirect (Claude drops the Authorization header on a redirect),
+// the Supabase session refresh, the consent cookies (a Set-Cookie on every
+// MCP call), the site CSP and the listing rate limits (the handlers carry
+// their own). The consent page /oauth/authorize is NOT here: it needs the
+// session and the site CSP with frame-ancestors 'none'.
+const AI_APP_MACHINE_PATHS: readonly string[] = [
+    '/mcp',
+    '/oauth/token',
+    '/oauth/register',
+    '/oauth/revoke',
+    '/.well-known/oauth-authorization-server',
+    '/.well-known/oauth-protected-resource',
+    '/.well-known/openai-apps-challenge',
+];
+
+function isAiAppMachinePath(pathname: string): boolean {
+    return AI_APP_MACHINE_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+    if (isAiAppMachinePath(request.nextUrl.pathname)) {
+        const passthrough = NextResponse.next();
+        passthrough.headers.set('X-Robots-Tag', 'noindex, nofollow');
+        return passthrough;
+    }
+
     const hostRedirect = canonicalHostRedirect(request);
     if (hostRedirect) return hostRedirect;
 
@@ -1439,6 +1468,8 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
         '/post-job/checkout', '/post-job/preview',
         '/job-alerts/manage', '/job-alerts/unsubscribe',
         '/unauthorized', '/unsubscribe', '/messages', '/my-applications',
+        // The AI app consent page (app/oauth/authorize).
+        '/oauth',
     ];
     // SEO Fix: include the BARE prefix as well as `prefix/`. Previously
     // `pathname.startsWith('/dashboard/')` failed to match `/dashboard` exactly,

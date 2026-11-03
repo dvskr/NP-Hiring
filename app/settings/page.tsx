@@ -25,6 +25,7 @@ import ScreeningAnswersSection from '@/components/settings/ScreeningAnswersSecti
 import OpenEndedResponsesSection from '@/components/settings/OpenEndedResponsesSection'
 import NewsletterPreference from '@/components/settings/NewsletterPreference'
 import AIRecommendationsToggle from '@/components/settings/AIRecommendationsToggle'
+import ConnectedAppsSection from '@/components/settings/ConnectedAppsSection'
 
 import ReferencesSection from '@/components/settings/ReferencesSection'
 // Niche specialty vocabulary — see config/niche/credentials.ts for FORK NOTEs.
@@ -1634,6 +1635,8 @@ function SettingsPageInner() {
             <NewsletterPreference email={profile.email} />
             {profile.role !== 'employer' && <AIRecommendationsToggle />}
           </div>
+
+          {profile.role === 'job_seeker' && <ConnectedAppsSection />}
 
           {/* ── Danger Zone ── */}
           <div style={{ ...cardStyle, borderColor: 'rgba(239,68,68,0.3)' }}>

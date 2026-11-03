@@ -52,7 +52,8 @@ function parseHeadings(src: string): TocEntry[] {
 }
 
 const PAGES = [
-    { rel: 'app/privacy/page.tsx', constName: 'PRIVACY_SECTIONS', tocId: 'privacy-toc-heading', minSections: 16 },
+    // 17 since 2026-10-28: section 17, AI Assistants (the Claude and ChatGPT apps).
+    { rel: 'app/privacy/page.tsx', constName: 'PRIVACY_SECTIONS', tocId: 'privacy-toc-heading', minSections: 17 },
     { rel: 'app/terms/page.tsx', constName: 'TERMS_SECTIONS', tocId: 'terms-toc-heading', minSections: 18 },
 ] as const;
 

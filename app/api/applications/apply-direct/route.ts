@@ -1,47 +1,17 @@
-import { NextRequest, NextResponse, after } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { toOwnResumePath } from '@/lib/resume-storage';
-import { buildApplicationStatusFields } from './status-fields';
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-const MAX_COVER_LETTER_LENGTH = 5000;
-
-/** Strip all HTML tags to prevent XSS when employer views the cover letter */
-function sanitizeText(text: string): string {
-    return text
-        .replace(/<[^>]*>/g, '')          // strip HTML tags
-        .replace(/&lt;/g, '<')            // decode common entities
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#x27;/g, "'")
-        .replace(/&#x2F;/g, '/')
-        .replace(/javascript:/gi, '')     // strip javascript: protocol
-        .replace(/on\w+\s*=/gi, '')       // strip inline event handlers
-        .trim();
-}
-
-/**
- * Advisory-lock key that serializes submits for one candidate on one job, so
- * the "does an application already exist?" read and the upsert below cannot
- * interleave with a concurrent submit. Namespaced so it can never collide
- * with the job-alert lock in app/api/job-alerts/route.ts or any other
- * advisory lock taken on the same database.
- */
-function applicationLockKey(userId: string, jobId: string): string {
-    return `job_application:submit:${userId}:${jobId}`;
-}
-
-// ── Handler ──────────────────────────────────────────────────────────────────
+import { submitDirectApplication } from '@/lib/applications/submit-direct-application';
 
 /**
  * POST /api/applications/apply-direct
  * Submit an in-platform job application (for jobs with applyOnPlatform=true).
  * Body: { jobId: string, coverLetter?: string, resumeUrl?: string, consent: boolean }
+ *
+ * The submission itself (validation, the locked upsert, the emails and the
+ * AI scoring) is lib/applications/submit-direct-application.ts, shared with
+ * the AI app's submit_application tool so both apply the same rules.
  */
 export async function POST(request: NextRequest) {
     try {
@@ -57,298 +27,32 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // 2. Parse & validate body
+        // 2. Parse the body; every value is validated by the shared routine
         const body = await request.json();
         const { jobId, coverLetter, coverLetterUrl, resumeUrl, consent, screeningAnswers } = body;
 
-        if (!jobId || typeof jobId !== 'string') {
-            return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
-        }
-
-        // GDPR consent is mandatory
-        if (!consent) {
-            return NextResponse.json(
-                { error: 'You must consent to sharing your data with the employer' },
-                { status: 400 }
-            );
-        }
-
-        // Sanitize cover letter (XSS prevention + length cap)
-        let sanitizedCoverLetter: string | null = null;
-        if (coverLetter && typeof coverLetter === 'string') {
-            sanitizedCoverLetter = sanitizeText(coverLetter).slice(0, MAX_COVER_LETTER_LENGTH) || null;
-        }
-
-        // SECURITY (APP-2): both values used to be stored after a host-suffix
-        // check only, and the employer's applicant list signs the stored
-        // resume with the service role, so an applicant could hand an employer
-        // a fresh link to another user's file. A value now counts only when it
-        // names a key in the applicant's own upload folder (/api/upload keys
-        // every file there, cover letters included), and the bare key is
-        // stored. That also accepts the bare key the form posts for a profile
-        // resume or a cover letter, which the old URL parse refused.
-        // Tests: tests/regressions/resume-ownership-writers.test.ts.
-        let validResumeUrl: string | null = null;
-        if (resumeUrl && typeof resumeUrl === 'string') {
-            validResumeUrl = toOwnResumePath(resumeUrl, user.id);
-            if (!validResumeUrl) {
-                return NextResponse.json(
-                    { error: 'Invalid resume URL. Please upload your resume through the platform.' },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // Validate cover letter URL (if uploaded as PDF)
-        let validCoverLetterUrl: string | null = null;
-        if (coverLetterUrl && typeof coverLetterUrl === 'string') {
-            validCoverLetterUrl = toOwnResumePath(coverLetterUrl, user.id);
-            if (!validCoverLetterUrl) {
-                return NextResponse.json(
-                    { error: 'Invalid cover letter URL. Please upload your cover letter through the platform.' },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // 3. Verify the job exists and accepts platform applications
-        const job = await prisma.job.findUnique({
-            where: { id: jobId },
-            select: {
-                id: true,
-                title: true,
-                employer: true,
-                applyOnPlatform: true,
-                isPublished: true,
-                expiresAt: true,
-                employerJobs: {
-                    select: {
-                        contactEmail: true,
-                        employerName: true,
-                        notifyOnApplication: true,
-                    },
-                },
-            },
-        });
-
-        if (!job) {
-            return NextResponse.json({ error: 'Job not found' }, { status: 404 });
-        }
-
-        if (!job.applyOnPlatform) {
-            return NextResponse.json(
-                { error: 'This job does not accept platform applications' },
-                { status: 400 }
-            );
-        }
-
-        if (!job.isPublished) {
-            return NextResponse.json(
-                { error: 'This job is no longer active' },
-                { status: 400 }
-            );
-        }
-
-        if (job.expiresAt && new Date(job.expiresAt) < new Date()) {
-            return NextResponse.json(
-                { error: 'This job has expired' },
-                { status: 400 }
-            );
-        }
-
-        // 4. Get applicant profile
-        const profile = await prisma.userProfile.findUnique({
-            where: { supabaseId: user.id },
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                resumeUrl: true,
-                headline: true,
-                yearsExperience: true,
-            },
-        });
-
-        if (!profile) {
-            return NextResponse.json({ error: 'User profile not found' }, { status: 403 });
-        }
-
-        // Use provided (validated) resume URL, or fall back to profile resume.
-        // The profile column is writable by its owner too (APP-2), so the
-        // fallback passes the same check; a value outside the applicant's own
-        // folder counts as no resume.
-        const applicationResumeUrl = validResumeUrl || toOwnResumePath(profile.resumeUrl, user.id);
-
-        // 5a. Validate screening answers (if the job has questions)
-        let validatedAnswers: { questionId: string; questionText: string; answer: string }[] | null = null;
-        let autoReject = false;
-        let autoRejectReason = '';
-
-        const questions = await prisma.jobScreeningQuestion.findMany({
-            where: { jobId },
-            orderBy: { sortOrder: 'asc' },
-        });
-
-        if (questions.length > 0 && Array.isArray(screeningAnswers)) {
-            validatedAnswers = [];
-
-            for (const q of questions) {
-                const answer = screeningAnswers.find(
-                    (a: { questionId: string }) => a.questionId === q.id
-                );
-
-                // Check required questions
-                if (q.isRequired && (!answer || !answer.answer || String(answer.answer).trim() === '')) {
-                    return NextResponse.json(
-                        { error: `Please answer: "${q.questionText}"` },
-                        { status: 400 }
-                    );
-                }
-
-                const answerValue = answer ? String(answer.answer).trim() : '';
-
-                // Check knockout answers
-                if (q.isKnockout && q.knockoutAnswer && answerValue.toLowerCase() === q.knockoutAnswer.toLowerCase()) {
-                    autoReject = true;
-                    autoRejectReason = `Does not meet requirement: ${q.questionText}`;
-                }
-
-                validatedAnswers.push({
-                    questionId: q.id,
-                    questionText: q.questionText,
-                    answer: answerValue,
-                });
-            }
-        } else if (questions.length > 0) {
-            // Job has questions but no answers submitted — check if any are required
-            const hasRequired = questions.some(q => q.isRequired);
-            if (hasRequired) {
-                return NextResponse.json(
-                    { error: 'Please answer the required screening questions' },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // 5b. Upsert the application (don't duplicate if user already applied).
-        // The existing row's state decides the status: a withdrawn application
-        // that is re-submitted becomes active again (see status-fields.ts).
-        //
-        // The same read also decides `isNew`, this route's answer to "did this
-        // request create the application?". ApplyButton counts a GA4
-        // generate_lead only when it is true, because the route answers 200
-        // for a first submit and a re-submit alike. The read and the write run
-        // in one transaction behind a per-candidate, per-job advisory lock
-        // (the pattern app/api/job-alerts/route.ts uses): without it, two
-        // concurrent submits of one application (a second tab, a retried
-        // request) could both read "no row" and both report a new
-        // application for the single row the upsert leaves behind.
-        const { application, isNew } = await prisma.$transaction(async (tx) => {
-            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${applicationLockKey(user.id, jobId)}))`;
-
-            const existingApplication = await tx.jobApplication.findUnique({
-                where: { userId_jobId: { userId: user.id, jobId } },
-                select: { status: true, withdrawnAt: true },
-            });
-            const statusFields = buildApplicationStatusFields(existingApplication, autoReject, autoRejectReason);
-
-            const saved = await tx.jobApplication.upsert({
-                where: {
-                    userId_jobId: { userId: user.id, jobId },
-                },
-                update: {
-                    coverLetter: sanitizedCoverLetter,
-                    coverLetterUrl: validCoverLetterUrl,
-                    resumeUrl: applicationResumeUrl,
-                    consentGiven: true,
-                    consentGivenAt: new Date(),
-                    withdrawnAt: null, // un-withdraw if re-applying
-                    ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
-                    ...statusFields,
-                },
-                create: {
-                    userId: user.id,
-                    jobId,
-                    coverLetter: sanitizedCoverLetter,
-                    coverLetterUrl: validCoverLetterUrl,
-                    resumeUrl: applicationResumeUrl,
-                    sourceUrl: 'platform',
-                    consentGiven: true,
-                    consentGivenAt: new Date(),
-                    ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
-                    ...statusFields,
-                },
-            });
-            return { application: saved, isNew: existingApplication === null };
-        });
-
-        // 6. Send notification email to the employer (fire-and-forget)
-        const employerEmail = job.employerJobs?.contactEmail;
-        const shouldNotify = job.employerJobs?.notifyOnApplication !== false; // default true
-        if (employerEmail && shouldNotify) {
-            try {
-                const { sendNewApplicationEmail } = await import('@/lib/email-service');
-                await sendNewApplicationEmail({
-                    employerEmail,
-                    employerName: job.employerJobs?.employerName || job.employer,
-                    jobTitle: job.title,
-                    candidateName: [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'A candidate',
-                    candidateHeadline: profile.headline || undefined,
-                    candidateExperience: profile.yearsExperience || undefined,
-                    hasResume: !!applicationResumeUrl,
-                    hasCoverLetter: !!sanitizedCoverLetter,
-                });
-            } catch (emailError) {
-                logger.error('Failed to send new application notification email', emailError);
-                // Don't fail the request if email fails
-            }
-        }
-
-        logger.info('Direct application submitted', {
-            applicationId: application.id,
-            jobId,
+        const outcome = await submitDirectApplication({
             userId: user.id,
+            jobId,
+            coverLetter,
+            coverLetterUrl,
+            resumeUrl,
+            consent,
+            screeningAnswers,
         });
 
-        // 7. Send confirmation email to the CANDIDATE (fire-and-forget)
-        if (profile.email) {
-            try {
-                const { sendApplicationConfirmationEmail } = await import('@/lib/email-service');
-                await sendApplicationConfirmationEmail({
-                    candidateEmail: profile.email,
-                    candidateName: [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'there',
-                    jobTitle: job.title,
-                    employerName: job.employerJobs?.employerName || job.employer,
-                    hasResume: !!applicationResumeUrl,
-                    hasCoverLetter: !!sanitizedCoverLetter,
-                });
-            } catch (confirmError) {
-                logger.error('Failed to send application confirmation to candidate', confirmError);
-            }
-        }
-
-        // 8. Trigger AI candidate scoring in the background (audit B91).
-        // after() keeps the invocation alive until scoring completes — a bare
-        // fire-and-forget promise can be frozen with the function as soon as
-        // the response returns on serverless, silently never computing the
-        // score. Same pattern as the messaging routes' notification emails.
-        if (!autoReject) {
-            after(
-                import('@/lib/candidate-scorer')
-                    .then(({ scoreCandidate }) => scoreCandidate(application.id, jobId, user.id))
-                    .catch(err => logger.error('AI candidate scoring failed', err))
-            );
+        if (!outcome.ok) {
+            return NextResponse.json({ error: outcome.error }, { status: outcome.status });
         }
 
         return NextResponse.json({
             success: true,
-            applicationId: application.id,
+            applicationId: outcome.applicationId,
             // True only when this request created the row; a re-submit of an
             // existing application (including one the candidate withdrew)
-            // answers false. See step 5b.
-            isNew,
-            ...(autoReject && { autoRejected: true, autoRejectReason }),
+            // answers false. See step 5b of the shared routine.
+            isNew: outcome.isNew,
+            ...(outcome.autoRejected && { autoRejected: true, autoRejectReason: outcome.autoRejectReason }),
         });
     } catch (error) {
         logger.error('Error in apply-direct:', error);

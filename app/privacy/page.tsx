@@ -34,7 +34,7 @@ const ulStyle: React.CSSProperties = { listStyleType: 'disc', paddingLeft: '24px
 const liStyle: React.CSSProperties = { fontSize: '14px', color: '#4A5568', lineHeight: 1.65 };
 
 /**
- * P3 #13: a 16-section policy with no table of contents. Every entry's `id`
+ * P3 #13: a 16-section policy (17 since the AI apps section) with no table of contents. Every entry's `id`
  * matches the `id` on the corresponding <h2> below — the drift guard in
  * tests/regressions/p2-polish-batch-legal-toc.test.ts fails if a section is
  * renamed, reordered, or added on one side only.
@@ -56,6 +56,7 @@ const PRIVACY_SECTIONS: ReadonlyArray<{ id: string; title: string }> = [
   { id: 'california-privacy-rights', title: '14. California Privacy Rights (CCPA / CPRA)' },
   { id: 'european-privacy-rights', title: '15. European Privacy Rights (GDPR / UK GDPR)' },
   { id: 'cross-border-transfers', title: '16. Cross-Border Transfers' },
+  { id: 'ai-apps', title: '17. AI Assistants' },
 ];
 
 const tocLinkStyle: React.CSSProperties = {
@@ -89,7 +90,7 @@ export default function PrivacyPage() {
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px 0', lineHeight: 1.15 }}>
                 Privacy <span style={{ color: '#059669' }}>Policy</span>
               </h1>
-              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: May 1, 2026</p>
+              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: November 3, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Image src="/images/pages/privacy-hero.webp" alt="Privacy Policy" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
@@ -269,6 +270,25 @@ export default function PrivacyPage() {
 
           <h2 id="cross-border-transfers" style={h2Style}>16. Cross-Border Transfers</h2>
           <p style={pStyle}>Most of our sub-processors are based in the United States. Where personal data of EEA, UK, or Swiss residents is transferred outside its country of origin, the transfer relies on Standard Contractual Clauses (SCCs) included in each sub-processor&apos;s DPA, supplemented by encryption in transit and at rest.</p>
+
+          <h2 id="ai-apps" style={h2Style}>17. AI Assistants</h2>
+          <p style={pStyle}>You can connect {brand.name} to an AI assistant, such as Claude (by Anthropic) or ChatGPT (by OpenAI), to search jobs, apply and follow your applications from a conversation. Searching jobs needs no account. Everything else needs you to sign in on a {brand.name} page and approve the assistant&apos;s access.</p>
+          <h3 style={h3Style}>What You Can Allow</h3>
+          <ul style={ulStyle}>
+            <li style={liStyle}>See your name, headline and whether a resume is on your profile.</li>
+            <li style={liStyle}>See your applications and saved jobs.</li>
+            <li style={liStyle}>Submit, track and withdraw applications and save jobs when you ask.</li>
+          </ul>
+          <h3 style={h3Style}>What the Assistant Receives</h3>
+          <p style={pStyle}>The job listings you search for and, when you ask for them, the profile, application and saved job details listed above. The assistant never receives your password, your resume file, your NPI or DEA numbers, your license numbers or your EEO information, and the app never asks you for them.</p>
+          <h3 style={h3Style}>Applications Sent From an Assistant</h3>
+          <p style={pStyle}>An application sent from an assistant is the same as one sent on our website: it goes to the employer only after you review it and agree to share your profile, resume and cover letter, and this policy applies to it in the same way. The assistant may draft a cover letter for you, and you can edit it before you send.</p>
+          <h3 style={h3Style}>What We Receive and Keep</h3>
+          <p style={pStyle}>We receive only what each request needs, such as your search terms, a cover letter you approve or your answers to an employer&apos;s screening questions. We do not receive or keep your conversation with the assistant. We keep a record of each connection (the assistant&apos;s name and when it was connected and last used) for as long as your account exists. Access tokens expire after one hour, and a connection left unused for 30 days has to be approved again.</p>
+          <h3 style={h3Style}>The Assistant&apos;s Provider</h3>
+          <p style={pStyle}>What you type into the assistant, and what it shows you, is handled by its provider under its own privacy policy: <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>Anthropic</a> for Claude and <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>OpenAI</a> for ChatGPT.</p>
+          <h3 style={h3Style}>Removing Access</h3>
+          <p style={pStyle}>You can remove an assistant&apos;s access at any time in Settings, under Account, in Connected apps. It stops working at once. Deleting your account removes every connection.</p>
         </div>
 
         {/* Footer Nav */}
