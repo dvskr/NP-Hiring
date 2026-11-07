@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
-import { syncToBeehiiv, unsubscribeFromBeehiiv } from '@/lib/beehiiv'
+import { unsubscribeFromBeehiiv } from '@/lib/beehiiv'
+import { subscribeToNewsletter } from '@/lib/newsletter'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -47,19 +48,8 @@ export async function POST(request: NextRequest) {
         const normalizedEmail = email.trim().toLowerCase()
 
         if (optIn) {
-            // Subscribe: create if new, set true if exists
-            await prisma.emailLead.upsert({
-                where: { email: normalizedEmail },
-                update: { newsletterOptIn: true },
-                create: {
-                    email: normalizedEmail,
-                    source: source || 'newsletter',
-                    newsletterOptIn: true,
-                },
-            })
-
-            // Sync to Beehiiv newsletter (fire-and-forget)
-            syncToBeehiiv(normalizedEmail, { utmSource: source || 'newsletter' })
+            // Subscribe: create if new, set true if exists, then Beehiiv.
+            await subscribeToNewsletter(normalizedEmail, source || 'newsletter')
         } else {
             // SECURITY: this branch took the address from an anonymous body,
             // so anyone could take any subscriber off the newsletter here and

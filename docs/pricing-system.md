@@ -1,6 +1,6 @@
 # NP Hiring Pricing System — Architecture & Operations
 
-**Last verified:** 2026-11-07 (the NP guides store, free to claim through the promo and sold from the ladder's start: §2i, §3a, §3b, §4g, §9a to §9c, §10b); 2026-10-27 (the 2027 re-price, Phase 4: the retired Employer plan's dormant code deleted, with its config values, its `'plan'` tier, its Payment Link variable, its routes, jobs, emails and admin page; a subscription-mode Checkout Session is alerted for a refund, and the webhook needs 7 events: §1b to §1d, §2b, §2d to §2g, §3a to §3c, §4a to §4e, §5, §6, §8, §9a to §9d, §10 to §12 and the glossary); 2026-10-25 (the 2027 re-price, the fix pass of the pack's code and security reviews: the pack recorded in the state its payment is in, refund and dispute events for a pack not yet recorded retried, the pack checkout's account and session rules, the post-free screening questions inside the transaction, the new-post ledger write's retry, and the migration's lock timeout: §1b, §1c, §2a, §2c, §2h, §3a, §3b, §4f, §8, §9a to §9c, §10b, §12); 2026-10-25 (the 2027 re-price, Phase 3: the 5-post pack's pages, copy, emails, GA events and back office, and all sales final (owner decision 2026-10-25): §1b to §1d, §2h, §3a to §3c, §9c, §9d, §10 to §12); 2026-10-25 (the 2027 re-price, Phase 2 backend: the 5-post pack, built and kept dark, and the plan taken out of posting: §1b to §1d, §2a to §2d, §2g, the new §2h, §3a, §3b, §4a, §4f, §5 to §12 and the glossary); 2026-10-24 (the 2027 re-price, Phase 1: $249 first post and $349 after, a renewal priced by the post it renews, and the Employer plan retired from every surface: §1, §2d, §2g, §3, §5, §8 to §12); 2026-10-02 (the plan checkout and its account linking in §2e, the activation order in §2c, the schema blocks in §4, the open loopholes in §8, the checklist and monitors in §9 and the test map in §10, re-checked against the code; `tests/regressions/docs-pricing-system-matches-code.test.ts` now holds them to it); 2026-10-01 (the copy switch at the promo end: §1d, §2g and §3); 2026-09-27 (plan post lifecycle, renewal effects and the promo end instant)
+**Last verified:** 2026-11-08 (the guides store follow-ups: one sender for the delivery email, the claim lock, email-only claim links, the newsletter box, /admin/guides and the token masking: §2i); 2026-11-07 (the NP guides store, free to claim through the promo and sold from the ladder's start: §2i, §3a, §3b, §4g, §9a to §9c, §10b); 2026-10-27 (the 2027 re-price, Phase 4: the retired Employer plan's dormant code deleted, with its config values, its `'plan'` tier, its Payment Link variable, its routes, jobs, emails and admin page; a subscription-mode Checkout Session is alerted for a refund, and the webhook needs 7 events: §1b to §1d, §2b, §2d to §2g, §3a to §3c, §4a to §4e, §5, §6, §8, §9a to §9d, §10 to §12 and the glossary); 2026-10-25 (the 2027 re-price, the fix pass of the pack's code and security reviews: the pack recorded in the state its payment is in, refund and dispute events for a pack not yet recorded retried, the pack checkout's account and session rules, the post-free screening questions inside the transaction, the new-post ledger write's retry, and the migration's lock timeout: §1b, §1c, §2a, §2c, §2h, §3a, §3b, §4f, §8, §9a to §9c, §10b, §12); 2026-10-25 (the 2027 re-price, Phase 3: the 5-post pack's pages, copy, emails, GA events and back office, and all sales final (owner decision 2026-10-25): §1b to §1d, §2h, §3a to §3c, §9c, §9d, §10 to §12); 2026-10-25 (the 2027 re-price, Phase 2 backend: the 5-post pack, built and kept dark, and the plan taken out of posting: §1b to §1d, §2a to §2d, §2g, the new §2h, §3a, §3b, §4a, §4f, §5 to §12 and the glossary); 2026-10-24 (the 2027 re-price, Phase 1: $249 first post and $349 after, a renewal priced by the post it renews, and the Employer plan retired from every surface: §1, §2d, §2g, §3, §5, §8 to §12); 2026-10-02 (the plan checkout and its account linking in §2e, the activation order in §2c, the schema blocks in §4, the open loopholes in §8, the checklist and monitors in §9 and the test map in §10, re-checked against the code; `tests/regressions/docs-pricing-system-matches-code.test.ts` now holds them to it); 2026-10-01 (the copy switch at the promo end: §1d, §2g and §3); 2026-09-27 (plan post lifecycle, renewal effects and the promo end instant)
 **Source of truth:** [lib/config.ts](../lib/config.ts) + [lib/pricing.ts](../lib/pricing.ts) + [lib/renewal-price.ts](../lib/renewal-price.ts) + [lib/post-packs.ts](../lib/post-packs.ts) + [prisma/schema.prisma](../prisma/schema.prisma); the words every surface prints come from [lib/pricing-copy.ts](../lib/pricing-copy.ts) and the per-page builders in §3a
 **Companion doc:** [pricing-audit.md](./archive/pricing-audit.md) (the April 2026 audit and its change log; archived and no longer maintained. Open items live in [PENDING_WORK.md](./PENDING_WORK.md))
 
@@ -446,16 +446,22 @@ By hand: /admin/post-packs → PATCH /api/admin/post-packs/:id (requireApiAdminA
 Six PDF guides, three bundles and one checkout add-on for readers (not employers), priced in [lib/guides/catalog.ts](../lib/guides/catalog.ts), the only price source: $9 to $39 a guide, $39 to $69 a bundle, the Compensation Report as a $5 add-on to a product that does not include it. The guides take those prices from the same instant as the posting ladder (owner decision 2026-11-07): until `config.promoEndsAt` every product, bundles included, is free to claim with an email address and Stripe is never called; from it they are sold through Stripe Checkout, one-time, all sales final. [lib/guides/phase.ts](../lib/guides/phase.ts) holds the switch (`guidePhase`, `isGuideClaimOpen`), the paid gate (`guideSaleClosedReason`, in the 5-post pack's order) and the price block every surface prints (`guidePriceCopy(product, now)`), decided per render or request.
 
 ```
-Claim (promo): POST /api/guides/claim { product, email } (app/api/guides/claim/route.ts)
+Claim (promo): POST /api/guides/claim { product, email, newsletter? } (app/api/guides/claim/route.ts)
   ├─ verifyCsrf, then 5 a minute per IP (RATE_LIMITS.guideClaim); 409 PROMO_ENDED once isGuideClaimOpen(now)
   │    is false; 400 for a malformed body, a bad email (trimmed, lowercased, at most 254) or an unknown product;
-  │    429 past 6 claims an hour for one address from any IP (RATE_LIMITS.guideClaimPerEmail, keyed on a hash)
+  │    429 past 6 new claims an hour for one address from any IP (RATE_LIMITS.guideClaimPerEmail, keyed on a
+  │    hash; a claim the address already holds never counts)
   ├─ lib/guides/fulfill.ts#fulfillPromoClaim: a 'promo' claim this email already holds with every guide of the
   │    product is re-used (no new row; its email re-sent at most once per 10 minutes, a conditional write on
-  │    email_sent_at). Else GuidePurchase { source 'promo', amountCents 0, no Stripe ids, the product's own
+  │    email_sent_at). Else, under a transaction lock on the address (pg_advisory_xact_lock, so two claims at
+  │    once make one row), GuidePurchase { source 'promo', amountCents 0, no Stripe ids, the product's own
   │    guides (never the add-on), userId when signed in, a 48-hex access token } and the delivery email
-  └─ 200 { ok: true, emailed, guides }; a new claim's token joins this browser's np_guides cookie (a re-used
-       one does not: the request has not shown it owns the address, so its link goes by email only)
+  ├─ newsletter: true opts the address in (lib/newsletter.ts, email lead source 'guide_claim'): the signed-in
+  │    owner of the address as the public signup does, anyone else only for an address the site has never
+  │    seen (an unsubscribe always stands); a failure there never fails the claim
+  └─ 200 { ok: true, emailed, guides, inLibrary }, the same whether or not the address held a claim. The link
+       goes by email; only a reader signed in with that confirmed address gets the token in this browser's
+       np_guides cookie at once (inLibrary)
 
 Buy (from config.promoEndsAt): POST /api/guides/checkout { product, addOn? } (app/api/guides/checkout/route.ts)
   ├─ verifyCsrf, 10 a minute per IP; guideSaleClosedReason(now): 503 PAID_POSTING_DISABLED · 503
@@ -464,8 +470,9 @@ Buy (from config.promoEndsAt): POST /api/guides/checkout { product, addOn? } (ap
   ├─ Checkout Session, mode 'payment', card only, no promotion codes, no account needed (a signed-in buyer's
   │    email prefilled): metadata { type: 'guide', product, addOn, userId } and the GA ids of a consenting
   │    visitor; payment_intent_data.metadata { type: 'guide', product }
-  └─ 200 { url }; the session id joins the httpOnly np_guide_checkout cookie (a day); success_url
-       /guides/success?session_id=…, cancel_url /guides/<product>
+  └─ 200 { url, amountCents } (amountCents for the button's GA begin_checkout, type 'guide'); the session id
+       joins the httpOnly np_guide_checkout cookie (a day); success_url /guides/success?session_id=…,
+       cancel_url /guides/<product>
 
 Record: lib/guides/fulfill.ts#fulfillGuideSession, run by the webhook (checkout.session.completed or
   async_payment_succeeded with metadata.type 'guide', after the subscription guard and the pack branch and
@@ -474,30 +481,38 @@ Record: lib/guides/fulfill.ts#fulfillGuideSession, run by the webhook (checkout.
   ├─ unpaid is deferred; 'no_payment_required' is alerted; an unknown product is alerted and answered 400
   ├─ GuidePurchase upsert keyed on the unique stripeSessionId (a P2002 from the other caller reads its row):
   │    source 'stripe', amountCents = session.amount_total, the product's guides plus the add-on if bought
-  ├─ the delivery email claimed by email_sent_at before it is sent, released on a failed send; a failed write
-  │    or a failed email answers 500 and rolls the dedupe row back (the retry only re-sends the email)
+  ├─ only the webhook sends the delivery email (verify passes sendEmail: false and reports whether it has
+  │    gone): claimed by email_sent_at before it is sent, released on a failed send; a failed write or a
+  │    failed email answers 500 and rolls the dedupe row back (the retry only re-sends the email). An email
+  │    that can never send (no address; validation_error, missing_required_field or invalid_parameter) is
+  │    alerted for staff to send the link from /admin/guides
   └─ the GA purchase (type 'guide', the product slug and title) once the email has gone, for a paid amount
   Verify adds the purchase to the np_guides cookie only for the browser whose np_guide_checkout cookie holds
-  the session; anyone else holding the id learns it was paid, and the link goes by email.
+  the session; anyone else holding the id learns it was paid, and the link goes by email. The success page
+  asks again every 3 seconds, for about 45 seconds, until the email has gone.
 
 Read: the email links /guides/library/<token>, which moves the token into the np_guides cookie (a year,
   httpOnly) and redirects to /guides/library. GET /api/guides/download?guide=<slug> is authorised by that
-  cookie only: refused cross-site, a conditional increment (60 downloads a purchase), then a 60-second signed
-  link to <slug>.pdf in the private Supabase bucket 'guides' under the guide's published file name; a link
-  that cannot be signed gives the download back. scripts/guides/upload-guides.ts puts the PDFs there (a dry
-  run unless --apply)
+  cookie only: refused cross-site (Sec-Fetch-Site, or for a browser that sends none, a Referer that is not on
+  this site; the library page's referrer policy is same-origin so its links send one), a conditional increment (60 downloads a purchase), then a 60-second signed link to <slug>.pdf
+  in the private Supabase bucket 'guides' under the guide's published file name; a link that cannot be signed
+  gives the download back. scripts/guides/upload-guides.ts puts the PDFs there (a dry run unless --apply)
+  Support: /admin/guides (GET /api/admin/guides?email=, POST /api/admin/guides/:id/rotate; lib/guides/admin.ts)
+  finds a reader's purchases and gives one a new token, which ends the old link in every browser, and emails
+  it (not for a refunded or disputed purchase)
 
 Refund and chargeback: app/api/webhooks/stripe/guide-checkout.ts, when no JobCharge and no pack matches
   ├─ charge.refunded in full → refundedAt (downloads end); in part → nothing changes
   ├─ charge.dispute.created → disputedAt (downloads frozen); closed won or warning_closed → restored; lost
   │    → stays frozen
   └─ no purchase matches and the payment intent is tagged 'guide' (isUnrecordedGuidePayment): 500 with the
-       dedupe row rolled back, so Stripe retries once the checkout is recorded; a Stripe error answers 500
+       dedupe row rolled back, so Stripe retries once the checkout is recorded; a Stripe error answers 500.
+       The pack check and this one share one read of the payment intent (lib/payment-intent-reader.ts)
   A promo claim has no payment, so no event reaches it. Account erasure (the purge cron) keeps every row as
   the sales record and nulls its email and userId.
 ```
 
-Library tokens and checkout session ids are masked in every Sentry event ([lib/private-url.ts](../lib/private-url.ts), wired into the three Sentry configs) and never reach Google Analytics (lib/analytics.ts swaps the token segment of /guides/library/<token> for its route name and reports allowlisted query parameters only).
+Library tokens (in the link path, in the np_guides cookie or bare) and checkout session ids are masked in every Sentry event and every server log line ([lib/private-url.ts](../lib/private-url.ts), wired into the three Sentry configs and lib/logger.ts) and never reach Google Analytics (lib/analytics.ts swaps the token segment of /guides/library/<token> for its route name and reports allowlisted query parameters only).
 
 ---
 

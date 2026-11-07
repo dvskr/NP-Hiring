@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2, Package } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2, Package, BookOpen } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -33,6 +33,10 @@ const navItems = [
   // webhook only alerts on), move the use-by date, restore a post spent in
   // error. It replaced the Employer plan page, deleted with the plan code.
   { name: 'Post Packs', href: '/admin/post-packs', icon: Package },
+  // The guides store back office: find a reader's purchases by email and
+  // give one a new library link, which cuts off the old link (a library
+  // token never expires, so a forwarded delivery email is lasting access).
+  { name: 'Guides', href: '/admin/guides', icon: BookOpen },
   { name: 'Job Health', href: '/admin/health', icon: HeartPulse },
   { name: 'Cron & Triggers', href: '/admin/cron', icon: Activity },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

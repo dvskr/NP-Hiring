@@ -13,6 +13,13 @@ import { GUIDES, isGuideSlug, type GuideSlug } from '@/lib/guides/catalog';
 const SESSION_STORAGE_KEY = 'np_guide_checkout_session_id';
 const MAX_ATTEMPTS = 5;
 const RETRY_MS = 2000;
+/**
+ * The webhook sends the delivery email, usually within seconds of payment.
+ * Until it has, the page asks again this often, this many times (about 45
+ * seconds in all).
+ */
+const EMAIL_POLL_MS = 3000;
+const EMAIL_POLLS = 15;
 
 /**
  * The Checkout session id from ?session_id=, moved into this tab's session
@@ -43,6 +50,8 @@ interface Verified {
     readonly guides: readonly GuideSlug[];
     readonly emailed: boolean;
     readonly inLibrary: boolean;
+    /** Not emailed yet, and the page is still asking. */
+    readonly emailWaiting: boolean;
 }
 
 type ViewState =
@@ -92,6 +101,11 @@ function ReadyView({ result }: { readonly result: Verified }) {
                     <Mail size={16} style={{ color: '#BE185D', flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
                     We emailed you a private link to your library. Keep it: it opens your {noun} on any device.
                 </p>
+            ) : result.emailWaiting ? (
+                <p style={noteStyle}>
+                    <Loader2 size={16} className="animate-spin" style={{ color: '#BE185D', flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
+                    Sending your library email.
+                </p>
             ) : (
                 <p style={noteStyle}>
                     <Mail size={16} style={{ color: '#B45309', flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
@@ -117,7 +131,26 @@ export default function GuidesSuccessPage() {
 
         let cancelled = false;
         let attempts = 0;
+        let emailPolls = 0;
+        let shown: Verified | null = null;
         let retry: ReturnType<typeof setTimeout> | null = null;
+
+        const show = (result: Verified) => {
+            shown = result;
+            setState({ kind: 'ready', result });
+        };
+
+        // Once the guides are shown, a failed check never replaces them: the
+        // page only stops asking about the email, and says so.
+        const askAgainForEmail = () => {
+            if (!shown) return;
+            if (emailPolls >= EMAIL_POLLS) {
+                show({ ...shown, emailWaiting: false });
+                return;
+            }
+            emailPolls += 1;
+            retry = setTimeout(tick, EMAIL_POLL_MS);
+        };
 
         const tick = async () => {
             attempts += 1;
@@ -126,14 +159,18 @@ export default function GuidesSuccessPage() {
                 const data = (await res.json().catch(() => ({}))) as VerifyAnswer;
                 if (cancelled) return;
                 if (res.ok && data.paid === true) {
-                    setState({
-                        kind: 'ready',
-                        result: {
-                            guides: (data.guides ?? []).filter(isGuideSlug),
-                            emailed: data.emailed === true,
-                            inLibrary: data.inLibrary === true,
-                        },
+                    const emailed = data.emailed === true;
+                    show({
+                        guides: (data.guides ?? []).filter(isGuideSlug),
+                        emailed,
+                        inLibrary: data.inLibrary === true,
+                        emailWaiting: !emailed,
                     });
+                    if (!emailed) askAgainForEmail();
+                    return;
+                }
+                if (shown) {
+                    askAgainForEmail();
                     return;
                 }
                 if (res.status >= 500 && attempts < MAX_ATTEMPTS) {
@@ -143,6 +180,10 @@ export default function GuidesSuccessPage() {
                 setState({ kind: 'error', message: data.error ?? 'We could not confirm this checkout.' });
             } catch {
                 if (cancelled) return;
+                if (shown) {
+                    askAgainForEmail();
+                    return;
+                }
                 if (attempts < MAX_ATTEMPTS) {
                     retry = setTimeout(tick, RETRY_MS);
                     return;

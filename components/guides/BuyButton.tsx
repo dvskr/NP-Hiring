@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import { trackBeginCheckout } from '@/lib/analytics';
 
 /** The checkout add-on, offered as a checkbox above the button. */
 export interface AddOnOffer {
@@ -23,6 +24,7 @@ interface BuyButtonProps {
 
 interface CheckoutAnswer {
     readonly url?: string;
+    readonly amountCents?: number;
     readonly error?: string;
 }
 
@@ -63,6 +65,7 @@ export default function BuyButton({ product, label, addOn = null, variant = 'pri
                 setPending(false);
                 return;
             }
+            if (typeof answer.amountCents === 'number') trackBeginCheckout(answer.amountCents, 'guide');
             window.location.href = answer.url;
         } catch {
             setError('Could not reach checkout. Check your connection and try again.');

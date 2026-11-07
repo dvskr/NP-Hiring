@@ -90,7 +90,7 @@ export default function PrivacyPage() {
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px 0', lineHeight: 1.15 }}>
                 Privacy <span style={{ color: '#059669' }}>Policy</span>
               </h1>
-              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: November 3, 2026</p>
+              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: November 8, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Image src="/images/pages/privacy-hero.webp" alt="Privacy Policy" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
@@ -126,6 +126,7 @@ export default function PrivacyPage() {
             <li style={liStyle}><strong>Email addresses:</strong> When you subscribe to job alerts, save drafts, or post jobs</li>
             <li style={liStyle}><strong>Employer information:</strong> Company name, job posting details, contact information when posting jobs</li>
             <li style={liStyle}><strong>Payment information:</strong> Processed securely through Stripe (we do not store credit card details)</li>
+            <li style={liStyle}><strong>Career guides:</strong> The email address you give to claim or buy a guide, and the guides it holds, so we can send you the link to your library</li>
           </ul>
           <h3 style={h3Style}>Automatically Collected Information</h3>
           <ul style={ulStyle}>
@@ -151,7 +152,7 @@ export default function PrivacyPage() {
           <ul style={ulStyle}>
             <li style={liStyle}><strong>Vercel:</strong> Application hosting and performance telemetry (Speed Insights, enabled only after analytics consent).</li>
             <li style={liStyle}><strong>Supabase:</strong> Database, authentication, and file storage (resumes, profile assets).</li>
-            <li style={liStyle}><strong>Stripe:</strong> Payment processing for employer job postings (hosted Checkout; card data never touches our servers).</li>
+            <li style={liStyle}><strong>Stripe:</strong> Payment processing for employer job postings and career guide purchases (hosted Checkout; card data never touches our servers).</li>
             <li style={liStyle}><strong>Resend:</strong> Transactional and marketing email delivery.</li>
             <li style={liStyle}><strong>Google Analytics 4:</strong> Aggregate site analytics. Loads only after explicit analytics consent. IP anonymization and Google Signals are disabled. We honor Global Privacy Control (GPC) signals.</li>
             <li style={liStyle}><strong>Sentry:</strong> Application error monitoring (configured at build time; client-side reporting currently disabled).</li>
@@ -228,6 +229,7 @@ export default function PrivacyPage() {
             <li style={liStyle}><strong>Email logs (deliverability):</strong> 90 days.</li>
             <li style={liStyle}><strong>Analytics events (Google Analytics):</strong> 14 months (the shortest retention setting GA4 allows).</li>
             <li style={liStyle}><strong>Account deletion:</strong> on request, we soft-delete immediately and hard-purge after a 30-day grace period during which the deletion can be reversed.</li>
+            <li style={liStyle}><strong>Career guides:</strong> kept while your library link works. Deleting your account removes the email address from guides claimed or bought while signed in or with your account&apos;s email address. For guides claimed or bought with another address, write to {brand.email.privacy} from that address and we will remove it.</li>
           </ul>
 
           <h2 id="automated-decisions-and-ai" style={h2Style}>12. Automated Decision-Making and AI</h2>

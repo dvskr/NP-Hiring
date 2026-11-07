@@ -1,3 +1,4 @@
+import { maskPrivateTokens } from '@/lib/private-url';
 
 /**
  * Structured Logger for Production
@@ -69,7 +70,15 @@ function formatError(error: unknown): LogEntry['error'] | undefined {
     };
 }
 
+/**
+ * One log line, with guide library tokens and checkout session ids masked
+ * (lib/private-url.ts) wherever they sit: the message, the context, the error.
+ */
 function formatLog(level: LogLevel, message: string, context?: LogContext, error?: unknown): string {
+    return maskPrivateTokens(formatLogUnmasked(level, message, context, error));
+}
+
+function formatLogUnmasked(level: LogLevel, message: string, context?: LogContext, error?: unknown): string {
     const entry: LogEntry = {
         timestamp: new Date().toISOString(),
         level,

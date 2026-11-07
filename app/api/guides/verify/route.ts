@@ -6,6 +6,10 @@
  * safe to run twice). When the request comes from the browser that started
  * the checkout (the np_guide_checkout cookie), it also adds the purchase to
  * that browser's library cookie.
+ *
+ * It never sends the delivery email: the webhook does, and Stripe retries the
+ * webhook until the send succeeds. `emailed` says whether it has gone out
+ * yet; the success page asks again until it has.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
@@ -53,7 +57,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
 
     try {
-        const result = await fulfillGuideSession(session);
+        const result = await fulfillGuideSession(session, { sendEmail: false });
         if (result.status !== 'fulfilled') {
             logger.error('Paid guide session could not be fulfilled', null, { sessionId, status: result.status });
             return noStore(NextResponse.json({ error: 'Your payment went through, but we could not prepare your guides. Please contact support.' }, { status: 500 }));

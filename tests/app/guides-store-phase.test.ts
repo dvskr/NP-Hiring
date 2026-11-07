@@ -122,12 +122,12 @@ describe('the price block and action follow the phase', () => {
     it('the claim form and the buy button post a product slug to their routes, never an amount', () => {
         const claim = read('components/guides/ClaimForm.tsx');
         expect(claim).toContain("fetch('/api/guides/claim'");
-        expect(claim).toContain('JSON.stringify({ product, email: address })');
+        expect(claim).toContain('JSON.stringify({ product, email: address, newsletter })');
         const buy = read('components/guides/BuyButton.tsx');
         expect(buy).toContain("fetch('/api/guides/checkout'");
         expect(buy).toContain('JSON.stringify({ product, addOn: addOnChosen })');
         // Each sends exactly one body, and that is it.
-        expect(claim.match(/JSON\.stringify\(\{[^}]*\}\)/g)).toEqual(['JSON.stringify({ product, email: address })']);
+        expect(claim.match(/JSON\.stringify\(\{[^}]*\}\)/g)).toEqual(['JSON.stringify({ product, email: address, newsletter })']);
         expect(buy.match(/JSON\.stringify\(\{[^}]*\}\)/g)).toEqual(['JSON.stringify({ product, addOn: addOnChosen })']);
     });
 });

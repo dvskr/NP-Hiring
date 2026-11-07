@@ -144,11 +144,19 @@ describe('checkout.session.completed for a guide', () => {
         expect(alerts()).toContain('delivery email failed');
     });
 
-    it('does not retry an address that will never accept the email', async () => {
+    it('does not retry an address that will never accept the email, and pages a human to send the link', async () => {
         vi.mocked(fulfillGuideSession).mockResolvedValueOnce({ status: 'fulfilled', purchase: PURCHASE, delivery: 'refused' } as never);
         const { res } = await deliver('checkout.session.completed', guideSession);
         expect(res.status).toBe(200);
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+        expect(alerts()).toContain('delivery email cannot be sent');
+        expect(alerts()).toContain('/admin/guides');
+    });
+
+    it('sends no such alert when the email went out', async () => {
+        vi.mocked(fulfillGuideSession).mockResolvedValueOnce({ status: 'fulfilled', purchase: PURCHASE, delivery: 'sent' } as never);
+        await deliver('checkout.session.completed', guideSession);
+        expect(alerts()).not.toContain('cannot be sent');
     });
 
     it('lets Stripe retry when the write fails', async () => {
@@ -203,6 +211,17 @@ describe('refunds and disputes on guide payments', () => {
         expect(json.note).toBe('no matching JobCharge');
         expect(isUnrecordedGuidePayment).toHaveBeenCalledWith(expect.anything(), 'pi_g');
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+    });
+
+    it('reads the payment intent once for the pack check and the guide check', async () => {
+        vi.mocked(isUnrecordedGuidePayment).mockImplementationOnce(async (stripe, id) => {
+            await stripe.paymentIntents.retrieve(id);
+            return false;
+        });
+        const { json } = await refund(100);
+        expect(json.note).toBe('no matching JobCharge');
+        expect(isUnrecordedGuidePayment).toHaveBeenCalledTimes(1);
+        expect(stripeApi.paymentIntentsRetrieve).toHaveBeenCalledTimes(1);
     });
 
     it('a pack payment not recorded yet is still retried by the pack code first', async () => {

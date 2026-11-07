@@ -21,14 +21,32 @@ function redirect(req: NextRequest, to: string): NextResponse {
     return res;
 }
 
+/**
+ * Downloads start from the library page. A navigation from another site
+ * carries the lax library cookie too, so without this a hostile page could
+ * spend a reader's downloads by sending them here repeatedly. Browsers that
+ * send Sec-Fetch-Site are refused only when it says cross-site; an older
+ * browser that sends none must show a Referer on this site's origin (the
+ * library page's links send one; a hostile page can only send its own or
+ * none).
+ */
+function startedOnThisSite(req: NextRequest): boolean {
+    const site = req.headers.get('sec-fetch-site');
+    if (site) return site !== 'cross-site';
+    const referer = req.headers.get('referer');
+    if (!referer) return false;
+    try {
+        return new URL(referer).origin === req.nextUrl.origin;
+    } catch {
+        return false;
+    }
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
     const limited = await rateLimit(req, 'guides:download', RATE_LIMITS.guideAccess);
     if (limited) return limited;
 
-    // Downloads start from the library page. A navigation from another site
-    // carries the lax library cookie too, so without this a hostile page
-    // could spend a reader's downloads by sending them here repeatedly.
-    if (req.headers.get('sec-fetch-site') === 'cross-site') return redirect(req, '/guides/library');
+    if (!startedOnThisSite(req)) return redirect(req, '/guides/library');
 
     const guide = req.nextUrl.searchParams.get('guide') ?? '';
     if (!isGuideSlug(guide)) return redirect(req, '/guides/library?error=unknown');

@@ -62,7 +62,7 @@ export function guidesFaqs(now: Date): GuidesFaq[] {
         promo
             ? {
                 question: 'How do I get my guides?',
-                answer: 'Enter your email address on any guide or bundle. The guides open in your library in this browser right away, and we email you a private link that opens them on any other device. Keep that email: the link is how you get back to your library.',
+                answer: 'Enter your email address on any guide or bundle and we email you a private link to your library. It opens your guides on any device. Keep that email: the link is how you get back to your library.',
             }
             : {
                 question: 'How do I get my guides after I pay?',

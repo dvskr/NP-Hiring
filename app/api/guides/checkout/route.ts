@@ -1,5 +1,5 @@
 /**
- * POST /api/guides/checkout  { product, addOn? }  ->  { url }
+ * POST /api/guides/checkout  { product, addOn? }  ->  { url, amountCents }
  *
  * Opens a Stripe Checkout session for one product from the guides store,
  * from config.promoEndsAt on. Until then every guide is claimed free
@@ -144,7 +144,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: 'Could not start checkout. Please try again.' }, { status: 502 });
         }
 
-        const res = NextResponse.json({ url: session.url });
+        // amountCents is for the button's GA begin_checkout; Stripe charges the line items.
+        const amountCents = product.priceCents + (withAddOn ? ADD_ON.priceCents : 0);
+        const res = NextResponse.json({ url: session.url, amountCents });
         // Ties the success page to this browser: only it receives the
         // library cookie straight away. Anyone else holding the session id
         // learns that it was paid, and the buyer gets the link by email.

@@ -820,6 +820,14 @@ export function trackShare(contentType: string, itemId: string, method: string) 
   });
 }
 
+/**
+ * A guide claimed free during the launch promo (app/api/guides/claim). Its
+ * own event, so the application leads that generate_lead counts stay apart.
+ */
+export function trackGuideClaim(product: string) {
+  gtag('event', 'claim_guide', { item_id: product });
+}
+
 export function trackEmailSubscribe(source: string) {
   gtag('event', 'email_subscribe', {
     subscribe_source: source,
@@ -859,10 +867,11 @@ export function trackViewPostJobPage() {
 }
 
 /**
- * Employer clicked through to Stripe checkout: a new post, a renewal, or a
- * 5-post pack (valued at its price, config.stripePackPriceInCents).
+ * A click through to Stripe checkout: an employer's new post, renewal or
+ * 5-post pack (valued at its price, config.stripePackPriceInCents), or a
+ * reader's guides store purchase (valued at the product plus any add-on).
  */
-export function trackBeginCheckout(amountCents: number, type: 'new' | 'renewal' | 'pack') {
+export function trackBeginCheckout(amountCents: number, type: 'new' | 'renewal' | 'pack' | 'guide') {
   gtag('event', 'begin_checkout', {
     currency: 'USD',
     value: amountCents / 100,

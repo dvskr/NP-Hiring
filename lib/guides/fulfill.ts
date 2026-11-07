@@ -5,12 +5,14 @@
  *   - a paid Stripe checkout (source 'stripe'): fulfillGuideSession, called by
  *     the Stripe webhook and by the success page (/api/guides/verify),
  *     whichever gets there first. Both are safe to repeat: the purchase is
- *     keyed on the Checkout session and the delivery email is claimed before
- *     it is sent.
+ *     keyed on the Checkout session. Only the webhook sends the delivery
+ *     email (sendEmail: false on the success page), so a send that fails is
+ *     always the webhook's, and Stripe's retry sends it again.
  *   - a launch-promo claim (source 'promo'): fulfillPromoClaim, called by
  *     POST /api/guides/claim while lib/guides/phase.ts#isGuideClaimOpen. No
  *     payment and no Stripe ids; a claim the same email already holds is
- *     re-used rather than duplicated, and its email re-sent at most once per
+ *     re-used rather than duplicated (claims for one address are serialised
+ *     with a transaction lock), and its email re-sent at most once per
  *     PROMO_RESEND_INTERVAL_MS.
  *
  * Refunds and chargebacks reach only Stripe rows (a promo row has no payment
@@ -21,6 +23,7 @@ import type Stripe from 'stripe';
 import type { GuidePurchase, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import type { PaymentIntentReader } from '@/lib/payment-intent-reader';
 import { ADD_ON, getProduct, isGuideSlug, productGuides, resolvePurchaseGuides, type Product } from './catalog';
 import { GUIDE_CHECKOUT_TYPE } from './phase';
 import { newAccessToken } from './access';
@@ -39,9 +42,16 @@ export const PROMO_RESEND_INTERVAL_MS = 10 * 60 * 1000;
  *  - 'sent': sent now; 'already': sent before (for a re-used promo claim,
  *    within PROMO_RESEND_INTERVAL_MS), or being sent by a concurrent caller;
  *  - 'no-address': no email to send to; 'refused': it will never send;
- *  - 'retry': a provider or database failure, released for the next caller.
+ *  - 'retry': a provider or database failure, released for the next caller;
+ *  - 'pending': not sent yet, and this caller does not send it (the success
+ *    page, which leaves the email to the webhook).
  */
-export type DeliveryOutcome = 'sent' | 'already' | 'no-address' | 'refused' | 'retry';
+export type DeliveryOutcome = 'sent' | 'already' | 'no-address' | 'refused' | 'retry' | 'pending';
+
+export interface FulfillOptions {
+    /** False on the success page: record the purchase, leave the email to the webhook. */
+    readonly sendEmail?: boolean;
+}
 
 export type FulfillResult =
     | { readonly status: 'fulfilled'; readonly purchase: GuidePurchase; readonly delivery: DeliveryOutcome }
@@ -81,18 +91,28 @@ async function recordPurchase(session: Stripe.Checkout.Session, data: SaleData):
     }
 }
 
+/**
+ * The row as this caller read it: every claim and release of the email is
+ * tied to the token too, so a link support replaced in between
+ * (lib/guides/admin.ts#rotateGuideAccess) is never emailed, and its send is
+ * never undone by this caller.
+ */
+function asRead(purchase: GuidePurchase): { id: string; accessToken: string } {
+    return { id: purchase.id, accessToken: purchase.accessToken };
+}
+
 /** Send the delivery email once per purchase. A failed send releases the claim for the next caller. */
 async function deliverOnce(purchase: GuidePurchase): Promise<DeliveryOutcome> {
     if (!purchase.email) return 'no-address';
     if (purchase.emailSentAt) return 'already';
     const claim = await prisma.guidePurchase.updateMany({
-        where: { id: purchase.id, emailSentAt: null },
+        where: { ...asRead(purchase), emailSentAt: null },
         data: { emailSentAt: new Date() },
     });
     if (claim.count !== 1) return 'already';
     const result = await sendGuidePurchaseEmail(purchase);
     if (result !== 'sent') {
-        await prisma.guidePurchase.updateMany({ where: { id: purchase.id }, data: { emailSentAt: null } });
+        await prisma.guidePurchase.updateMany({ where: asRead(purchase), data: { emailSentAt: null } });
     }
     return result;
 }
@@ -107,7 +127,7 @@ async function deliverSafely(purchase: GuidePurchase, deliver: (p: GuidePurchase
     }
 }
 
-export async function fulfillGuideSession(session: Stripe.Checkout.Session): Promise<FulfillResult> {
+export async function fulfillGuideSession(session: Stripe.Checkout.Session, options: FulfillOptions = {}): Promise<FulfillResult> {
     if (session.metadata?.type !== GUIDE_CHECKOUT_TYPE) return { status: 'not-guide' };
     if (session.payment_status !== 'paid') return { status: 'unpaid' };
 
@@ -129,6 +149,9 @@ export async function fulfillGuideSession(session: Stripe.Checkout.Session): Pro
         currency: session.currency ?? 'usd',
     });
 
+    if (options.sendEmail === false) {
+        return { status: 'fulfilled', purchase, delivery: purchase.emailSentAt ? 'already' : 'pending' };
+    }
     // The purchase is recorded either way; the caller decides whether to
     // retry the email (the webhook does, by asking Stripe to resend).
     const delivery = await deliverSafely(purchase, deliverOnce);
@@ -151,26 +174,65 @@ async function resendThrottled(purchase: GuidePurchase, now: Date): Promise<Deli
     if (!purchase.email) return 'no-address';
     const cutoff = new Date(now.getTime() - PROMO_RESEND_INTERVAL_MS);
     const claim = await prisma.guidePurchase.updateMany({
-        where: { id: purchase.id, OR: [{ emailSentAt: null }, { emailSentAt: { lt: cutoff } }] },
+        where: { ...asRead(purchase), OR: [{ emailSentAt: null }, { emailSentAt: { lt: cutoff } }] },
         data: { emailSentAt: now },
     });
-    // Sent within the interval, or claimed by a concurrent caller just now.
+    // Sent within the interval, claimed by a concurrent caller just now, or
+    // given a new link by support since this caller read it.
     if (claim.count !== 1) return 'already';
     const result = await sendGuidePurchaseEmail(purchase);
     if (result !== 'sent') {
         await prisma.guidePurchase.updateMany({
-            where: { id: purchase.id, emailSentAt: now },
+            where: { ...asRead(purchase), emailSentAt: now },
             data: { emailSentAt: purchase.emailSentAt },
         });
     }
     return result;
 }
 
+type GuidePurchaseReader = Pick<Prisma.TransactionClient, 'guidePurchase'>;
+
 /** The newest promo claim of `email` (trimmed, lowercased) that already holds every guide of `product`. */
-export async function findReusableClaim(product: Product, email: string): Promise<GuidePurchase | null> {
-    return prisma.guidePurchase.findFirst({
+export async function findReusableClaim(product: Product, email: string, db: GuidePurchaseReader = prisma): Promise<GuidePurchase | null> {
+    return db.guidePurchase.findFirst({
         where: { source: 'promo', email, guideSlugs: { hasEvery: [...productGuides(product)] } },
         orderBy: { createdAt: 'desc' },
+    });
+}
+
+/** The transaction lock that serialises promo claims for one address (the job alert and application routes lock the same way). */
+export function claimLockKey(email: string): string {
+    return `guide-claim:${email}`;
+}
+
+/**
+ * The address's reusable claim, or a new one. Runs under a transaction lock
+ * on the address, so two claims sent at the same instant find one row (and
+ * send one email) instead of creating two.
+ */
+async function findOrCreateClaim(
+    product: Product,
+    email: string,
+    userId: string | null,
+): Promise<{ readonly purchase: GuidePurchase; readonly reused: boolean }> {
+    return prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${claimLockKey(email)}))`;
+        const existing = await findReusableClaim(product, email, tx);
+        if (existing) return { purchase: existing, reused: true };
+        const purchase = await tx.guidePurchase.create({
+            data: {
+                source: 'promo',
+                stripeSessionId: null,
+                stripePaymentIntentId: null,
+                email,
+                userId,
+                productSlug: product.slug,
+                guideSlugs: [...productGuides(product)],
+                amountCents: 0,
+                accessToken: newAccessToken(),
+            },
+        });
+        return { purchase, reused: false };
     });
 }
 
@@ -178,7 +240,8 @@ export async function findReusableClaim(product: Product, email: string): Promis
  * A launch-promo claim of `product` for `email` (already trimmed and
  * lowercased). The caller checks lib/guides/phase.ts#isGuideClaimOpen first.
  * Unlocks the product's own guides, never the checkout add-on. `known` is the
- * caller's findReusableClaim answer, when it already asked; omitted, it is read here.
+ * caller's findReusableClaim answer, when it found one; otherwise the claim
+ * is found or created here, under the address's lock.
  */
 export async function fulfillPromoClaim(
     product: Product,
@@ -187,28 +250,11 @@ export async function fulfillPromoClaim(
     now: Date = new Date(),
     known?: GuidePurchase | null,
 ): Promise<PromoClaimResult> {
-    const guideSlugs = [...productGuides(product)];
-    const existing = known === undefined ? await findReusableClaim(product, email) : known;
-    if (existing) {
-        const delivery = await deliverSafely(existing, (p) => resendThrottled(p, now));
-        return { purchase: existing, reused: true, delivery };
-    }
-
-    const purchase = await prisma.guidePurchase.create({
-        data: {
-            source: 'promo',
-            stripeSessionId: null,
-            stripePaymentIntentId: null,
-            email,
-            userId,
-            productSlug: product.slug,
-            guideSlugs,
-            amountCents: 0,
-            accessToken: newAccessToken(),
-        },
-    });
-    const delivery = await deliverSafely(purchase, deliverOnce);
-    return { purchase, reused: false, delivery };
+    const { purchase, reused } = known ? { purchase: known, reused: true } : await findOrCreateClaim(product, email, userId);
+    const delivery = reused
+        ? await deliverSafely(purchase, (p) => resendThrottled(p, now))
+        : await deliverSafely(purchase, deliverOnce);
+    return { purchase, reused, delivery };
 }
 
 /** Whether this payment bought guides, so the webhook knows to stop looking elsewhere. */
@@ -226,7 +272,7 @@ export async function isGuidePayment(paymentIntent: string): Promise<boolean> {
  * Stripe no longer has is not one, and any other failure to read it throws,
  * so the webhook answers 500 and Stripe retries.
  */
-export async function isUnrecordedGuidePayment(stripe: Stripe, paymentIntent: string): Promise<boolean> {
+export async function isUnrecordedGuidePayment(stripe: PaymentIntentReader, paymentIntent: string): Promise<boolean> {
     if (await isGuidePayment(paymentIntent)) return false;
     try {
         const intent = await stripe.paymentIntents.retrieve(paymentIntent);

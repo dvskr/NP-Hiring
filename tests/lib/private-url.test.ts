@@ -6,7 +6,7 @@
  * lib/analytics.ts swaps the library token for its route name in GA page
  * views.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PRIVATE_QUERY_PARAMS, maskPrivateTokens, scrubSentryEvent, withoutPrivateQueryParams } from '@/lib/private-url';
@@ -47,6 +47,50 @@ describe('maskPrivateTokens', () => {
 
     it('leaves the bare library page alone', () => {
         expect(maskPrivateTokens('/guides/library?error=link')).toBe('/guides/library?error=link');
+    });
+
+    it('masks the library cookie and a bare token in any other field', () => {
+        const other = 'a'.repeat(48);
+        const text = `cookie: np_guides=${TOKEN}.${other}; theme=dark {"accessToken":"${other}","id":"x"} token ${TOKEN.toUpperCase()}`;
+        const masked = maskPrivateTokens(text);
+        expect(masked).not.toMatch(new RegExp(`${TOKEN}|${other}`, 'i'));
+        expect(masked).toContain('np_guides=[redacted]; theme=dark');
+        expect(masked).toContain('"accessToken":"[token]"');
+    });
+
+    it('masks a token that follows a JSON escape in a serialised line', () => {
+        const line = JSON.stringify({ message: `failed\n${TOKEN}\tthen\r${'c'.repeat(48)}` });
+        const masked = maskPrivateTokens(line);
+        expect(masked).not.toMatch(new RegExp(`${TOKEN}|${'c'.repeat(48)}`));
+        expect(masked).toContain('failed\\n[token]\\tthen\\r[token]');
+    });
+
+    it('keeps hex ids of other lengths whole', () => {
+        const sentryId = 'b'.repeat(32);
+        const gitSha = 'c'.repeat(40);
+        const sha256 = 'd'.repeat(64);
+        const text = `${sentryId} ${gitSha} ${sha256} ${TOKEN}x`;
+        expect(maskPrivateTokens(text)).toBe(text);
+    });
+});
+
+describe('server log lines', () => {
+    it('never carry a library token, the library cookie or a session id', async () => {
+        const { logger } = await vi.importActual<typeof import('@/lib/logger')>('@/lib/logger');
+        const lines: string[] = [];
+        const spy = vi.spyOn(console, 'warn').mockImplementation((line: unknown) => { lines.push(String(line)); });
+        try {
+            logger.warn(`Download refused for /guides/library/${TOKEN}`, {
+                cookie: `np_guides=${TOKEN}`,
+                purchase: { accessToken: TOKEN },
+                url: '/api/guides/verify?session_id=cs_live_Q1w2',
+            }, new Error(`row ${TOKEN} not found`));
+        } finally {
+            spy.mockRestore();
+        }
+        expect(lines).toHaveLength(1);
+        expect(lines[0]).not.toMatch(new RegExp(`${TOKEN}|cs_live_Q1w2`));
+        expect(lines[0]).toContain('/guides/library/[token]');
     });
 });
 

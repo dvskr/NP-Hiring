@@ -20,7 +20,10 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
     title: 'Your Guide Library',
     robots: { index: false, follow: false },
-    referrer: 'no-referrer',
+    // The download links must carry a Referer on this site: browsers that
+    // send no Sec-Fetch-Site are refused without one (app/api/guides/download).
+    // This page's address holds no token, and no other site ever sees it.
+    referrer: 'same-origin',
 };
 
 const SUPPORT = brand.email.support;
@@ -98,7 +101,7 @@ export default async function GuideLibraryPage({ searchParams }: PageProps) {
                                                 <h2 className="stk-title font-heading" style={{ fontSize: '16px', margin: '0 0 2px' }}>{guide.title}</h2>
                                                 <p className="gd-meta">PDF, {guide.pages} pages</p>
                                             </div>
-                                            <a href={`/api/guides/download?guide=${slug}`} rel="noreferrer" className="gd-btn gd-btn-auto" style={{ justifySelf: 'start', padding: '10px 16px' }}>
+                                            <a href={`/api/guides/download?guide=${slug}`} className="gd-btn gd-btn-auto" style={{ justifySelf: 'start', padding: '10px 16px' }}>
                                                 <Download size={15} aria-hidden="true" /> Download PDF
                                             </a>
                                         </div>

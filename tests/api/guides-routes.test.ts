@@ -124,7 +124,7 @@ describe('POST /api/guides/checkout', () => {
     it('charges the catalog price and tags the session and the payment intent as a guide checkout', async () => {
         const res = await checkout(post({ product: 'complete-library', priceCents: 1 }));
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ url: 'https://checkout.stripe.com/c/pay/x' });
+        expect(await res.json()).toEqual({ url: 'https://checkout.stripe.com/c/pay/x', amountCents: 6900 });
 
         const params = stripeMock.create.mock.calls[0][0];
         expect(params.mode).toBe('payment');
@@ -148,7 +148,8 @@ describe('POST /api/guides/checkout', () => {
     });
 
     it('adds the add-on line only where the product is eligible', async () => {
-        await checkout(post({ product: 'interview-prep-pack', addOn: true }));
+        const priced = await checkout(post({ product: 'interview-prep-pack', addOn: true }));
+        expect(await priced.json()).toMatchObject({ amountCents: 2400 });
         const withAddOn = stripeMock.create.mock.calls[0][0];
         expect(withAddOn.line_items.map((l: { price_data: { unit_amount: number } }) => l.price_data.unit_amount)).toEqual([1900, 500]);
         expect(withAddOn.metadata.addOn).toBe('compensation-report');
@@ -215,17 +216,19 @@ describe('GET /api/guides/verify', () => {
 
     it('gives the library cookie to the browser that paid', async () => {
         stripeMock.retrieve.mockResolvedValueOnce(paidSession);
-        vi.mocked(fulfillGuideSession).mockResolvedValueOnce({ status: 'fulfilled', purchase, delivery: 'sent' } as never);
+        vi.mocked(fulfillGuideSession).mockResolvedValueOnce({ status: 'fulfilled', purchase, delivery: 'already' } as never);
         const res = await verify(get(`/api/guides/verify?session_id=${SESSION_ID}`, { [GUIDE_CHECKOUT_COOKIE]: `cs_test_OtherTab12345678.${SESSION_ID}` }));
         expect(res.status).toBe(200);
         expect(await res.json()).toMatchObject({ paid: true, inLibrary: true, emailed: true, amountCents: 6900 });
+        // The webhook sends the delivery email; the success page never does.
+        expect(vi.mocked(fulfillGuideSession).mock.calls[0][1]).toEqual({ sendEmail: false });
         expect(res.cookies.get(GUIDES_COOKIE)?.value).toBe(TOKEN);
         expect(res.headers.get('cache-control')).toContain('no-store');
     });
 
     it('confirms but grants nothing to anyone else holding the session id', async () => {
         stripeMock.retrieve.mockResolvedValueOnce(paidSession);
-        vi.mocked(fulfillGuideSession).mockResolvedValueOnce({ status: 'fulfilled', purchase, delivery: 'retry' } as never);
+        vi.mocked(fulfillGuideSession).mockResolvedValueOnce({ status: 'fulfilled', purchase, delivery: 'pending' } as never);
         const res = await verify(get(`/api/guides/verify?session_id=${SESSION_ID}`));
         expect(await res.json()).toMatchObject({ paid: true, inLibrary: false, emailed: false });
         expect(res.cookies.get(GUIDES_COOKIE)).toBeUndefined();
@@ -242,9 +245,12 @@ describe('GET /api/guides/verify', () => {
 });
 
 describe('GET /api/guides/download', () => {
+    /** What a current browser sends for a click on the library page. */
+    const SAME_ORIGIN = { 'sec-fetch-site': 'same-origin' };
+
     it('sends a browser without access back to the library', async () => {
         vi.mocked(authorizeDownload).mockResolvedValueOnce({ ok: false, reason: 'no-access' });
-        const res = await download(get('/api/guides/download?guide=interview-prep-pack'));
+        const res = await download(get('/api/guides/download?guide=interview-prep-pack', {}, SAME_ORIGIN));
         expect(res.status).toBe(302);
         expect(res.headers.get('location')).toBe(`${ORIGIN}/guides/library?error=no-access`);
         expect(signedGuideUrl).not.toHaveBeenCalled();
@@ -254,6 +260,25 @@ describe('GET /api/guides/download', () => {
         const res = await download(get('/api/guides/download?guide=interview-prep-pack', { [GUIDES_COOKIE]: TOKEN }, { 'sec-fetch-site': 'cross-site' }));
         expect(res.headers.get('location')).toBe(`${ORIGIN}/guides/library`);
         expect(authorizeDownload).not.toHaveBeenCalled();
+    });
+
+    it('lets an older browser without Sec-Fetch-Site download only from a page on this site', async () => {
+        vi.mocked(authorizeDownload).mockResolvedValue({ ok: true, purchaseId: 'p1' });
+        vi.mocked(signedGuideUrl).mockResolvedValue('https://storage.example/signed?token=t');
+        const path = '/api/guides/download?guide=interview-prep-pack';
+
+        const fromLibrary = await download(get(path, { [GUIDES_COOKIE]: TOKEN }, { referer: `${ORIGIN}/guides/library` }));
+        expect(fromLibrary.headers.get('location')).toBe('https://storage.example/signed?token=t');
+
+        const refused: Record<string, string>[] = [{}, { referer: 'https://evil.example/page' }, { referer: 'not a url' }];
+        for (const headers of refused) {
+            vi.mocked(authorizeDownload).mockClear();
+            const res = await download(get(path, { [GUIDES_COOKIE]: TOKEN }, headers));
+            expect(res.headers.get('location'), JSON.stringify(headers)).toBe(`${ORIGIN}/guides/library`);
+            expect(authorizeDownload).not.toHaveBeenCalled();
+        }
+        vi.mocked(authorizeDownload).mockReset();
+        vi.mocked(signedGuideUrl).mockReset();
     });
 
     it('gives the download back when the file cannot be signed', async () => {
@@ -266,12 +291,12 @@ describe('GET /api/guides/download', () => {
 
     it('sends the reader back when the database cannot be read', async () => {
         vi.mocked(authorizeDownload).mockRejectedValueOnce(new Error('db down'));
-        const res = await download(get('/api/guides/download?guide=interview-prep-pack', { [GUIDES_COOKIE]: TOKEN }));
+        const res = await download(get('/api/guides/download?guide=interview-prep-pack', { [GUIDES_COOKIE]: TOKEN }, SAME_ORIGIN));
         expect(res.headers.get('location')).toBe(`${ORIGIN}/guides/library?error=unavailable`);
     });
 
     it('rejects a guide that is not in the catalog', async () => {
-        const res = await download(get('/api/guides/download?guide=../../secrets'));
+        const res = await download(get('/api/guides/download?guide=../../secrets', {}, SAME_ORIGIN));
         expect(res.headers.get('location')).toBe(`${ORIGIN}/guides/library?error=unknown`);
         expect(authorizeDownload).not.toHaveBeenCalled();
     });
@@ -279,7 +304,7 @@ describe('GET /api/guides/download', () => {
     it('redirects an authorised browser to a signed link, without a referrer', async () => {
         vi.mocked(authorizeDownload).mockResolvedValueOnce({ ok: true, purchaseId: 'p1' });
         vi.mocked(signedGuideUrl).mockResolvedValueOnce('https://storage.example/signed?token=t');
-        const res = await download(get('/api/guides/download?guide=interview-prep-pack', { [GUIDES_COOKIE]: TOKEN }));
+        const res = await download(get('/api/guides/download?guide=interview-prep-pack', { [GUIDES_COOKIE]: TOKEN }, SAME_ORIGIN));
         expect(vi.mocked(authorizeDownload).mock.calls[0]).toEqual([[TOKEN], 'interview-prep-pack']);
         expect(res.headers.get('location')).toBe('https://storage.example/signed?token=t');
         expect(res.headers.get('referrer-policy')).toBe('no-referrer');

@@ -2,8 +2,8 @@
  * /guides/library renders from a cookie and a query string anyone can type.
  * An unknown or inherited error key ("__proto__", "constructor") must render
  * the page normally, a browser whose purchases were all refunded must not be
- * told to go and find its email, and the page is private: noindex, no
- * referrer, rendered per request.
+ * told to go and find its email, and the page is private: noindex, a
+ * referrer for this site only, rendered per request.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -68,10 +68,13 @@ describe('the library page', () => {
         expect(html).toContain('href="/guides"');
     });
 
-    it('is private: noindex, no referrer, rendered per request', () => {
+    it('is private: noindex, a referrer for this site only, rendered per request', () => {
         expect(libraryPage.dynamic).toBe('force-dynamic');
         expect(libraryPage.metadata.robots).toEqual({ index: false, follow: false });
-        expect(libraryPage.metadata.referrer).toBe('no-referrer');
+        // Same origin only: the download route needs it from browsers that
+        // send no Sec-Fetch-Site, and no other site ever sees this page's
+        // address (which holds no token anyway).
+        expect(libraryPage.metadata.referrer).toBe('same-origin');
     });
 
     it('prints no dash', async () => {

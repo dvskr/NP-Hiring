@@ -95,8 +95,13 @@ export function guidePurchaseEmailContent(purchase: GuideEmailPurchase): { subje
  */
 export type GuideEmailResult = 'sent' | 'retry' | 'refused';
 
-/** Resend error names that a retry cannot fix. */
-const PERMANENT_EMAIL_ERRORS: ReadonlySet<string> = new Set(['validation_error']);
+/**
+ * Resend error names that a retry of the same message cannot fix: a
+ * recipient or field Resend rejects. Account and quota errors (an API key,
+ * the sending domain, a rate or daily limit) stay 'retry', because they clear
+ * once fixed or reset and Stripe's retries then deliver the email.
+ */
+const PERMANENT_EMAIL_ERRORS: ReadonlySet<string> = new Set(['validation_error', 'missing_required_field', 'invalid_parameter']);
 
 /**
  * The Resend error name on a failed send. sendAndLog (lib/email-service.ts)

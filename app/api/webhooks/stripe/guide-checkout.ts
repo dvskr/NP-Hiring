@@ -27,6 +27,7 @@ import type Stripe from 'stripe';
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { getProduct } from '@/lib/guides/catalog';
+import type { PaymentIntentReader } from '@/lib/payment-intent-reader';
 import {
   fulfillGuideSession,
   isGuidePayment,
@@ -87,6 +88,15 @@ export async function handleGuideCheckoutPaid(
       'Guide delivery email failed',
     );
   }
+  if (result.delivery === 'refused' || result.delivery === 'no-address') {
+    // No retry can send it, so a person must. /admin/guides re-sends the link
+    // to the address on the purchase; with no address on it, reach the buyer
+    // through the email or receipt details in Stripe.
+    const reason = result.delivery === 'refused'
+      ? 'Guide purchase recorded, but its delivery email cannot be sent: send the library link from /admin/guides'
+      : 'Guide purchase recorded with no email address: reach the buyer through Stripe and send the library link by hand';
+    await alertWebhookFailure(reason, null, { ...extras, purchaseId: purchase.id, delivery: result.delivery });
+  }
 
   const amountCents = session.amount_total ?? purchase.amountCents;
   if (amountCents > 0) {
@@ -134,7 +144,7 @@ export async function guideDisputeClosed(dispute: Stripe.Dispute, paymentIntentI
  * the payment intent throws into the caller's catch, which answers 500 too.
  */
 export async function retryUntilGuideRecorded(
-  stripe: Stripe,
+  stripe: PaymentIntentReader,
   event: Stripe.Event,
   paymentIntentId: string,
   failAndRetry: FailAndRetry,

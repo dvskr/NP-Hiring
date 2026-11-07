@@ -122,7 +122,8 @@ const UNTOUCHED_PAGE_DATES: Readonly<Record<string, string>> = {
  * the release ships on a later day.
  */
 const AI_APPS_RELEASE_DAY = '2026-11-03';
-const AI_APPS_RELEASE_PAGES: readonly string[] = ['/privacy'];
+/** /privacy left this group for the guides follow-ups (its guide sections). */
+const AI_APPS_RELEASE_PAGES: readonly string[] = [];
 
 /**
  * The UTC day the security and register batch shipped, and the pages whose
@@ -184,8 +185,6 @@ const PRICING_RELEASE_PAGES: readonly string[] = [
  */
 const GUIDES_RELEASE_DAY = '2026-11-07';
 const GUIDES_RELEASE_PAGES: readonly string[] = [
-    '/guides',
-    '/guides/[slug]',
     '/for-job-seekers',
     '/faq',
     '/contact',
@@ -197,6 +196,17 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
     '/tools/1099-vs-w2-calculator',
     '/tools/licensure-checker',
 ];
+
+/**
+ * The UTC day the guides store follow-ups shipped, and the pages whose copy
+ * they changed: the claim form's newsletter box, the promo FAQ answer and the
+ * guides' page counts on the store and product pages, and the guide sections
+ * of the privacy policy with its "Last updated" line. /guides and
+ * /guides/[slug] left the store's own group, /privacy the AI apps group. Same
+ * rule: move the constant and these entries together if they ship later.
+ */
+const GUIDES_FOLLOW_UPS_DAY = '2026-11-08';
+const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]', '/privacy'];
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */
 const PROMO_SWITCH_PAGES = [
@@ -389,7 +399,7 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -401,11 +411,14 @@ describe('lastmod helpers', () => {
             ...PRICING_RELEASE_PAGES,
             ...AI_APPS_RELEASE_PAGES,
             ...GUIDES_RELEASE_PAGES,
+            ...GUIDES_FOLLOW_UPS_PAGES,
             ...Object.keys(UNTOUCHED_PAGE_DATES),
         ];
         expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = GUIDES_RELEASE_PAGES.includes(pagePath)
+            const expected = GUIDES_FOLLOW_UPS_PAGES.includes(pagePath)
+                ? GUIDES_FOLLOW_UPS_DAY
+                : GUIDES_RELEASE_PAGES.includes(pagePath)
                 ? GUIDES_RELEASE_DAY
                 : AI_APPS_RELEASE_PAGES.includes(pagePath)
                 ? AI_APPS_RELEASE_DAY
@@ -450,11 +463,11 @@ describe('lastmod helpers', () => {
         }
     });
 
-    it('guides store: the store and its product pages carry its ship day until the promo ends, then the switch', () => {
+    it('guides store: the store and its product pages carry their last ship day until the promo ends, then the switch', () => {
         for (const pagePath of ['/guides', '/guides/[slug]']) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(GUIDES_RELEASE_DAY);
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(GUIDES_FOLLOW_UPS_DAY);
             expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(true);
-            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(new Date(`${GUIDES_RELEASE_DAY}T00:00:00.000Z`));
+            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(new Date(`${GUIDES_FOLLOW_UPS_DAY}T00:00:00.000Z`));
             expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
         }
     });
@@ -772,9 +785,9 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         }
     });
 
-    it('guides store: /guides and one page per product are listed with the ship day, and none of the private pages', async () => {
+    it('guides store: /guides and one page per product are listed with their last ship day, and none of the private pages', async () => {
         const entries = await byUrl();
-        const shipDay = new Date(`${GUIDES_RELEASE_DAY}T00:00:00.000Z`);
+        const shipDay = new Date(`${GUIDES_FOLLOW_UPS_DAY}T00:00:00.000Z`);
         expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(shipDay);
         for (const product of allProducts()) {
             expect(entries.get(`${BASE}/guides/${product.slug}`)?.lastModified, product.slug).toEqual(shipDay);

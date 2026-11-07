@@ -6,7 +6,8 @@
 > 2026-10-23, the edit token hotfix `3574809` and its follow-ups `862b8af` of 2026-10-24, the CI fixes and the
 > 2027 re-price `8ac1d66` of 2026-10-25, the 5-post pack `08f2e33` of 2026-10-26, and on 2026-10-27 the
 > deletion of the retired Employer plan's code (2.27 phase 4) with the 2.29 and 2.30 follow-ups and their
-> review fixes, the AI apps `ba12bc5` of 2026-11-03 and the career guides store of 2026-11-07; all are live,
+> review fixes, the AI apps `ba12bc5` of 2026-11-03, the career guides store `831000c` of 2026-11-07 and its
+> follow-ups of 2026-11-08; all are live,
 > and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
@@ -311,28 +312,10 @@ review of the plan deletion. None is reachable while paid posting is off, and no
   candidate without one. Claude has no such API yet, so the profile resume is the only source today.
 - Put the listing links in `config/ai-apps.ts` once each directory publishes them.
 
-**2.35 Career guides store follow-ups (after the 2026-11-07 release).** All low, left by the reviews:
-- Two claims for the same email at the same instant can create two rows and send two emails.
-- The success page can claim the delivery email while the webhook reads it as sent; if that send then fails,
-  nothing retries it until the buyer reloads the success page (the paying browser already holds the guides).
-- The claim response shows whether an address already holds a claim (only a new claim sets the cookie).
-- An unmatched refund or dispute reads the PaymentIntent twice (the pack check, then the guide check).
-- A permanent email error other than `validation_error` keeps the webhook at 500 until Stripe stops retrying.
-- No GA4 event for a claim or a guide checkout start (the purchase is recorded server side).
-- Medium, from the 2026-11-07 security review: account erasure clears a guide purchase only when it matches the
-  account's id or sign-in email, so a guide bought signed out with another checkout email keeps that email; match
-  the Stripe customer email too, or say so in the privacy policy.
-- Medium: a download is a counted GET, refused cross-site only when the browser sends `Sec-Fetch-Site`; an older
-  browser that omits it can have its 60 downloads spent by a hostile page. Add a same-origin Referer fallback.
-- Medium: library tokens never expire, so a forwarded delivery email gives lasting access (capped at 60
-  downloads a purchase). Add a support route that rotates a purchase's token.
-- Medium: the Sentry scrub masks `/guides/library/<token>` in the serialised event only; keep tokens out of any
-  other logged field (the regression test pins today's coverage).
-- Fixed before release: the per-address claim limit now counts only new claims, so spending it cannot lock an
-  owner out of guides the address already holds.
-- Facts in the PDFs a reviewer may still want to read: every edit to the guides is listed in the release notes
-  of 2026-11-07; the source PDFs and the scripts that clean them are in the ignored `NP Guides/originals` and
-  `tmp/guides-fix` on the machine that built them.
+**2.35 Career guides store follow-ups.** Closed on 2026-11-08 (see "Closed since the last version"). The
+source PDFs and the scripts that clean them are in the ignored `NP Guides/originals` and `tmp/guides-fix` on
+the machine that built them; after any edit, upload with `scripts/guides/upload-guides.ts` from the main
+checkout and keep each guide's `pages` in `lib/guides/catalog.ts` equal to the PDF (cover excluded).
 
 ## 3. Decisions (DECISION)
 
@@ -430,11 +413,8 @@ change any of them.
 
 ### 3.4e The career guides store (recorded 2026-11-07)
 
-| # | Question | Today | Where |
-|---|---|---|---|
-| D47 | The job seeker comparison table's row 2 | The guides checkout made "Free for Job Seekers" untrue after 2026-12-31, so the row and its card now read "Free Job Search and Applications" / "Free to Search and Apply", with the guides named as optional. It is a judged table (D25): approve the new wording or send yours | `lib/seeker-comparison.ts` |
-| D48 | Ask for newsletter consent on a free guide claim? | A claim sends only the delivery email; nothing subscribes the address. An unticked opt-in box could grow the list | `components/guides/ClaimForm.tsx`, `app/api/guides/claim/route.ts` |
-| D49 | The free Salary Guide PDF beside the Compensation Report | /resources and /salary-guide still give away the older Salary Guide PDF for an email, next to the Compensation Report that sells from 2027. Keep both, or retire the free PDF? | `components/ResourceDownloadGate.tsx`, `app/api/salary-guide/route.ts` |
+D47 to D49 were decided on 2026-11-08, when you asked Claude to apply its recommendations (see "Closed since
+the last version").
 
 ### 3.5 Audit-era items (enterprise audit)
 
@@ -503,6 +483,31 @@ tests fail until every side agrees:
 | On a real content review | CLAUDE | Bump per-surface `LAST_REVIEWED` literals; never automate them to render time | salary guide, resource guides |
 
 ## Closed since the last version (2026-09-27)
+
+- 2.35 Career guides store follow-ups (2026-11-08):
+  - Claims for one address run under a transaction lock (`pg_advisory_xact_lock`, as the job alert and
+    application routes do), so two at the same instant make one row and one email.
+  - Only the webhook sends a paid purchase's delivery email; the success page records the purchase, asks
+    again until the email is out, and Stripe's retries cover a failed send.
+  - A claim answers the same whether or not the address held one: the link goes by email, and only a reader
+    signed in with that confirmed address gets the guides in the browser at once.
+  - One Stripe read per unmatched refund or dispute (`lib/payment-intent-reader.ts`).
+  - `missing_required_field` and `invalid_parameter` count as permanent email errors, and a paid purchase
+    whose email cannot be sent alerts staff to send the link from the new /admin/guides.
+  - GA4 `claim_guide` on a claim and `begin_checkout` (type `guide`) on a checkout start.
+  - The privacy policy names guide emails and how to remove one claimed or bought with another address.
+  - A download from a browser without `Sec-Fetch-Site` needs a Referer on this site.
+  - /admin/guides finds a reader's purchases by email and gives one a new library link: the old link and every
+    browser holding it stop working, and the new link is emailed (not for a refunded or disputed purchase).
+  - Server log lines and Sentry events mask library tokens wherever they appear (path, cookie or bare).
+- D47 (2026-11-08): the comparison row's new wording stays: "Free Job Search and Applications" / "Free to
+  Search and Apply", with the guides named as optional.
+- D48 (2026-11-08): the claim form has an unticked "Send me career tips, salary insights, and market updates."
+  box; ticked, it opts the address in to the newsletter (source `guide_claim`): for the address's signed-in
+  owner as the public signup does, and for anyone else only when the site has never seen the address, so a
+  claim can never re-subscribe someone who unsubscribed.
+- D49 (2026-11-08): the free Salary Guide PDF stays as the lead magnet on /resources and /salary-guide; those
+  pages already link the store, so the Compensation Report is the paid next step, not a competitor.
 
 - 2.27 phase 4 (2026-10-27): the retired Employer plan's dormant code is deleted. Production had no `employer_plans` row and no `'plan'` post (both read only, 2026-10-26). Gone: the plan, subscribe and Customer Portal routes, the plan checkout and subscription webhook handlers with the dunning notice on `invoice.payment_failed`, the daily plan-lapse and plan reconciliation jobs, the admin plan page, its API and its sidebar link, the four plan emails and their EmailTypes, the plan expiry copy and confirmation mode, `config.planPrice`, `planSlots` and `planGraceDays`, the `'plan'` tier, the Payment Link variable, and the plan-only test suites. Kept as guards: a Checkout Session in subscription mode, and every paid invoice of a subscription, is alerted ("Employer plan retired: refund it in Stripe") and answered 200 with nothing granted; a legacy `'plan'` row is refused a renewal (409, and a renewal paid for one anyway is ledgered, not applied) and a republish (402), and the dashboard still never offers it Renew. The EmployerPlan model and the `employer_plans` table stay, deprecated; dropping them is a separate, deliberate migration (`docs/pricing-system.md` section 11). The webhook needs 7 events now, and a restricted key no Subscriptions or Customer portal permission (1.1, `docs/pricing-system.md` section 9b). Inngest drops the two deleted daily jobs at its next sync of `https://nphiring.com/api/inngest` (`docs/LAUNCH_RUNBOOK.md` section 6 step 4); until then it may record failed runs for them, which does no harm.
 - 1.14 Security checks (done 2026-10-23 to 2026-10-24; you asked Claude to run the read-only ones): no planted admin account (both queries empty; no admin role exists at all); the leaked audit test password belonged to the PMHNP Hiring project, not this one, and was replaced there on 2026-10-23 with an unseen random one, its sessions ended; Supabase Authentication checked on screen (Site URL `https://nphiring.com`, no `*.vercel.app` redirect, Confirm email on); all 4 profile pictures are the account's own upload or Google photo; no unconfirmed employer owns an unclaimed post. The comparison table stays as it is: Indeed's own help page says it no longer supports its paid Career Services, and its California and Texas NP articles are still indexed. You chose to leave the indexing key (1.4).
@@ -585,4 +590,4 @@ tests fail until every side agrees:
 - `00282e6`, `1d3e18b`, `e0e9d4e`, `08f2e33` (2026-10-26) The one-time 5-post pack for $1,245 (backend, pages, emails, admin), all sales final, and the code and security review fixes; migration `20261025000000_add_employer_post_packs` applied by the build.
 - `4210512`, `b014700` and the review fixes on top (2026-10-27) The retired Employer plan's code deleted (2.27 phase 4), the 2.29 security follow-ups (edit token window on every route that edits, paid checkout validators, the logo rule, drafts cleared by account, the typed body guard) and the 2.30 monitoring fixes (no zero Search Console snapshots, Bing skips counted as skipped).
 - `ba12bc5` (2026-11-03) The NP Hiring app for Claude and ChatGPT: job search and Easy Apply from the chat, its own sign-in (off until 1.15), migration `20261028000000_add_oauth_for_ai_apps`.
-- (2026-11-07) The career guides store at /guides, ported from pmhnphiring.com: six cleaned NP guides (no dashes, no edition labels, the Compensation Report sold whole, covers), three bundles, free to claim with an email until the paid ladder starts, then sold through Stripe at the same prices as the PMHNP store; private downloads from the `guides` bucket; migration `20261107000000_add_guide_purchases`.
+- `831000c` (2026-11-07) The career guides store at /guides, ported from pmhnphiring.com: six cleaned NP guides (no dashes, no edition labels, the Compensation Report sold whole, covers), three bundles, free to claim with an email until the paid ladder starts, then sold through Stripe at the same prices as the PMHNP store; private downloads from the `guides` bucket; migration `20261107000000_add_guide_purchases`.

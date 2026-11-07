@@ -5,10 +5,14 @@
  *   - CSRF checked, then 5 claims a minute per IP;
  *   - 409 PROMO_ENDED once lib/guides/phase.ts#isGuideClaimOpen is false;
  *   - a 'promo' row (amount 0, no Stripe ids, the product's guides and
- *     never the checkout add-on) and the delivery email, and the token in
- *     this browser's np_guides cookie;
+ *     never the checkout add-on), found or created under a transaction lock
+ *     on the address, and the delivery email;
+ *   - the library link goes by email; only a reader signed in with that
+ *     confirmed address gets the token in this browser's np_guides cookie,
+ *     so the answer never shows whether the address held a claim before;
  *   - an email that already holds every guide of the product re-uses its
- *     claim (no new row, no cookie for this browser: the link goes by email).
+ *     claim (no new row, the email re-sent at most every ten minutes);
+ *   - newsletter: true opts the address in, and never fails the claim.
  * The route runs the real lib/guides/fulfill.ts against the Prisma mock.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -30,12 +34,14 @@ vi.mock('@/lib/guides/phase', async (importOriginal) => ({
 }));
 vi.mock('@/lib/guides/email', () => ({ sendGuidePurchaseEmail: vi.fn() }));
 vi.mock('@/lib/stripe', () => ({ getStripe: vi.fn() }));
+vi.mock('@/lib/newsletter', () => ({ subscribeToNewsletter: vi.fn(), subscribeNewAddressToNewsletter: vi.fn() }));
 
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { isGuideClaimOpen } from '@/lib/guides/phase';
 import { sendGuidePurchaseEmail } from '@/lib/guides/email';
 import { getStripe } from '@/lib/stripe';
+import { subscribeNewAddressToNewsletter, subscribeToNewsletter } from '@/lib/newsletter';
 import { BUNDLES } from '@/lib/guides/catalog';
 import { GUIDES_COOKIE, parseLibraryCookie } from '@/lib/guides/access';
 import { POST } from '@/app/api/guides/claim/route';
@@ -43,6 +49,13 @@ import { POST } from '@/app/api/guides/claim/route';
 const ORIGIN = 'http://localhost:3000';
 const gp = prisma.guidePurchase as unknown as Record<string, ReturnType<typeof vi.fn>>;
 const EARLIER = 'a'.repeat(48);
+/** The transaction lock statement fulfillPromoClaim runs first. */
+const executeRaw = vi.fn();
+
+/** A signed-in reader whose account address is confirmed. */
+function signedIn(email: string): void {
+    auth.getUser.mockResolvedValue({ data: { user: { id: 'user-7', email, email_confirmed_at: '2026-01-01T00:00:00Z' } } });
+}
 
 function claim(body: unknown, opts: { origin?: string; cookie?: string } = {}): NextRequest {
     return new NextRequest(`${ORIGIN}/api/guides/claim`, {
@@ -70,6 +83,14 @@ beforeEach(() => {
     gp.create.mockReset();
     gp.updateMany.mockReset().mockResolvedValue({ count: 1 });
     echoCreate();
+    vi.mocked(sendGuidePurchaseEmail).mockReset().mockResolvedValue('sent');
+    vi.mocked(subscribeToNewsletter).mockReset().mockResolvedValue(undefined);
+    vi.mocked(subscribeNewAddressToNewsletter).mockReset().mockResolvedValue(true);
+    executeRaw.mockReset().mockResolvedValue(1);
+    vi.mocked(prisma.$transaction).mockImplementation(((arg: unknown) =>
+        typeof arg === 'function'
+            ? (arg as (tx: unknown) => Promise<unknown>)({ $executeRaw: executeRaw, guidePurchase: prisma.guidePurchase })
+            : Promise.all(arg as Promise<unknown>[])) as never);
 });
 
 describe('the gate', () => {
@@ -153,7 +174,7 @@ describe('a new claim', () => {
     it('records a promo row for the product and its guides, and answers ok', async () => {
         const res = await POST(claim({ product: 'career-bundle', email: '  NP@Example.COM ' }));
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ ok: true, emailed: true, guides: [...BUNDLES['career-bundle'].guides] });
+        expect(await res.json()).toEqual({ ok: true, emailed: true, guides: [...BUNDLES['career-bundle'].guides], inLibrary: false });
         expect(gp.create).toHaveBeenCalledTimes(1);
         expect(gp.create.mock.calls[0][0].data).toMatchObject({
             source: 'promo',
@@ -175,13 +196,30 @@ describe('a new claim', () => {
     });
 
     it('keeps the signed-in reader\'s user id', async () => {
-        auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-7', email: 'np@example.com' } } });
+        auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-7', email: 'other@example.com' } } });
         await POST(claim({ product: 'first-year-playbook', email: 'np@example.com' }));
         expect(gp.create.mock.calls[0][0].data.userId).toBe('user-7');
     });
 
-    it('adds the token to this browser\'s library cookie, newest first, httpOnly', async () => {
+    it('finds or creates the claim under a transaction lock on the address', async () => {
+        await POST(claim({ product: 'first-year-playbook', email: 'NP@example.com' }));
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        const lock = executeRaw.mock.calls[0];
+        expect(lock[0].join('')).toContain('pg_advisory_xact_lock(hashtext(');
+        expect(lock[1]).toBe('guide-claim:np@example.com');
+        expect(gp.findFirst).toHaveBeenCalledTimes(2);
+    });
+
+    it('sends the link by email and gives this browser nothing', async () => {
         const res = await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com' }, { cookie: `${GUIDES_COOKIE}=${EARLIER}` }));
+        expect(await res.json()).toMatchObject({ ok: true, emailed: true, inLibrary: false });
+        expect(res.cookies.get(GUIDES_COOKIE)).toBeUndefined();
+    });
+
+    it('adds the token to the library cookie of a reader signed in with that confirmed address', async () => {
+        signedIn('NP@example.com');
+        const res = await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com' }, { cookie: `${GUIDES_COOKIE}=${EARLIER}` }));
+        expect(await res.json()).toMatchObject({ ok: true, inLibrary: true });
         const token = gp.create.mock.calls[0][0].data.accessToken as string;
         expect(token).toMatch(/^[0-9a-f]{48}$/);
         const cookie = res.cookies.get(GUIDES_COOKIE);
@@ -190,11 +228,52 @@ describe('a new claim', () => {
         expect(cookie?.sameSite).toBe('lax');
     });
 
+    it('gives nothing to a signed-in reader whose address is unconfirmed or different', async () => {
+        auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-7', email: 'np@example.com', email_confirmed_at: null } } });
+        const unconfirmed = await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com' }));
+        expect(unconfirmed.cookies.get(GUIDES_COOKIE)).toBeUndefined();
+        signedIn('someone@example.com');
+        const different = await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com' }));
+        expect(await different.json()).toMatchObject({ inLibrary: false });
+        expect(different.cookies.get(GUIDES_COOKIE)).toBeUndefined();
+    });
+
     it('says so when the email could not be sent, and still keeps the claim', async () => {
         vi.mocked(sendGuidePurchaseEmail).mockResolvedValueOnce('retry');
         const res = await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com' }));
-        expect(await res.json()).toMatchObject({ ok: true, emailed: false });
-        expect(res.cookies.get(GUIDES_COOKIE)?.value).toMatch(/^[0-9a-f]{48}$/);
+        expect(await res.json()).toMatchObject({ ok: true, emailed: false, inLibrary: false });
+        expect(gp.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('for an anonymous claim, subscribes only an address the site has never seen, and only when asked', async () => {
+        await POST(claim({ product: 'telehealth-playbook', email: 'NP@example.com', newsletter: true }));
+        expect(subscribeNewAddressToNewsletter).toHaveBeenCalledWith('np@example.com', 'guide_claim');
+        expect(subscribeToNewsletter).not.toHaveBeenCalled();
+        vi.mocked(subscribeNewAddressToNewsletter).mockClear();
+        await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com' }));
+        await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com', newsletter: false }));
+        expect(subscribeNewAddressToNewsletter).not.toHaveBeenCalled();
+        expect(subscribeToNewsletter).not.toHaveBeenCalled();
+    });
+
+    it('opts in the address\'s signed-in owner as the public signup does', async () => {
+        signedIn('np@example.com');
+        await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com', newsletter: true }));
+        expect(subscribeToNewsletter).toHaveBeenCalledWith('np@example.com', 'guide_claim');
+        expect(subscribeNewAddressToNewsletter).not.toHaveBeenCalled();
+    });
+
+    it('still delivers the guides when the newsletter opt-in fails', async () => {
+        vi.mocked(subscribeNewAddressToNewsletter).mockRejectedValueOnce(new Error('db down'));
+        const res = await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com', newsletter: true }));
+        expect(res.status).toBe(200);
+        expect(await res.json()).toMatchObject({ ok: true, emailed: true });
+    });
+
+    it('refuses a newsletter field that is not a boolean', async () => {
+        const res = await POST(claim({ product: 'telehealth-playbook', email: 'np@example.com', newsletter: 'yes' }));
+        expect(res.status).toBe(400);
+        expect(gp.create).not.toHaveBeenCalled();
     });
 
     it('answers 500 when the claim cannot be written', async () => {
@@ -217,11 +296,12 @@ describe('an email that already holds the product', () => {
         emailSentAt: new Date(Date.now() - 60 * 60 * 1000),
     };
 
-    it('re-uses the earlier claim: no new row, the email re-sent, no cookie for this browser', async () => {
+    it('re-uses the earlier claim: no new row, the email re-sent, the same answer as a new claim', async () => {
         gp.findFirst.mockResolvedValueOnce(existing);
         const res = await POST(claim({ product: 'interview-prep-pack', email: 'np@example.com' }));
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ ok: true, emailed: true, guides: ['interview-prep-pack'] });
+        expect(await res.json()).toEqual({ ok: true, emailed: true, guides: ['interview-prep-pack'], inLibrary: false });
+        expect(prisma.$transaction).not.toHaveBeenCalled();
         expect(gp.findFirst).toHaveBeenCalledWith(expect.objectContaining({
             where: { source: 'promo', email: 'np@example.com', guideSlugs: { hasEvery: ['interview-prep-pack'] } },
         }));
@@ -239,6 +319,22 @@ describe('an email that already holds the product', () => {
         expect(checkRateLimit).not.toHaveBeenCalled();
         expect(gp.findFirst).toHaveBeenCalledTimes(1);
         vi.mocked(checkRateLimit).mockResolvedValue({ success: true, reset: 0, remaining: 5 });
+    });
+
+    it('gives the earlier claim to the library of a reader signed in with that address', async () => {
+        signedIn('np@example.com');
+        gp.findFirst.mockResolvedValueOnce(existing);
+        const res = await POST(claim({ product: 'complete-library', email: 'np@example.com' }));
+        expect(await res.json()).toMatchObject({ inLibrary: true });
+        expect(parseLibraryCookie(res.cookies.get(GUIDES_COOKIE)?.value)).toEqual([existing.accessToken]);
+    });
+
+    it('re-uses a claim another request created a moment earlier, found under the lock', async () => {
+        gp.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(existing);
+        const res = await POST(claim({ product: 'complete-library', email: 'np@example.com' }));
+        expect(await res.json()).toMatchObject({ ok: true, emailed: true });
+        expect(gp.create).not.toHaveBeenCalled();
+        expect(sendGuidePurchaseEmail).toHaveBeenCalledWith(existing);
     });
 
     it('does not re-send within ten minutes, and still reports the email as sent', async () => {

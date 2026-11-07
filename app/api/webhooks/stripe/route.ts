@@ -10,6 +10,7 @@ import {
 import { logger } from '@/lib/logger';
 import { POST_PACK_CHECKOUT_TYPE } from '@/lib/post-pack-sale';
 import { GUIDE_CHECKOUT_TYPE } from '@/lib/guides/phase';
+import { cachedPaymentIntentReader, type PaymentIntentReader } from '@/lib/payment-intent-reader';
 import { activatePaidJobCheckout } from './activate-paid-job';
 import { applyRenewalCheckout } from './apply-renewal';
 import { fulfilPostPackCheckout, refreshPackInvoice } from './post-pack-checkout';
@@ -515,7 +516,7 @@ async function handleInvoicePaid(event: Stripe.Event, invoice: Stripe.Invoice, c
  * catch, which answers 500 as well.
  */
 async function retryUntilPackRecorded(
-  stripe: Stripe,
+  stripe: PaymentIntentReader,
   event: Stripe.Event,
   paymentIntentId: string,
   cleanupDedupe: CleanupDedupe,
@@ -530,6 +531,25 @@ async function retryUntilPackRecorded(
     null,
     { eventId: event.id, paymentIntentId },
     'The 5-post pack for this payment is not recorded yet',
+  );
+}
+
+/**
+ * A refund or dispute that no JobCharge, pack or guide purchase matches: 500
+ * when it belongs to a 5-post pack or a guide sale not recorded yet, so
+ * Stripe retries; null otherwise. Both checks read the same payment intent,
+ * so Stripe is asked once.
+ */
+async function retryUntilSaleRecorded(
+  stripe: Stripe,
+  event: Stripe.Event,
+  paymentIntentId: string,
+  cleanupDedupe: CleanupDedupe,
+): Promise<NextResponse | null> {
+  const intents = cachedPaymentIntentReader(stripe);
+  return (
+    (await retryUntilPackRecorded(intents, event, paymentIntentId, cleanupDedupe)) ??
+    (await retryUntilGuideRecorded(intents, event, paymentIntentId, retryWith(cleanupDedupe)))
   );
 }
 
@@ -600,10 +620,8 @@ async function handleChargeRefunded(stripe: Stripe, event: Stripe.Event, charge:
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
       const guide = await guideRefund(charge, paymentIntentId);
       if (guide) return guide;
-      const retry = await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe);
+      const retry = await retryUntilSaleRecorded(stripe, event, paymentIntentId, cleanupDedupe);
       if (retry) return retry;
-      const guideRetry = await retryUntilGuideRecorded(stripe, event, paymentIntentId, retryWith(cleanupDedupe));
-      if (guideRetry) return guideRetry;
       logger.warn('charge.refunded: no matching JobCharge — pre-#28 row or external charge', { paymentIntentId, chargeId: charge.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -691,10 +709,8 @@ async function handleDisputeCreated(stripe: Stripe, event: Stripe.Event, dispute
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
       const guide = await guideDisputeCreated(paymentIntentId);
       if (guide) return guide;
-      const retry = await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe);
+      const retry = await retryUntilSaleRecorded(stripe, event, paymentIntentId, cleanupDedupe);
       if (retry) return retry;
-      const guideRetry = await retryUntilGuideRecorded(stripe, event, paymentIntentId, retryWith(cleanupDedupe));
-      if (guideRetry) return guideRetry;
       logger.warn('charge.dispute.created: no matching JobCharge', { paymentIntentId, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -733,12 +749,8 @@ async function handleDisputeClosed(stripe: Stripe, event: Stripe.Event, dispute:
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
       const guide = paymentIntentId ? await guideDisputeClosed(dispute, paymentIntentId) : null;
       if (guide) return guide;
-      const retry = paymentIntentId ? await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe) : null;
+      const retry = paymentIntentId ? await retryUntilSaleRecorded(stripe, event, paymentIntentId, cleanupDedupe) : null;
       if (retry) return retry;
-      const guideRetry = paymentIntentId
-        ? await retryUntilGuideRecorded(stripe, event, paymentIntentId, retryWith(cleanupDedupe))
-        : null;
-      if (guideRetry) return guideRetry;
       logger.warn('charge.dispute.closed: no matching JobCharge', { paymentIntentId: paymentIntentId ?? undefined, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }

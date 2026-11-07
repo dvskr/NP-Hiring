@@ -1,13 +1,15 @@
 /**
  * Guide fulfilment runs from the Stripe webhook and from the success page,
  * whichever arrives first, so it must be safe to run twice: one purchase per
- * Checkout session and one delivery email per purchase. Refunds and
+ * Checkout session and one delivery email per purchase, sent by the webhook
+ * only (the success page passes sendEmail: false). Refunds and
  * chargebacks take access back; a partial refund or a won dispute does not.
  *
  * During the launch promo a claim (fulfillPromoClaim) records a 'promo' row:
  * no amount, no Stripe ids, the product's own guides and never the add-on.
  * A claim the same email already holds is re-used, its email re-sent at most
- * once per ten minutes.
+ * once per ten minutes; claims for one address run under a transaction lock,
+ * so two at the same instant make one row.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type Stripe from 'stripe';
@@ -21,6 +23,7 @@ import {
     ADD_ON_METADATA_VALUE,
     GUIDE_CHECKOUT_TYPE,
     PROMO_RESEND_INTERVAL_MS,
+    claimLockKey,
     emailDelivered,
     fulfillGuideSession,
     fulfillPromoClaim,
@@ -66,7 +69,15 @@ beforeEach(() => {
     gp.create.mockReset();
     gp.update.mockReset();
     vi.mocked(sendGuidePurchaseEmail).mockReset().mockResolvedValue('sent');
+    executeRaw.mockReset().mockResolvedValue(1);
+    vi.mocked(prisma.$transaction).mockImplementation(((arg: unknown) =>
+        typeof arg === 'function'
+            ? (arg as (tx: unknown) => Promise<unknown>)({ $executeRaw: executeRaw, guidePurchase: prisma.guidePurchase })
+            : Promise.all(arg as Promise<unknown>[])) as never);
 });
+
+/** The transaction lock statement a new promo claim runs first. */
+const executeRaw = vi.fn();
 
 describe('the metadata the checkout and the webhook share', () => {
     it('tags a guide checkout and its add-on', () => {
@@ -140,7 +151,7 @@ describe('fulfillGuideSession', () => {
     it('sends the delivery email only to the caller that claims it', async () => {
         expect(await fulfillGuideSession(session())).toMatchObject({ delivery: 'sent' });
         expect(sendGuidePurchaseEmail).toHaveBeenCalledTimes(1);
-        expect(gp.updateMany).toHaveBeenCalledWith({ where: { id: 'gp_1', emailSentAt: null }, data: { emailSentAt: expect.any(Date) } });
+        expect(gp.updateMany).toHaveBeenCalledWith({ where: { id: 'gp_1', accessToken: PURCHASE.accessToken, emailSentAt: null }, data: { emailSentAt: expect.any(Date) } });
 
         gp.updateMany.mockResolvedValueOnce({ count: 0 });
         expect(await fulfillGuideSession(session())).toMatchObject({ delivery: 'already' });
@@ -156,7 +167,7 @@ describe('fulfillGuideSession', () => {
     it('releases the claim when the email fails, and reports it for a retry', async () => {
         vi.mocked(sendGuidePurchaseEmail).mockResolvedValueOnce('retry');
         expect(await fulfillGuideSession(session())).toMatchObject({ status: 'fulfilled', delivery: 'retry' });
-        expect(gp.updateMany).toHaveBeenLastCalledWith({ where: { id: 'gp_1' }, data: { emailSentAt: null } });
+        expect(gp.updateMany).toHaveBeenLastCalledWith({ where: { id: 'gp_1', accessToken: PURCHASE.accessToken }, data: { emailSentAt: null } });
     });
 
     it('reports a permanently refused address without asking for a retry', async () => {
@@ -179,7 +190,19 @@ describe('fulfillGuideSession', () => {
     it('tells the success page the link is in the inbox only when it is', () => {
         expect(emailDelivered('sent')).toBe(true);
         expect(emailDelivered('already')).toBe(true);
-        for (const outcome of ['retry', 'refused', 'no-address'] as const) expect(emailDelivered(outcome)).toBe(false);
+        for (const outcome of ['retry', 'refused', 'no-address', 'pending'] as const) expect(emailDelivered(outcome)).toBe(false);
+    });
+
+    it('records the purchase for the success page without sending, leaving the email to the webhook', async () => {
+        const pending = await fulfillGuideSession(session(), { sendEmail: false });
+        expect(pending).toMatchObject({ status: 'fulfilled', delivery: 'pending' });
+        expect(gp.upsert).toHaveBeenCalledTimes(1);
+        expect(gp.updateMany).not.toHaveBeenCalled();
+        expect(sendGuidePurchaseEmail).not.toHaveBeenCalled();
+
+        gp.upsert.mockResolvedValueOnce({ ...PURCHASE, emailSentAt: new Date() });
+        expect(await fulfillGuideSession(session(), { sendEmail: false })).toMatchObject({ delivery: 'already' });
+        expect(sendGuidePurchaseEmail).not.toHaveBeenCalled();
     });
 });
 
@@ -215,6 +238,27 @@ describe('fulfillPromoClaim', () => {
         expect(sendGuidePurchaseEmail).toHaveBeenCalledWith(CLAIM);
     });
 
+    it('creates a claim only under a transaction lock on the address, after looking again', async () => {
+        gp.create.mockResolvedValueOnce(CLAIM);
+        await fulfillPromoClaim(BUNDLES['career-bundle'], 'np@example.com', null, NOW, null);
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(executeRaw.mock.calls[0][1]).toBe(claimLockKey('np@example.com'));
+        expect(claimLockKey('np@example.com')).toBe('guide-claim:np@example.com');
+        expect(gp.findFirst).toHaveBeenCalledTimes(1);
+        expect(executeRaw.mock.invocationCallOrder[0]).toBeLessThan(gp.findFirst.mock.invocationCallOrder[0]);
+        expect(gp.findFirst.mock.invocationCallOrder[0]).toBeLessThan(gp.create.mock.invocationCallOrder[0]);
+    });
+
+    it('re-uses a claim a concurrent request created, found under the lock, and sends one email', async () => {
+        const created = { ...CLAIM, emailSentAt: new Date(NOW.getTime() - 1000) };
+        gp.findFirst.mockResolvedValueOnce(created);
+        gp.updateMany.mockResolvedValueOnce({ count: 0 });
+        const result = await fulfillPromoClaim(BUNDLES['career-bundle'], 'np@example.com', null, NOW, null);
+        expect(result).toMatchObject({ reused: true, delivery: 'already', purchase: created });
+        expect(gp.create).not.toHaveBeenCalled();
+        expect(sendGuidePurchaseEmail).not.toHaveBeenCalled();
+    });
+
     it('never adds the checkout add-on to a claim', async () => {
         gp.create.mockResolvedValueOnce({ ...CLAIM, productSlug: 'interview-prep-pack', guideSlugs: ['interview-prep-pack'] });
         await fulfillPromoClaim(GUIDES['interview-prep-pack'], 'np@example.com', null, NOW);
@@ -237,7 +281,7 @@ describe('fulfillPromoClaim', () => {
         expect(result).toMatchObject({ reused: true, delivery: 'sent', purchase: earlier });
         expect(gp.create).not.toHaveBeenCalled();
         expect(gp.updateMany).toHaveBeenCalledWith({
-            where: { id: 'gp_promo', OR: [{ emailSentAt: null }, { emailSentAt: { lt: new Date(NOW.getTime() - PROMO_RESEND_INTERVAL_MS) } }] },
+            where: { id: 'gp_promo', accessToken: CLAIM.accessToken, OR: [{ emailSentAt: null }, { emailSentAt: { lt: new Date(NOW.getTime() - PROMO_RESEND_INTERVAL_MS) } }] },
             data: { emailSentAt: NOW },
         });
         expect(sendGuidePurchaseEmail).toHaveBeenCalledWith(earlier);
@@ -259,7 +303,7 @@ describe('fulfillPromoClaim', () => {
         vi.mocked(sendGuidePurchaseEmail).mockResolvedValueOnce('retry');
         const result = await fulfillPromoClaim(BUNDLES['career-bundle'], 'np@example.com', null, NOW);
         expect(result.delivery).toBe('retry');
-        expect(gp.updateMany).toHaveBeenLastCalledWith({ where: { id: 'gp_promo', emailSentAt: NOW }, data: { emailSentAt: sentAt } });
+        expect(gp.updateMany).toHaveBeenLastCalledWith({ where: { id: 'gp_promo', accessToken: CLAIM.accessToken, emailSentAt: NOW }, data: { emailSentAt: sentAt } });
     });
 
     it('releases a new claim\'s email for the next attempt when the send fails', async () => {
@@ -267,7 +311,7 @@ describe('fulfillPromoClaim', () => {
         vi.mocked(sendGuidePurchaseEmail).mockResolvedValueOnce('retry');
         const result = await fulfillPromoClaim(BUNDLES['career-bundle'], 'np@example.com', null, NOW);
         expect(result).toMatchObject({ reused: false, delivery: 'retry' });
-        expect(gp.updateMany).toHaveBeenLastCalledWith({ where: { id: 'gp_promo' }, data: { emailSentAt: null } });
+        expect(gp.updateMany).toHaveBeenLastCalledWith({ where: { id: 'gp_promo', accessToken: CLAIM.accessToken }, data: { emailSentAt: null } });
     });
 
     it('lets a failed write throw, so the route answers 500', async () => {

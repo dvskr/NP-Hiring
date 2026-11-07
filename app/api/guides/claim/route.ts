@@ -1,5 +1,5 @@
 /**
- * POST /api/guides/claim  { product, email }  ->  { ok: true, emailed, guides }
+ * POST /api/guides/claim  { product, email, newsletter? }  ->  { ok: true, emailed, guides, inLibrary }
  *
  * The launch promo's way to the guides: until config.promoEndsAt every
  * product, bundles included, is free to claim with an email address
@@ -21,9 +21,16 @@
  * with every guide of the product, that claim is re-used instead and its email
  * re-sent at most once per 10 minutes.
  *
- * A new claim is added to this browser's library cookie. A re-used one is
- * not: it belongs to whoever owns the address, and this request has not
- * shown it does, so the link travels by email only.
+ * The guides reach a browser through the emailed link, which proves the
+ * reader owns the address. Only a reader signed in with that confirmed
+ * address gets them in this browser's library at once (inLibrary). So the
+ * answer is the same whether or not the address held a claim before, and a
+ * claim made with someone else's address gives this browser nothing.
+ *
+ * `newsletter: true` (an unticked box on the form) also opts the address in
+ * to the newsletter (lib/newsletter.ts): as the public signup does for the
+ * address's signed-in owner, and for anyone else only when the site has
+ * never seen the address.
  */
 import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
@@ -32,14 +39,19 @@ import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { verifyCsrf } from '@/lib/csrf';
+import { subscribeNewAddressToNewsletter, subscribeToNewsletter } from '@/lib/newsletter';
 import { getProduct, isGuideSlug, productGuides } from '@/lib/guides/catalog';
 import { GUIDES_COOKIE, addToLibraryCookie, libraryCookieOptions } from '@/lib/guides/access';
 import { isGuideClaimOpen } from '@/lib/guides/phase';
 import { emailDelivered, findReusableClaim, fulfillPromoClaim } from '@/lib/guides/fulfill';
 
+/** The email lead source of a newsletter opt-in made on the claim form. */
+const GUIDE_CLAIM_NEWSLETTER_SOURCE = 'guide_claim';
+
 const BODY = z.object({
     product: z.string().min(1).max(64),
     email: z.string().trim().toLowerCase().max(254).email(),
+    newsletter: z.boolean().optional(),
 });
 
 function noStore(res: NextResponse): NextResponse {
@@ -63,14 +75,39 @@ async function emailLimited(email: string): Promise<NextResponse | null> {
     );
 }
 
-/** The signed-in reader's user id, if any. Claiming never requires an account. */
-async function optionalUserId(): Promise<string | null> {
+interface SignedInReader {
+    readonly userId: string;
+    /** The account's address, lowercased, when it is confirmed. */
+    readonly confirmedEmail: string | null;
+}
+
+/** The signed-in reader, if any. Claiming never requires an account. */
+async function signedInReader(): Promise<SignedInReader | null> {
     try {
         const supabase = await createClient();
         const { data } = await supabase.auth.getUser();
-        return data.user?.id ?? null;
+        const user = data.user;
+        if (!user) return null;
+        const confirmed = user.email && user.email_confirmed_at ? user.email.trim().toLowerCase() : null;
+        return { userId: user.id, confirmedEmail: confirmed };
     } catch {
         return null;
+    }
+}
+
+/**
+ * The newsletter box. The address's signed-in owner opts in as on the public
+ * signup; anyone else can only subscribe an address the site has never seen,
+ * so a claim can never re-subscribe someone who unsubscribed. Never fails
+ * the claim: the guides are what the reader asked for.
+ */
+async function optInIfAsked(asked: boolean | undefined, email: string, ownsAddress: boolean): Promise<void> {
+    if (!asked) return;
+    try {
+        if (ownsAddress) await subscribeToNewsletter(email, GUIDE_CLAIM_NEWSLETTER_SOURCE);
+        else await subscribeNewAddressToNewsletter(email, GUIDE_CLAIM_NEWSLETTER_SOURCE);
+    } catch (error) {
+        logger.error('Newsletter opt-in on a guide claim failed', error);
     }
 }
 
@@ -97,23 +134,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const badEmail = parsed.error.issues.some((issue) => issue.path[0] === 'email');
         return noStore(NextResponse.json({ error: badEmail ? 'Enter a valid email address.' : 'Invalid request.' }, { status: 400 }));
     }
+    const { email, newsletter } = parsed.data;
 
     const product = getProduct(parsed.data.product);
     if (!product) return noStore(NextResponse.json({ error: 'That guide is not in the store.' }, { status: 400 }));
 
     try {
-        const existing = await findReusableClaim(product, parsed.data.email);
+        const existing = await findReusableClaim(product, email);
         if (!existing) {
-            const tooMany = await emailLimited(parsed.data.email);
+            const tooMany = await emailLimited(email);
             if (tooMany) return noStore(tooMany);
         }
-        const result = await fulfillPromoClaim(product, parsed.data.email, await optionalUserId(), now, existing);
+        const reader = await signedInReader();
+        const result = await fulfillPromoClaim(product, email, reader?.userId ?? null, now, existing);
+        const ownsAddress = reader?.confirmedEmail === email;
+        await optInIfAsked(newsletter, email, ownsAddress);
+
         const res = NextResponse.json({
             ok: true,
             emailed: emailDelivered(result.delivery),
             guides: productGuides(product).filter(isGuideSlug),
+            inLibrary: ownsAddress,
         });
-        if (!result.reused) {
+        if (ownsAddress) {
             res.cookies.set(
                 GUIDES_COOKIE,
                 addToLibraryCookie(req.cookies.get(GUIDES_COOKIE)?.value, result.purchase.accessToken),

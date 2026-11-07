@@ -45,6 +45,7 @@ import {
   unfreezePack,
 } from '@/lib/post-packs';
 import { POST_PACK_CHECKOUT_TYPE } from '@/lib/post-pack-sale';
+import type { PaymentIntentReader } from '@/lib/payment-intent-reader';
 import { alertWebhookFailure } from './webhook-support';
 
 export interface PackEventContext {
@@ -205,7 +206,7 @@ function closedInOurFavourReason(status: string, standing: boolean): string {
  * an intent Stripe no longer has: no retry could find a pack for it. Any
  * other Stripe error propagates, and the webhook answers 500 for it too.
  */
-export async function isUnrecordedPackPayment(stripe: Stripe, paymentIntentId: string): Promise<boolean> {
+export async function isUnrecordedPackPayment(stripe: PaymentIntentReader, paymentIntentId: string): Promise<boolean> {
   try {
     const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
     return intent.metadata?.type === POST_PACK_CHECKOUT_TYPE;
