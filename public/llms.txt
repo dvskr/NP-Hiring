@@ -1,6 +1,6 @@
 # NP Hiring
 
-> A specialized US job board for Nurse Practitioners of every specialty plus CRNAs, CNMs and CNSs, with salary shown whenever the employer's posting provides it and free career guides and tools.
+> A specialized US job board for Nurse Practitioners of every specialty plus CRNAs, CNMs and CNSs, with salary shown whenever the employer's posting provides it, free career articles and tools, and a store of PDF career guides.
 
 ## What We Do
 
@@ -18,7 +18,7 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 - State salary pages show a state median only where enough postings with disclosed pay, from enough employers, support one
 - Salary is shown whenever the employer's posting provides it; we do not estimate or fabricate pay for an individual listing
 - Cited statistics on our pages carry a named source and an as-of date
-- 100% free for job seekers
+- Searching, job alerts and applying are free for job seekers; the PDF career guides at /guides are optional
 - Founded in 2026
 
 ## Key Facts
@@ -57,6 +57,7 @@ Canonical figures, as cited across the site (last verified 2026-10-06):
 - /for-job-seekers: Job search hub with the application guides
 - /blog: Career guides, licensure guides, and industry insights
 - /resources: Career resources, state licensure guides and tools
+- /guides: NP career guides (PDF): the compensation report, the first-year playbook, interview prep, negotiation, telehealth and launching a practice, alone or in bundles
 - /job-alerts: Set up email alerts for new NP jobs
 - /companies: Employers with active listings
 - /faq: Frequently asked questions

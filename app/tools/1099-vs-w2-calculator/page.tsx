@@ -22,6 +22,7 @@ import { ArrowRight, Calculator, HelpCircle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
+import GuidePromo from '@/components/guides/GuidePromo';
 import TakeHomeCalculator from '@/components/tools/TakeHomeCalculator';
 import {
   TAX_MODEL_EXCLUSIONS,
@@ -236,6 +237,17 @@ export default function TakeHomeCalculatorPage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* ─── The negotiation guide: what to do with the result ─── */}
+      <section style={{ background: '#FFF', padding: '48px 20px 0' }}>
+        <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+          <GuidePromo
+            slug="negotiate-like-an-np"
+            heading="Turn the math into a counteroffer"
+            pitch="Every pay model decoded, from salary to wRVU and collections, plus scripts to ask for the rate the numbers support."
+          />
         </div>
       </section>
 

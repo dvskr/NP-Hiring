@@ -26,6 +26,7 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryFAQ from '@/components/CategoryFAQ';
+import GuidePromo from '@/components/guides/GuidePromo';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
@@ -578,6 +579,12 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
+          <GuidePromo
+            slug="telehealth-playbook"
+            heading="New to telehealth practice?"
+            pitch="Licensing across state lines, DEA registration, the telehealth prescribing rules for 2027 and how to judge a platform job."
+            style={{ maxWidth: '900px', margin: '40px auto 0' }}
+          />
         </section>
       </div>
 

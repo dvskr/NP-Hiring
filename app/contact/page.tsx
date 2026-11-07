@@ -38,7 +38,9 @@ import ContactFAQ from './ContactFAQ';
 //     (lib/active-job-filter.ts) and the distinct-reporter auto-unpublish in
 //     app/api/jobs/report/route.ts are each real code paths.
 const FAQ_ITEMS = [
-    { q: `Is ${brand.name} free for job seekers?`, a: 'Yes. Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
+    // 2026-11-07: "We never charge job seekers" became untrue in 2027, when
+    // the career guides at /guides are sold. True in both phases now.
+    { q: `Is ${brand.name} free for job seekers?`, a: 'Yes. Browsing jobs, setting up alerts, and applying are free. Our career guides are optional.' },
     // P0 #5 still applies here: no hardcoded company or posting count
     // (config/niche/copy.ts RULE: evergreen claims only; live counters come
     // from lib/site-stats.ts).

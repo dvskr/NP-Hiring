@@ -26,6 +26,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import GuidePromo from '@/components/guides/GuidePromo';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import {
@@ -550,6 +551,12 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
               </div>
             ))}
           </div>
+          <GuidePromo
+            slug="negotiate-like-an-np"
+            heading="Pricing your first 1099 contract?"
+            pitch="A 1099 vs. W-2 calculator, every pay model decoded and a 20-point contract red-flag audit."
+            style={{ maxWidth: '900px', margin: '40px auto 0' }}
+          />
         </section>
       </div>
 

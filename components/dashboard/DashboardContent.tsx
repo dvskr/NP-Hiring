@@ -16,6 +16,7 @@ import {
     HelpCircle, Star, MessageSquare, Sparkles
 } from 'lucide-react'
 import HowItWorksSidebar from './HowItWorksSidebar'
+import { GuideShelf } from '@/components/guides/GuidePromo'
 import JobCard from '@/components/JobCard'
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers'
 import type { Job as JobCardJob } from '@/lib/types'
@@ -863,6 +864,7 @@ export default function DashboardContent() {
                     { icon: FileText, label: 'Upload Resume', href: '/settings' },
                     { icon: Settings, label: 'Preferences', href: '/settings?tab=screening' },
                     { icon: BellRing, label: 'Manage Alerts', href: '/job-alerts/manage' },
+                    { icon: BookOpen, label: 'Career Guides', href: '/guides' },
                 ].map((action) => {
                     const ActionIcon = action.icon
                     return (
@@ -1139,12 +1141,21 @@ export default function DashboardContent() {
             </div>
 
             {/* ═══ RIGHT: Feedback & Support Panel ═══ */}
-            <aside style={{ position: 'sticky', top: '100px', display: 'flex', flexDirection: 'column', gap: '16px' }} className="dashboard-right-panel">
+            {/* The rail scrolls on its own when it is taller than the screen
+                (it grew with the guides shelf); without it the lower cards
+                stay out of reach until the left column ends. The padding and
+                matching negative margin keep the card shadows from being
+                clipped. Grid, not a flex column: a capped flex column shrinks
+                the cards that set overflow hidden and cuts off their text. */}
+            <aside style={{ position: 'sticky', top: '100px', display: 'grid', alignContent: 'start', gap: '16px', maxHeight: 'calc(100vh - 116px)', overflowY: 'auto', overscrollBehavior: 'contain', scrollbarWidth: 'thin', padding: '4px 12px 16px', margin: '-4px -12px 0' }} className="dashboard-right-panel">
 
                 {/* ── How this platform works — explainer for the badge system on
                        the recommendation cards. Pinned to the top of the sidebar
                        so candidates can decode the Easy Apply and employer site tags. */}
                 <HowItWorksSidebar />
+
+                {/* ── Career guides: pay data, interview and offer prep for the search they are running ── */}
+                <GuideShelf />
 
                 {/* ── Rate + Share Your Story (combined) ── */}
                 <div style={{
@@ -1316,6 +1327,10 @@ export default function DashboardContent() {
                     }
                     .dashboard-right-panel {
                         position: static !important;
+                        max-height: none !important;
+                        overflow: visible !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
                         display: grid !important;
                         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
                     }

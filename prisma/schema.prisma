@@ -2119,3 +2119,43 @@ model OauthRefreshToken {
   @@index([grantId])
   @@map("oauth_refresh_tokens")
 }
+
+/// One delivery from the NP guides store (/guides): a single guide or a
+/// bundle, claimed free during the launch promo (source 'promo', POST
+/// /api/guides/claim) or bought through Stripe Checkout (source 'stripe').
+/// Written by lib/guides/fulfill.ts; a Stripe row from the webhook or the
+/// success page, whichever arrives first. Migration
+/// 20261107000000_add_guide_purchases, whose CHECK ties source to the Stripe
+/// ids and the amount.
+model GuidePurchase {
+  id                    String    @id @default(cuid())
+  /// 'stripe' | 'promo'
+  source                String    @default("stripe") @db.VarChar(16)
+  /// Unique, so a replayed webhook or a success-page visit cannot record the same sale twice. Null for a promo claim.
+  stripeSessionId       String?   @unique @map("stripe_session_id")
+  /// How refunds and disputes find the purchase to revoke it. Null for a promo claim.
+  stripePaymentIntentId String?   @unique @map("stripe_payment_intent_id")
+  /// The reader's email: from Checkout, or the one given to claim. Null if Stripe returned none, or after account erasure.
+  email                 String?
+  /// Supabase user id when the reader was signed in. No foreign key: a purchase outlives an account.
+  userId                String?   @map("user_id")
+  /// The catalog product (lib/guides/catalog.ts), a guide or bundle slug.
+  productSlug           String    @map("product_slug") @db.VarChar(64)
+  /// Every guide this row unlocks, resolved when it was paid for or claimed.
+  guideSlugs            String[]  @map("guide_slugs")
+  /// What Stripe charged; 0 for a promo claim.
+  amountCents           Int       @map("amount_cents")
+  currency              String    @default("usd") @db.VarChar(8)
+  /// Lowercase hex bearer token behind the reader's library link.
+  accessToken           String    @unique @map("access_token")
+  downloadCount         Int       @default(0) @map("download_count")
+  /// Set by the claim before the delivery email is sent, so it goes once (a promo re-send moves it forward).
+  emailSentAt           DateTime? @map("email_sent_at")
+  refundedAt            DateTime? @map("refunded_at")
+  disputedAt            DateTime? @map("disputed_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("guide_purchases")
+}

@@ -30,7 +30,9 @@ export const metadata: Metadata = {
   // same way (2026-10-06): it was still a count claim, just a vaguer one.
   // The description names what a seeker can do, with no number at all.
   description:
-    `Find your next ${brand.niche.long} position. Search ${brand.niche.descriptor} jobs in every specialty, see pay whenever the employer posts it, get daily alerts, and read free career guides.`,
+    // 2026-11-07: "read free career guides" became untrue in 2027, when the
+    // career guides at /guides are sold; the free articles are resources.
+    `Find your next ${brand.niche.long} position. Search ${brand.niche.descriptor} jobs in every specialty, see pay whenever the employer posts it, get daily alerts, and read career resources.`,
   openGraph: {
     images: [{ url: SEEKERS_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job seeker career resources` }],
   },
@@ -198,7 +200,7 @@ export default async function ForJobSeekersPage() {
           </h1>
           <p style={{ fontSize: '16px', color: '#5f4a50', lineHeight: 1.7, fontWeight: 600, margin: '0 auto 28px', maxWidth: '600px' }}>
             Search {brand.niche.descriptor} and APRN jobs in every specialty, see pay whenever the employer posts it,
-            and use free guides for every step from resume to first day.
+            and use guides for every step from resume to first day.
           </p>
 
           <form action="/jobs" method="get" role="search" className="seeker-hero-search" style={{
@@ -253,10 +255,10 @@ export default async function ForJobSeekersPage() {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '80px 20px 56px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            100% Free · No Hidden Fees
+            Free to Search · No Hidden Fees
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>
-            Everything You Need, For Free
+            Your Job Search, Free
           </h2>
 
           {/* Bento Grid */}
@@ -359,7 +361,9 @@ export default async function ForJobSeekersPage() {
                 seekers is true today and is the table's row, but "Forever"
                 is a promise the owner has not made, and the autofill
                 extension code already defines paid tiers
-                (app/api/autofill/_lib/quota.ts). */}
+                (app/api/autofill/_lib/quota.ts). 2026-11-07: "Free for Job
+                Seekers" became "Free to Search and Apply" with the table's
+                row, once the career guides at /guides went on sale from 2027. */}
             <div className="seeker-bento-free emp-bento-card" style={{
               ...clayCard, gridColumn: 'span 12',
               padding: '24px 28px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px 24px',
@@ -370,7 +374,7 @@ export default async function ForJobSeekersPage() {
                 <Gift size={22} />
               </div>
               <div style={{ flex: '1 1 260px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 4px' }}>Free for Job Seekers</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 4px' }}>Free to Search and Apply</h3>
                 <p style={{ fontSize: '13px', color: '#BE185D', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
                   No subscriptions. No premium tiers.
                 </p>
@@ -515,8 +519,10 @@ export default async function ForJobSeekersPage() {
                 </h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                   {/* D25 (2026-10-17): "and get matched" rested on the removed
-                      match scoring row. */}
-                  100% free. No sign-up required to browse. Create a profile to apply.
+                      match scoring row. 2026-11-07: "100% free" left with the
+                      career guides at /guides, sold from 2027; searching and
+                      applying stay free. */}
+                  Free to search and apply. No sign-up required to browse. Create a profile to apply.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link href="/jobs" className="seeker-cta-primary" style={{

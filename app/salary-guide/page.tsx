@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import SalaryGuideForm from '@/components/SalaryGuideForm';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
+import GuidePromo from '@/components/guides/GuidePromo';
 import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 import SalaryCalculator from '@/components/SalaryCalculator';
 import SalaryProvenance from '@/components/SalaryProvenance';
@@ -643,6 +644,13 @@ export default async function SalaryGuidePage() {
             </div>
 
           </div>
+
+          <GuidePromo
+            slug="compensation-report"
+            heading="Want every state and setting in one report?"
+            pitch="A state by state pay table for all 50 states and DC, pay by specialty and setting, W-2 vs. 1099 math and a negotiation method built on the data."
+            style={{ maxWidth: '900px', margin: '40px auto 0' }}
+          />
         </section>
       </div>
 

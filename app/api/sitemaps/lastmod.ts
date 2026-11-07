@@ -113,6 +113,14 @@ export async function latestJobContentDate(where: Prisma.JobWhereInput): Promise
  * pack in the ladder lines, the pack card, answer and calculator mode,
  * /terms sections 6 to 8, and every refund answer. All eight moved to that
  * ship day.
+ *
+ * 2026-11-07 (the guides store): /guides and every product page are new, and
+ * ten dated pages changed: /for-job-seekers, /faq and /contact no longer call
+ * everything on the site free (searching, alerts and applying are; the
+ * guides are optional), and seven pages carry a link card to the guide that
+ * fits their reader (components/guides/GuidePromo.tsx). The other pages with
+ * such a card (the salary guide, the job pages and three job landings) are
+ * dated by their jobs, not here.
  */
 export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // 2026-10-25 (2027 re-price): the ladder and renewal lines, the plan FAQ and the refund answer's plan sentence;
@@ -122,13 +130,22 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // from audited cells (lib/seeker-comparison.ts, register D25), its
   // surrounding cards say only what the board does, and the "how it works"
   // steps (components/FeaturedJobs.tsx) lose the AI and no recruiter claims.
-  '/for-job-seekers': '2026-10-20',
+  // 2026-11-07 (guides store): the hero, the features band, the comparison
+  // table's free row and the closing card say searching and applying are
+  // free rather than everything.
+  '/for-job-seekers': '2026-11-07',
   '/about': '2026-10-13',
   '/editorial-policy': '2026-10-13',
   // 2026-10-25 (2027 re-price): the cost, features, renewal and refund answers, and no plan answer;
   // 2026-10-26 (Phase 3): the 5-post pack answer and the all sales final refund answer.
-  '/faq': '2026-10-26',
-  '/contact': '2026-10-13',
+  // 2026-11-07 (guides store): the job seeker answer names the optional guides.
+  '/faq': '2026-11-07',
+  // 2026-11-07 (guides store): the job seeker answer names the optional guides.
+  '/contact': '2026-11-07',
+  // 2026-11-07 (guides store): new. The store and every product page render
+  // from their own page files and lib/guides/catalog.ts.
+  '/guides': '2026-11-07',
+  '/guides/[slug]': '2026-11-07',
   // 2026-10-25 (2027 re-price): §6 to §8 state the new prices and both renewal prices, drop the plan, and "Last updated" moved;
   // 2026-10-26 (Phase 3): §6 and §7 add the 5-post pack and §8 says all sales are final.
   '/terms': '2026-10-26',
@@ -156,19 +173,26 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // count and the article grid, the "Before you apply" cards carry the two
   // guides' new titles and descriptions, and three tool cards carry their
   // new titles (app/tools/tools-registry.ts).
-  '/resources': '2026-10-13',
-  '/resources/fpa-guide': '2026-10-13',
+  // 2026-11-07 (guides store): a Complete Library card under the deep guides.
+  '/resources': '2026-11-07',
+  // 2026-11-07 (guides store): a First-Year NP Playbook card.
+  '/resources/fpa-guide': '2026-11-07',
   // 2026-10-23 (register 2.25): the private practice jobs card follows that
   // landing's job count, and the landing had none at ship.
-  '/resources/private-practice-guide': '2026-10-23',
-  '/resources/1099-vs-w2': '2026-10-13',
+  // 2026-11-07 (guides store): a Launch Your NP Practice card.
+  '/resources/private-practice-guide': '2026-11-07',
+  // 2026-11-07 (guides store): a Negotiate Like an NP card.
+  '/resources/1099-vs-w2': '2026-11-07',
   '/scope-of-practice': '2026-10-13',
-  '/tools': '2026-10-13',
-  '/tools/1099-vs-w2-calculator': '2026-10-13',
+  // 2026-11-07 (guides store): a Career Bundle card under the tools.
+  '/tools': '2026-11-07',
+  // 2026-11-07 (guides store): a Negotiate Like an NP card under the calculator.
+  '/tools/1099-vs-w2-calculator': '2026-11-07',
   // 2026-09-29: a curated metro's jobs link now opens its metro guide (L-05).
   // 2026-10-13 (SEO, AEO and GEO release): the H1 names the tool.
   '/tools/cost-of-living-comparison': '2026-10-13',
-  '/tools/licensure-checker': '2026-10-13',
+  // 2026-11-07 (guides store): a Telehealth NP Playbook card under the multi-state planner.
+  '/tools/licensure-checker': '2026-11-07',
   '/tools/salary-benchmark': '2026-10-13',
   // 2026-10-23 (register 2.25): the last breadcrumb names the tool as its title does.
   '/tools/specialty-finder': '2026-10-23',
@@ -258,6 +282,11 @@ export const PROMO_SWITCH_PATHS: ReadonlySet<string> = new Set([
   '/compare/np-hiring-vs-indeed',
   '/compare/np-hiring-vs-aanp-jobcenter',
   '/compare/np-hiring-vs-enp-network',
+  // The guides store: every price block reads "Free" with its date while the
+  // promo runs and the catalog price after it (lib/guides/phase.ts
+  // guidePriceCopy), and the claim form gives way to checkout.
+  '/guides',
+  '/guides/[slug]',
 ]);
 
 /**

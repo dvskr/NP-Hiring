@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Building2, DollarSign, FileText, CheckCircle, Shield, Users, BookOpen, Landmark } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import GuidePromo from '@/components/guides/GuidePromo';
 import { getStatesByAuthority } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 // P6 #10: this guide carried Article JSON-LD + a review stamp but no
@@ -488,6 +489,13 @@ export default async function PrivatePracticeGuidePage() {
               ))}
             </div>
           </div>
+
+          <GuidePromo
+            slug="launch-your-practice"
+            heading="Ready to open your own practice?"
+            pitch="A 120-day launch timeline with the forms, costs, billing codes and templates for each step, from choosing your entity to your first claim."
+            style={{ marginBottom: '32px' }}
+          />
 
           {/* Related Resources — P2 #22: full cross-linking across the
               /resources guide cluster plus the salary guide. */}

@@ -1,6 +1,6 @@
 # NP Hiring Pricing System — Architecture & Operations
 
-**Last verified:** 2026-10-27 (the 2027 re-price, Phase 4: the retired Employer plan's dormant code deleted, with its config values, its `'plan'` tier, its Payment Link variable, its routes, jobs, emails and admin page; a subscription-mode Checkout Session is alerted for a refund, and the webhook needs 7 events: §1b to §1d, §2b, §2d to §2g, §3a to §3c, §4a to §4e, §5, §6, §8, §9a to §9d, §10 to §12 and the glossary); 2026-10-25 (the 2027 re-price, the fix pass of the pack's code and security reviews: the pack recorded in the state its payment is in, refund and dispute events for a pack not yet recorded retried, the pack checkout's account and session rules, the post-free screening questions inside the transaction, the new-post ledger write's retry, and the migration's lock timeout: §1b, §1c, §2a, §2c, §2h, §3a, §3b, §4f, §8, §9a to §9c, §10b, §12); 2026-10-25 (the 2027 re-price, Phase 3: the 5-post pack's pages, copy, emails, GA events and back office, and all sales final (owner decision 2026-10-25): §1b to §1d, §2h, §3a to §3c, §9c, §9d, §10 to §12); 2026-10-25 (the 2027 re-price, Phase 2 backend: the 5-post pack, built and kept dark, and the plan taken out of posting: §1b to §1d, §2a to §2d, §2g, the new §2h, §3a, §3b, §4a, §4f, §5 to §12 and the glossary); 2026-10-24 (the 2027 re-price, Phase 1: $249 first post and $349 after, a renewal priced by the post it renews, and the Employer plan retired from every surface: §1, §2d, §2g, §3, §5, §8 to §12); 2026-10-02 (the plan checkout and its account linking in §2e, the activation order in §2c, the schema blocks in §4, the open loopholes in §8, the checklist and monitors in §9 and the test map in §10, re-checked against the code; `tests/regressions/docs-pricing-system-matches-code.test.ts` now holds them to it); 2026-10-01 (the copy switch at the promo end: §1d, §2g and §3); 2026-09-27 (plan post lifecycle, renewal effects and the promo end instant)
+**Last verified:** 2026-11-07 (the NP guides store, free to claim through the promo and sold from the ladder's start: §2i, §3a, §3b, §4g, §9a to §9c, §10b); 2026-10-27 (the 2027 re-price, Phase 4: the retired Employer plan's dormant code deleted, with its config values, its `'plan'` tier, its Payment Link variable, its routes, jobs, emails and admin page; a subscription-mode Checkout Session is alerted for a refund, and the webhook needs 7 events: §1b to §1d, §2b, §2d to §2g, §3a to §3c, §4a to §4e, §5, §6, §8, §9a to §9d, §10 to §12 and the glossary); 2026-10-25 (the 2027 re-price, the fix pass of the pack's code and security reviews: the pack recorded in the state its payment is in, refund and dispute events for a pack not yet recorded retried, the pack checkout's account and session rules, the post-free screening questions inside the transaction, the new-post ledger write's retry, and the migration's lock timeout: §1b, §1c, §2a, §2c, §2h, §3a, §3b, §4f, §8, §9a to §9c, §10b, §12); 2026-10-25 (the 2027 re-price, Phase 3: the 5-post pack's pages, copy, emails, GA events and back office, and all sales final (owner decision 2026-10-25): §1b to §1d, §2h, §3a to §3c, §9c, §9d, §10 to §12); 2026-10-25 (the 2027 re-price, Phase 2 backend: the 5-post pack, built and kept dark, and the plan taken out of posting: §1b to §1d, §2a to §2d, §2g, the new §2h, §3a, §3b, §4a, §4f, §5 to §12 and the glossary); 2026-10-24 (the 2027 re-price, Phase 1: $249 first post and $349 after, a renewal priced by the post it renews, and the Employer plan retired from every surface: §1, §2d, §2g, §3, §5, §8 to §12); 2026-10-02 (the plan checkout and its account linking in §2e, the activation order in §2c, the schema blocks in §4, the open loopholes in §8, the checklist and monitors in §9 and the test map in §10, re-checked against the code; `tests/regressions/docs-pricing-system-matches-code.test.ts` now holds them to it); 2026-10-01 (the copy switch at the promo end: §1d, §2g and §3); 2026-09-27 (plan post lifecycle, renewal effects and the promo end instant)
 **Source of truth:** [lib/config.ts](../lib/config.ts) + [lib/pricing.ts](../lib/pricing.ts) + [lib/renewal-price.ts](../lib/renewal-price.ts) + [lib/post-packs.ts](../lib/post-packs.ts) + [prisma/schema.prisma](../prisma/schema.prisma); the words every surface prints come from [lib/pricing-copy.ts](../lib/pricing-copy.ts) and the per-page builders in §3a
 **Companion doc:** [pricing-audit.md](./archive/pricing-audit.md) (the April 2026 audit and its change log; archived and no longer maintained. Open items live in [PENDING_WORK.md](./PENDING_WORK.md))
 
@@ -113,7 +113,7 @@ There is no flag to flip and no deploy. Every phase-dependent decision calls `co
 - **The cost-per-hire calculator:** `flatFeeModeOptions('ladder')` offers per post and the 5-post pack (no promo mode and no start date; the plan mode was retired with the plan; while the promo runs the pack mode is offered as `5-post pack, from January 1, 2027`), `defaultInputs('ladder')` opens on per post, a calculator that was already open with the promo selected falls back to per post (`offeredFlatFeeMode`), and the method notes, the FAQ (with its FAQPage JSON-LD) and the post-a-role card state the ladder.
 - **The outreach `freeOffer` template:** /admin/outreach stops listing it (`availableOutreachTemplates(now)`), `renderTemplate` refuses it (`OutreachTemplateUnavailableError`), and `POST /api/outreach` answers `409 { success: false, error }` with that reason, which the admin page shows. `initial` and `followUp` state the ladder price.
 - **Expiry emails** stop offering a free repost (§2g), and a renewal savings claim becomes possible where a renewal can be bought (lib/renewal-offer.ts).
-- **Sitemap lastmod:** every page in `PROMO_SWITCH_PATHS` (app/api/sitemaps/lastmod.ts: /pricing, /for-employers, /faq, the employer resources hub, hiring guide, job description guide, template library and template pages, /tools/salary-benchmark, /tools/cost-per-hire-calculator and the three comparison pages) is dated no earlier than the switch once it has passed, and so is the homepage (`withPromoSwitch`: its employer band's CTA switched). The sitemap index dates its primary child from the same dates. Before the instant no date moves. The date moves at the instant itself, so a crawl it prompts can reach a page that has not regenerated yet and receive the promo render (the copy bullet above).
+- **Sitemap lastmod:** every page in `PROMO_SWITCH_PATHS` (app/api/sitemaps/lastmod.ts: /pricing, /for-employers, /faq, the employer resources hub, hiring guide, job description guide, template library and template pages, /tools/salary-benchmark, /tools/cost-per-hire-calculator, the three comparison pages, and the guides store and its guide pages, whose price blocks follow the clock, §2i) is dated no earlier than the switch once it has passed, and so is the homepage (`withPromoSwitch`: its employer band's CTA switched). The sitemap index dates its primary child from the same dates. Before the instant no date moves. The date moves at the instant itself, so a crawl it prompts can reach a page that has not regenerated yet and receive the promo render (the copy bullet above).
 
 **Does not happen on its own** (owner steps: docs/LAUNCH_RUNBOOK.md §8, checklist in §9b):
 
@@ -441,6 +441,64 @@ By hand: /admin/post-packs → PATCH /api/admin/post-packs/:id (requireApiAdminA
   └─ restore: one post the pack spent back to creditsRemaining (a post removed in error); never a revoked one
 ```
 
+### 2i. NP guides store (built 2026-11-07; sold from the ladder's start)
+
+Six PDF guides, three bundles and one checkout add-on for readers (not employers), priced in [lib/guides/catalog.ts](../lib/guides/catalog.ts), the only price source: $9 to $39 a guide, $39 to $69 a bundle, the Compensation Report as a $5 add-on to a product that does not include it. The guides take those prices from the same instant as the posting ladder (owner decision 2026-11-07): until `config.promoEndsAt` every product, bundles included, is free to claim with an email address and Stripe is never called; from it they are sold through Stripe Checkout, one-time, all sales final. [lib/guides/phase.ts](../lib/guides/phase.ts) holds the switch (`guidePhase`, `isGuideClaimOpen`), the paid gate (`guideSaleClosedReason`, in the 5-post pack's order) and the price block every surface prints (`guidePriceCopy(product, now)`), decided per render or request.
+
+```
+Claim (promo): POST /api/guides/claim { product, email } (app/api/guides/claim/route.ts)
+  ├─ verifyCsrf, then 5 a minute per IP (RATE_LIMITS.guideClaim); 409 PROMO_ENDED once isGuideClaimOpen(now)
+  │    is false; 400 for a malformed body, a bad email (trimmed, lowercased, at most 254) or an unknown product;
+  │    429 past 6 claims an hour for one address from any IP (RATE_LIMITS.guideClaimPerEmail, keyed on a hash)
+  ├─ lib/guides/fulfill.ts#fulfillPromoClaim: a 'promo' claim this email already holds with every guide of the
+  │    product is re-used (no new row; its email re-sent at most once per 10 minutes, a conditional write on
+  │    email_sent_at). Else GuidePurchase { source 'promo', amountCents 0, no Stripe ids, the product's own
+  │    guides (never the add-on), userId when signed in, a 48-hex access token } and the delivery email
+  └─ 200 { ok: true, emailed, guides }; a new claim's token joins this browser's np_guides cookie (a re-used
+       one does not: the request has not shown it owns the address, so its link goes by email only)
+
+Buy (from config.promoEndsAt): POST /api/guides/checkout { product, addOn? } (app/api/guides/checkout/route.ts)
+  ├─ verifyCsrf, 10 a minute per IP; guideSaleClosedReason(now): 503 PAID_POSTING_DISABLED · 503
+  │    STRIPE_NOT_CONFIGURED (the key or STRIPE_WEBHOOK_SECRET missing) · 409 PROMO_ACTIVE, before the body
+  ├─ the amount is the catalog's (inline price_data), never the request's; the add-on line only when eligible
+  ├─ Checkout Session, mode 'payment', card only, no promotion codes, no account needed (a signed-in buyer's
+  │    email prefilled): metadata { type: 'guide', product, addOn, userId } and the GA ids of a consenting
+  │    visitor; payment_intent_data.metadata { type: 'guide', product }
+  └─ 200 { url }; the session id joins the httpOnly np_guide_checkout cookie (a day); success_url
+       /guides/success?session_id=…, cancel_url /guides/<product>
+
+Record: lib/guides/fulfill.ts#fulfillGuideSession, run by the webhook (checkout.session.completed or
+  async_payment_succeeded with metadata.type 'guide', after the subscription guard and the pack branch and
+  before the "Missing job ID" 400; app/api/webhooks/stripe/guide-checkout.ts) and GET /api/guides/verify
+  (the success page), whichever comes first
+  ├─ unpaid is deferred; 'no_payment_required' is alerted; an unknown product is alerted and answered 400
+  ├─ GuidePurchase upsert keyed on the unique stripeSessionId (a P2002 from the other caller reads its row):
+  │    source 'stripe', amountCents = session.amount_total, the product's guides plus the add-on if bought
+  ├─ the delivery email claimed by email_sent_at before it is sent, released on a failed send; a failed write
+  │    or a failed email answers 500 and rolls the dedupe row back (the retry only re-sends the email)
+  └─ the GA purchase (type 'guide', the product slug and title) once the email has gone, for a paid amount
+  Verify adds the purchase to the np_guides cookie only for the browser whose np_guide_checkout cookie holds
+  the session; anyone else holding the id learns it was paid, and the link goes by email.
+
+Read: the email links /guides/library/<token>, which moves the token into the np_guides cookie (a year,
+  httpOnly) and redirects to /guides/library. GET /api/guides/download?guide=<slug> is authorised by that
+  cookie only: refused cross-site, a conditional increment (60 downloads a purchase), then a 60-second signed
+  link to <slug>.pdf in the private Supabase bucket 'guides' under the guide's published file name; a link
+  that cannot be signed gives the download back. scripts/guides/upload-guides.ts puts the PDFs there (a dry
+  run unless --apply)
+
+Refund and chargeback: app/api/webhooks/stripe/guide-checkout.ts, when no JobCharge and no pack matches
+  ├─ charge.refunded in full → refundedAt (downloads end); in part → nothing changes
+  ├─ charge.dispute.created → disputedAt (downloads frozen); closed won or warning_closed → restored; lost
+  │    → stays frozen
+  └─ no purchase matches and the payment intent is tagged 'guide' (isUnrecordedGuidePayment): 500 with the
+       dedupe row rolled back, so Stripe retries once the checkout is recorded; a Stripe error answers 500
+  A promo claim has no payment, so no event reaches it. Account erasure (the purge cron) keeps every row as
+  the sales record and nulls its email and userId.
+```
+
+Library tokens and checkout session ids are masked in every Sentry event ([lib/private-url.ts](../lib/private-url.ts), wired into the three Sentry configs) and never reach Google Analytics (lib/analytics.ts swaps the token segment of /guides/library/<token> for its route name and reports allowlisted query parameters only).
+
 ---
 
 ## 3. Architecture map
@@ -455,6 +513,9 @@ By hand: /admin/post-packs → PATCH /api/admin/post-packs/:id (requireApiAdminA
 | Whether the pack can be sold now, and if not why (`packSaleClosedReason(now)`, `isPackSaleOpen(now)`: the gate's one copy), who it is sold to (`PackBuyer`), and the identifiers its checkout, webhook, sweep and GA event share (`POST_PACK_CHECKOUT_TYPE` = `'post_pack'`, `POST_PACK_SKU` = `'post-pack-5'`) | [lib/post-pack-sale.ts](../lib/post-pack-sale.ts) |
 | One pack as the employer's pages show it (`POST_PACK_VIEW_SELECT`, `toPostPackView`, `packCreditsLine`, `packStatusLine`, `packInvoiceHref`, `MAX_PACKS_LISTED`). Client-safe; GET /api/employer/post-packs, /employer/post-pack, the dashboard usage card and Settings, Billing print it | [lib/post-pack-view.ts](../lib/post-pack-view.ts) |
 | The pack back office: the admin view (`ADMIN_PACK_SELECT`, `toAdminPackView`) and the three changes (`planPackChange`: revoke, extend, restore; §2h). Client-safe; /admin/post-packs and its two routes | [lib/post-pack-admin.ts](../lib/post-pack-admin.ts) |
+| The guides store's products and prices (§2i): six guides, three bundles, the add-on (`ADD_ON`), `getProduct`, `productGuides`, `resolvePurchaseGuides`, `GUIDES_BUCKET`; the only price source the claim and the checkout read | [lib/guides/catalog.ts](../lib/guides/catalog.ts) |
+| Whether a guide is claimed or sold now (`guidePhase`, `isGuideClaimOpen`, `guideSaleClosedReason(now)`, `isGuideSaleOpen`), the price block each surface prints (`guidePriceCopy(product, now)`), and `GUIDE_CHECKOUT_TYPE` = `'guide'` | [lib/guides/phase.ts](../lib/guides/phase.ts) |
+| Recording a guide delivery (`fulfillGuideSession`, `fulfillPromoClaim`), the refund and dispute steps (`revokeGuidePurchase`, `restoreDisputedGuidePurchase`, `isGuidePayment`, `isUnrecordedGuidePayment`), with the cookies and tokens ([lib/guides/access.ts](../lib/guides/access.ts)), the library and download counter ([lib/guides/library.ts](../lib/guides/library.ts)), the delivery email ([lib/guides/email.ts](../lib/guides/email.ts)) and the signed links ([lib/guides/storage.ts](../lib/guides/storage.ts)) | [lib/guides/fulfill.ts](../lib/guides/fulfill.ts) |
 | Which renewal price a post pays (`renewalRungFor`, `renewalRungForRow`, `asRenewalRung`; §1b). Client-safe (imports only lib/config) | [lib/renewal-price.ts](../lib/renewal-price.ts) |
 | Renewal offer rule: the price the offer names (the row's own, passed as `renewalPrice`) and whether a renewal may be pitched as a saving, in which words (`renewalSavings`, `resolveRenewalOffer`, `renewalSavingsLabel`, `renewalSavingsLine`). Client-safe (imports only lib/config), so the dashboard and the edit page apply the same rule as the emails and the cron; lib/pricing.ts re-exports the first three and their types | [lib/renewal-offer.ts](../lib/renewal-offer.ts) |
 | Whether a next-post quote the browser already holds is still true (`currentQuote(quote, now)`: a `'promo'` quote reads as no quote once the promo has ended). Client-safe; used by /post-job/preview, /post-job/checkout and the dashboard usage widget | [lib/next-post-quote.ts](../lib/next-post-quote.ts) |
@@ -462,7 +523,7 @@ By hand: /admin/post-packs → PATCH /api/admin/post-packs/:id (requireApiAdminA
 | Email-change policy (helper, not yet wired; a `'pack'` post and a paid pack lock the domain like a paid post) | [lib/auth/email-change-policy.ts](../lib/auth/email-change-policy.ts) |
 | Email templates (pricing sentences from lib/pricing-copy.ts, chosen at send time) | [lib/email-service.ts](../lib/email-service.ts) (uses [lib/email-templates-v2.ts](../lib/email-templates-v2.ts)) |
 | Client-side analytics events | [lib/analytics.ts](../lib/analytics.ts) |
-| Server-side purchase events (a new post, a renewal, or a pack: item `post-pack-5`, 'Job Posting Pack') | [lib/analytics-server.ts](../lib/analytics-server.ts) |
+| Server-side purchase events (a new post, a renewal, a pack: item `post-pack-5`, 'Job Posting Pack', or a paid guide: the product slug and title, type `'guide'`) | [lib/analytics-server.ts](../lib/analytics-server.ts) |
 
 **The date-driven copy switch.** Every sentence that states a price or the promo is chosen from `config.isPromoActive(now)` when it is rendered, sent or requested, never at module load (§1d). These modules hold the words; each page calls its builder with `now` on every render (a Next.js page may export only Next's own names, so a page's builder sits in a sibling file):
 
@@ -493,7 +554,11 @@ By hand: /admin/post-packs → PATCH /api/admin/post-packs/:id (requireApiAdminA
 | `/api/verify-checkout-session` | GET | Server-side Stripe verification for `/success` page |
 | `/api/verify-renewal-session` | GET | Server-side verification for `/employer/renewal-success` |
 | `/api/verify-pack-session` | GET | Server-side verification of a pack checkout for its own account (401 / 403 otherwise); self-heals a paid session with no pack row, and sends the purchase email a failed send left unsent |
-| `/api/webhooks/stripe` | POST | Stripe → publish job, write JobCharge, record a 5-post pack and apply its refunds and disputes, emails, purchase event; a subscription-mode session (the retired plan) is alerted for a refund and acknowledged (§2e) |
+| `/api/webhooks/stripe` | POST | Stripe → publish job, write JobCharge, record a 5-post pack or a guide purchase and apply their refunds and disputes, emails, purchase event; a subscription-mode session (the retired plan) is alerted for a refund and acknowledged (§2e) |
+| `/api/guides/claim` | POST | While the promo runs: a guide or bundle claimed free with an email (§2i); CSRF, 5 a minute per IP and 6 an hour per address, 409 `PROMO_ENDED` after it, 400 for an unknown product; never calls Stripe |
+| `/api/guides/checkout` | POST | From `config.promoEndsAt`: a guide or bundle → Stripe Checkout at the catalog price (§2i); 503 `PAID_POSTING_DISABLED` / `STRIPE_NOT_CONFIGURED`, 409 `PROMO_ACTIVE` while the promo runs |
+| `/api/guides/verify` | GET | The guides success page: confirms a paid guide session with Stripe, records it if the webhook has not, and sets the library cookie for the browser that paid |
+| `/api/guides/download` | GET | A guide PDF for a browser whose library cookie holds it: counted (60 a purchase), then a 60-second signed link |
 | `/api/outreach` | GET/POST | Admin only (`requireApiAdmin`): employer leads and the cold-outreach templates. `render-template` validates the name against `OUTREACH_TEMPLATE_NAMES` (400) and answers 409 `{ success: false, error }` with the service's reason for a template that is not on offer (`freeOffer` once the promo has ended) |
 | `/api/admin/post-packs` | GET | Admin only (`requireApiAdmin`): every pack, newest first, bounded, as `AdminPackView`s (the account, the source, the Stripe payment) |
 | `/api/admin/post-packs/[id]` | PATCH | Admin only (`requireApiAdminActor`, `verifyCsrf`, a strict zod body): revoke unused posts, a later use-by date, or restore one spent post, on a paid pack, as a compare-and-set (409 when it matched nothing), audit logged (§2h) |
@@ -679,6 +744,34 @@ model EmployerPostPack {
 
 A credit is usable while `status = 'paid'`, `expiresAt > now` and `creditsRemaining > 0`. Used = `creditsTotal − creditsRemaining − creditsRevoked`: a counter, not a count of posts, so a hard-deleted post never hands a credit back. The migration adds what Prisma cannot express, `CHECK (credits_remaining >= 0 AND credits_revoked >= 0 AND credits_remaining + credits_revoked <= credits_total)`, the last line of defence behind the conditional decrement (§2h), and enables row level security with no policies (service role only, like `employer_plans`). `status` and `source` carry no default, in the schema or the SQL: the one create site (the fulfilment, §2h) sets both, so a write that forgot one fails instead of recording a pack as paid. The migration's first statement is `SET LOCAL lock_timeout = '5s'`: a deploy that would queue behind a long transaction on `employer_jobs` (the foreign key locks it) fails and is retried instead of stalling the writes behind it, and `SET LOCAL` ends with the migration's transaction, where a session-level `SET` would outlive it on a pooled connection. `tests/regressions/post-pack-migration.test.ts` pins the SQL: additive only, the lock timeout, the CHECK, the RLS, no default on the status and the source, the unique session key and the `ON DELETE SET NULL` link.
 
+### 4g. GuidePurchase (the guides store; migration `20261107000000_add_guide_purchases`)
+
+```prisma
+model GuidePurchase {
+  id                    String    @id @default(cuid())
+  source                String    @default("stripe") @db.VarChar(16)   // 'stripe' | 'promo'
+  stripeSessionId       String?   @unique   // the key both fulfilment paths create a sale by; null for a promo claim
+  stripePaymentIntentId String?   @unique   // how a refund or a dispute finds the sale; null for a promo claim
+  email                 String?   // from Checkout or the claim; nulled by account erasure
+  userId                String?   // loose Supabase auth id (no FK): a purchase outlives an account
+  productSlug           String    @db.VarChar(64)
+  guideSlugs            String[]  // every guide the row unlocks, resolved when paid for or claimed
+  amountCents           Int       // what Stripe charged; 0 for a promo claim
+  currency              String    @default("usd") @db.VarChar(8)
+  accessToken           String    @unique   // 48 lowercase hex, the reader's library credential
+  downloadCount         Int       @default(0)   // conditional increment, at most 60
+  emailSentAt           DateTime? // the delivery email's claim; a promo re-send moves it forward
+  refundedAt            DateTime? // a full refund: downloads end
+  disputedAt            DateTime? // a chargeback: downloads frozen until it is won
+  createdAt             DateTime  @default(now())
+  @@index([email])
+  @@index([createdAt])
+  @@map("guide_purchases")
+}
+```
+
+The migration adds one table and nothing else, with what Prisma cannot express: `CHECK (("source" = 'stripe' AND "stripe_session_id" IS NOT NULL) OR ("source" = 'promo' AND "stripe_session_id" IS NULL AND "stripe_payment_intent_id" IS NULL AND "amount_cents" = 0))`, so a refund or a dispute, matched by payment intent, can never reach a promo claim. Row level security is on with no policies (service role only), and the first statement is `SET LOCAL lock_timeout = '5s'`, as in §4f. `tests/regressions/guide-purchases-migration.test.ts` pins the SQL.
+
 ---
 
 ## 5. Feature inventory
@@ -831,6 +924,7 @@ Lifetime once unlocked (audit #21).
 | `20260913000000_stripe_integration_hardening` | `employer_jobs.stripe_checkout_session_id`, `processed_stripe_events.status/claimed_at` (two-phase webhook dedupe), `employer_plans.last_stripe_event_at` (the deleted plan handlers' out-of-order event guard) |
 | `20260913000001_employer_plans_rls` | Row level security on `employer_plans` with no policies: service role only, like `job_charges` and `processed_stripe_events`. Kept with the table |
 | `20261025000000_add_employer_post_packs` | Added the `employer_post_packs` table (the 5-post pack, §4f) with its credit CHECK and row level security, and the nullable `employer_jobs.post_pack_id` with its index and an `ON DELETE SET NULL` foreign key. Additive, no backfill: the code before it never reads either. It waits at most 5 seconds for a lock (`SET LOCAL lock_timeout`, its first statement), so a deploy stuck behind a long transaction fails and is retried |
+| `20261107000000_add_guide_purchases` | Added the `guide_purchases` table (the guides store, §4g) with its source CHECK, its unique session, payment intent and access token keys, and row level security. Additive: no existing table touched. The same 5-second lock timeout first |
 
 Applied via the deploy build (`prisma migrate deploy`) — never run migrations by hand against production from a dev shell.
 
@@ -841,14 +935,15 @@ The promo needs NOTHING from Stripe. Everything below must be live **before Janu
 - [ ] `ENABLE_PAID_POSTING=true` + `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` in Vercel. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 until both are set, and no checkout opens until then (§1d)
 - [ ] (Optional, recommended) Restricted live key in place of the standard secret key. `STRIPE_SECRET_KEY` takes either, and a restricted key can do only what it is given, so a leaked key cannot refund, pay out, or change products and prices (it can still create and expire checkout sessions, and read the buyer emails and addresses that sessions, payment intents and invoices carry). Every Stripe call in the code needs exactly these permissions:
   - Checkout Sessions: Write (create and expire a session; Write includes the retrieve and list calls)
-  - Payment Intents: Read (the resume, verify and reconciliation paths retrieve a session with its `payment_intent` expanded; the 5-post pack's fulfilment reads its payment intent, and the refund and dispute handlers read the intent of a payment nothing matches, for its `post_pack` tag)
+  - Payment Intents: Read (the resume, verify and reconciliation paths retrieve a session with its `payment_intent` expanded; the 5-post pack's fulfilment reads its payment intent, and the refund and dispute handlers read the intent of a payment nothing matches, for its `post_pack` or `guide` tag)
   - Charges: Read (the pack's fulfilment expands the payment intent's `latest_charge`, to see a refund or a dispute that came first)
   - Invoices: Read (retrieve, for invoice and receipt links)
   - Nothing for the webhook: `webhooks.constructEvent` checks the signature locally against `STRIPE_WEBHOOK_SECRET`.
   - No Subscriptions and no Customer portal permission: nothing calls either since the retired plan's code was deleted (2026-10-27), so a key made earlier with them can lose them.
   Create the key in a sandbox first, run one per post checkout, one renewal at each renewal price and one 5-post pack, then read the key's request logs (API keys, the key's menu, View request logs) for any 403 and add what it names. Stripe's guide: https://docs.stripe.com/keys/restricted-api-keys
 - [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` registered; event filter includes the 7 events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed` (the list in `.env.example`; `processEvent` in app/api/webhooks/stripe/route.ts handles every one). The retired plan's four events are no longer needed: an endpoint that still sends them gets a 200 and nothing happens, so drop them from it
-- [ ] Dashboard → Settings → Payment methods: choose the methods offered on per-post Checkout (the sessions no longer pin `card`; delayed methods are safe — fulfilment waits for `payment_status: 'paid'`)
+- [ ] Dashboard → Settings → Payment methods: choose the methods offered on per-post Checkout (the sessions no longer pin `card`; delayed methods are safe — fulfilment waits for `payment_status: 'paid'`). The guides checkout pins `card` (§2i)
+- [ ] Guides store (§2i): the six PDFs in the private Supabase Storage bucket `guides` (`npx tsx scripts/guides/upload-guides.ts`, a dry run first; `--apply` uploads and checks the files cannot be fetched without a signed link). The promo claims need them from launch, before any Stripe step
 - [ ] Stripe Tax decision (head office address, registrations, product tax code) — open owner decision, see docs/PENDING_WORK.md B113
 - [ ] Stripe Dashboard → Settings → Public details / Branding / Customer emails as before
 - [ ] (Optional) `GA_MEASUREMENT_ID` + `GA_API_SECRET` for server-side `purchase` events
@@ -873,6 +968,10 @@ Nothing for the retired Employer plan: no plan Product, Price or Payment Link, a
 | Discord alert "5-post pack charged an unexpected amount or currency" | A pack paid at other than `config.stripePackPriceInCents` in `usd` (a coupon, a manual price): recorded as charged, with the posts and the year config sells. Check that the charge was meant |
 | Discord alert "5-post pack paid with no payment intent" | No refund or dispute of it can find the pack: handle any by hand in /admin/post-packs |
 | `audit_logs` rows with action `post_pack.revoke`, `post_pack.extend` or `post_pack.restore` | An admin changed a pack by hand in /admin/post-packs (§2h): the admin, the pack, and the counters and expiry before and after. Each should match a support case or a partial refund issued in Stripe |
+| Discord alert "Guide purchase recorded, delivery email failed: Stripe will retry" | A paid guide whose delivery email failed (§2i): the purchase is saved and the event answered 500 until the email sends. Repeated alerts mean the email provider is down or refusing the address |
+| Discord alert "Guide checkout paid but not fulfilled: deliver or refund it by hand" | A paid guide session naming a product the catalog does not have: nothing was recorded. Refund it in Stripe, or record and send it by hand |
+| Discord alert "... for a guide payment arrived before its purchase was recorded: Stripe will retry" | A refund or dispute of a guide sale whose checkout is not recorded yet: answered 500 until it is. Repeated alerts mean the checkout event is not being delivered |
+| `guide_purchases` rows where `source = 'stripe'` and `amount_cents` is not a catalog price (or a price plus the $5 add-on) | Coupon used or manual price override — sanity check |
 | 5xx error rate on `/api/webhooks/stripe` | Should be ~0 with idempotency |
 | post-free 403 rate (`promoCapReached` / `requiresPayment`) and 409 rate (`packCreditUnavailable` / `retry`) | Abuse signal during the promo; demand signal for the ladder after; a steady 409 rate means parallel posts on one account |
 | `processed_stripe_events` table size after 12+ months | Will grow unbounded; plan partition or quarterly cleanup |
@@ -918,6 +1017,7 @@ Every path that takes money or grants a paid entitlement has a Vitest suite. All
 | `POST /api/jobs/post-free`: the promo cap re-counted and the pack credit spent inside the transaction (every write asserted on its own transaction client, none on the global one), the screening questions written in it, a failed write rolling the spent credit back, 409 for a credit spent first or a serialization conflict; the intro rule counting paid packs; paid modes handed to checkout | `tests/api/post-free-modes.test.ts`, `tests/lib/pricing.test.ts` |
 | `POST /api/create-checkout`: intro then pro, the resume path, delayed payments, 409 `PROMO_ACTIVE`, 409 `PACK_CREDIT_AVAILABLE` | `tests/api/create-checkout-tier.test.ts` |
 | The 5-post pack (§2h): the credits, their spend order and expiry, the account id every query needs, the sale gate and config, the purchase route (the confirmed email, the earlier sessions expired, the tagged payment intent), the webhook's fulfilment (idempotency, the payment gate, the payment read first and a pack recorded refunded or disputed by each of the three callers, the alerts sent before the write, money recorded and alerted when it should not have been taken, the email and its retry, the GA event, invoice.paid), the verify route's ownership and self-heal, refunds and disputes (an event for a pack not recorded yet retried, a lost dispute on a paid pack, an inquiry closed, a failed write finished by the redelivery), the quote (a used-up pack's totals included), the invoice / receipt / billing branches for a pack post, the account's own pack list, the purchase email, the admin changes (revoke, extend, restore: the admin gate, CSRF, the strict body, the compare-and-set, the audit entry, and the CHECK kept), and the migration's SQL | `tests/lib/post-packs.test.ts`, `tests/lib/post-pack-sale.test.ts`, `tests/lib/config-pricing.test.ts`, `tests/api/create-pack-checkout.test.ts`, `tests/api/webhooks-stripe-post-pack.test.ts`, `tests/api/post-pack-late-fulfilment.test.ts`, `tests/api/webhooks-stripe-post-pack-refund-dispute.test.ts`, `tests/api/verify-pack-session.test.ts`, `tests/api/employer-free-quota-status-pack.test.ts`, `tests/api/employer-billing-pack-posts.test.ts`, `tests/api/employer-post-packs.test.ts`, `tests/lib/post-pack-purchased-email.test.ts`, `tests/lib/post-pack-admin.test.ts`, `tests/api/admin-post-packs.test.ts`, `tests/regressions/post-pack-migration.test.ts`, `tests/regressions/ga-measurement-protocol.test.ts` |
+| The guides store (§2i): the phase and the paid gate at both sides of `config.promoEndsAt` and `guidePriceCopy`; the promo claim (CSRF, the rate limit, 409 `PROMO_ENDED`, a re-used claim and its 10-minute re-send, no add-on, the cookie); the checkout (each closed reason, catalog prices only, the add-on, the tagged payment intent, the checkout cookie); the verify route's same-browser cookie; idempotent fulfilment (the session upsert and its P2002, the email claim and release); downloads (the conditional increment, the limit, a release on a signing failure, cross-site refused); the webhook's guide branches (before the job id check, a failed write or email retried, GA only once delivered and paid, refunds, disputes and an unrecorded guide payment retried, after the JobCharge and the packs); the delivery email in both wordings; the masked tokens; erasure; and the migration's SQL | `tests/lib/guides-phase.test.ts`, `tests/api/guides-claim.test.ts`, `tests/api/guides-routes.test.ts`, `tests/lib/guides-fulfill.test.ts`, `tests/lib/guides-library.test.ts`, `tests/lib/guides-access.test.ts`, `tests/lib/guides-email.test.ts`, `tests/api/webhooks-stripe-guides.test.ts`, `tests/lib/private-url.test.ts`, `tests/api/purge-soft-deleted-c3.test.ts`, `tests/regressions/guide-purchases-migration.test.ts` |
 | `POST /api/create-renewal-checkout`: the status and archive refusals; the renewal cap (409 `RENEWAL_CAP_REACHED` before any Stripe call for a post at or past `config.renewalCapDays`, and Checkout quoting the days a renewal near the cap really adds); the price by the post it renews ($249 only for a post bought at $349, $199 for every other renewable row) and `metadata.renewalRung`; one payable session per post; a reused idempotency key that replays a session this route had already expired, and the parameter fingerprint in that key | `tests/api/create-renewal-checkout-status.test.ts`, `tests/api/create-renewal-checkout-cap.test.ts`, `tests/api/create-renewal-checkout-tiered-price.test.ts`, `tests/api/create-renewal-checkout-single-payable.test.ts`, `tests/api/create-renewal-checkout-replayed-session.test.ts`, `tests/lib/renewal-checkout-sessions.test.ts` |
 | Which renewal price a post pays (§1b), a row loaded without its charges refused rather than guessed, and the row price the dashboard, the edit API and the expiry offers hand on | `tests/lib/renewal-price.test.ts`, `tests/lib/renewal-offer.test.ts`, `tests/api/employer-dashboard-renewal-price.test.ts`, `tests/api/jobs-edit-token-renewal-price.test.ts` |
 | The webhook: idempotency and the two-phase claim, the `payment_status` gate, a second payment for one post, the `JobCharge` ledger (a failed `'new'` write rethrown after the activation's later steps ran, and backfilled on Stripe's retry; a failed backfill answered 500 too), the intro race detector (paid packs included, and its log line) | `tests/api/webhooks-stripe-c2.test.ts`, `tests/api/activate-paid-job-intro-race.test.ts` |

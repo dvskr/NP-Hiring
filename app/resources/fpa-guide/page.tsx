@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Shield, MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import GuidePromo from '@/components/guides/GuidePromo';
 import { getStatesByAuthority, type PracticeAuthority } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 // P6 #10: this guide carried Article JSON-LD + a review stamp but no
@@ -463,6 +464,13 @@ export default function FPAGuidePage() {
               <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>State-by-state pay computed from live postings.</p>
             </Link>
           </div>
+
+          <GuidePromo
+            slug="first-year-playbook"
+            heading="Working through transition hours or a collaborative agreement?"
+            pitch="Practice authority, transition hours and a five-year plan, with a full chapter on collaborative agreements."
+            style={{ marginBottom: '32px' }}
+          />
 
           {/* CTA */}
           <div className="text-center py-8">

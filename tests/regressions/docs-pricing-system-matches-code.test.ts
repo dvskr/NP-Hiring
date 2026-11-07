@@ -207,6 +207,9 @@ describe('section 1: the copy and the switch at config.promoEndsAt', () => {
             '/compare/np-hiring-vs-indeed': 'the three comparison pages',
             '/compare/np-hiring-vs-aanp-jobcenter': 'the three comparison pages',
             '/compare/np-hiring-vs-enp-network': 'the three comparison pages',
+            // The guides store (2026-11-07): its price blocks read "Free" until the switch (section 2i).
+            '/guides': 'the guides store',
+            '/guides/[slug]': 'its guide pages',
         };
         const bullet = lineWith(section1d, '**Sitemap lastmod:**');
         for (const switchPath of PROMO_SWITCH_PATHS) {

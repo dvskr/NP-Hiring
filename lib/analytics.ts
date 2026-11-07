@@ -209,6 +209,10 @@ const SECRET_PATH_RULES: ReadonlyArray<SecretPathRule> = [
   // Deprecated token dashboard (app/employer/dashboard/[token]). It only
   // redirects today, but the links are still live in old employer mail.
   { prefix: ['employer', 'dashboard'], placeholder: '[token]' },
+  // Guides store library link (app/guides/library/[token]): the token is the
+  // reader's bearer credential (lib/guides/access.ts). The route redirects
+  // to /guides/library at once, but a page view can fire first.
+  { prefix: ['guides', 'library'], placeholder: '[token]' },
 ];
 
 function sanitizePathname(pathname: string): string {

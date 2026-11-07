@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Scale, DollarSign, Calculator, CheckCircle, AlertTriangle, TrendingUp, Building2, Percent } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import GuidePromo from '@/components/guides/GuidePromo';
 import { SALARY_BANDS } from '@/lib/stats-sources';
 // P6 #10: this guide carried Article JSON-LD + a review stamp but no
 // E-E-A-T byline. Visible byline and schema both derive from
@@ -574,6 +575,13 @@ export default function CompensationGuidePage() {
               ))}
             </div>
           </div>
+
+          <GuidePromo
+            slug="negotiate-like-an-np"
+            heading="Weighing a W-2 job against a 1099 contract?"
+            pitch="A 1099 vs. W-2 calculator, every pay model decoded and a 20-point contract red-flag audit."
+            style={{ marginBottom: '32px' }}
+          />
 
           {/* Related Resources — P2 #22: all three /resources guides now
               cross-link each other plus the salary guide, so the cluster is

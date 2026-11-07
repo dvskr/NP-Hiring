@@ -62,7 +62,9 @@ export default function FAQPage() {
   const jobSeekerFaqs = [
     {
       question: `Is ${brand.name} free to use?`,
-      answer: "Yes. Job seekers can browse, save, and apply to jobs completely free. There are no hidden fees, subscriptions, or charges for candidates."
+      // 2026-11-07: "no charges for candidates" became untrue in 2027, when
+      // the career guides at /guides are sold. True in both phases now.
+      answer: "Yes. Job seekers can browse, save, and apply to jobs for free, with no subscriptions or hidden fees. Our career guides are optional."
     },
     {
       question: "How do I save jobs?",

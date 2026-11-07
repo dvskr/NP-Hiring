@@ -43,6 +43,7 @@ import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import SalaryProvenance from '@/components/SalaryProvenance';
 import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
+import GuidePromo from '@/components/guides/GuidePromo';
 import StateImage, { hasStateDiorama } from '@/components/StateImage';
 import {
     BENCHMARK_MIN_POSTINGS,
@@ -973,6 +974,15 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     />
                 </Band>
             )}
+
+            {/* The compensation report: every state in one table */}
+            <section className="sg-band">
+                <GuidePromo
+                    slug="compensation-report"
+                    heading={`See how ${stateName} compares with every other state`}
+                    pitch="A state by state pay table for all 50 states and DC, pay by specialty and setting, W-2 vs. 1099 math and a negotiation method built on the data."
+                />
+            </section>
 
             {/* Cross-links */}
             <section className="sg-band">

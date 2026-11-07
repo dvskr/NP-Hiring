@@ -39,6 +39,13 @@ describe('sendAndLog — Resend error contract', () => {
       sendAndLog({ from: '', to: 'bad@example.com', subject: 'S', html: '<p>hi</p>' }, 'contact_confirmation'),
     ).rejects.toThrow(/Email send failed/);
 
+    // The Resend error name travels on the error, so a caller can tell a
+    // refusal no retry fixes from an outage (lib/guides/email.ts).
+    sendMock.mockResolvedValueOnce({ data: null, error: { name: 'validation_error', message: 'Invalid `to` field' } });
+    await expect(
+      sendAndLog({ from: '', to: 'bad@example.com', subject: 'S', html: '<p>hi</p>' }, 'guide_purchase'),
+    ).rejects.toMatchObject({ resendErrorName: 'validation_error' });
+
     expect(prisma.emailSend.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: 'failed', to: 'bad@example.com', resendId: null }),

@@ -9,9 +9,18 @@ import {
 } from '@/lib/email-service';
 import { logger } from '@/lib/logger';
 import { POST_PACK_CHECKOUT_TYPE } from '@/lib/post-pack-sale';
+import { GUIDE_CHECKOUT_TYPE } from '@/lib/guides/phase';
 import { activatePaidJobCheckout } from './activate-paid-job';
 import { applyRenewalCheckout } from './apply-renewal';
 import { fulfilPostPackCheckout, refreshPackInvoice } from './post-pack-checkout';
+import {
+  guideDisputeClosed,
+  guideDisputeCreated,
+  guideRefund,
+  handleGuideCheckoutPaid,
+  retryUntilGuideRecorded,
+  type FailAndRetry,
+} from './guide-checkout';
 import {
   applyPackDisputeClosed,
   applyPackDisputeCreated,
@@ -34,6 +43,7 @@ import {
  *   apply-renewal.ts      — renewals
  *   post-pack-checkout.ts — 5-post pack purchases (and their invoice.paid)
  *   post-pack-refunds.ts  — 5-post pack refunds and chargebacks
+ *   guide-checkout.ts     — guides store purchases, refunds and chargebacks
  *   webhook-support.ts    — alerting (Sentry + Discord), email claims, helpers
  *
  * Required endpoint events (the list in .env.example; processEvent handles
@@ -80,6 +90,11 @@ async function failAndRetry(
   await alertWebhookFailure(reason, err, extras);
   await cleanupDedupe();  // C2: let Stripe retry succeed
   return NextResponse.json({ error: message }, { status: 500 });
+}
+
+/** failAndRetry bound to this delivery's dedupe row, for the guides store handlers (./guide-checkout.ts). */
+function retryWith(cleanupDedupe: CleanupDedupe): FailAndRetry {
+  return (reason, err, extras, message) => failAndRetry(cleanupDedupe, reason, err, extras, message);
 }
 
 /**
@@ -282,6 +297,12 @@ async function handleCheckoutSessionPaid(
   // "Missing job ID" 400 and never reaches the per-post paths.
   if (session.metadata?.type === POST_PACK_CHECKOUT_TYPE) {
     return handlePostPackPaid(stripe, event, session, cleanupDedupe);
+  }
+
+  // Guides store: no jobId either, so it is routed before the "Missing job
+  // ID" 400, which keeps the dedupe row and would lose the sale.
+  if (session.metadata?.type === GUIDE_CHECKOUT_TYPE) {
+    return handleGuideCheckoutPaid(event, session, retryWith(cleanupDedupe));
   }
 
   const jobId = session.metadata?.jobId;
@@ -571,13 +592,18 @@ async function handleChargeRefunded(stripe: Stripe, event: Stripe.Event, charge:
 
     const jobCharge = await prisma.jobCharge.findUnique({ where: { stripePaymentIntentId: paymentIntentId } });
     if (!jobCharge) {
-      // A 5-post pack's payment (post-pack-refunds.ts), one whose pack is not
-      // recorded yet (500, Stripe retries), else a pre-audit-#28 charge with
-      // no payment_intent persisted, or one from outside our flow.
+      // A 5-post pack's payment (post-pack-refunds.ts), a guide purchase
+      // (guide-checkout.ts), one of those not recorded yet (500, Stripe
+      // retries), else a pre-audit-#28 charge with no payment_intent
+      // persisted, or one from outside our flow.
       const pack = await applyPackRefund(charge, paymentIntentId, { eventId: event.id });
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
+      const guide = await guideRefund(charge, paymentIntentId);
+      if (guide) return guide;
       const retry = await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe);
       if (retry) return retry;
+      const guideRetry = await retryUntilGuideRecorded(stripe, event, paymentIntentId, retryWith(cleanupDedupe));
+      if (guideRetry) return guideRetry;
       logger.warn('charge.refunded: no matching JobCharge — pre-#28 row or external charge', { paymentIntentId, chargeId: charge.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -663,8 +689,12 @@ async function handleDisputeCreated(stripe: Stripe, event: Stripe.Event, dispute
     if (!jobCharge) {
       const pack = await applyPackDisputeCreated(dispute, paymentIntentId, { eventId: event.id });
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
+      const guide = await guideDisputeCreated(paymentIntentId);
+      if (guide) return guide;
       const retry = await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe);
       if (retry) return retry;
+      const guideRetry = await retryUntilGuideRecorded(stripe, event, paymentIntentId, retryWith(cleanupDedupe));
+      if (guideRetry) return guideRetry;
       logger.warn('charge.dispute.created: no matching JobCharge', { paymentIntentId, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
@@ -701,8 +731,14 @@ async function handleDisputeClosed(stripe: Stripe, event: Stripe.Event, dispute:
     if (!jobCharge) {
       const pack = paymentIntentId ? await applyPackDisputeClosed(dispute, paymentIntentId, { eventId: event.id }) : null;
       if (pack) return NextResponse.json({ received: true, pack: pack.outcome });
+      const guide = paymentIntentId ? await guideDisputeClosed(dispute, paymentIntentId) : null;
+      if (guide) return guide;
       const retry = paymentIntentId ? await retryUntilPackRecorded(stripe, event, paymentIntentId, cleanupDedupe) : null;
       if (retry) return retry;
+      const guideRetry = paymentIntentId
+        ? await retryUntilGuideRecorded(stripe, event, paymentIntentId, retryWith(cleanupDedupe))
+        : null;
+      if (guideRetry) return guideRetry;
       logger.warn('charge.dispute.closed: no matching JobCharge', { paymentIntentId: paymentIntentId ?? undefined, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }

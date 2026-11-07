@@ -8,6 +8,7 @@
  * capture while leaving the heavy perf/replay machinery out of the bundle.
  */
 import * as Sentry from '@sentry/nextjs';
+import { scrubSentryEvent } from '@/lib/private-url';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -17,6 +18,9 @@ Sentry.init({
   environment: process.env.NODE_ENV,
   tracesSampleRate: 0,
   sendDefaultPii: false,
+  // Guide library tokens and checkout session ids never reach Sentry.
+  beforeSend: (event) => scrubSentryEvent(event),
+  beforeSendTransaction: (event) => scrubSentryEvent(event),
   integrations: (defaults) =>
     defaults.filter(
       (i) => !['Replay', 'ReplayCanvas', 'BrowserTracing', 'Feedback'].includes(i.name),

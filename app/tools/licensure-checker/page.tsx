@@ -37,6 +37,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import LicensureChecker from '@/components/LicensureChecker';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
+import GuidePromo from '@/components/guides/GuidePromo';
 import MultiStatePlanner, { type PlannerState } from '@/components/tools/MultiStatePlanner';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
@@ -300,6 +301,12 @@ export default async function LicensureCheckerToolPage() {
             Plan several states
           </h2>
           <MultiStatePlanner states={plannerStates} />
+          <GuidePromo
+            slug="telehealth-playbook"
+            heading="Licensing in more than one state?"
+            pitch="A worksheet for choosing your first three states, step by step license adds, DEA registration strategy and the telehealth prescribing rules for 2027."
+            style={{ maxWidth: '860px', margin: '40px auto 0' }}
+          />
         </div>
       </section>
 

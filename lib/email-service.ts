@@ -174,7 +174,11 @@ export type EmailType =
   | 'account_purge_warning'
   | 'pd_outreach'
   // 5-post pack bought (Stripe webhook, app/api/webhooks/stripe/post-pack-checkout.ts).
-  | 'post_pack_purchased';
+  | 'post_pack_purchased'
+  // Delivery of guides from the guides store, bought or claimed during the
+  // launch promo (lib/guides/email.ts): the only way back to the downloads,
+  // so transactional and never suppressible.
+  | 'guide_purchase';
 
 // Marketing email types — these use the marketing sender address
 const MARKETING_EMAIL_TYPES = new Set<EmailType>([
@@ -293,7 +297,11 @@ export async function sendAndLog(
       logger.error('Failed to log failed email send', e, { emailType, to: params.to });
     }
     logger.error('Resend send failed', result.error, { emailType, to: params.to });
-    throw new Error(`Email send failed (${emailType}): ${errMsg}`);
+    // resendErrorName lets a caller tell a refusal no retry can fix
+    // (validation_error) from a provider outage (lib/guides/email.ts).
+    throw Object.assign(new Error(`Email send failed (${emailType}): ${errMsg}`), {
+      resendErrorName: result.error.name ?? null,
+    });
   }
 
   // Non-blocking log — don't let logging failure break email sending

@@ -65,6 +65,14 @@ export const RATE_LIMITS = {
      *  link 100×/min — the cap exists to bound abuse of the redirect as a
      *  free 302 proxy, not to throttle organic engagement. */
     shortlinkRedirect: { limit: 120, windowSeconds: 60 },
+    /** Guides store: starting a checkout, 10 per minute per IP. */
+    guideCheckout: { limit: 10, windowSeconds: 60 },
+    /** Guides store: claiming a guide during the launch promo, 5 per minute per IP (each claim can send an email). */
+    guideClaim: { limit: 5, windowSeconds: 60 },
+    /** Guides store: claims for one email address, 6 per hour across every IP, so nobody can flood an inbox with delivery emails. */
+    guideClaimPerEmail: { limit: 6, windowSeconds: 3600 },
+    /** Guides store: verifying a checkout, opening a library link or downloading, 60 per minute per IP. */
+    guideAccess: { limit: 60, windowSeconds: 60 },
 } as const;
 
 // --- Redis Backend Setup ---

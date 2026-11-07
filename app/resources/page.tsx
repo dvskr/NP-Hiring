@@ -11,6 +11,7 @@ import {
 // page can never advertise a tool route the app would 404 on.
 import { TOOLS, type ToolIconKey } from '@/app/tools/tools-registry';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import GuidePromo from '@/components/guides/GuidePromo';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import ResourceDownloadGate from '@/components/ResourceDownloadGate';
 import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
@@ -391,6 +392,15 @@ export default async function ResourcesPage() {
               </span>
               <span className="stk-icon stk-icon-lg" aria-hidden="true"><MapPin size={26} strokeWidth={2.25} /></span>
             </Link>
+
+            {/* The guides store: all six PDF guides (sticker variant: this is a sticker page). */}
+            <GuidePromo
+              slug="complete-library"
+              variant="sticker"
+              heading={`Go deeper with the ${brand.niche.short} Career Guides`}
+              pitch="All six guides: pay data, your first year, interviews, negotiation, telehealth and launching a practice."
+              style={{ marginTop: '24px' }}
+            />
 
             {/* ─── P4: Before you apply — the education wedge ───
                 Gated on the /blog listing (see EDUCATION_WEDGE_SLUGS above):

@@ -37,6 +37,8 @@ const leadColumns: FooterColumn[] = [
       // footer link reached it. It sits beside the salary guide, the other
       // state-by-state reference a job seeker uses, under the page's own H1.
       { label: `${brand.niche.short} Scope of Practice by State`, href: '/scope-of-practice' },
+      // The guides store (2026-11-07): sitemap-listed, so it needs a sitewide link.
+      { label: `${brand.niche.short} Career Guides`, href: '/guides' },
       { label: 'FAQ', href: '/faq' },
     ],
   },

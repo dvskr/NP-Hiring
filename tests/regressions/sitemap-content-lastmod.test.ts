@@ -56,6 +56,7 @@ import { COMPARE_HUB_PATH, COMPARE_PAGE_PATHS, COMPARE_REVIEW_DATE } from '@/lib
 import { loadStateHubVerdicts, type StateHubVerdict } from '@/lib/pseo/state-hub-index';
 import { ALL_CATEGORY_CONFIGS } from '@/lib/pseo/category-city-template';
 import { stateDioramaSrc } from '@/components/StateImage';
+import { allProducts } from '@/lib/guides/catalog';
 import {
     jobContentDate,
     lastmodTag,
@@ -132,7 +133,6 @@ const AI_APPS_RELEASE_PAGES: readonly string[] = ['/privacy'];
  */
 const SECURITY_BATCH_DAY = '2026-10-20';
 const SECURITY_BATCH_PAGES: readonly string[] = [
-    '/for-job-seekers',
     '/for-employers/resources/how-to-hire',
     '/for-employers/resources/job-description-templates/[id]',
 ];
@@ -148,7 +148,6 @@ const FOLLOW_UPS_DAY = '2026-10-23';
 const FOLLOW_UPS_PAGES: readonly string[] = [
     '/tools/specialty-finder',
     '/tools/private-practice-revenue-calculator',
-    '/resources/private-practice-guide',
 ];
 
 /**
@@ -166,7 +165,6 @@ const PRICING_RELEASE_DAY = '2026-10-26';
 const PRICING_RELEASE_PAGES: readonly string[] = [
     '/pricing',
     '/for-employers',
-    '/faq',
     '/terms',
     '/tools/cost-per-hire-calculator',
     '/compare/np-hiring-vs-indeed',
@@ -174,7 +172,33 @@ const PRICING_RELEASE_PAGES: readonly string[] = [
     '/compare/np-hiring-vs-enp-network',
 ];
 
-/** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1). */
+/**
+ * The UTC day the guides store shipped, and the dated pages it added or
+ * changed: the store and its product pages (new); /for-job-seekers, /faq and
+ * /contact, whose job seeker copy no longer calls everything free (the
+ * security batch, the re-price and the content release had dated them); and
+ * the seven pages that carry a guide card (GuidePromo). /faq and /for-job-seekers
+ * left the re-price and security groups, the private practice guide the
+ * follow-ups group, and /resources the content release. Same rule: move the
+ * constant and these entries together if the store ships on a later day.
+ */
+const GUIDES_RELEASE_DAY = '2026-11-07';
+const GUIDES_RELEASE_PAGES: readonly string[] = [
+    '/guides',
+    '/guides/[slug]',
+    '/for-job-seekers',
+    '/faq',
+    '/contact',
+    '/resources',
+    '/resources/fpa-guide',
+    '/resources/private-practice-guide',
+    '/resources/1099-vs-w2',
+    '/tools',
+    '/tools/1099-vs-w2-calculator',
+    '/tools/licensure-checker',
+];
+
+/** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */
 const PROMO_SWITCH_PAGES = [
     '/pricing',
     '/for-employers',
@@ -188,6 +212,9 @@ const PROMO_SWITCH_PAGES = [
     '/tools/salary-benchmark',
     '/tools/cost-per-hire-calculator',
     ...COMPARE_PAGE_PATHS,
+    // Every price block reads "Free" with its end date while the promo runs (lib/guides/phase.ts).
+    '/guides',
+    '/guides/[slug]',
 ];
 
 /** The sitemaps read the clock (lastmods, the canonical predicate), so sections 4 and 5 pin it. */
@@ -360,9 +387,9 @@ describe('lastmod helpers', () => {
         // body names. The security and register batch then changed three
         // more pages, the register follow-ups three tool breadcrumbs, and the
         // 2027 re-price the eight pages that print the ladder, the plan or
-        // the renewal price.
+        // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -373,11 +400,14 @@ describe('lastmod helpers', () => {
             ...FOLLOW_UPS_PAGES,
             ...PRICING_RELEASE_PAGES,
             ...AI_APPS_RELEASE_PAGES,
+            ...GUIDES_RELEASE_PAGES,
             ...Object.keys(UNTOUCHED_PAGE_DATES),
         ];
         expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = AI_APPS_RELEASE_PAGES.includes(pagePath)
+            const expected = GUIDES_RELEASE_PAGES.includes(pagePath)
+                ? GUIDES_RELEASE_DAY
+                : AI_APPS_RELEASE_PAGES.includes(pagePath)
                 ? AI_APPS_RELEASE_DAY
                 : PRICING_RELEASE_PAGES.includes(pagePath)
                 ? PRICING_RELEASE_DAY
@@ -403,18 +433,29 @@ describe('lastmod helpers', () => {
         }
     });
 
-    it('content release: /resources and /for-programs carry its ship day, on both sides of the promo end', () => {
+    it('content release: /for-programs carries its ship day, and /resources the guides store, on both sides of the promo end', () => {
         // Both print post titles served from code (lib/blog.ts). The content
         // release added ten posts and retitled the two education guides, so
         // the article grids and the program guide card changed that day.
-        for (const pagePath of ['/resources', '/for-programs']) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(CONTENT_RELEASE_DAY);
-            // Neither page's copy follows the promo clock, so the switch never
-            // dates it: the copy date stands on both sides of the promo end.
+        // /resources then gained the Complete Library card (2026-11-07).
+        for (const [pagePath, day] of [['/for-programs', CONTENT_RELEASE_DAY], ['/resources', GUIDES_RELEASE_DAY]] as const) {
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(day);
+            // Neither page's copy follows the promo clock (the guide card
+            // prints no price), so the switch never dates it: the copy date
+            // stands on both sides of the promo end.
             expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(false);
             for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
-                expect(pageContentDate(pagePath, at), pagePath).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
+                expect(pageContentDate(pagePath, at), pagePath).toEqual(new Date(`${day}T00:00:00.000Z`));
             }
+        }
+    });
+
+    it('guides store: the store and its product pages carry its ship day until the promo ends, then the switch', () => {
+        for (const pagePath of ['/guides', '/guides/[slug]']) {
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(GUIDES_RELEASE_DAY);
+            expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(true);
+            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(new Date(`${GUIDES_RELEASE_DAY}T00:00:00.000Z`));
+            expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
         }
     });
 
@@ -721,14 +762,26 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         expect(undated, 'a listed page has no content date (add it to PAGE_CONTENT_DATES)').toEqual([]);
     });
 
-    it('content release: /resources and /for-programs are listed with its ship day, before and after the promo end', async () => {
+    it('content release: /for-programs is listed with its ship day and /resources with the guides store\'s, before and after the promo end', async () => {
         for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
             vi.setSystemTime(at);
             const entries = await byUrl();
-            for (const pagePath of ['/resources', '/for-programs']) {
-                expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(new Date(`${CONTENT_RELEASE_DAY}T00:00:00.000Z`));
+            for (const [pagePath, day] of [['/for-programs', CONTENT_RELEASE_DAY], ['/resources', GUIDES_RELEASE_DAY]] as const) {
+                expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(new Date(`${day}T00:00:00.000Z`));
             }
         }
+    });
+
+    it('guides store: /guides and one page per product are listed with the ship day, and none of the private pages', async () => {
+        const entries = await byUrl();
+        const shipDay = new Date(`${GUIDES_RELEASE_DAY}T00:00:00.000Z`);
+        expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(shipDay);
+        for (const product of allProducts()) {
+            expect(entries.get(`${BASE}/guides/${product.slug}`)?.lastModified, product.slug).toEqual(shipDay);
+        }
+        const guideUrls = [...entries.keys()].filter((url) => url.startsWith(`${BASE}/guides`));
+        expect(guideUrls).toHaveLength(allProducts().length + 1);
+        expect(guideUrls.some((url) => /\/guides\/(?:library|success)/.test(url))).toBe(false);
     });
 
     it('a comparison page and the hub each carry the later of the claims review and their own copy change', async () => {
@@ -767,13 +820,17 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
     it('2.1: from the promo end, every page whose copy switched is dated at the switch, and no other page moves', async () => {
         vi.setSystemTime(AFTER_SWITCH);
         const entries = await byUrl();
-        const switched = PROMO_SWITCH_PAGES.filter((pagePath) => !pagePath.includes('[id]'));
+        const switched = PROMO_SWITCH_PAGES.filter((pagePath) => !pagePath.includes('['));
         for (const pagePath of switched) {
             expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(SWITCH);
         }
         const templatePages = [...entries.values()].filter((entry) => entry.url.includes('/job-description-templates/'));
         expect(templatePages.length).toBeGreaterThan(0);
         for (const entry of templatePages) expect(entry.lastModified, entry.url).toEqual(SWITCH);
+        // Every guide and bundle page prints its price block, which switched too.
+        const productPages = [...entries.values()].filter((entry) => entry.url.startsWith(`${BASE}/guides/`));
+        expect(productPages).toHaveLength(allProducts().length);
+        for (const entry of productPages) expect(entry.lastModified, entry.url).toEqual(SWITCH);
         // Pages whose copy does not follow the promo clock keep their dates.
         expect(entries.get(`${BASE}/about`)?.lastModified).toEqual(pageContentDate('/about', PROMO_RUNNING));
         expect(entries.get(`${BASE}/tools/licensure-checker`)?.lastModified)

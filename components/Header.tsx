@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, X, LayoutDashboard, Briefcase, MessageSquare, Calculator, DollarSign, Building2, BookOpen, Search, HelpCircle, Info, Mail, MapPin, PenSquare, GraduationCap, UserCheck, Users, Bookmark, FileText, Activity, Workflow, Plus } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Briefcase, MessageSquare, Calculator, DollarSign, Building2, BookOpen, Search, HelpCircle, Info, Mail, MapPin, PenSquare, GraduationCap, UserCheck, Users, Bookmark, FileText, Activity, Workflow, Plus, Library } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 // SEO Fix H5: use LazyMotion + the lightweight `m` namespace instead of the
 // full `motion` import. Header renders on every page, so importing the full
@@ -159,6 +159,7 @@ export default function Header() {
     { href: '/jobs/locations', label: 'Jobs by Location', icon: MapPin },
     { href: '/for-job-seekers', label: 'For Job Seekers', icon: UserCheck },
     { href: '/new-grad', label: 'New Grad Guide', icon: GraduationCap },
+    { href: '/guides', label: 'Career Guides', icon: Library },
     { href: '/blog', label: 'Blog', icon: PenSquare },
     { href: '/faq', label: 'FAQ', icon: HelpCircle },
     { href: '/about', label: 'About', icon: Info },

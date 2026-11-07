@@ -38,6 +38,8 @@ import JobLocationContext, {
 // backfill has not stamped yet — deterministic rules, no network.
 import { classifyProfession, type ProfessionClass } from '@/lib/profession-classifier';
 import { ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
+import GuidePromo from '@/components/guides/GuidePromo';
+import { guideForJob } from '@/lib/guides/job-guide';
 import { prisma } from '@/lib/prisma';
 import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -950,6 +952,16 @@ export default async function JobPage({ params }: JobPageProps) {
   const workModeLabel = resolveWorkModeLabel(job);
   const isVerifiedRemote = workModeLabel === 'Remote';
   const remoteStates = isVerifiedRemote ? resolveRemoteApplicantStates(job) : [];
+  // The career guide for this reader (lib/guides/job-guide.ts), on the same
+  // verified signals the page shows: "Remote" only when verified, so only a
+  // telehealth mode is passed as a mode.
+  const guidePick = guideForJob({
+    newGradFriendly: effectiveNewGradFriendly(job),
+    isRemote: isVerifiedRemote,
+    mode: job.mode?.toLowerCase().includes('telehealth') ? job.mode : null,
+    jobType: job.jobType,
+    title: job.title,
+  });
   // H-03: the chip names every type the posting offers ("Full-Time or
   // Part-Time"), the same types JobPosting.employmentType emits. The tips
   // and the internal links read the primary one of those, never the raw
@@ -1282,6 +1294,8 @@ export default async function JobPage({ params }: JobPageProps) {
                 <JobLocationContext model={locationContext} />
               </AnimatedContainer>
             )}
+
+            <GuidePromo {...guidePick} style={{ marginTop: '24px' }} />
 
             {/* Footer Info */}
             <div className="text-sm px-1 mt-6" style={{ color: 'var(--text-tertiary)' }}>

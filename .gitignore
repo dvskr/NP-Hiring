@@ -148,3 +148,6 @@ notebooklm-*.md
 
 # Claude Code harness state (per-session locks, etc.)
 .claude/
+
+# Paid guide PDFs: sold on the site, never published in this public repo.
+/NP Guides/

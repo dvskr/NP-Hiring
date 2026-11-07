@@ -6,7 +6,8 @@
 > 2026-10-23, the edit token hotfix `3574809` and its follow-ups `862b8af` of 2026-10-24, the CI fixes and the
 > 2027 re-price `8ac1d66` of 2026-10-25, the 5-post pack `08f2e33` of 2026-10-26, and on 2026-10-27 the
 > deletion of the retired Employer plan's code (2.27 phase 4) with the 2.29 and 2.30 follow-ups and their
-> review fixes; all are live, and `main` is the only branch). Shipped work is at the end.
+> review fixes, the AI apps `ba12bc5` of 2026-11-03 and the career guides store of 2026-11-07; all are live,
+> and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
 > **CLAUDE** engineering that needs no decision from you.
@@ -29,6 +30,7 @@
 | After 2026-11-14 | NP Week 2026 is over | CLAUDE refreshes or redirects the NP Week post (2.24) |
 | About 2026-11-21 | First expiry warning emails for promo posts (sent 5 days before a 60-day post ends) | Only if the $199 renewal should be on sale by then: Stripe live and paid posting on (1.1, 1.2), with the 2027 re-price shipped first (code that predates it would sell the renewal at the old price). Otherwise the email offers a free repost, which is fine |
 | Before 2027-01-01 10:00 UTC | The promo ends (midnight Hawaii time, `config.promoEndsAt`) and the paid ladder starts on its own. With no deploy, the pricing copy switches: emails at send time, the employer app on its next render, and each page when its cached render is replaced. A page re-renders at most once an hour (the homepage once a minute), and the first request after that window is still answered with the old render while it triggers the new one, so a page shows the promo once more to its first visitor after the switch, however late that visit comes. /terms does not switch (2.15) | Stripe live (1.1), paid posting on (1.2), pricing decisions made (3.1) |
+| Same instant | The career guides at /guides go on sale at their catalog prices ($9 to $39 a guide, bundles $39, $49 and $69); until then every guide and bundle is free to claim with an email. The store pages switch within the hour, like /pricing | Nothing beyond the paid ladder's steps: the guides use the same Stripe account, webhook events, paid posting flag and 2.33 checks |
 | 2026-12-31 | The DEA telemedicine flexibilities for prescribing controlled substances expire unless the special registration rule is published first | CLAUDE re-checks the prescribing post, the remote guide and the telehealth FAQ on the remote, telehealth and psychiatric hubs (2.24) |
 | About 2027-03-01 | Promo posts made on 2026-12-31 reach their 60 days | CLAUDE may retire the promo code paths (`docs/pricing-system.md` section 11) |
 | 2030-07-01 | New York's NP Modernization Act sunset date | Re-check New York before then (section 6) |
@@ -309,6 +311,29 @@ review of the plan deletion. None is reachable while paid posting is off, and no
   candidate without one. Claude has no such API yet, so the profile resume is the only source today.
 - Put the listing links in `config/ai-apps.ts` once each directory publishes them.
 
+**2.35 Career guides store follow-ups (after the 2026-11-07 release).** All low, left by the reviews:
+- Two claims for the same email at the same instant can create two rows and send two emails.
+- The success page can claim the delivery email while the webhook reads it as sent; if that send then fails,
+  nothing retries it until the buyer reloads the success page (the paying browser already holds the guides).
+- The claim response shows whether an address already holds a claim (only a new claim sets the cookie).
+- An unmatched refund or dispute reads the PaymentIntent twice (the pack check, then the guide check).
+- A permanent email error other than `validation_error` keeps the webhook at 500 until Stripe stops retrying.
+- No GA4 event for a claim or a guide checkout start (the purchase is recorded server side).
+- Medium, from the 2026-11-07 security review: account erasure clears a guide purchase only when it matches the
+  account's id or sign-in email, so a guide bought signed out with another checkout email keeps that email; match
+  the Stripe customer email too, or say so in the privacy policy.
+- Medium: a download is a counted GET, refused cross-site only when the browser sends `Sec-Fetch-Site`; an older
+  browser that omits it can have its 60 downloads spent by a hostile page. Add a same-origin Referer fallback.
+- Medium: library tokens never expire, so a forwarded delivery email gives lasting access (capped at 60
+  downloads a purchase). Add a support route that rotates a purchase's token.
+- Medium: the Sentry scrub masks `/guides/library/<token>` in the serialised event only; keep tokens out of any
+  other logged field (the regression test pins today's coverage).
+- Fixed before release: the per-address claim limit now counts only new claims, so spending it cannot lock an
+  owner out of guides the address already holds.
+- Facts in the PDFs a reviewer may still want to read: every edit to the guides is listed in the release notes
+  of 2026-11-07; the source PDFs and the scripts that clean them are in the ignored `NP Guides/originals` and
+  `tmp/guides-fix` on the machine that built them.
+
 ## 3. Decisions (DECISION)
 
 Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
@@ -402,6 +427,14 @@ change any of them.
 | D44 | Email candidates about the privacy policy change? | Section 9 of the policy says changes are announced by the "Last updated" date, email and a homepage notice. Section 17 (AI assistants) is new and narrows nothing, and only the date moved | `app/privacy/page.tsx` |
 | D45 | ChatGPT listing countries | Recommended `US` only: every listing is a US job | `docs/ai-apps/submission.md` 3.4 |
 | D46 | Should /terms mention the AI apps? | Not required by either directory; the privacy policy carries the data rules | `app/terms/page.tsx` |
+
+### 3.4e The career guides store (recorded 2026-11-07)
+
+| # | Question | Today | Where |
+|---|---|---|---|
+| D47 | The job seeker comparison table's row 2 | The guides checkout made "Free for Job Seekers" untrue after 2026-12-31, so the row and its card now read "Free Job Search and Applications" / "Free to Search and Apply", with the guides named as optional. It is a judged table (D25): approve the new wording or send yours | `lib/seeker-comparison.ts` |
+| D48 | Ask for newsletter consent on a free guide claim? | A claim sends only the delivery email; nothing subscribes the address. An unticked opt-in box could grow the list | `components/guides/ClaimForm.tsx`, `app/api/guides/claim/route.ts` |
+| D49 | The free Salary Guide PDF beside the Compensation Report | /resources and /salary-guide still give away the older Salary Guide PDF for an email, next to the Compensation Report that sells from 2027. Keep both, or retire the free PDF? | `components/ResourceDownloadGate.tsx`, `app/api/salary-guide/route.ts` |
 
 ### 3.5 Audit-era items (enterprise audit)
 
@@ -551,3 +584,5 @@ tests fail until every side agrees:
 - `8ac1d66` (2026-10-25) The 2027 re-price: $249 first post, $349 after, renewals $199 or $249 by post, the Employer plan retired from every page.
 - `00282e6`, `1d3e18b`, `e0e9d4e`, `08f2e33` (2026-10-26) The one-time 5-post pack for $1,245 (backend, pages, emails, admin), all sales final, and the code and security review fixes; migration `20261025000000_add_employer_post_packs` applied by the build.
 - `4210512`, `b014700` and the review fixes on top (2026-10-27) The retired Employer plan's code deleted (2.27 phase 4), the 2.29 security follow-ups (edit token window on every route that edits, paid checkout validators, the logo rule, drafts cleared by account, the typed body guard) and the 2.30 monitoring fixes (no zero Search Console snapshots, Bing skips counted as skipped).
+- `ba12bc5` (2026-11-03) The NP Hiring app for Claude and ChatGPT: job search and Easy Apply from the chat, its own sign-in (off until 1.15), migration `20261028000000_add_oauth_for_ai_apps`.
+- (2026-11-07) The career guides store at /guides, ported from pmhnphiring.com: six cleaned NP guides (no dashes, no edition labels, the Compensation Report sold whole, covers), three bundles, free to claim with an email until the paid ladder starts, then sold through Stripe at the same prices as the PMHNP store; private downloads from the `guides` bucket; migration `20261107000000_add_guide_purchases`.

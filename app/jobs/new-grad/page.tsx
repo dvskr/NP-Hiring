@@ -25,6 +25,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import GuidePromo from '@/components/guides/GuidePromo';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
@@ -542,6 +543,12 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Secure references from clinical preceptors and advisors.</p>
             </div>
           </div>
+          <GuidePromo
+            slug="first-year-playbook"
+            heading={`Starting your first ${brand.niche.short} job?`}
+            pitch="Your board exam, first-job green and red flags, collaborative agreements and a year-one checklist."
+            style={{ maxWidth: '900px', margin: '40px auto 0' }}
+          />
         </section>
       </div>
 

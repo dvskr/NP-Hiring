@@ -149,6 +149,40 @@ describe('purge-soft-deleted C3 — full PII erasure', () => {
         expect(adminDeleteUserMock).toHaveBeenCalledWith('sb1');
     });
 
+    it('keeps guide purchases and promo claims as sales records, without the reader address or account id', async () => {
+        vi.mocked(prisma.userProfile.findMany).mockResolvedValue([
+            { id: 'u5', supabaseId: 'sb5', email: 'reader@example.com', resumeUrl: null, avatarUrl: null },
+        ] as never);
+        vi.mocked(prisma.userProfile.delete).mockResolvedValue({} as never);
+
+        const { GET } = await import('@/app/api/cron/purge-soft-deleted/route');
+        await GET(fakeRequest() as never);
+
+        expect(prisma.guidePurchase.updateMany).toHaveBeenCalledWith({
+            where: {
+                OR: [
+                    { userId: 'sb5' },
+                    { email: { equals: 'reader@example.com', mode: 'insensitive' } },
+                ],
+            },
+            data: { email: null, userId: null },
+        });
+    });
+
+    it('still purges the account when the guide purchases cannot be anonymized, and says so', async () => {
+        vi.mocked(prisma.userProfile.findMany).mockResolvedValue([
+            { id: 'u6', supabaseId: 'sb6', email: 'g6@example.com', resumeUrl: null, avatarUrl: null },
+        ] as never);
+        vi.mocked(prisma.guidePurchase.updateMany).mockRejectedValueOnce(new Error('db blip'));
+        vi.mocked(prisma.userProfile.delete).mockResolvedValue({} as never);
+
+        const { GET } = await import('@/app/api/cron/purge-soft-deleted/route');
+        const res = await GET(fakeRequest() as never);
+
+        expect((await res.json()).purgedCount).toBe(1);
+        expect(logger.error).toHaveBeenCalledWith('purge-soft-deleted: failed to anonymize guide purchases', expect.any(Error), { userId: 'u6' });
+    });
+
     it('continues to delete auth + profile even if resume delete fails', async () => {
         vi.mocked(prisma.userProfile.findMany).mockResolvedValue([
             {

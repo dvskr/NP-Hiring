@@ -39,13 +39,18 @@
  *      1 billion members" (https://about.linkedin.com/); its job search
  *      covers every occupation (Help a6889044).
  *
- *   2. "Free for Job Seekers" (yes, yes, Limited). Was "Completely Free for
- *      Job Seekers", with a note naming LinkedIn.
- *      Us: every Stripe Checkout session the code opens buys an employer
- *      post, a renewal or a 5-post pack (app/api/create-checkout,
- *      app/api/create-renewal-checkout, app/api/create-pack-checkout), and
- *      the Terms price list covers postings, renewals and packs only (the
- *      Employer plan is retired and its code deleted). The autofill
+ *   2. "Free Job Search and Applications" (yes, yes, Limited). Was "Free for
+ *      Job Seekers" until the guides store (2026-11-07), and "Completely Free
+ *      for Job Seekers", with a note naming LinkedIn, before that.
+ *      Us: searching, alerts, saving and applying open no checkout. Every
+ *      Stripe Checkout session the code opens buys an employer post, a
+ *      renewal or a 5-post pack (app/api/create-checkout,
+ *      app/api/create-renewal-checkout, app/api/create-pack-checkout), or,
+ *      from 2027, an optional PDF career guide (app/api/guides/checkout,
+ *      free to claim until then), which is why the label names the search
+ *      and not the job seeker. The Terms price list covers postings,
+ *      renewals and packs (the Employer plan is retired and its code
+ *      deleted). The autofill
  *      extension code defines pro and premium tiers
  *      (app/api/autofill/_lib/quota.ts), but no account can hold one: the
  *      only roles are job_seeker, employer and admin.
@@ -178,7 +183,7 @@ export const SEEKER_COMPARISON_CHECKED_MONTH = 'October 2026';
 // reads the rows from this source and renders every cell as English.
 export const SEEKER_COMPARISON_ROWS: readonly ComparisonRow[] = [
     { feature: `Focused on ${brand.niche.short} and APRN Jobs`, us: true, indeed: false, linkedin: false },
-    { feature: 'Free for Job Seekers', us: true, indeed: true, linkedin: 'partial' },
+    { feature: 'Free Job Search and Applications', us: true, indeed: true, linkedin: 'partial' },
     { feature: 'Licensure Guides for All 50 States and DC', us: true, indeed: 'partial', linkedin: false },
     { feature: 'Saved Jobs and Application Tracking', us: true, indeed: true, linkedin: true },
     { feature: 'Profile Filled In From Your Resume', us: true, indeed: true, linkedin: 'partial' },

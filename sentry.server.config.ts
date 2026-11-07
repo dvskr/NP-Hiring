@@ -4,6 +4,7 @@
  * (local dev), so error monitoring only activates where it's configured.
  */
 import * as Sentry from '@sentry/nextjs';
+import { scrubSentryEvent } from '@/lib/private-url';
 
 const dsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -16,4 +17,7 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
   // This app handles candidate PII — do NOT attach IP/email to events by default.
   sendDefaultPii: false,
+  // Guide library tokens and checkout session ids never reach Sentry.
+  beforeSend: (event) => scrubSentryEvent(event),
+  beforeSendTransaction: (event) => scrubSentryEvent(event),
 });

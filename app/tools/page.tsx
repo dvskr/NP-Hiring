@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import GuidePromo from '@/components/guides/GuidePromo';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, clayCard, iconTile } from '@/components/tools/tool-theme';
 import { TOOLS, TOOLS_HUB_PATH, type ToolAudience, type ToolIconKey } from './tools-registry';
 
@@ -153,6 +154,13 @@ export default function ToolsHubPage() {
               );
             })}
           </div>
+
+          <GuidePromo
+            slug="career-bundle"
+            heading="Ready for the interview and the offer?"
+            pitch="Four guides: the first-year roadmap, interview answers, negotiation scripts and the pay data behind your ask."
+            style={{ marginTop: '40px' }}
+          />
         </section>
       </div>
 

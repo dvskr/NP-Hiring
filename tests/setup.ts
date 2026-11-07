@@ -210,6 +210,19 @@ vi.mock('@/lib/prisma', () => {
                 update: vi.fn(),
                 updateMany: vi.fn().mockResolvedValue({ count: 0 }),
             },
+            // Guides store rows (lib/guides): the Stripe webhook checks every
+            // unmatched refund and dispute against them, and the purge cron
+            // anonymizes them. Empty unless a test says otherwise.
+            guidePurchase: {
+                findUnique: vi.fn().mockResolvedValue(null),
+                findFirst: vi.fn().mockResolvedValue(null),
+                findMany: vi.fn().mockResolvedValue([]),
+                count: vi.fn().mockResolvedValue(0),
+                create: vi.fn(),
+                upsert: vi.fn(),
+                update: vi.fn(),
+                updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+            },
             $queryRaw: vi.fn(),
             // Batch form only (array of PrismaPromises). Test files that need
             // the interactive callback form define their own module mock.

@@ -90,6 +90,11 @@ const FULL_DISALLOW = [
   '/my-applications',
   '/unauthorized',
   '/success',
+  // Guides store: a reader's private library (and the token links into it)
+  // and the post-checkout page. Both also answer noindex; nothing public
+  // links them, so a block cannot strand an indexed URL (TECH-05).
+  '/guides/library',
+  '/guides/success',
   // Raw media assets (sitemap exposes the indexable ones)
   '/videos/',
 ]

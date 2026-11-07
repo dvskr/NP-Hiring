@@ -72,7 +72,9 @@ interface MarkedRow {
 /** The judge's final table, in order. No row carries a note. */
 const JUDGED_ROWS: readonly MarkedRow[] = [
     { feature: `Focused on ${brand.niche.short} and APRN Jobs`, us: true, indeed: false, linkedin: false },
-    { feature: 'Free for Job Seekers', us: true, indeed: true, linkedin: 'partial' },
+    // "Free for Job Seekers" until the guides store (2026-11-07): from 2027 a
+    // job seeker can buy an optional career guide, so the row names the search.
+    { feature: 'Free Job Search and Applications', us: true, indeed: true, linkedin: 'partial' },
     { feature: 'Licensure Guides for All 50 States and DC', us: true, indeed: 'partial', linkedin: false },
     { feature: 'Saved Jobs and Application Tracking', us: true, indeed: true, linkedin: true },
     { feature: 'Profile Filled In From Your Resume', us: true, indeed: true, linkedin: 'partial' },
@@ -86,7 +88,8 @@ const REMOVED_ROW_CLAIMS: ReadonlyArray<readonly [RegExp, string]> = [
     [/easy apply|employer site/i, 'no difference: all three sites offer both apply paths'],
     [/state.by.state|salary data/i, 'overstated: a state shows a posted pay median only above the publishing gate'],
     [/spam|recruiter noise/i, 'false: recruiter firms are listed on purpose, and no competitor page can source it'],
-    [/completely free/i, 'restated as "Free for Job Seekers"'],
+    [/completely free/i, 'restated as "Free Job Search and Applications"'],
+    [/free for job seekers/i, 'restated as "Free Job Search and Applications" when the guides store opened a job seeker checkout'],
     [/\bindeed\b|linkedin/i, 'a competitor named in a label or note; the Limited footnote carries that meaning'],
 ];
 
@@ -268,12 +271,15 @@ describe('D25: each brand cell stays tied to the code it rests on', () => {
         expect(read('config/brand.ts')).toMatch(/plus the APRN cohort/i);
     });
 
-    it('row 2: every Stripe Checkout session the code opens sells an employer post, a renewal or a 5-post pack', () => {
-        // A new checkout fails here until someone confirms it charges an
-        // employer and not a job seeker, and adds it to this list. (The
-        // retired Employer plan's Payment Link and its code are gone.)
+    it('row 2: no checkout sells a search, an alert or an application: every Stripe Checkout session sells an employer post, a renewal, a 5-post pack or a career guide', () => {
+        // A new checkout fails here until someone confirms what it charges
+        // for and adds it to this list. (The retired Employer plan's Payment
+        // Link and its code are gone.)
         // The 5-post pack (2026-10-25): /api/create-pack-checkout sells only to
         // the signed-in employer account, 403 for any other role.
+        // The guides store (2026-11-07): /api/guides/checkout sells a catalog
+        // guide or bundle to anyone, a job seeker included, which is why the
+        // row names the free search and applications rather than the job seeker.
         const CALL = '.checkout.sessions.create(';
         const sellers = [...sourceFiles('app'), ...sourceFiles('lib')]
             .filter((rel) => {
@@ -281,7 +287,11 @@ describe('D25: each brand cell stays tied to the code it rests on', () => {
                 return src.includes(CALL) && code(src).includes(CALL);
             })
             .sort();
-        expect(sellers).toEqual(['app/api/create-checkout/route.ts', 'app/api/create-pack-checkout/route.ts', 'app/api/create-renewal-checkout/route.ts']);
+        expect(sellers).toEqual(['app/api/create-checkout/route.ts', 'app/api/create-pack-checkout/route.ts', 'app/api/create-renewal-checkout/route.ts', 'app/api/guides/checkout/route.ts']);
+        // ...the guides checkout sells only a catalog product, tagged as a guide sale...
+        const guides = code(read('app/api/guides/checkout/route.ts'));
+        expect(guides).toContain('getProduct(body.product)');
+        expect(guides).toContain('type: GUIDE_CHECKOUT_TYPE');
         // ...and the pack's checkout refuses any account that is not an employer before Stripe is asked.
         expect(code(read('app/api/create-pack-checkout/route.ts'))).toMatch(/profile\?\.role !== 'employer'\) \{\s*return NextResponse\.json\([^;]*\{ status: 403 \}\);/);
     }, 60_000);
@@ -395,7 +405,9 @@ describe('D25: /for-job-seekers renders the rows with the audited markup', () =>
     it('keeps the true half of each sentence it cut', () => {
         const text = textOf(html);
         expect(text).toContain("Pay is shown whenever the employer's posting includes it.");
-        expect(text).toContain('100% free. No sign-up required to browse. Create a profile to apply.');
+        // 2026-11-07: "100% free" left with the career guides store (sold from
+        // 2027); what stays free is searching and applying.
+        expect(text).toContain('Free to search and apply. No sign-up required to browse. Create a profile to apply.');
     });
 });
 

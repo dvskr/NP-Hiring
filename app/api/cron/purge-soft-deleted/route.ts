@@ -244,6 +244,24 @@ export async function GET(request: NextRequest) {
                     logger.error('purge-soft-deleted: failed to anonymize email_sends', emailErr, { userId: u.id });
                 }
 
+                // Step 3a: guide purchases and promo claims stay as the sales
+                // record, without the reader's address or account id. A row is
+                // linked by the Supabase user id when the reader was signed in,
+                // and by the checkout or claim email otherwise.
+                try {
+                    await prisma.guidePurchase.updateMany({
+                        where: {
+                            OR: [
+                                { userId: u.supabaseId },
+                                { email: { equals: u.email, mode: 'insensitive' } },
+                            ],
+                        },
+                        data: { email: null, userId: null },
+                    });
+                } catch (guideErr) {
+                    logger.error('purge-soft-deleted: failed to anonymize guide purchases', guideErr, { userId: u.id });
+                }
+
                 // Step 4 (F34 fix, 2026-07-18): explicit purge of models with
                 // NO @relation/FK back to UserProfile — nothing cascades into
                 // them when the profile row is dropped:

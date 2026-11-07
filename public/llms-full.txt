@@ -1,7 +1,7 @@
 # NP Hiring: Site Information for AI Systems
 # llms-full.txt: Extended version of llms.txt, with guide summaries, tool methods and key facts
 
-> NP Hiring (nphiring.com) is a specialized job board for Nurse Practitioners in the United States, covering every NP specialty plus the wider APRN cohort (CRNA, CNM, CNS), with free career guides, tools and data reports.
+> NP Hiring (nphiring.com) is a specialized job board for Nurse Practitioners in the United States, covering every NP specialty plus the wider APRN cohort (CRNA, CNM, CNS), with free career articles, tools and data reports, and a store of PDF career guides.
 
 ## Mission
 
@@ -143,6 +143,7 @@ All tools are free and live under https://nphiring.com/tools.
 - /resources/fpa-guide: What full practice authority means
 - /scope-of-practice: Practice authority rules by state
 - /resources/private-practice-guide: Starting an NP private practice
+- /guides: NP career guides store: six PDF guides (the NP compensation report, the first-year playbook, interview prep, negotiation, telehealth and launching a practice) and three bundles. Each guide's page lists its chapters and page count. Searching and applying for jobs never require a guide
 - /blog: Career guides, per-state licensure guides, and industry insights
 - /job-alerts: Email alerts for new NP jobs
 - /faq: Frequently asked questions
