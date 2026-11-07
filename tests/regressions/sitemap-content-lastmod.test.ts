@@ -205,7 +205,7 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
  * /guides/[slug] left the store's own group, /privacy the AI apps group. Same
  * rule: move the constant and these entries together if they ship later.
  */
-const GUIDES_FOLLOW_UPS_DAY = '2026-11-08';
+const GUIDES_FOLLOW_UPS_DAY = '2026-11-07';
 const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]', '/privacy'];
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */

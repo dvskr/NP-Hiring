@@ -7,7 +7,7 @@
 > 2027 re-price `8ac1d66` of 2026-10-25, the 5-post pack `08f2e33` of 2026-10-26, and on 2026-10-27 the
 > deletion of the retired Employer plan's code (2.27 phase 4) with the 2.29 and 2.30 follow-ups and their
 > review fixes, the AI apps `ba12bc5` of 2026-11-03, the career guides store `831000c` of 2026-11-07 and its
-> follow-ups of 2026-11-08; all are live,
+> follow-ups `aef4fbe` later that day; all are live,
 > and `main` is the only branch). Shipped work is at the end.
 >
 > **Who acts:** **OWNER** only you can do it. **DECISION** you decide, then Claude implements.
@@ -312,7 +312,7 @@ review of the plan deletion. None is reachable while paid posting is off, and no
   candidate without one. Claude has no such API yet, so the profile resume is the only source today.
 - Put the listing links in `config/ai-apps.ts` once each directory publishes them.
 
-**2.35 Career guides store follow-ups.** Closed on 2026-11-08 (see "Closed since the last version"). The
+**2.35 Career guides store follow-ups.** Closed on 2026-11-07 by `aef4fbe` (see "Closed since the last version"). The
 source PDFs and the scripts that clean them are in the ignored `NP Guides/originals` and `tmp/guides-fix` on
 the machine that built them; after any edit, upload with `scripts/guides/upload-guides.ts` from the main
 checkout and keep each guide's `pages` in `lib/guides/catalog.ts` equal to the PDF (cover excluded).
@@ -413,7 +413,7 @@ change any of them.
 
 ### 3.4e The career guides store (recorded 2026-11-07)
 
-D47 to D49 were decided on 2026-11-08, when you asked Claude to apply its recommendations (see "Closed since
+D47 to D49 were decided on 2026-11-07, when you asked Claude to apply its recommendations (see "Closed since
 the last version").
 
 ### 3.5 Audit-era items (enterprise audit)
@@ -484,7 +484,7 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
-- 2.35 Career guides store follow-ups (2026-11-08):
+- 2.35 Career guides store follow-ups (`aef4fbe`, 2026-11-07):
   - Claims for one address run under a transaction lock (`pg_advisory_xact_lock`, as the job alert and
     application routes do), so two at the same instant make one row and one email.
   - Only the webhook sends a paid purchase's delivery email; the success page records the purchase, asks
@@ -500,13 +500,13 @@ tests fail until every side agrees:
   - /admin/guides finds a reader's purchases by email and gives one a new library link: the old link and every
     browser holding it stop working, and the new link is emailed (not for a refunded or disputed purchase).
   - Server log lines and Sentry events mask library tokens wherever they appear (path, cookie or bare).
-- D47 (2026-11-08): the comparison row's new wording stays: "Free Job Search and Applications" / "Free to
+- D47 (2026-11-07): the comparison row's new wording stays: "Free Job Search and Applications" / "Free to
   Search and Apply", with the guides named as optional.
-- D48 (2026-11-08): the claim form has an unticked "Send me career tips, salary insights, and market updates."
+- D48 (2026-11-07): the claim form has an unticked "Send me career tips, salary insights, and market updates."
   box; ticked, it opts the address in to the newsletter (source `guide_claim`): for the address's signed-in
   owner as the public signup does, and for anyone else only when the site has never seen the address, so a
   claim can never re-subscribe someone who unsubscribed.
-- D49 (2026-11-08): the free Salary Guide PDF stays as the lead magnet on /resources and /salary-guide; those
+- D49 (2026-11-07): the free Salary Guide PDF stays as the lead magnet on /resources and /salary-guide; those
   pages already link the store, so the Compensation Report is the paid next step, not a competitor.
 
 - 2.27 phase 4 (2026-10-27): the retired Employer plan's dormant code is deleted. Production had no `employer_plans` row and no `'plan'` post (both read only, 2026-10-26). Gone: the plan, subscribe and Customer Portal routes, the plan checkout and subscription webhook handlers with the dunning notice on `invoice.payment_failed`, the daily plan-lapse and plan reconciliation jobs, the admin plan page, its API and its sidebar link, the four plan emails and their EmailTypes, the plan expiry copy and confirmation mode, `config.planPrice`, `planSlots` and `planGraceDays`, the `'plan'` tier, the Payment Link variable, and the plan-only test suites. Kept as guards: a Checkout Session in subscription mode, and every paid invoice of a subscription, is alerted ("Employer plan retired: refund it in Stripe") and answered 200 with nothing granted; a legacy `'plan'` row is refused a renewal (409, and a renewal paid for one anyway is ledgered, not applied) and a republish (402), and the dashboard still never offers it Renew. The EmployerPlan model and the `employer_plans` table stay, deprecated; dropping them is a separate, deliberate migration (`docs/pricing-system.md` section 11). The webhook needs 7 events now, and a restricted key no Subscriptions or Customer portal permission (1.1, `docs/pricing-system.md` section 9b). Inngest drops the two deleted daily jobs at its next sync of `https://nphiring.com/api/inngest` (`docs/LAUNCH_RUNBOOK.md` section 6 step 4); until then it may record failed runs for them, which does no harm.
