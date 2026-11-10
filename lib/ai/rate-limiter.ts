@@ -12,6 +12,7 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import { logger } from '../logger';
+import { redisKey } from '../redis-key';
 import type { AiTaskId, AiTenant } from './types';
 
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -70,7 +71,9 @@ export async function checkAiRateLimit(
             const limiter = new Ratelimit({
                 redis,
                 limiter: Ratelimit.slidingWindow(limit.limit, `${limit.windowSeconds} s`),
-                prefix: 'ai-gateway',
+                // Board-namespaced (lib/redis-key.ts): a tenant id on this
+                // board must not spend another board's AI budget.
+                prefix: redisKey('ai-gateway'),
                 analytics: false,
             });
             const result = await limiter.limit(key);

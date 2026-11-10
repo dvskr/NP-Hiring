@@ -484,6 +484,21 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
+- 2.36 Redis key namespace (2026-11-10): every key this board writes to Redis starts with `nphiring:`
+  (`REDIS_NAMESPACE` in `lib/redis-key.ts`, a durable identity like `INNGEST_APP_ID`).
+  - The fork inherited the donor template's key names (`@upstash/ratelimit:...`, `ai-gateway:...`,
+    `ai:cache:...`, `presence:<source>:run:<bucket>`), and the donor board writes the same names with no
+    prefix. On one database the two boards would share rate-limit windows and cached AI answers and overwrite
+    each other's Greenhouse and Workday chunk payloads (the chunk crons run at the same minutes on both), so
+    the presence check would strike jobs against the wrong board's catalog.
+  - It never happened: the two boards have never shared a database. The prefix is what makes it safe to point
+    this board at any database, the sister board's included.
+  - The four Redis callers (`lib/rate-limit.ts`, `lib/ai/rate-limiter.ts`, `lib/ai/cache.ts`,
+    `lib/health/chunked-presence.ts`) take their keys from `redisKey()`.
+    `tests/regressions/redis-key-namespace.test.ts` fails on a key that reaches Redis without the prefix and
+    on a new Redis caller that skips the helper.
+  - Changing `REDIS_NAMESPACE` later is a migration, not a rename: live rate-limit windows, cached answers and
+    a presence run in flight stay behind under the old prefix until they expire.
 - 2.35 Career guides store follow-ups (`aef4fbe`, 2026-11-07):
   - Claims for one address run under a transaction lock (`pg_advisory_xact_lock`, as the job alert and
     application routes do), so two at the same instant make one row and one email.

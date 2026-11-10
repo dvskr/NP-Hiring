@@ -71,7 +71,9 @@ Work through in this order; each is one file unless noted:
 Supabase project (DB + storage buckets + auth) · Vercel project + domain +
 env vars · Stripe (products, webhook endpoint, statement descriptor =
 brand.legal.stripeDescriptor) · Resend (domain verified, webhook secret) ·
-Upstash Redis (per-board, don't share) · Inngest app · GSC + Bing +
+Upstash Redis (per-board, don't share; either way give the fork its own
+`REDIS_NAMESPACE` in `lib/redis-key.ts`, a fork inherits the donor's) ·
+Inngest app (its own `INNGEST_APP_ID`) · GSC + Bing +
 IndexNow keys (set BOTH INDEXNOW_API_KEY and INDEXNOW_KEY) · VAPID pair ·
 GitHub Actions secret PROD_DIRECT_DATABASE_URL (direct 5432, not pooler).
 

@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { __testing } from '@/lib/ai/cache';
+import { redisKey } from '@/lib/redis-key';
 
 describe('lib/ai/cache.buildCacheKey', () => {
     it('produces identical keys for identical inputs', () => {
@@ -27,6 +28,8 @@ describe('lib/ai/cache.buildCacheKey', () => {
 
     it('embeds the version prefix so we can bump-and-invalidate', () => {
         const key = __testing.buildCacheKey('candidate_scoring', ['x']);
-        expect(key.startsWith('ai:cache:v1:candidate_scoring:')).toBe(true);
+        // The board's Redis namespace sits in front (lib/redis-key.ts); the
+        // version and task segments follow it unchanged.
+        expect(key.startsWith(redisKey('ai:cache:v1:candidate_scoring:'))).toBe(true);
     });
 });

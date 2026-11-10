@@ -5,14 +5,18 @@
  * When Redis is unavailable, cache reads/writes silently no-op so callers
  * still get a fresh response (just without the cost savings).
  *
- * Cache key shape: `ai:cache:v1:<task>:<sha256(...keyParts)>`. Keep the prefix
- * stable — it lets us bump the version (`v2`) to invalidate cleanly when the
- * prompt or output schema changes.
+ * Cache key shape: `<board>:ai:cache:v1:<task>:<sha256(...keyParts)>`, where
+ * `<board>` is this board's Redis namespace (lib/redis-key.ts): the hash
+ * covers the inputs, not the prompt, so without it two boards on one database
+ * could serve each other's answers. Keep the rest of the prefix stable — it
+ * lets us bump the version (`v2`) to invalidate cleanly when the prompt or
+ * output schema changes.
  */
 
 import { createHash } from 'crypto';
 import { Redis } from '@upstash/redis';
 import { logger } from '../logger';
+import { redisKey } from '../redis-key';
 import type { AiTaskId, CompleteResponse } from './types';
 
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -28,7 +32,7 @@ function buildCacheKey(task: AiTaskId, parts: readonly unknown[]): string {
     const hash = createHash('sha256')
         .update(parts.map((p) => JSON.stringify(p ?? null)).join('|'))
         .digest('hex');
-    return `ai:cache:${CACHE_VERSION}:${task}:${hash}`;
+    return redisKey(`ai:cache:${CACHE_VERSION}:${task}:${hash}`);
 }
 
 /** Stored shape — slim copy of CompleteResponse without the `parsed` field (recomputed on read). */

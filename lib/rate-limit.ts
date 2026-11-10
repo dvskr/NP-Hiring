@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import { logger } from './logger';
+import { redisKey } from './redis-key';
 
 // --- Configuration ---
 
@@ -159,7 +160,10 @@ export async function checkRateLimit(key: string, config: RateLimitConfig): Prom
                 redis: redis,
                 limiter: Ratelimit.slidingWindow(config.limit, `${config.windowSeconds} s`),
                 analytics: true,
-                prefix: '@upstash/ratelimit',
+                // Namespaced per board at the single point every limiter key
+                // (and the analytics keys beside it) passes through, so a
+                // caller that builds its own key is covered too.
+                prefix: redisKey('@upstash/ratelimit'),
             });
 
             const { success, reset, remaining } = await limiter.limit(key);

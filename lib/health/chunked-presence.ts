@@ -18,6 +18,8 @@
  *     share a key; the next cycle (6h later) gets a new bucket cleanly.
  *   - Each chunk writes `presence:<source>:run:<bucket>:chunk:<idx>` with
  *     its `external_id`s and fetched count, TTL 12h.
+ *   - Every one of those keys carries this board's Redis namespace in front
+ *     (lib/redis-key.ts), so a run can only ever hold this board's chunks.
  *   - On every chunk completion, check whether all expected chunk keys
  *     exist for this run. If yes → aggregate + run presence check +
  *     cleanup. If no → wait for the next chunk.
@@ -31,6 +33,7 @@
 import { Redis } from '@upstash/redis';
 import type { PrismaClient } from '@prisma/client';
 import { logger } from '@/lib/logger';
+import { redisKey } from '@/lib/redis-key';
 import {
     recordSourcePresence,
     loadHistoricalAvgFetched,
@@ -164,10 +167,18 @@ export async function recordChunkAndMaybeAggregate(
     return baseResult(input, 'aggregated_and_checked', totalChunks, totalChunks, presenceResult);
 }
 
-/** Public so tests can assert key shape. */
+/**
+ * Public so tests can assert key shape.
+ *
+ * Board-namespaced (lib/redis-key.ts), and every chunk key is built from this
+ * one, so the whole run lives under this board's prefix. Without it two boards
+ * on one Redis database write the same `presence:<source>:run:<bucket>` keys
+ * (their chunk crons fire at the same minutes), each counts the other's chunks
+ * as its own, and the aggregate strikes jobs against the wrong board's catalog.
+ */
 export function buildRunKey(source: string, nowMs: number): string {
     const bucket = Math.floor(nowMs / RUN_BUCKET_MS);
-    return `presence:${source}:run:${bucket}`;
+    return redisKey(`presence:${source}:run:${bucket}`);
 }
 
 async function countChunksSeen(redis: Redis, runKey: string, total: number): Promise<number> {
