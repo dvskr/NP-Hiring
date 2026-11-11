@@ -26,6 +26,28 @@ import { prisma } from '@/lib/prisma';
 import { checkJobHealth, HealthRecorder } from '@/lib/health';
 import { logger } from '@/lib/logger';
 
+/** The posting a job carries: its apply link and, when the source gives one, its external id. */
+export interface CarriedPosting {
+    applyLink: string | null | undefined;
+    externalId: string | null | undefined;
+}
+
+/**
+ * Does the job carry a different posting now than the one it was flipped
+ * with?
+ *
+ * The ingest renewal points a downed job at a live posting of the same role
+ * (lib/health/renewal-decision.ts), which rewrites its apply link and its
+ * external id. A re-probe scheduled at the flip still holds the old pair. An
+ * alive answer about the old link says nothing about the link the job has
+ * now: resurrecting on it would republish a job whose current link may be
+ * the dead one.
+ */
+export function carriesAnotherPosting(current: CarriedPosting, flipped: CarriedPosting): boolean {
+    if ((current.applyLink ?? null) !== (flipped.applyLink ?? null)) return true;
+    return Boolean(flipped.externalId) && (current.externalId ?? null) !== flipped.externalId;
+}
+
 const RECOVERY_USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
@@ -123,6 +145,8 @@ export const fpRecoveryProbe = inngest.createFunction(
                     id: true,
                     isPublished: true,
                     isManuallyUnpublished: true,
+                    applyLink: true,
+                    externalId: true,
                 },
             });
         });
@@ -138,6 +162,10 @@ export const fpRecoveryProbe = inngest.createFunction(
         if (job.isManuallyUnpublished) {
             log.info('Job manually-unpublished by admin — never overriding');
             return { skipped: 'manual_admin_override' };
+        }
+        if (carriesAnotherPosting(job, { applyLink, externalId })) {
+            log.info('Job carries another posting than the one this probe was scheduled for, skipping');
+            return { skipped: 'posting_replaced' };
         }
 
         // 2. Re-probe with a rotated UA.

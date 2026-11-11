@@ -484,6 +484,27 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
+- 2.37 Ingest renewal and takedowns (2026-11-11): a posting a source lists no longer republishes a stored job
+  just because the duplicate check matched the two (`lib/health/renewal-decision.ts`, `renewExistingJob` in
+  `lib/ingestion-service.ts`).
+  - Before, any match set `isPublished`. When the match was a different posting (the same role under a new id,
+    or another source's copy), the job came back still carrying the id and the apply link of a posting that
+    was gone. The presence sweep or the dead-link check took it down again and the next run put it back, with
+    a dead apply link served in between and a removal and a return sent to the search engines each time. The
+    same revive also undid takedowns the health checks never made, such as a job that reached the report
+    threshold.
+  - Now: ingest brings back only what the health checks took down (read from the job's own health record). A
+    job comes back as it is only when the fetch returned its own id, and after a dead-link verdict only on an
+    employer feed's word. A different posting takes the job over (id, link, source, a clean presence count)
+    only when it is the same job by exact identity. One that may not is stored as a job of its own when it
+    comes from the same source or an employer feed, and dropped when it is a relisted copy from elsewhere.
+  - Found on the way and fixed with it: the fuzzy duplicate strategy read its 20 candidates in no order (now
+    published first, then newest); the normalizer and the ingest run read a posting's external id two
+    different ways (now one reader, `rawExternalId`); a recovery re-probe scheduled before a take-over could
+    republish the job on its old link (now skipped).
+  - Tests: `tests/lib/renewal-decision.test.ts`, `renew-existing-job.test.ts`, `renewal-support.test.ts`,
+    `deduplicator-live-first.test.ts`. The three test blocks that read the renewal's source now run it
+    (`tests/helpers/renewal.ts`). The diorama sweep no longer walks into `.claude` worktrees.
 - 2.36 Redis key namespace (2026-11-10): every key this board writes to Redis starts with `nphiring:`
   (`REDIS_NAMESPACE` in `lib/redis-key.ts`, a durable identity like `INNGEST_APP_ID`).
   - The fork inherited the donor template's key names (`@upstash/ratelimit:...`, `ai-gateway:...`,

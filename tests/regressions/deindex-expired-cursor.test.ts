@@ -39,7 +39,10 @@ import { generateKeyPairSync } from 'node:crypto';
 // or job.count wiring for this, and shared test files must not be edited.
 vi.mock('@/lib/prisma', () => ({
     prisma: {
-        job: { findMany: vi.fn(), count: vi.fn() },
+        // findUnique and update, and the health record, are what the ingest
+        // renewal reads and writes (section 4 runs it).
+        job: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+        jobHealthCheck: { findFirst: vi.fn() },
         cronRun: { create: vi.fn(), update: vi.fn(), findFirst: vi.fn() },
     },
 }));
@@ -74,6 +77,8 @@ import {
     type OfferedJob,
 } from '@/app/api/cron/deindex-expired/cursor';
 import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
+import { renewExistingJob } from '@/lib/ingestion-service';
+import { RENEWAL_NOW, SWEPT_BY_PRESENCE, daysFromNow, installStoredJob, ownListingOf, storedJob } from '../helpers/renewal';
 
 const ROOT = process.cwd();
 const ROUTE = 'app/api/cron/deindex-expired/route.ts';
@@ -911,30 +916,31 @@ describe('the deindex-expired route', () => {
 // ─── 4. Ingest renewal leaves expired jobs alone ────────────────────────────
 
 describe('ingest renewal does not re-stamp expired jobs', () => {
-    // renewJob is a closure inside ingestJobs, reached only through a full
-    // ingest run, so its guards are pinned on the source. Each unguarded write
-    // moved updatedAt past the cursor and resent the URL to Google and
-    // IndexNow after every ingest run that still saw the job.
-    const source = read('lib/ingestion-service.ts').replace(/\r\n/g, '\n');
-    const start = source.indexOf('const renewJob = async (');
-    const renewJob = source.slice(start, source.indexOf('// Process each job', start));
+    // Runs renewExistingJob against a stored job (tests/helpers/renewal.ts).
+    // Each unguarded write moved updatedAt past the cursor and resent the URL
+    // to Google and IndexNow after every ingest run that still saw the job.
+    it('unpublishes a job past the age cap once, and writes nothing when it is already unpublished', async () => {
+        const live = storedJob({ originalPostedAt: daysFromNow(-61), expiresAt: null });
+        const liveWrites = installStoredJob(live);
+        expect(await renewExistingJob(live.id, live.originalPostedAt, null, ownListingOf(live), RENEWAL_NOW)).toEqual({ outcome: 'age-expired', ageDays: 61 });
+        expect(liveWrites).toEqual([{ isPublished: false }]);
 
-    it('reads the publish state and expiry it guards on', () => {
-        expect(start).toBeGreaterThan(-1);
-        expect(renewJob).toMatch(/select: \{[^}]*isPublished: true,[^}]*expiresAt: true,/);
+        const down = storedJob({ originalPostedAt: daysFromNow(-61), expiresAt: null, isPublished: false });
+        const downWrites = installStoredJob(down);
+        expect(await renewExistingJob(down.id, down.originalPostedAt, null, ownListingOf(down), RENEWAL_NOW)).toEqual({ outcome: 'age-expired', ageDays: 61 });
+        expect(downWrites).toEqual([]);
     });
 
-    it('skips the age cap write when the row is already unpublished', () => {
-        const ageBranch = renewJob.slice(renewJob.indexOf('if (ageMs > MAX_JOB_AGE_MS)'));
-        expect(ageBranch).toMatch(/if \(existing\.isPublished\) \{\s*await prisma\.job\.update\(\{\s*where: \{ id \},\s*data: \{ isPublished: false \},/);
-    });
+    it('never revives a job past its own expiresAt, and never writes to it', async () => {
+        const expired = storedJob({ isPublished: false, expiresAt: daysFromNow(-1), healthConsecutiveMissing: 3 });
+        const writes = installStoredJob(expired, SWEPT_BY_PRESENCE);
 
-    it('never revives a job past its own expiresAt', () => {
-        const guard = renewJob.indexOf('existing.expiresAt.getTime() < Date.now()');
-        const revive = renewJob.indexOf('isPublished: true,\n          updatedAt: new Date(),');
-        expect(guard).toBeGreaterThan(-1);
-        expect(revive).toBeGreaterThan(guard);
-        expect(renewJob.slice(guard, revive)).toMatch(/\{\s*return;\s*\}/);
+        // Its own posting, with a fresh copy that would otherwise be merged.
+        const fresh = { description: 'A longer description the fresh copy carries. '.repeat(10) };
+        expect(await renewExistingJob(expired.id, expired.originalPostedAt, fresh, ownListingOf(expired), RENEWAL_NOW)).toEqual({ outcome: 'expired' });
+
+        expect(writes).toEqual([]);
+        expect(expired.isPublished).toBe(false);
     });
 });
 

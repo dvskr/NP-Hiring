@@ -5,7 +5,7 @@ import { prisma } from './prisma';
 // chunk totals are consumed via CHUNKED_SOURCE_TOTAL_CHUNKS in
 // lib/health/chunked-presence.ts and the cron schedule in config/cron-schedule.ts.)
 import { getLastRunDiagnostics as getFantasticJobsDiag } from './aggregators/fantastic-jobs-db';
-import { normalizeJobWithReason } from './job-normalizer';
+import { normalizeJobWithReason, rawExternalId } from './job-normalizer';
 import { checkDuplicate, buildJobIdentityKey, buildSiteIdentityKey, buildApplyUrlPathKey } from './deduplicator';
 import { parseLocation } from './location-parser';
 import { storedLocality } from './location-fallback';
@@ -29,6 +29,8 @@ import { HealthRecorder } from './health/recorder';
 import { slugify } from './utils';
 import { recordChunkAndMaybeAggregate } from './health/chunked-presence';
 import { checkJobHealth, type HealthReason } from './health/check-job-health';
+import { decideRenewal, renewalWrite, type IncomingListing, type TakedownCause } from './health/renewal-decision';
+import { presenceUnpublishMinMisses } from './health/presence-unpublish-threshold';
 
 /**
  * Reasons we reject a job at ingest time. Only the highest-confidence
@@ -436,12 +438,12 @@ function extractRawTitle(rawJob: Record<string, unknown>): string {
  * the normalizer uses (`externalId` → `id` → `external_id`). Returns a
  * de-duplicated array of non-empty string IDs for source-presence tracking.
  */
-function collectExternalIds(rawJobs: Array<Record<string, unknown>>): string[] {
+export function collectExternalIds(rawJobs: Array<Record<string, unknown>>, source: string): string[] {
   const seen = new Set<string>();
   for (const raw of rawJobs) {
-    const candidate = raw.externalId ?? raw.id ?? raw.external_id;
-    if (candidate === null || candidate === undefined) continue;
-    const id = String(candidate).trim();
+    // The normalizer's own reader, so a stored id is always found in the
+    // fetch that returned its posting. Exported for tests.
+    const id = rawExternalId(raw, source);
     if (id.length === 0) continue;
     seen.add(id);
   }
@@ -542,132 +544,63 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
       });
     }
 
-    // Hard lifetime cap: 60 days from originalPostedAt. No renewal extensions.
-    // Once a job is set, expiresAt = originalPostedAt + 60d and stays there.
-    // The "renewal" path now ONLY: (a) revives jobs that were unpublished but
-    // are still within their 60-day window, (b) touches updatedAt for freshness
-    // scoring. It does NOT push expiresAt forward.
-    const MAX_JOB_AGE_MS = 60 * 24 * 60 * 60 * 1000;
+    // Every external id this fetch returned. The renewal reads it to tell a
+    // stored job whose own posting is still listed from one the source has
+    // moved to a new id, and the presence check below reads the same list.
+    const fetchedExternalIds = collectExternalIds(rawJobs, source);
+    const fetchedIdSet: ReadonlySet<string> = new Set(fetchedExternalIds);
+
+    // The renewal rules live in renewExistingJob; this closure does the
+    // per-source bookkeeping around it.
     let expiredByAge = 0;
+    let tookOver = 0;
+    let leftUnpublished = 0;
+    let storedSeparately = 0;
 
     const renewJob = async (
       id: string,
       title: string,
-      existingPostedAt?: Date | null,
-      fresh?: Record<string, unknown> | null,
-    ) => {
+      existingPostedAt: Date | null | undefined,
+      fresh: Record<string, unknown> | null,
+      listing: Omit<RenewalListing, 'listedThisRun'>,
+    ): Promise<RenewalOutcome['outcome'] | 'failed'> => {
       try {
-        // Single SELECT — fetches `isManuallyUnpublished` AND all the
-        // fields we'd consider enriching with fresh source data. Avoids
-        // a second roundtrip per renewal at the per-source-loop scale.
-        const existing = await prisma.job.findUnique({
-          where: { id },
-          select: {
-            isManuallyUnpublished: true,
-            isPublished: true,
-            expiresAt: true,
-            description: true,
-            descriptionSummary: true,
-            minSalary: true,
-            maxSalary: true,
-            salaryPeriod: true,
-            salaryRange: true,
-            displaySalary: true,
-            normalizedMinSalary: true,
-            normalizedMaxSalary: true,
-            city: true,
-            state: true,
-            stateCode: true,
-            jobType: true,
-            mode: true,
-            experienceLevel: true,
-            setting: true,
-            population: true,
-            benefits: true,
-            location: true,
-            isRemote: true,
-            isHybrid: true,
-            // The remaining category tagger inputs and the stored tags
-            // (CQ-05: renewalCategoryTags below).
-            title: true,
-            employer: true,
-            newGradFriendly: true,
-            minYearsExperience: true,
-            categoryTags: true,
-          },
-        });
-        if (!existing) return;
-        if (existing.isManuallyUnpublished) {
-          return; // Skip — admin intentionally hid this job
+        const result = await renewExistingJob(id, existingPostedAt, fresh, { ...listing, listedThisRun: fetchedIdSet });
+        if (result.outcome === 'age-expired') {
+          rejectedJobs.push({
+            title: title,
+            employer: null,
+            location: null,
+            applyLink: null,
+            externalId: null,
+            sourceProvider: source,
+            rejectionReason: 'renewal_age_expired',
+            rawData: { jobId: id, ageDays: result.ageDays } as object,
+          });
+          expiredByAge++;
         }
-
-        // Enforce 60-day-from-original cap. Past it → unpublish, do not renew.
-        if (existingPostedAt) {
-          const ageMs = Date.now() - new Date(existingPostedAt).getTime();
-          if (ageMs > MAX_JOB_AGE_MS) {
-            // Skip the write when the row is already unpublished. It would
-            // change nothing but updatedAt, and deindex-expired reads a newer
-            // updatedAt as a removal it has not sent yet, so every ingest run
-            // that still sees the job would resend it to the search engines.
-            if (existing.isPublished) {
-              await prisma.job.update({
-                where: { id },
-                data: { isPublished: false },
-              });
-            }
-            rejectedJobs.push({
-              title: title,
-              employer: null,
-              location: null,
-              applyLink: null,
-              externalId: null,
-              sourceProvider: source,
-              rejectionReason: 'renewal_age_expired',
-              rawData: { jobId: id, ageDays: Math.round(ageMs / (24 * 60 * 60 * 1000)) } as object,
-            });
-            expiredByAge++;
-            return;
+        if (result.outcome === 'left-unpublished') leftUnpublished++;
+        if (result.outcome === 'separate') storedSeparately++;
+        if (result.outcome === 'took-over') {
+          tookOver++;
+          // The job answers to the listed posting from here on, in this run
+          // too: by its id, by its apply link and by its identity.
+          if (listing.externalId) {
+            const entry = { id, originalPostedAt: existingPostedAt ?? null };
+            existingJobsMap.set(listing.externalId, entry);
+            globalExternalIdMap?.set(listing.externalId, { ...entry, sourceProvider: source });
+          }
+          const pathKey = listing.applyLink ? buildApplyUrlPathKey(listing.applyLink) : null;
+          if (globalApplyLinkMap && pathKey && !globalApplyLinkMap.has(pathKey)) globalApplyLinkMap.set(pathKey, id);
+          if (globalTitleKeyMap && listing.title && listing.employer && listing.location) {
+            const idKey = buildJobIdentityKey(listing.title, listing.employer, listing.location);
+            if (!globalTitleKeyMap.has(idKey)) globalTitleKeyMap.set(idKey, id);
           }
         }
-
-        // Past its own expiresAt (an undated job gets 30 days): leave the row
-        // alone. The job page and middleware already answer 410 on the date,
-        // every public listing, sitemap and feed filters on expiresAt too, and
-        // cleanupExpiredJobs (after the ingest cron, and in the twice-daily
-        // cleanup-expired cron) would unpublish a revived row again, so the
-        // revive changes nothing a visitor sees.
-        // It would only move updatedAt, which deindex-expired reads as a new
-        // removal to send.
-        if (existing.expiresAt && existing.expiresAt.getTime() < Date.now()) {
-          return;
-        }
-
-        // Within window: revive if it was unpublished, touch updatedAt.
-        // expiresAt is intentionally NOT extended — the original 60-day
-        // window from originalPostedAt is the absolute clock.
-        // If fresh data is available, merge improvements (longer description,
-        // newly-present salary, missing location parts, etc.) — never
-        // overwrite richer existing data with leaner fresh data.
-        const update: Record<string, unknown> = {
-          isPublished: true,
-          updatedAt: new Date(),
-        };
-        const delta = fresh ? buildRenewalEnrichmentDelta(existing, fresh) : {};
-        Object.assign(update, delta);
-        // contentChangedAt (sitemap lastmod, the page's "Last updated") moves
-        // only when the visible posting changes: a non-empty enrichment delta,
-        // or a row coming back from unpublished. A plain "still listed"
-        // renewal leaves it alone (indexing audit CS-02 / fixSoon 5).
-        if (shouldStampContentChange(delta, existing.isPublished)) {
-          update.contentChangedAt = new Date();
-        }
-        // CQ-05: a delta that rewrites a tagger input re-derives the tags
-        // from the updated row in the same write.
-        const categoryTags = renewalCategoryTags(existing, delta);
-        if (categoryTags) update.categoryTags = categoryTags;
-        await prisma.job.update({ where: { id }, data: update });
+        return result.outcome;
       } catch (e) {
         console.error(`[${source.toUpperCase()}] Failed to renew job ${id}:`, e);
+        return 'failed';
       }
     };
 
@@ -787,11 +720,23 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           continue;
         }
 
+        // The posting the source just listed, as the renewal reads it
+        // (lib/health/renewal-decision.ts has the rules).
+        const incomingListing: Omit<RenewalListing, 'listedThisRun'> = {
+          source,
+          externalId: normalizedJob.externalId || null,
+          applyLink: normalizedJob.applyLink || null,
+          sourceSite: normalizedJob.sourceSite ?? null,
+          title: normalizedJob.title,
+          employer: normalizedJob.employer,
+          location: normalizedJob.location,
+        };
+
         // Strategy 1: Fast in-memory lookup for exact externalId match
         if (normalizedJob.externalId && existingJobsMap.has(normalizedJob.externalId)) {
           // AUTO-RENEWAL: Job exists, so we extend its life instead of ignoring it
           const existing = existingJobsMap.get(normalizedJob.externalId)!;
-          await renewJob(existing.id, normalizedJob.title, existing.originalPostedAt, normalizedJob as Record<string, unknown>);
+          const renewal = await renewJob(existing.id, normalizedJob.title, existing.originalPostedAt, normalizedJob as Record<string, unknown>, incomingListing);
 
           // Track duplicate for analysis
           rejectedJobs.push({
@@ -802,7 +747,7 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
             externalId: normalizedJob.externalId || null,
             sourceProvider: source,
             rejectionReason: 'duplicate_externalid',
-            rawData: { matchedJobId: existing.id } as object,
+            rawData: { matchedJobId: existing.id, renewal } as object,
           });
 
           duplicates++; // Count as duplicate (it IS a duplicate, just renewed)
@@ -827,17 +772,23 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           },
         );
 
-        if (dupCheck.isDuplicate) {
-          // AUTO-RENEWAL: Fuzzy match found, renew the matched job
-          if (dupCheck.matchedJobId) {
-            // Look up the existing job's originalPostedAt for age-cap enforcement
-            const matchedJob = await prisma.job.findUnique({
-              where: { id: dupCheck.matchedJobId },
-              select: { originalPostedAt: true },
-            });
-            await renewJob(dupCheck.matchedJobId, normalizedJob.title, matchedJob?.originalPostedAt, normalizedJob as Record<string, unknown>);
-          }
+        // A match is a duplicate unless the renewal answers 'separate': the
+        // matched job is down, this posting may not bring it back, and it
+        // stands on its own. It then goes on to be stored like any new job.
+        let renewal: string | null = null;
+        if (dupCheck.isDuplicate && dupCheck.matchedJobId) {
+          // AUTO-RENEWAL: renew the matched job. The match can be a
+          // different posting of the same role, which is why the renewal is
+          // told which posting this is.
+          // Look up the existing job's originalPostedAt for age-cap enforcement
+          const matchedJob = await prisma.job.findUnique({
+            where: { id: dupCheck.matchedJobId },
+            select: { originalPostedAt: true },
+          });
+          renewal = await renewJob(dupCheck.matchedJobId, normalizedJob.title, matchedJob?.originalPostedAt, normalizedJob as Record<string, unknown>, incomingListing);
+        }
 
+        if (dupCheck.isDuplicate && renewal !== 'separate') {
           // Track duplicate for analysis
           rejectedJobs.push({
             title: normalizedJob.title,
@@ -847,7 +798,7 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
             externalId: normalizedJob.externalId || null,
             sourceProvider: source,
             rejectionReason: `duplicate_${dupCheck.matchType || 'fuzzy'}`,
-            rawData: { matchedJobId: dupCheck.matchedJobId, matchType: dupCheck.matchType } as object,
+            rawData: { matchedJobId: dupCheck.matchedJobId, matchType: dupCheck.matchType, renewal } as object,
           });
 
           duplicates++;
@@ -1114,6 +1065,9 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
       added,
       duplicates,
       expiredByAge,
+      tookOver,
+      leftUnpublished,
+      storedSeparately,
       errors,
       duplicateRate: `${duplicateRate}%`,
       duration: `${(duration / 1000).toFixed(1)}s`
@@ -1146,7 +1100,6 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
     //   - the source has no historical baseline (returns 0)
     if (!stoppedEarly && fetched > 0) {
       try {
-        const fetchedExternalIds = collectExternalIds(rawJobs);
         if (fetchedExternalIds.length > 0) {
           const recorder = new HealthRecorder(prisma);
 
@@ -1390,6 +1343,220 @@ export function buildRenewalEnrichmentDelta(
   }
 
   return delta;
+}
+
+/**
+ * Hard lifetime cap for an aggregated job: 60 days from originalPostedAt.
+ * No renewal extends it. expiresAt = originalPostedAt + 60d is set once and
+ * stays there.
+ */
+const MAX_JOB_AGE_MS = 60 * 24 * 60 * 60 * 1000;
+
+/**
+ * The posting a source just listed, as the renewal needs it: its identity
+ * (IncomingListing), the title, employer and location the duplicate check
+ * read, and every external id the same fetch returned.
+ */
+export interface RenewalListing extends IncomingListing {
+  title: string;
+  employer: string;
+  location: string;
+  listedThisRun: ReadonlySet<string>;
+}
+
+/** What renewExistingJob did with a stored job a source's posting was matched to. */
+export type RenewalOutcome =
+  | { outcome: 'missing' | 'manually-unpublished' | 'expired' | 'renewed' | 'took-over' | 'left-unpublished' | 'separate' }
+  | { outcome: 'age-expired'; ageDays: number };
+
+/** The check types of a link verdict in job_health_checks (lib/health/recorder.ts). */
+const LINK_VERDICT_CHECK_TYPES: ReadonlySet<string> = new Set(['http_probe', 'greenhouse_api', 'engagement_anomaly']);
+
+/**
+ * What took an unpublished job down, read from the job's own health record.
+ *
+ * Every automated takedown writes a row there with alive=false as it flips
+ * the job: the presence sweep ('source_presence'), the dead-link check and
+ * the engagement check (a link verdict). Nothing probes an unpublished job
+ * afterwards except the recovery re-probes, which republish it when they find
+ * it alive, so the newest row of a job the health checks took down is that
+ * verdict. A job whose newest row says alive, or that has none, was taken
+ * down by something else: a person, a report threshold, a cleanup.
+ *
+ * The audit write is best effort (a failed flush never blocks a takedown), so
+ * a job at or above the sweep's own miss threshold also reads as the sweep's.
+ */
+async function takedownCauseOf(id: string, consecutiveMisses: number): Promise<TakedownCause> {
+  const newest = await prisma.jobHealthCheck.findFirst({
+    where: { jobId: id },
+    orderBy: { checkedAt: 'desc' },
+    select: { checkType: true, alive: true },
+  });
+  if (newest && newest.alive === false) {
+    if (newest.checkType === 'source_presence') return 'presence';
+    if (LINK_VERDICT_CHECK_TYPES.has(newest.checkType)) return 'dead-link';
+  }
+  return consecutiveMisses >= presenceUnpublishMinMisses() ? 'presence' : 'other';
+}
+
+/**
+ * Renew a stored job that a posting in a source feed was matched to.
+ *
+ * The match is either the stored job's own posting (the same source and the
+ * same external id) or a different posting the duplicate check resolved to
+ * it. lib/health/renewal-decision.ts has the rules and why; in short, ingest
+ * brings back only what the health checks took down, a job comes back as it
+ * is only on the source's word about the stored posting itself, and a
+ * different posting takes the job over only when it is the same job exactly.
+ *
+ * Outcomes:
+ *  - 'renewed': the fetch returned the job's own posting (published if it
+ *    was down, and its presence misses cleared), or a published job a
+ *    different posting only refreshed. updatedAt is touched and whatever the
+ *    fresh copy improves is merged (longer description, a salary where there
+ *    was none, missing location parts); richer stored data is never
+ *    overwritten.
+ *  - 'took-over': the job now carries the listed posting's source, external
+ *    id and apply link, is published, and has no presence miss.
+ *  - 'left-unpublished': an unpublished job the posting may not bring back.
+ *    Nothing is written, so the row is not queued for another deindex notice.
+ *    The caller drops the posting as a duplicate.
+ *  - 'separate': an unpublished job the posting may not bring back, and a
+ *    posting that stands on its own. Nothing is written; the caller stores
+ *    the posting as a job of its own.
+ *
+ * Three states are left alone before any of that:
+ *  - A job a person took down (isManuallyUnpublished).
+ *  - A job past the 60 day age cap: unpublished, and only when it is still
+ *    published. Writing isPublished:false to a row that already is would
+ *    change nothing but updatedAt, and deindex-expired reads a newer
+ *    updatedAt as a removal it has not sent yet, so every ingest run that
+ *    still sees the job would resend it to the search engines.
+ *  - A job past its own expiresAt (an undated job gets 30 days). The job
+ *    page and middleware already answer 410 on the date, every public
+ *    listing, sitemap and feed filters on expiresAt too, and
+ *    cleanupExpiredJobs would unpublish a revived row again, so a revive
+ *    changes nothing a visitor sees. It would only move updatedAt, which
+ *    deindex-expired reads as a new removal to send.
+ */
+export async function renewExistingJob(
+  id: string,
+  existingPostedAt: Date | null | undefined,
+  fresh: Record<string, unknown> | null | undefined,
+  listing: RenewalListing,
+  now: Date = new Date(),
+): Promise<RenewalOutcome> {
+  // Single SELECT: the lifecycle and identity fields the rules read AND all
+  // the fields we'd consider enriching with fresh source data. Avoids a
+  // second roundtrip per renewal at the per-source-loop scale.
+  const existing = await prisma.job.findUnique({
+    where: { id },
+    select: {
+      isManuallyUnpublished: true,
+      isPublished: true,
+      expiresAt: true,
+      sourceType: true,
+      sourceProvider: true,
+      externalId: true,
+      healthConsecutiveMissing: true,
+      description: true,
+      descriptionSummary: true,
+      minSalary: true,
+      maxSalary: true,
+      salaryPeriod: true,
+      salaryRange: true,
+      displaySalary: true,
+      normalizedMinSalary: true,
+      normalizedMaxSalary: true,
+      city: true,
+      state: true,
+      stateCode: true,
+      jobType: true,
+      mode: true,
+      experienceLevel: true,
+      setting: true,
+      population: true,
+      benefits: true,
+      location: true,
+      isRemote: true,
+      isHybrid: true,
+      // The remaining category tagger inputs and the stored tags
+      // (CQ-05: renewalCategoryTags below).
+      title: true,
+      employer: true,
+      newGradFriendly: true,
+      minYearsExperience: true,
+      categoryTags: true,
+    },
+  });
+  if (!existing) return { outcome: 'missing' };
+  if (existing.isManuallyUnpublished) {
+    return { outcome: 'manually-unpublished' }; // A person took this down.
+  }
+
+  // Enforce 60-day-from-original cap. Past it → unpublish, do not renew.
+  if (existingPostedAt) {
+    const ageMs = now.getTime() - new Date(existingPostedAt).getTime();
+    if (ageMs > MAX_JOB_AGE_MS) {
+      if (existing.isPublished) {
+        await prisma.job.update({
+          where: { id },
+          data: { isPublished: false },
+        });
+      }
+      return { outcome: 'age-expired', ageDays: Math.round(ageMs / (24 * 60 * 60 * 1000)) };
+    }
+  }
+
+  if (existing.expiresAt && existing.expiresAt.getTime() < now.getTime()) {
+    return { outcome: 'expired' };
+  }
+
+  const consecutiveMisses = existing.healthConsecutiveMissing ?? 0;
+  const action = decideRenewal(
+    {
+      isPublished: existing.isPublished,
+      isAggregated: existing.sourceType === 'external',
+      sourceProvider: existing.sourceProvider,
+      externalId: existing.externalId,
+      healthConsecutiveMissing: consecutiveMisses,
+      // Read only for a job that is down: one indexed read of its health record.
+      downBy: existing.isPublished ? null : await takedownCauseOf(id, consecutiveMisses),
+    },
+    listing,
+    {
+      storedIdListedThisRun:
+        existing.sourceProvider === listing.source &&
+        existing.externalId !== null &&
+        listing.listedThisRun.has(existing.externalId),
+      sameIdentity:
+        buildJobIdentityKey(existing.title, existing.employer, existing.location) ===
+        buildJobIdentityKey(listing.title, listing.employer, listing.location),
+    },
+  );
+  if (action === 'leave') return { outcome: 'left-unpublished' };
+  if (action === 'separate') return { outcome: 'separate' };
+
+  // Within window. expiresAt is intentionally NOT extended: the original
+  // window from originalPostedAt is the absolute clock.
+  const delta = fresh ? buildRenewalEnrichmentDelta(existing, fresh) : {};
+  const update: Record<string, unknown> = {
+    ...renewalWrite(action, listing, now),
+    ...delta,
+  };
+  // contentChangedAt (sitemap lastmod, the page's "Last updated") moves
+  // only when the visible posting changes: a non-empty enrichment delta,
+  // or a row coming back from unpublished. A plain "still listed"
+  // renewal leaves it alone (indexing audit CS-02 / fixSoon 5).
+  if (shouldStampContentChange(delta, existing.isPublished)) {
+    update.contentChangedAt = now;
+  }
+  // CQ-05: a delta that rewrites a tagger input re-derives the tags
+  // from the updated row in the same write.
+  const categoryTags = renewalCategoryTags(existing, delta);
+  if (categoryTags) update.categoryTags = categoryTags;
+  await prisma.job.update({ where: { id }, data: update });
+  return { outcome: action === 'take-over' ? 'took-over' : 'renewed' };
 }
 
 /**

@@ -10,16 +10,17 @@
  *     in the same write (renewalCategoryTags).
  */
 import { describe, it, expect } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import {
     CATEGORY_TAG_INPUT_FIELDS,
+    buildRenewalEnrichmentDelta,
     categoryTagsForRow,
     mergeLlmIntoNormalized,
     renewalCategoryTags,
+    renewExistingJob,
     touchesCategoryTagInputs,
 } from '@/lib/ingestion-service';
 import { normalizeJobWithReason } from '@/lib/job-normalizer';
+import { RENEWAL_NOW, installStoredJob, ownListingOf, storedJob } from '../helpers/renewal';
 
 const BODY =
     'We are seeking a nurse practitioner to provide primary care for adults in our clinic. You will ' +
@@ -139,23 +140,31 @@ describe('renewalCategoryTags', () => {
     });
 });
 
-describe('renewJob writes the re-derived tags in the same update', () => {
-    // renewJob is a closure inside ingestJobs; pin the wiring in the source.
-    const source = fs.readFileSync(path.join(process.cwd(), 'lib', 'ingestion-service.ts'), 'utf8');
-    const start = source.indexOf('const renewJob = async (');
-    const renewJob = source.slice(start, source.indexOf('// Process each job', start));
+describe('the renewal writes the re-derived tags in the same update', () => {
+    // Runs renewExistingJob against a stored job (tests/helpers/renewal.ts).
+    it('a fresh copy that fills a tagger input re-derives the tags, from the row as the write leaves it', async () => {
+        const job = storedJob({ mode: null, isRemote: false, categoryTags: [] });
+        const fresh = { mode: 'Remote' };
+        const delta = buildRenewalEnrichmentDelta(job as never, fresh);
+        const expected = renewalCategoryTags(job as never, delta);
+        // The fixture has to move the tags, or this test proves nothing.
+        expect(touchesCategoryTagInputs(delta)).toBe(true);
+        expect(expected).not.toBeNull();
 
-    it('selects the remaining tagger inputs and the stored tags', () => {
-        for (const field of ['title: true', 'employer: true', 'newGradFriendly: true', 'minYearsExperience: true', 'categoryTags: true']) {
-            expect(renewJob).toContain(field);
-        }
+        const writes = installStoredJob(job);
+        await renewExistingJob(job.id, job.originalPostedAt, fresh, ownListingOf(job), RENEWAL_NOW);
+
+        expect(writes).toHaveLength(1);
+        expect(writes[0].categoryTags).toEqual(expected);
+        expect(writes[0]).toMatchObject(delta);
     });
 
-    it('sets update.categoryTags from renewalCategoryTags before the write', () => {
-        const tagsAt = renewJob.indexOf('renewalCategoryTags(existing, delta)');
-        const writeAt = renewJob.indexOf('await prisma.job.update({ where: { id }, data: update })');
-        expect(tagsAt).toBeGreaterThan(-1);
-        expect(writeAt).toBeGreaterThan(tagsAt);
-        expect(renewJob).toContain('if (categoryTags) update.categoryTags = categoryTags;');
+    it('a renewal that changes no tagger input leaves the tags out of the write', async () => {
+        const job = storedJob();
+        const writes = installStoredJob(job);
+        await renewExistingJob(job.id, job.originalPostedAt, null, ownListingOf(job), RENEWAL_NOW);
+
+        expect(writes).toHaveLength(1);
+        expect('categoryTags' in writes[0]).toBe(false);
     });
 });

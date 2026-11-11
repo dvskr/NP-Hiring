@@ -444,6 +444,13 @@ export async function checkDuplicate(
         employer: true,
         location: true,
       },
+      // Published rows first, then the newest. Unordered, the 20 candidates
+      // were whichever rows the database returned first, usually the oldest.
+      // Unpublished rows stay in the table, so a role that is reposted often
+      // has more than 20 dead copies, and a posting was then matched to a
+      // dead row while a published copy of the same job sat outside the
+      // window.
+      orderBy: [{ isPublished: 'desc' }, { createdAt: 'desc' }],
       take: 20,
     });
 

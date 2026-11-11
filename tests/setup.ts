@@ -24,6 +24,13 @@ vi.mock('@/lib/prisma', () => {
                 updateMany: vi.fn(),
                 deleteMany: vi.fn(),
             },
+            // The ingest renewal reads the newest health row of a job that
+            // is down, to tell what took it down.
+            jobHealthCheck: {
+                findFirst: vi.fn(),
+                findMany: vi.fn(),
+                createMany: vi.fn(),
+            },
             emailLead: {
                 findUnique: vi.fn(),
                 create: vi.fn(),

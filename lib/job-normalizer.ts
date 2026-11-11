@@ -734,6 +734,23 @@ function extractField(rawJob: Record<string, unknown>, fields: string[], default
   return defaultValue;
 }
 
+/**
+ * The external id of a raw posting, as it is stored. Empty when the posting
+ * carries none.
+ *
+ * One reader for the two places that need it: the normalizer, which stores
+ * the id, and the ingest run, which lists the ids a fetch returned
+ * (collectExternalIds in lib/ingestion-service.ts). The presence check and
+ * the renewal look a stored id up in that list, so both sides have to read
+ * the same field and trim it the same way. Read two ways, a posting whose
+ * `externalId` is empty beside a usable `id`, or whose id carries a stray
+ * space, is stored under one string and listed under another, and is then
+ * counted missing from every fetch that returns it.
+ */
+export function rawExternalId(rawJob: Record<string, unknown>, source: string): string {
+  return extractField(rawJob, getConfig(source).externalId, '').trim();
+}
+
 function extractNumericField(rawJob: Record<string, unknown>, fields: string[]): number | null {
   for (const field of fields) {
     if (typeof rawJob[field] === 'number') return rawJob[field] as number;
@@ -1025,7 +1042,7 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
     const location = extractField(rawJob, config.location, config.defaultLocation);
     const description = extractField(rawJob, config.description, '');
     const applyLink = extractField(rawJob, config.applyLink, '');
-    const externalId = extractField(rawJob, config.externalId, '');
+    const externalId = rawExternalId(rawJob, source);
     let salaryMin = extractNumericField(rawJob, config.salaryMin);
     let salaryMax = extractNumericField(rawJob, config.salaryMax);
     const sourceSuppliedPeriod = extractField(rawJob, config.salaryPeriod, '') || null;

@@ -15,6 +15,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { prisma } from '@/lib/prisma';
 import { parseJobLocation } from '@/lib/location-parser';
+import { renewExistingJob } from '@/lib/ingestion-service';
+import { RENEWAL_NOW, SWEPT_BY_PRESENCE, installStoredJob, ownListingOf, storedJob } from '../helpers/renewal';
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -27,12 +29,32 @@ describe('ingestion-service stamps contentChangedAt on create and on real renewa
         expect(create.slice(0, 600)).toContain('contentChangedAt: new Date(),');
     });
 
-    it('renewal stamps through shouldStampContentChange and still writes updatedAt', () => {
-        const start = src.indexOf('const renewJob = async (');
-        const renewJob = src.slice(start, src.indexOf('// Process each job', start));
-        expect(renewJob).toContain('shouldStampContentChange(delta, existing.isPublished)');
-        expect(renewJob).toContain('update.contentChangedAt = new Date();');
-        expect(renewJob).toContain('isPublished: true,\n          updatedAt: new Date(),');
+    // The renewal is run, not read (tests/helpers/renewal.ts).
+    it('a plain "still listed" renewal writes updatedAt and leaves contentChangedAt alone', async () => {
+        const job = storedJob();
+        const writes = installStoredJob(job);
+        await renewExistingJob(job.id, job.originalPostedAt, null, ownListingOf(job), RENEWAL_NOW);
+
+        expect(writes).toHaveLength(1);
+        expect(writes[0].updatedAt).toEqual(RENEWAL_NOW);
+        expect('contentChangedAt' in writes[0]).toBe(false);
+    });
+
+    it('a renewal that improves a rendered field stamps contentChangedAt', async () => {
+        const job = storedJob();
+        const writes = installStoredJob(job);
+        const longer = 'A much longer description of the role, the team, the schedule and the pay. '.repeat(5);
+        await renewExistingJob(job.id, job.originalPostedAt, { description: longer }, ownListingOf(job), RENEWAL_NOW);
+
+        expect(writes[0]).toMatchObject({ description: longer, contentChangedAt: RENEWAL_NOW, updatedAt: RENEWAL_NOW });
+    });
+
+    it('a job coming back from unpublished stamps contentChangedAt', async () => {
+        const job = storedJob({ isPublished: false, healthConsecutiveMissing: 3 });
+        const writes = installStoredJob(job, SWEPT_BY_PRESENCE);
+        await renewExistingJob(job.id, job.originalPostedAt, null, ownListingOf(job), RENEWAL_NOW);
+
+        expect(writes[0]).toMatchObject({ isPublished: true, contentChangedAt: RENEWAL_NOW, updatedAt: RENEWAL_NOW });
     });
 });
 
