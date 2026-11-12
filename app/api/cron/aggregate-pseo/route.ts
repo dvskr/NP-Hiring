@@ -287,9 +287,18 @@ async function groupCategoryByCity(
   const stateNames = [...new Set(cities.map((city) => city.state))]
   // Not annotated: Prisma infers groupBy's result from its argument, and an
   // annotation on the binding makes it type the argument as the array.
+  // One case-insensitive equality per state, ORed. Not `{ in: stateNames,
+  // mode: 'insensitive' }`: Prisma 7 compiles that to LOWER("state") IN (...)
+  // with the names left in their stored case, which matches no row. From
+  // 2026-09-20 to 2026-11-12 that wrote totalJobs = 0 into every category x
+  // city row, so all of those pages were noindexed, left out of the sitemap
+  // and never submitted.
+  const inBatchStates: Prisma.JobWhereInput = {
+    OR: stateNames.map((name) => ({ state: { equals: name, mode: 'insensitive' as const } })),
+  }
   const groups = await prisma.job.groupBy({
     by: ['state', 'city', 'employer', 'title'],
-    where: canonicalBucketWhere({ AND: [category, { state: { in: stateNames, mode: 'insensitive' } }] }, now),
+    where: canonicalBucketWhere({ AND: [category, inBatchStates] }, now),
     _count: { _all: true },
   })
   const buckets = new Map<string, CityEmployerGroup[]>()

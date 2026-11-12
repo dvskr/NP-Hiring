@@ -46,6 +46,56 @@ const INGEST_DEAD_REASONS: ReadonlySet<HealthReason> = new Set([
   'smartrecruiters_api_404',
 ]);
 
+/** How far back a low-completeness rejection counts as "already tried". */
+const LLM_RESCUE_MEMORY_DAYS = 7;
+
+/**
+ * True when the inline LLM rescue should be skipped for a posting: the same
+ * posting, with a description of the same length, was already rejected as
+ * low-completeness inside LLM_RESCUE_MEMORY_DAYS. The rescue ran on that text
+ * then and did not lift it over the floor, so running it again buys nothing.
+ * A posting whose description has changed length is tried again.
+ */
+export function llmRescueAlreadyFailed(
+  previousDescriptionLength: number | undefined,
+  currentDescriptionLength: number,
+): boolean {
+  return previousDescriptionLength !== undefined && previousDescriptionLength === currentDescriptionLength;
+}
+
+/**
+ * externalId → raw description length, for this source's postings rejected as
+ * low-completeness in the last LLM_RESCUE_MEMORY_DAYS (latest rejection wins).
+ *
+ * Why: every ingest run used to send the same hopeless postings back to the
+ * model. Greenhouse chunk 3 fetched in 1 second and then ran 229 seconds,
+ * twice a day, on 12 OnePeak Medical postings (168 identical rejections in a
+ * week); JazzHR did the same with 20. That used the whole ingest budget, so
+ * postings later in the list lost their own rescue and any tenant added to
+ * the chunk would have been cut off unprocessed.
+ *
+ * Returns an empty map on any error: the run then behaves as it always did.
+ */
+async function loadFailedLlmRescues(source: string): Promise<Map<string, number>> {
+  try {
+    const since = new Date(Date.now() - LLM_RESCUE_MEMORY_DAYS * 24 * 60 * 60 * 1000);
+    const rows = await prisma.$queryRaw<Array<{ external_id: string; len: number | null }>>`
+      SELECT DISTINCT ON (external_id)
+             external_id,
+             length(coalesce(raw_data->>'description', raw_data->>'job_description', ''))::int AS len
+        FROM rejected_jobs
+       WHERE source_provider = ${source}
+         AND rejection_reason = 'normalizer_low_completeness'
+         AND external_id IS NOT NULL
+         AND created_at > ${since}
+       ORDER BY external_id, created_at DESC`;
+    return new Map(rows.map((row) => [row.external_id, Number(row.len ?? 0)]));
+  } catch (e) {
+    console.warn(`[Ingest][${source}] could not load earlier LLM-rescue failures; rescuing as usual:`, e);
+    return new Map();
+  }
+}
+
 // ── Global dedup maps (pre-loaded once at start of full ingestion run) ──
 let globalExternalIdMap: Map<string, { id: string; sourceProvider: string; originalPostedAt: Date | null }> | null = null;
 let globalApplyLinkMap: Map<string, string> | null = null; // buildApplyUrlPathKey(applyLink) -> jobId
@@ -544,6 +594,10 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
       });
     }
 
+    // Postings the inline LLM rescue already failed on (see loadFailedLlmRescues).
+    const failedLlmRescues = await loadFailedLlmRescues(source);
+    let llmRescuesSkipped = 0;
+
     // Every external id this fetch returned. The renewal reads it to tell a
     // stored job whose own posting is still listed from one the source has
     // moved to a new id, and the presence check below reads the same list.
@@ -683,8 +737,15 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
         // Time-budgeted to keep us inside the 240s ingest envelope.
         const SOFT_COMPLETENESS_FLOOR = 40;
         const initialScore = computeCompleteness(normalizedJob);
+        // The same text already failed the rescue this week: do not ask again.
+        const rescueAlreadyFailed =
+          initialScore < SOFT_COMPLETENESS_FLOOR &&
+          !!normalizedJob.externalId &&
+          llmRescueAlreadyFailed(failedLlmRescues.get(normalizedJob.externalId), rawDesc.length);
+        if (rescueAlreadyFailed) llmRescuesSkipped++;
         if (
           initialScore < SOFT_COMPLETENESS_FLOOR &&
+          !rescueAlreadyFailed &&
           (normalizedJob.description?.length ?? 0) >= 200 &&
           // Don't burn LLM time when the orchestrator's clock is almost up.
           Date.now() - startTime < MAX_INGESTION_MS - 30_000
@@ -1068,6 +1129,7 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
       tookOver,
       leftUnpublished,
       storedSeparately,
+      llmRescuesSkipped,
       errors,
       duplicateRate: `${duplicateRate}%`,
       duration: `${(duration / 1000).toFixed(1)}s`

@@ -34,7 +34,7 @@
  * where the listings come from, and how often they refresh.
  */
 export const BOARD_DESCRIPTION =
-    "A job board for nurse practitioners, with listings from employers' own career sites and direct employer posts, updated daily.";
+    "A job board for nurse practitioners, with listings from employer career sites, USAJOBS, Adzuna and direct employer posts, updated daily.";
 
 /**
  * Uppercase micro-tagline rendered under the brand name in the email
@@ -60,7 +60,7 @@ export const EMAIL_HEADER_TAGLINE = 'Nurse Practitioner Careers';
  * does (see the RULE in the header).
  */
 export const EMAIL_DEFAULT_PREHEADER =
-    "NP Hiring: nurse practitioner jobs from employers' own career sites, updated daily";
+    "NP Hiring: nurse practitioner jobs from employer career sites, USAJOBS and Adzuna, updated daily";
 
 /**
  * Curated niche hashtag set appended to every Facebook/Instagram caption
@@ -121,12 +121,13 @@ export const OG_HOMEPAGE_SUBHEADLINE =
  * (indexing audit M-08). /about and /for-programs render the measured
  * figure from lib/states-covered.ts instead.
  *
- * '8 ATS Sources' is the scheduled source count in config/cron-schedule.ts
- * (every registry source not in DISABLED_SOURCES). Change it with that file.
+ * '10 Job Sources' is the scheduled source count in config/cron-schedule.ts
+ * (every registry source not in DISABLED_SOURCES): 8 employer ATS feeds,
+ * USAJOBS and Adzuna. Change it with that file.
  */
 export const OG_HOMEPAGE_STATS = [
     { number: 'Free', label: 'For Job Seekers' },
-    { number: '8', label: 'ATS Sources' },
+    { number: '10', label: 'Job Sources' },
     { number: 'Daily', label: 'Job Updates' },
 ] as const;
 

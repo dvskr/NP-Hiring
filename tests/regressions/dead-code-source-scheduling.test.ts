@@ -1,8 +1,9 @@
 /**
  * Static regression guards for B9 — ingestion-source scheduling documentation.
  *
- * The registry carries 13 sources but this board schedules only the 8 ATS
- * sources; the other 5 are intentionally disabled via DISABLED_SOURCES in
+ * The registry carries 13 sources and this board schedules 10 of them (the 8
+ * ATS sources, plus usajobs and adzuna since 2026-11-12); the other 3 are
+ * intentionally disabled via DISABLED_SOURCES in
  * config/cron-schedule.ts (enforced both directions by
  * tests/aggregators/cron-schedule-drift.test.ts). The doc drift being pinned
  * here:
@@ -42,16 +43,14 @@ describe('B9 — registry docs route scheduling through config/cron-schedule.ts'
     expect(src).toContain('DISABLED_SOURCES');
   });
 
-  it('the five unscheduled sources stay explicitly listed as disabled', () => {
+  it('the three unscheduled sources stay explicitly listed as disabled', () => {
     const src = read('config/cron-schedule.ts');
     const disabledBlock = src.match(
       /DISABLED_SOURCES[\s\S]*?=\s*\[([\s\S]*?)\];/,
     );
     expect(disabledBlock, 'DISABLED_SOURCES array not found').not.toBeNull();
     for (const source of [
-      'adzuna',
       'fantastic-jobs-db',
-      'usajobs',
       'doccafe',
       'healthcareercenter',
     ]) {

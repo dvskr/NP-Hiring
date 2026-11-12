@@ -405,7 +405,7 @@ export default function HomepageHero({ indexableLandingSlugs = [] }: HomepageHer
                     owner's "nothing under the headline but the search bar". */}
                 <m.p variants={fadeUp} className="ns-intro">
                     {brand.name} lists {brand.niche.descriptor} and other APRN openings from
-                    employers&apos; own career sites and direct employer posts, updated daily.
+                    employer career sites, USAJOBS, Adzuna and direct employer posts, updated daily.
                     Free for job seekers.
                 </m.p>
             </m.div>

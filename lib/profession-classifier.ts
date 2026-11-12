@@ -102,8 +102,11 @@ export function isNpServableClass(professionClass: string | null | undefined): b
 // ─── Title vocabulary ────────────────────────────────────────────────────────
 
 /** NP / APRN-NP credential tokens in the title (word-boundary). */
+// 'advanced practice registered nurse' is APRN spelled out: without it
+// 'Advanced Practice Registered Nurse/Physician Assistant - Adult Psychiatry'
+// (Halifax Health) skipped rule 4 and landed in pa_only.
 const NP_TITLE_RE =
-    /nurse\s+practitioner|\b(?:np|fnp|agnp|agpcnp|agacnp|pnp|acpnp|cpnp|nnp|whnp|acnp|enp|onp|pmhnp|fpmhnp|aprn|arnp)\b|np-c\b|np-bc\b/i;
+    /nurse\s+practitioner|advanced\s+practice\s+registered\s+nurse|\b(?:np|fnp|agnp|agpcnp|agacnp|pnp|acpnp|cpnp|nnp|whnp|acnp|enp|onp|pmhnp|fpmhnp|aprn|arnp)\b|np-c\b|np-bc\b/i;
 
 /** Dual-role "NP or PA" title shapes — np_eligible by design. */
 const DUAL_ROLE_RE =

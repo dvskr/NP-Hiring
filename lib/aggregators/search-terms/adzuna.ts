@@ -1,43 +1,36 @@
 /**
  * Adzuna search terms.
  *
- * ⛔ SOURCE DISABLED ON THIS BOARD — NP Hiring runs ATS-only ingestion
- * (see DISABLED_SOURCES in config/cron-schedule.ts). No cron schedules
- * adzuna; the adapter and this file remain in the engine for other
- * boards. The terms below are the inherited PMHNP set and are inert
- * here — refresh them for the niche if a board re-enables the source.
+ * Scheduled on this board since 2026-11-12, once a day (config/cron-schedule.ts).
+ * Until then the source was disabled and this file held the donor board's
+ * single-specialty list.
  *
- * Each entry becomes one search query against the Adzuna API. Adzuna's
- * search supports keywords + location filters but each call is a single
- * literal phrase, so each variant is its own paginated query.
+ * Each entry is one TITLE search (Adzuna's `title_only` parameter): every
+ * word must appear in the job title. A title search returns far fewer
+ * off-target postings than a keyword search, so the specialty variants
+ * ("Family Nurse Practitioner" and so on) are not listed: the first term
+ * already returns them. The abbreviations are listed because a title can
+ * carry only the abbreviation.
  *
- * Adding a term costs ~20 extra API calls per cron run (max 20 pages
- * each at 500ms throttle = ~10s wall-time per term).
+ * ORDER MATTERS. A run makes at most ADZUNA_MAX_CALLS_PER_RUN calls
+ * (lib/aggregators/adzuna.ts), newest postings first, up to
+ * ADZUNA_MAX_PAGES_PER_QUERY pages per term. The broadest term comes
+ * first, then the small terms, and the anesthesia terms last because they
+ * are large and are the ones to cut when the call budget runs out.
  *
  * Edit this file to add or remove a search term. Adapter unchanged.
  */
 
 export const ADZUNA_SEARCH_QUERIES: readonly string[] = [
+    'Nurse Practitioner',
+    'APRN',
+    'ARNP',
     'PMHNP',
-    'Psychiatric Nurse Practitioner',
-    'Psychiatric Mental Health Nurse Practitioner',
-    'Behavioral Health Nurse Practitioner',
-    'Psychiatric APRN',
-    'Psych NP',
-    'Mental Health NP',
-    'PMHNP-BC',
-    'Psychiatric prescriber',
-    'Telepsychiatry Nurse Practitioner',
-    'Nurse Practitioner Psychiatry',
-    'Psychiatric ARNP',
-    'Psychiatry Nurse Practitioner',
-    'Psychiatric Mental Health NP-BC',
-    'New Grad PMHNP',
-    'Remote PMHNP',
-    'Telehealth Psychiatric Nurse Practitioner',
-    'Locum Tenens PMHNP',
-    'Travel Psychiatric Nurse Practitioner',
-    'Correctional Psychiatric Nurse Practitioner',
-    'Inpatient Psychiatric Nurse Practitioner',
-    'Outpatient PMHNP',
+    'FNP',
+    'Advanced Practice Provider',
+    'Advanced Practice Registered Nurse',
+    'Nurse Midwife',
+    'Clinical Nurse Specialist',
+    'CRNA',
+    'Nurse Anesthetist',
 ];

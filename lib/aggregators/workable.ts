@@ -2,14 +2,30 @@
  * Workable adapter — public v2 board API.
  *
  * Endpoint:
- *   POST https://apply.workable.com/api/v2/accounts/{slug}/jobs?limit=100&offset=0
- *   body: {"query":"","department":[],"location":[],"remote":[]}
+ *   POST https://apply.workable.com/api/v2/accounts/{slug}/jobs
+ *   body: {"query":"","department":[],"location":[],"remote":[],"token":"<nextPage>"}
  *
- * Response: { total: number, results: WorkableJob[] }
+ * Response: { total: number, results: WorkableJob[], nextPage?: string }
+ *
+ * PAGING. The endpoint returns 10 postings a page and ignores `limit` and
+ * `offset`; the next page is asked for by sending the previous response's
+ * `nextPage` back as `token` in the body. Until 2026-11-12 this adapter
+ * paged with limit/offset and stopped when a page came back short of 100,
+ * so it read the first 10 postings of every board and nothing else
+ * (Greenlife Healthcare Staffing: 958 postings, 56 NP titles, nearly all
+ * past page one).
+ *
+ * A board is read in two steps: the newest WORKABLE_BROWSE_PAGES pages with
+ * no query, which is the whole of a small board, and then, only when the
+ * board has more than that, one keyword search per WORKABLE_SEARCH_QUERIES
+ * entry. Paging a 900-posting board end to end is what got a probe's
+ * address blocked for 24 hours (HTTP 429, Retry-After 86400) on
+ * 2026-11-12, so every loop here is capped and the first 429 ends the
+ * whole run (see rateLimited).
  *
  * Public, unauthenticated. Each `result` has only metadata — full
  * description requires a second call to
- *   POST https://apply.workable.com/api/v2/accounts/{slug}/jobs/{shortcode}
+ *   https://apply.workable.com/api/v2/accounts/{slug}/jobs/{shortcode}
  * which returns the full job-detail blob. We fetch detail only for
  * postings that pass the title-only relevance pre-filter.
  *
@@ -50,14 +66,52 @@ interface WorkableJob {
 interface WorkableListResponse {
     total?: number;
     results?: WorkableJob[];
+    /** Opaque cursor for the next page; absent on the last one. */
+    nextPage?: string;
 }
 
 const TIME_BUDGET_MS = 180_000; // under orchestrator MAX_INGESTION_MS (240s) so the insert loop has headroom
 const TENANT_GAP_MS = 400;
-const DETAIL_FETCH_GAP_MS = 200;
+const DETAIL_FETCH_GAP_MS = 300;
 const BATCH_SIZE = 3;
-const PAGE_SIZE = 100;
-const MAX_PAGES = 5;
+
+/** Pause between list pages of one tenant. */
+const PAGE_GAP_MS = 500;
+/** Unfiltered pages read first (10 postings each, newest first). */
+export const WORKABLE_BROWSE_PAGES = 3;
+/** Pages read per keyword search on a board larger than the browse pages. */
+export const WORKABLE_MAX_PAGES_PER_QUERY = 8;
+/** Ceiling on list requests to one tenant in one run, browse and search together. */
+export const WORKABLE_MAX_LIST_REQUESTS_PER_TENANT = 30;
+/**
+ * Ceiling on detail fetches for one tenant in one run. Postings arrive
+ * newest first, so a board with more relevant postings than this lists its
+ * newest ones. Kept low on purpose: the request volume Workable tolerates
+ * from one address is not known (the 2026-11-12 block came from a probe,
+ * not from this adapter), so raise it only after watching real runs.
+ */
+export const WORKABLE_MAX_DETAILS_PER_TENANT = 60;
+
+/**
+ * Keyword searches for boards too large to browse. Workable searches the
+ * posting text, so the role terms reach the specialty titles as well.
+ */
+export const WORKABLE_SEARCH_QUERIES: readonly string[] = [
+    'nurse practitioner',
+    'APRN',
+    'advanced practice',
+    'nurse anesthetist',
+    'CRNA',
+    'midwife',
+    'clinical nurse specialist',
+];
+
+/**
+ * Set by the first HTTP 429 of a run and cleared when the next run starts.
+ * Once set, no further request is sent to Workable in this run: its block
+ * lasts a day, and pressing on only extends it.
+ */
+let rateLimited = false;
 
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -118,6 +172,7 @@ async function fetchDetail(slug: string, shortcode: string): Promise<WorkableJob
         const t = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(t);
+        if (res.status === 429) rateLimited = true;
         if (!res.ok) {
             // H6 fix: log non-OK detail fetches so a tenant returning 403/429
             // doesn't silently drop every job's description (jobs would still
@@ -134,35 +189,88 @@ async function fetchDetail(slug: string, shortcode: string): Promise<WorkableJob
     }
 }
 
-async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<RawJobData[]> {
-    const out: RawJobData[] = [];
-    const seen = new Set<string>();
-    try {
-        for (let page = 0; page < MAX_PAGES; page++) {
-            const offset = page * PAGE_SIZE;
-            const url = `https://apply.workable.com/api/v2/accounts/${tenant.slug}/jobs?limit=${PAGE_SIZE}&offset=${offset}`;
+/**
+ * Every posting of one board the two-step read reaches, de-duplicated by
+ * shortcode (see the PAGING note in the file header). Exported for tests.
+ */
+export async function collectWorkablePostings(
+    tenant: { slug: string; name: string },
+    pageGapMs: number = PAGE_GAP_MS,
+): Promise<WorkableJob[]> {
+    const byCode = new Map<string, WorkableJob>();
+    let requests = 0;
+
+    /** Pages one query; true when the board has more pages than were read. */
+    const run = async (query: string, maxPages: number): Promise<boolean> => {
+        let token: string | undefined;
+        for (let page = 0; page < maxPages; page++) {
+            if (rateLimited || requests >= WORKABLE_MAX_LIST_REQUESTS_PER_TENANT) return true;
+            if (requests > 0) await sleep(pageGapMs);
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 10_000);
-            const res = await fetch(url, {
-                method: 'POST',
-                signal: controller.signal,
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                body: JSON.stringify({ query: '', department: [], location: [], remote: [] }),
-            });
-            clearTimeout(timeout);
+            let res: Response;
+            try {
+                requests++;
+                res = await fetch(`https://apply.workable.com/api/v2/accounts/${tenant.slug}/jobs`, {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                    body: JSON.stringify({
+                        query,
+                        department: [],
+                        location: [],
+                        remote: [],
+                        ...(token ? { token } : {}),
+                    }),
+                });
+            } finally {
+                clearTimeout(timeout);
+            }
 
+            if (res.status === 429) {
+                rateLimited = true;
+                console.warn(`[Workable] ${tenant.name} (${tenant.slug}): HTTP 429, ending this run's Workable requests`);
+                return false;
+            }
             if (!res.ok) {
                 console.warn(`[Workable] ${tenant.name} (${tenant.slug}): HTTP ${res.status}`);
-                break;
+                return false;
             }
             const data = (await res.json()) as WorkableListResponse;
             const results = data.results ?? [];
-            if (results.length === 0) break;
+            for (const posting of results) {
+                if (posting.shortcode && !byCode.has(posting.shortcode)) byCode.set(posting.shortcode, posting);
+            }
+            token = data.nextPage;
+            if (!token || results.length === 0) return false;
+        }
+        return true;
+    };
 
-            for (const j of results) {
-                if (seen.has(j.shortcode)) continue;
-                seen.add(j.shortcode);
-                if (!isRelevantJob(j.title ?? '', '')) continue;
+    const boardHasMore = await run('', WORKABLE_BROWSE_PAGES);
+    if (boardHasMore) {
+        for (const query of WORKABLE_SEARCH_QUERIES) {
+            if (rateLimited || requests >= WORKABLE_MAX_LIST_REQUESTS_PER_TENANT) break;
+            await run(query, WORKABLE_MAX_PAGES_PER_QUERY);
+        }
+    }
+    return [...byCode.values()];
+}
+
+async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<RawJobData[]> {
+    const out: RawJobData[] = [];
+    try {
+        const postings = await collectWorkablePostings(tenant);
+        const relevant = postings.filter((posting) => isRelevantJob(posting.title ?? '', ''));
+        if (relevant.length > WORKABLE_MAX_DETAILS_PER_TENANT) {
+            console.warn(
+                `[Workable] ${tenant.name}: ${relevant.length} relevant postings, ` +
+                `reading the first ${WORKABLE_MAX_DETAILS_PER_TENANT}`,
+            );
+        }
+        {
+            for (const j of relevant.slice(0, WORKABLE_MAX_DETAILS_PER_TENANT)) {
+                if (rateLimited) break;
 
                 const detail = await fetchDetail(tenant.slug, j.shortcode);
                 const description = htmlToReadableText(
@@ -203,10 +311,8 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
 
                 await sleep(DETAIL_FETCH_GAP_MS);
             }
-
-            if (results.length < PAGE_SIZE) break;
         }
-        console.log(`[Workable] ${tenant.name}: ${out.length} PMHNP-relevant jobs`);
+        console.log(`[Workable] ${tenant.name}: ${out.length} relevant of ${postings.length} read`);
     } catch (err) {
         console.warn(`[Workable] ${tenant.name} (${tenant.slug}): error -`, err);
     }
@@ -215,10 +321,15 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
 
 export async function fetchWorkableJobs(): Promise<RawJobData[]> {
     const startTime = Date.now();
+    rateLimited = false;
     console.log(`[Workable] Scanning ${WORKABLE_TENANTS.length} tenant career boards...`);
 
     const allJobs: RawJobData[] = [];
     for (let i = 0; i < WORKABLE_TENANTS.length; i += BATCH_SIZE) {
+        if (rateLimited) {
+            console.warn(`[Workable] Rate limited: stopping at tenant ${i}/${WORKABLE_TENANTS.length}`);
+            break;
+        }
         if (Date.now() - startTime >= TIME_BUDGET_MS) {
             console.warn(`[Workable] Time budget exhausted at tenant ${i}/${WORKABLE_TENANTS.length}`);
             break;
@@ -231,7 +342,7 @@ export async function fetchWorkableJobs(): Promise<RawJobData[]> {
         if (i + BATCH_SIZE < WORKABLE_TENANTS.length) await sleep(TENANT_GAP_MS);
     }
 
-    console.log(`[Workable] Total: ${allJobs.length} PMHNP-relevant jobs`);
+    console.log(`[Workable] Total: ${allJobs.length} relevant jobs`);
     return allJobs;
 }
 

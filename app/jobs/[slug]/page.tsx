@@ -1305,8 +1305,19 @@ export default async function JobPage({ params }: JobPageProps) {
                   Last updated: {new Date(contentChangedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                 </p>
               )}
+              {/* Adzuna's API terms ask for each listing to carry the word
+                  "Adzuna" linked to its site; other sources stay plain text. */}
               {job.sourceType === 'external' && job.sourceProvider && (
-                <p className="mt-1">Posted via {job.sourceProvider}</p>
+                job.sourceProvider === 'adzuna' ? (
+                  <p className="mt-1">
+                    Posted via{' '}
+                    <a href="https://www.adzuna.com" target="_blank" rel="nofollow noopener noreferrer" className="underline">
+                      Adzuna
+                    </a>
+                  </p>
+                ) : (
+                  <p className="mt-1">Posted via {job.sourceProvider}</p>
+                )
               )}
             </div>
           </div>

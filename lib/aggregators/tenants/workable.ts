@@ -36,4 +36,10 @@ export const WORKABLE_TENANTS: readonly WorkableTenant[] = [
     { slug: 'atria-health', name: 'Atria Physician Practice' },
     { slug: 'lifemdcareers', name: 'LifeMD' },
     { slug: 'firefly-health', name: 'Firefly Health' },
+
+    // === Added 2026-11-12: NP-wide expansion, each verified live ===
+    { slug: 'commonwealth-medical-services', name: 'Commonwealth Medical Services' }, // 139 NP / 890 total — NP count is a lower bound (473 of 890 read)
+    { slug: 'integrated-wound-care-1', name: 'Integrated Wound Care' },               // 33 NP / 34 total
+    { slug: 'summit-healthcare-staffing', name: 'Summit Healthcare Staffing' },       // 4 NP / 25 total
+    { slug: 'denis-development', name: 'Denis Development' },                         // 4 NP / 22 total
 ];

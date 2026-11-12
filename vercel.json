@@ -1,132 +1,228 @@
 {
   "crons": [
     {
+      "path": "/api/cron/ingest?source=usajobs",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=adzuna",
+      "schedule": "5 9 * * *"
+    },
+    {
       "path": "/api/cron/ingest?source=greenhouse&chunk=0",
-      "schedule": "10 10 * * *"
+      "schedule": "12 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=1",
-      "schedule": "15 10 * * *"
+      "schedule": "17 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=2",
-      "schedule": "20 10 * * *"
+      "schedule": "22 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=3",
-      "schedule": "25 10 * * *"
+      "schedule": "27 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=lever",
-      "schedule": "50 10 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=0",
-      "schedule": "5 11 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=1",
-      "schedule": "10 11 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=2",
-      "schedule": "15 11 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=3",
-      "schedule": "20 11 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=4",
-      "schedule": "25 11 * * *"
+      "schedule": "32 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=smartrecruiters",
-      "schedule": "35 11 * * *"
+      "schedule": "37 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=ashby",
-      "schedule": "40 11 * * *"
+      "schedule": "42 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=bamboohr",
-      "schedule": "50 11 * * *"
+      "schedule": "47 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=jazzhr",
-      "schedule": "55 11 * * *"
+      "schedule": "52 9 * * *"
     },
     {
       "path": "/api/cron/ingest?source=workable",
-      "schedule": "0 12 * * *"
+      "schedule": "57 9 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=0",
+      "schedule": "2 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=1",
+      "schedule": "7 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=2",
+      "schedule": "12 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=3",
+      "schedule": "17 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=4",
+      "schedule": "22 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=5",
+      "schedule": "27 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=6",
+      "schedule": "32 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=7",
+      "schedule": "37 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=8",
+      "schedule": "42 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=9",
+      "schedule": "47 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=10",
+      "schedule": "52 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=11",
+      "schedule": "57 10 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=12",
+      "schedule": "2 11 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=13",
+      "schedule": "7 11 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=14",
+      "schedule": "12 11 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=15",
+      "schedule": "17 11 * * *"
     },
     {
       "path": "/api/cron/ingest-wave-summary",
-      "schedule": "50 12 * * *"
+      "schedule": "30 11 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=0",
-      "schedule": "10 23 * * *"
+      "schedule": "2 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=1",
-      "schedule": "15 23 * * *"
+      "schedule": "7 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=2",
-      "schedule": "20 23 * * *"
+      "schedule": "12 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=3",
-      "schedule": "25 23 * * *"
+      "schedule": "17 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=lever",
-      "schedule": "50 23 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=0",
-      "schedule": "5 0 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=1",
-      "schedule": "10 0 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=2",
-      "schedule": "15 0 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=3",
-      "schedule": "20 0 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=workday&chunk=4",
-      "schedule": "25 0 * * *"
+      "schedule": "22 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=smartrecruiters",
-      "schedule": "35 0 * * *"
+      "schedule": "27 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=ashby",
-      "schedule": "40 0 * * *"
+      "schedule": "32 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=bamboohr",
-      "schedule": "45 0 * * *"
+      "schedule": "37 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=jazzhr",
-      "schedule": "48 0 * * *"
+      "schedule": "42 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=workable",
+      "schedule": "47 23 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=0",
+      "schedule": "2 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=1",
+      "schedule": "7 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=2",
+      "schedule": "12 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=3",
+      "schedule": "17 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=4",
+      "schedule": "22 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=5",
+      "schedule": "27 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=6",
+      "schedule": "32 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=7",
+      "schedule": "37 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=8",
+      "schedule": "42 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=9",
+      "schedule": "47 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=10",
       "schedule": "52 0 * * *"
     },
     {
+      "path": "/api/cron/ingest?source=workday&chunk=11",
+      "schedule": "57 0 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=12",
+      "schedule": "2 1 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=13",
+      "schedule": "7 1 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=14",
+      "schedule": "12 1 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?source=workday&chunk=15",
+      "schedule": "17 1 * * *"
+    },
+    {
       "path": "/api/cron/ingest-wave-summary",
-      "schedule": "55 0 * * *"
+      "schedule": "30 1 * * *"
     },
     {
       "path": "/api/cron/batch/morning",

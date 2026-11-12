@@ -119,11 +119,13 @@ describe('recordChunkAndMaybeAggregate', () => {
 
     it('aggregates and runs presence check when all chunks arrive', async () => {
         const { prisma, queryRaw } = fakePrisma();
-        // workday has 5 chunks. Pre-populate 4 chunks so this call (chunk 4) closes the cycle.
+        // Pre-populate every workday chunk but the last so this call closes the cycle.
+        const total = CHUNKED_SOURCE_TOTAL_CHUNKS.workday;
+        const last = total - 1;
         const initial = new Map<string, string>();
         const now = new Date('2026-04-29T11:30:00Z').getTime();
         const runKey = buildRunKey('workday', now);
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < last; i++) {
             initial.set(
                 `${runKey}:chunk:${i}`,
                 JSON.stringify({
@@ -138,16 +140,16 @@ describe('recordChunkAndMaybeAggregate', () => {
         const r = await recordChunkAndMaybeAggregate({
             prisma,
             source: 'workday',
-            chunkIndex: 4,
-            fetchedExternalIds: ['id-4-a', 'id-4-b'],
+            chunkIndex: last,
+            fetchedExternalIds: [`id-${last}-a`, `id-${last}-b`],
             fetchedCount: 2,
             redis,
             nowMs: now,
         });
 
         expect(r.outcome).toBe('aggregated_and_checked');
-        expect(r.chunksSeen).toBe(5);
-        expect(r.totalChunks).toBe(5);
+        expect(r.chunksSeen).toBe(total);
+        expect(r.totalChunks).toBe(total);
         expect(r.presenceResult).not.toBeNull();
         // Presence check should have been invoked → loadHistoricalAvgFetched
         // does a $queryRaw call.

@@ -44,7 +44,7 @@ const FAQ_ITEMS = [
     // P0 #5 still applies here: no hardcoded company or posting count
     // (config/niche/copy.ts RULE: evergreen claims only; live counters come
     // from lib/site-stats.ts).
-    { q: 'How often are jobs updated?', a: 'New listings are added every day from employer career pages and the applicant tracking systems those employers use. Every listing shows the date it was posted.' },
+    { q: 'How often are jobs updated?', a: 'New listings are added every day from employer career pages and the applicant tracking systems those employers use, from USAJOBS for federal roles, and from Adzuna. Every listing shows the date it was posted.' },
     { q: 'How do I post a job as an employer?', a: 'Create an employer account, then post from the Post a Job page. Our pricing page lists what a posting costs and everything it includes, and you can renew or archive it later from the employer dashboard.' },
     { q: 'Can I get job alerts by email?', a: 'Yes. Sign up for free, set your filters for location, job type and salary range, then choose a daily or a weekly digest. We email the matching jobs on whichever schedule you pick, and every message can unsubscribe you.' },
     { q: 'How do I delete my account?', a: `Go to Settings, open Account and choose Delete Account. Your account closes immediately, and your records are erased after a grace period, so you can still reverse a deletion made by mistake. You can also email ${brand.email.support} and we will do it for you.` },

@@ -34,4 +34,14 @@ export const SMARTRECRUITERS_TENANTS: readonly SmartRecruitersTenant[] = [
     { slug: 'vericare', name: 'Vericare' },                                                // 1/2 live
     { slug: 'covista', name: 'Covista' },                                                  // 302 total / 0 PMHNP at probe (35 historical) — monitor
     { slug: 'northwesternmedicine', name: 'Northwestern Memorial Healthcare' },            // 1213 total / 0 PMHNP at probe (31 historical) — monitor
+
+    // === Added 2026-11-12: NP-wide expansion, each verified live ===
+    { slug: 'integrateddermatology', name: 'Integrated Dermatology' },                         // 40 NP / 113 total
+    { slug: 'munsonhealthcare1', name: 'Munson Healthcare' },                                  // 23 NP / 650 total
+    { slug: 'stanfordmedicinechildrenshealth', name: 'Stanford Medicine Children\'s Health' }, // 22 NP / 140 total
+    { slug: 'saludfamilyhealthcenters', name: 'Salud Family Health' },                         // 5 NP / 24 total
+    { slug: 'cityofnewyork', name: 'City of New York' },                                       // 2 NP / 1712 total — low yield on a large board
+    { slug: 'cityandcountyofsanfrancisco1', name: 'City and County of San Francisco' },        // 1 NP / 161 total
+    { slug: 'daretocaretoollc', name: 'Dare to Care Too' },                                    // 1 NP / 7 total
+    { slug: 'usphysicaltherapy2', name: 'U.S. Physical Therapy' },                             // 1 NP / 628 total — low yield on a large board
 ];

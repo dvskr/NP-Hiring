@@ -54,7 +54,7 @@ const RUN_BUCKET_MS = 2 * 60 * 60 * 1000;
  *  fired — the Redis keys just TTL'd out every cycle. */
 export const CHUNKED_SOURCE_TOTAL_CHUNKS: Readonly<Record<string, number>> = {
     greenhouse: 4,
-    workday: 5,
+    workday: 16,
 };
 
 let redisInstance: Redis | null = null;

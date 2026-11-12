@@ -155,6 +155,17 @@ describe('classifyProfession — recon-verified cases', () => {
     });
 });
 
+describe('classifyProfession — APRN spelled out in a dual-role title (2026-11-12)', () => {
+    it('Advanced Practice Registered Nurse/Physician Assistant is np_eligible, not pa_only', () => {
+        const r = classifyProfession('Advanced Practice Registered Nurse/Physician Assistant- Adult Psychiatry', '');
+        expect(r.professionClass).toBe('np_eligible');
+    });
+
+    it('a bare Physician Assistant title is still pa_only', () => {
+        expect(classifyProfession('Physician Assistant - Adult Psychiatry', '').professionClass).toBe('pa_only');
+    });
+});
+
 describe('isNpServableClass — NULL passes (pre-backfill safety)', () => {
     it('lets NULL/undefined (unclassified) rows keep current behavior', () => {
         expect(isNpServableClass(null)).toBe(true);

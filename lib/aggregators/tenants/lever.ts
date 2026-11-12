@@ -15,8 +15,6 @@ export const LEVER_SLUGS: readonly string[] = [
     // === VERIFIED — Have PMHNP jobs ===
     'lifestance',          // LifeStance Health — 100+ PMHNP jobs (BIGGEST SOURCE)
     'synapticure',         // Synapticure — 1 PMHNP job
-    'ucsf',                // UCSF — 1 PMHNP job
-    'talkiatry',           // Talkiatry — 59 PMHNP jobs
     'includedhealth',      // Included Health — 6 PMHNP jobs
     'lyrahealth',          // Lyra Health — 1 PMHNP job
 
@@ -69,10 +67,32 @@ export const LEVER_SLUGS: readonly string[] = [
     'headlight.health',    // Headlight — 13 PMHNP / 30 total at probe
     'willowhealth.com',    // Willow Health — 5 PMHNP / 9 total
     'ultrahealthproviders',// Ultra Health — 3 PMHNP / 15 total
+
+    // === Added 2026-11-12: NP-wide expansion, each verified live ===
+    'vohra',           // 37 NP / 1492 total
+    'circadiahealth',  // 36 NP / 67 total
+    'porter',          // 12 NP / 21 total
+    'JourneyClinical', // 7 NP / 11 total — slug is case-sensitive
+    'meds',            // 4 NP / 24 total
+    'florence',        // 4 NP / 18 total
+    'ppsat',           // 4 NP / 15 total
+    'ppnne',           // 4 NP / 16 total
+    'pphp',            // 4 NP / 22 total
+    'ppgny',           // 3 NP / 24 total
+    'ppcentralcoast',  // 2 NP / 7 total
+    'ppgreatplains',   // 2 NP / 13 total
+    'ppmontana',       // 1 NP / 4 total
+    'simonmed',        // 3 NP / 260 total
+    'everlywell',      // 2 NP / 16 total
+    'paradigm-health', // 1 NP / 11 total
+    'ahschc',          // 1 NP / 33 total
+    'sanabenefits',    // 1 NP / 7 total
+    'reviverx',        // 1 NP / 2 total
+    'quilted-health',  // 1 NP / 1 total
+    'vida',            // 1 NP / 18 total
 ];
 
 export const LEVER_NAMES: Record<string, string> = {
-    'talkiatry': 'Talkiatry',
     'includedhealth': 'Included Health',
     'lyrahealth': 'Lyra Health',
     'carbonhealth': 'Carbon Health',
@@ -120,4 +140,27 @@ export const LEVER_NAMES: Record<string, string> = {
     'headlight.health': 'Headlight',
     'willowhealth.com': 'Willow Health',
     'ultrahealthproviders': 'Ultra Health',
+
+    // === Added 2026-11-12: NP-wide expansion, each verified live ===
+    'vohra': 'Vohra Wound Physicians',
+    'circadiahealth': 'Circadia Health',
+    'porter': 'Porter Cares',
+    'JourneyClinical': 'Journey Clinical',
+    'meds': 'Meds',
+    'florence': 'Florence Health',
+    'ppsat': 'Planned Parenthood South Atlantic',
+    'ppnne': 'Planned Parenthood of Northern New England',
+    'pphp': 'Planned Parenthood Hudson Peconic',
+    'ppgny': 'Planned Parenthood of Greater New York',
+    'ppcentralcoast': 'Planned Parenthood California Central Coast',
+    'ppgreatplains': 'Planned Parenthood Great Plains',
+    'ppmontana': 'Planned Parenthood of Montana',
+    'simonmed': 'SimonMed Imaging',
+    'everlywell': 'Everlywell',
+    'paradigm-health': 'Paradigm Health',
+    'ahschc': 'Asian Health Services',
+    'sanabenefits': 'Sana Benefits',
+    'reviverx': 'ReviveRX / Ways2Well',
+    'quilted-health': 'Quilted Health',
+    'vida': 'Vida Health',
 };

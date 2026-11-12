@@ -42,6 +42,15 @@ export const BAMBOOHR_TENANTS: readonly BambooHrTenant[] = [
     { slug: 'navabehavioralhealth', name: 'Nava Behavioral Health' },             // 2
     { slug: 'tpcwellness', name: 'TPC Wellness' },                                // 1
     { slug: 'nursepractitioneroncall', name: 'Nurse Practitioner On Call' },      // 1
-    { slug: 'kindermind', name: 'Kindermind' },                                   // 1
     { slug: 'epichealthpartners', name: 'Epic Health Partners' },                 // 1
+
+    // === Added 2026-11-12: NP-wide expansion, each verified live ===
+    { slug: 'ascensionrecovery', name: 'Ascension Recovery Services' },             // 6 NP / 62 total
+    { slug: 'tribecapediatrics', name: 'Tribeca Pediatrics' },                      // 4 NP / 11 total
+    { slug: 'bvhc', name: 'One Health' },                                           // 3 NP / 19 total
+    { slug: 'arkoshealth', name: 'Arkos Health' },                                  // 2 NP / 4 total
+    { slug: 'svt', name: 'Seldovia Village Tribe' },                                // 2 NP / 10 total
+    { slug: 'flchealth', name: 'Finger Lakes Community Health' },                   // 1 NP / 16 total
+    { slug: 'fortunafamilymedicineincorporated', name: 'Fortuna Family Medicine' }, // 1 NP / 3 total
+    { slug: 'mwa', name: 'Mountain West Anesthesia' },                              // 1 NP / 2 total
 ];

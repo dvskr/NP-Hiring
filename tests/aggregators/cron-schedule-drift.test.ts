@@ -8,8 +8,8 @@
  *   - the config (or a *_TOTAL_CHUNKS constant it derives from) changed
  *     without running `npm run crons:generate`,
  *   - a registry source is neither scheduled nor declared in
- *     DISABLED_SOURCES (this board is ATS-only; disabled non-ATS
- *     sources must be listed explicitly in config/cron-schedule.ts),
+ *     DISABLED_SOURCES (sources this board does not run must be listed
+ *     explicitly in config/cron-schedule.ts),
  *   - a cron references a source the registry doesn't know.
  *
  * Complements tests/aggregators/chunk-count.test.ts, which checks the
@@ -35,7 +35,8 @@ import { WORKDAY_TOTAL_CHUNKS } from '@/lib/aggregators/workday';
 // B106 (2026-07-18): dropped 40 → 22 when 21 housekeeping crons were
 // consolidated into 3 batch dispatcher entries (see CRON_BATCHES in
 // config/cron-schedule.ts) to fit Vercel Pro's 40-cron limit.
-const NON_CHUNKED_CRON_COUNT = 22;
+// 2026-11-12: 22 → 24 when usajobs and adzuna were scheduled once a day.
+const NON_CHUNKED_CRON_COUNT = 24;
 
 const INGEST_PREFIX = '/api/cron/ingest?';
 

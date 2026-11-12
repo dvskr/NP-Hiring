@@ -12,7 +12,7 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
   current, machine-readable snapshot of the newest active listings, fetch
   https://nphiring.com/feed.xml (RSS 2.0) or the sitemap index at
   https://nphiring.com/api/sitemaps/index
-- 8 ATS sources (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable), refreshed daily
+- 10 job sources, refreshed daily: 8 employer applicant tracking systems (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable), USAJOBS for federal postings, and Adzuna
 - 45 category hubs across seven taxonomy axes: setting, job type, specialty, APRN role, experience level, employer type, and population served
 - State, city and category pages are generated from live listings and published where their data passes the site's quality gates. A page below its gate answers noindex or is not published, so the sitemap index is the authoritative list of indexable pages
 - State salary pages show a state median only where enough postings with disclosed pay, from enough employers, support one

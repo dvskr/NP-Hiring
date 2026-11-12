@@ -525,6 +525,10 @@ export const DUAL_ROLE_NEGATIVE_KEYWORDS = [
  */
 export const APRN_TITLE_MARKERS = [
     'advanced practice registered nurse',
+    // ARNP spelled out (Florida, Washington, Iowa): 'Certified Psychiatric
+    // Advanced Registered Nurse Practitioner' (Centerstone) was rejected on
+    // the bare 'registered nurse' negative.
+    'advanced registered nurse practitioner',
     'advanced practice nurse',
     'aprn',
     'arnp',

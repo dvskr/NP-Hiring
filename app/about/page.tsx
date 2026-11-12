@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     // and description (audit 09 M-22). Spelled-out fields ensure the share
     // card matches the page identity.
     title: `About ${brand.name}: A ${brand.niche.long} Job Board`,
-    description: `Built for the ${brand.niche.short} community: ${brand.niche.descriptor} jobs from employers' own career sites, free for job seekers and transparent for employers.`,
+    description: `Built for the ${brand.niche.short} community: ${brand.niche.descriptor} jobs from employer career sites, USAJOBS and Adzuna, free for job seekers and transparent for employers.`,
     type: 'website',
     url: `${brand.baseUrl}/about`,
     siteName: brand.name,

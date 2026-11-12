@@ -66,6 +66,9 @@ interface SmartRecruitersListResponse {
 }
 
 
+/** Detail requests in flight per company. */
+const DETAIL_CONCURRENCY = 4;
+
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -147,33 +150,46 @@ async function fetchCompanyJobs(company: { slug: string; name: string }): Promis
 
             if (postings.length === 0) break;
 
-            for (const posting of postings) {
-                    // Title-only relevance check BEFORE fetching the full
-                    // description. Saves 1 HTTP call per non-PMHNP posting.
-                    // The orchestrator runs the same gate against title +
-                    // description; this just moves the title check earlier
-                    // so we don't waste API time on irrelevant titles.
-                    if (!isRelevantJob(posting.name, '')) continue;
+            // Title-only relevance check BEFORE fetching the full
+            // description. Saves 1 HTTP call per irrelevant posting. The
+            // orchestrator runs the same gate against title + description;
+            // this just moves the title check earlier so we don't waste API
+            // time on irrelevant titles.
+            const relevant = postings.filter((posting) => isRelevantJob(posting.name, ''));
 
-                    const description = await fetchJobDescription(company.slug, posting.id);
+            // Descriptions for the page, DETAIL_CONCURRENCY at a time, kept in
+            // posting order. One at a time with a pause took 205 seconds for
+            // the 19-company list on 2026-11-12, past the point where the
+            // ingest loop has any of its 240 seconds left.
+            const descriptions: string[] = new Array(relevant.length).fill('');
+            let cursor = 0;
+            const worker = async (): Promise<void> => {
+                while (true) {
+                    const idx = cursor++;
+                    if (idx >= relevant.length) return;
+                    descriptions[idx] = await fetchJobDescription(company.slug, relevant[idx].id);
+                }
+            };
+            await Promise.all(
+                Array.from({ length: Math.min(DETAIL_CONCURRENCY, relevant.length) }, () => worker()),
+            );
 
-                    const location = smartRecruitersLocation(posting);
-                    const country = smartRecruitersCountry(posting);
+            relevant.forEach((posting, idx) => {
+                const location = smartRecruitersLocation(posting);
+                const country = smartRecruitersCountry(posting);
 
-                    allJobs.push({
-                        externalId: `smartrecruiters-${company.slug}-${posting.id}`,
-                        title: posting.name,
-                        company: company.name,
-                        location,
-                        description,
-                        applyLink: `https://jobs.smartrecruiters.com/${company.slug}/${posting.id}`,
-                        postedDate: posting.releasedDate || undefined,
-                        jobType: posting.typeOfEmployment?.label || undefined,
-                        ...(country ? { country } : {}),
-                    });
-
-                    await sleep(100); // Rate limit between detail requests
-            }
+                allJobs.push({
+                    externalId: `smartrecruiters-${company.slug}-${posting.id}`,
+                    title: posting.name,
+                    company: company.name,
+                    location,
+                    description: descriptions[idx],
+                    applyLink: `https://jobs.smartrecruiters.com/${company.slug}/${posting.id}`,
+                    postedDate: posting.releasedDate || undefined,
+                    jobType: posting.typeOfEmployment?.label || undefined,
+                    ...(country ? { country } : {}),
+                });
+            });
 
             offset += postings.length;
 

@@ -19,19 +19,25 @@
  * 2. ingest-wave-summary coupling: WINDOW_MINUTES in
  *    app/api/cron/ingest-wave-summary/route.ts (currently 200) must
  *    cover the span from a wave's first ingest entry to its summary
- *    entry. Wave A spans 10:10 → 12:50 (160m); Wave B spans
- *    23:10 → 00:55 (105m) — both inside the window. If a wave
+ *    entry. Wave A spans 09:00 → 11:30 (150m); Wave B spans
+ *    23:02 → 01:30 (148m) — both inside the window. If a wave
  *    stretches (more chunks, later offsets), re-check before
  *    regenerating.
- * 3. Vercel plan cron limits: the Pro plan's documented cap is 40 cron
- *    jobs (a previous version of this comment claimed 64 — that number
- *    was never in Vercel's docs). This board schedules exactly 40
- *    entries: 32 ingestion-wave entries + 8 housekeeping entries, after
- *    the B106 consolidation folded 21 low-frequency housekeeping crons
- *    into 3 sequential batch dispatchers (see CRON_BATCHES below).
- *    There is NO headroom left — before adding a new cron, either add
- *    it as a target inside an existing batch (cadence permitting) or
- *    move it to an Inngest schedule (lib/inngest/functions/).
+ * 3. Vercel plan cron limits: 100 cron jobs per project on every plan,
+ *    with no per-team cap, since 2026-01-20 (vercel.com/changelog/
+ *    cron-jobs-now-support-100-per-project-on-every-plan; checked
+ *    2026-11-12). The 40 this file used to cite was the old Pro per-team
+ *    cap. This board schedules 64 entries: 56 ingestion-wave entries + 8
+ *    housekeeping entries. The B106 consolidation (21 low-frequency
+ *    housekeeping crons folded into 3 sequential batch dispatchers, see
+ *    CRON_BATCHES below) stays: it serializes their database load.
+ * 4. Chunked-presence coupling: every chunk of a chunked source must
+ *    START inside one 2-hour bucket (RUN_BUCKET_MS in
+ *    lib/health/chunked-presence.ts; buckets begin on even UTC hours), or
+ *    the cross-chunk presence check never sees a complete cycle.
+ *    chunkedIngest() throws at generation time if a wave breaks this.
+ * 5. The twice-daily midday batch (12:10, 18:10) runs cleanup-expired and
+ *    the health sweep; Wave A is finished well before the 12:10 run.
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -46,15 +52,26 @@ export interface CronEntry {
 
 /**
  * Sources that exist in the engine's registry but are NOT scheduled on
- * this board. Per-board decision: NP Hiring runs ATS-ONLY ingestion, a
- * strategy ported from the donor NP board (its 2026-05-23 "ATS-only
- * ingestion" decision): employer-authoritative feeds, fewer duplicates,
- * healthier apply links, and zero external API quota cost. The adapters
- * remain in the engine for other boards — only the scheduling is
- * per-board.
+ * this board. The adapters remain in the engine for other boards — only
+ * the scheduling is per-board.
  *
- * The 8 scheduled ATS sources: greenhouse, lever, workday,
- * smartrecruiters, ashby, bamboohr, jazzhr, workable.
+ * History: the board launched ATS-only (a strategy ported from the donor
+ * NP board's 2026-05-23 decision: employer-authoritative feeds, fewer
+ * duplicates, healthier apply links, no API quota). On 2026-11-12 the
+ * owner added two sources to widen coverage:
+ *   usajobs  the federal government's own postings (VA, IHS, BoP, DoD)
+ *   adzuna   a job search engine; needs ADZUNA_APP_ID / ADZUNA_APP_KEY
+ * Both return nothing, and log that, until their keys are set in Vercel.
+ *
+ * The 10 scheduled sources: greenhouse, lever, workday, smartrecruiters,
+ * ashby, bamboohr, jazzhr, workable (employer ATS feeds, twice a day),
+ * usajobs and adzuna (once a day).
+ *
+ * Changing this list changes what the site may say about where its
+ * listings come from: BOARD_DESCRIPTION, EMAIL_DEFAULT_PREHEADER and
+ * OG_HOMEPAGE_STATS in config/niche/copy.ts, the homepage hero, /about,
+ * /contact and public/llms.txt. tests/regressions/indexing-site-copy.test.ts
+ * ties the source count on the share card to this file.
  *
  * (jooble / jsearch / ats-jobs-db were also rejected by the donor but
  * are not present in this template's registry, so they are not listed.)
@@ -63,9 +80,7 @@ export interface CronEntry {
  * source is either scheduled below or listed here — both directions.
  */
 export const DISABLED_SOURCES: readonly JobSource[] = [
-    'adzuna',              // job aggregator (scraped, not employer-controlled)
     'fantastic-jobs-db',   // RapidAPI aggregator (paid 20k/mo quota)
-    'usajobs',             // federal job board
     'doccafe',             // healthcare niche board, not employer-controlled
     'healthcareercenter',  // healthcare niche board, not employer-controlled
 ];
@@ -87,83 +102,106 @@ function ingest(source: JobSource, minute: number, hours: string): CronEntry {
     };
 }
 
+/** Length of a chunked-presence bucket (RUN_BUCKET_MS in lib/health/chunked-presence.ts). */
+const PRESENCE_BUCKET_HOURS = 2;
+
 /**
  * Chunked ingest expansion: one entry per chunk index, staggered
- * CHUNK_STAGGER_MINUTES apart starting at `firstChunkMinute`. Changing
- * an aggregator's *_TOTAL_CHUNKS constant regenerates the right number
- * of entries here.
+ * CHUNK_STAGGER_MINUTES apart starting at `startHour:startMinute` UTC and
+ * running on into the following hours. Changing an aggregator's
+ * *_TOTAL_CHUNKS constant regenerates the right number of entries here.
+ *
+ * Throws when the chunks would not all start in one chunked-presence
+ * bucket (fork note 4): the cross-chunk presence check would then never
+ * see a complete cycle and would silently stop running.
  */
 function chunkedIngest(
     source: JobSource,
     totalChunks: number,
-    firstChunkMinute: number,
-    hours: string,
+    startHour: number,
+    startMinute: number,
 ): CronEntry[] {
-    return Array.from({ length: totalChunks }, (_, chunk) => {
-        const minute = firstChunkMinute + chunk * CHUNK_STAGGER_MINUTES;
-        if (minute > 59) {
-            throw new Error(
-                `chunkedIngest(${source}): chunk ${chunk} lands at minute ${minute} — ` +
-                'restructure the wave (this would spill past the hour and break staggering)',
-            );
-        }
+    const entries = Array.from({ length: totalChunks }, (_, chunk) => {
+        const offset = startMinute + chunk * CHUNK_STAGGER_MINUTES;
+        const hour = (startHour + Math.floor(offset / 60)) % 24;
+        const minute = offset % 60;
         return {
             path: `${INGEST_PATH}?source=${source}&chunk=${chunk}`,
-            schedule: `${minute} ${hours} * * *`,
+            schedule: `${minute} ${hour} * * *`,
+            bucket: Math.floor((startHour * 60 + offset) / (PRESENCE_BUCKET_HOURS * 60)),
         };
     });
+    if (new Set(entries.map((entry) => entry.bucket)).size > 1) {
+        throw new Error(
+            `chunkedIngest(${source}): ${totalChunks} chunks from ${startHour}:${String(startMinute).padStart(2, '0')} ` +
+            `cross a ${PRESENCE_BUCKET_HOURS}-hour presence bucket boundary — start earlier in the bucket, ` +
+            'shorten the stagger, or widen RUN_BUCKET_MS',
+        );
+    }
+    return entries.map(({ path, schedule }) => ({ path, schedule }));
 }
 
 /**
- * Wave A — morning ingestion wave (10:10–12:00 UTC), ATS sources only.
- * Minute/hour offsets mirror the donor NP board's Inngest schedule
- * (its lib/inngest/functions/scheduled-crons.ts) as the reference
- * cadence: twice-daily waves, 5-minute staggers, chunked
- * greenhouse/workday. This board stays on the vercel.json mechanism.
+ * Wave A — morning ingestion wave (09:00–11:20 UTC).
+ *
+ *   09:00, 09:05   usajobs, adzuna (once a day; each may use its full 240s)
+ *   09:12–09:27    greenhouse, 4 chunks
+ *   09:32–09:57    lever and the five small ATS sources
+ *   10:02–11:17    workday, 16 chunks (one presence bucket, 10:00–12:00)
+ *
+ * Workday goes last and off the round minutes: it is the longest block,
+ * and :02/:07/… keeps its chunks clear of the crons that fire at :00 and
+ * :15 (refresh-site-stats, aggregate-pseo, historical-deindex).
+ * Twice-daily waves and 5-minute staggers follow the donor NP board's
+ * cadence. This board stays on the vercel.json mechanism.
  */
 const WAVE_A_INGESTION: readonly CronEntry[] = [
-    ...chunkedIngest('greenhouse', GREENHOUSE_TOTAL_CHUNKS, 10, '10'),
-    ingest('lever', 50, '10'),
-    ...chunkedIngest('workday', WORKDAY_TOTAL_CHUNKS, 5, '11'),
-    ingest('smartrecruiters', 35, '11'),
-    ingest('ashby', 40, '11'),
-    ingest('bamboohr', 50, '11'),
-    ingest('jazzhr', 55, '11'),
-    ingest('workable', 0, '12'),
+    ingest('usajobs', 0, '9'),
+    ingest('adzuna', 5, '9'),
+    ...chunkedIngest('greenhouse', GREENHOUSE_TOTAL_CHUNKS, 9, 12),
+    ingest('lever', 32, '9'),
+    ingest('smartrecruiters', 37, '9'),
+    ingest('ashby', 42, '9'),
+    ingest('bamboohr', 47, '9'),
+    ingest('jazzhr', 52, '9'),
+    ingest('workable', 57, '9'),
+    ...chunkedIngest('workday', WORKDAY_TOTAL_CHUNKS, 10, 2),
 ];
 
 /**
- * Wave A summary — 12:50 covers 10:10 → 12:50 (see WINDOW_MINUTES,
- * note 2). The donor also fired a 17:55 summary left over from a
- * 16:00 repeat wave neither board schedules — dropped here as dead
- * weight (a summary with no ingest runs in its window no-ops).
+ * Wave A summary — 11:30 covers 09:00 → 11:30 (see WINDOW_MINUTES,
+ * note 2).
  */
 const WAVE_A_SUMMARIES: readonly CronEntry[] = [
-    { path: '/api/cron/ingest-wave-summary', schedule: '50 12 * * *' },
+    { path: '/api/cron/ingest-wave-summary', schedule: '30 11 * * *' },
 ];
 
 /**
- * Wave B — nightly wave (23:10–00:55 UTC). Mirrors Wave A across the
- * midnight boundary. The tail offsets (45/48/52) are hand-compressed to
- * finish before the 00:55 summary — irregular by design (donor
- * cadence), kept literal.
+ * Wave B — nightly wave (23:02–01:20 UTC). Mirrors Wave A across the
+ * midnight boundary, without the once-a-day sources.
+ *
+ *   23:02–23:17    greenhouse, 4 chunks (presence bucket 22:00–24:00)
+ *   23:22–23:47    lever and the five small ATS sources
+ *   00:02–01:17    workday, 16 chunks (presence bucket 00:00–02:00)
  */
 const WAVE_B_INGESTION: readonly CronEntry[] = [
-    ...chunkedIngest('greenhouse', GREENHOUSE_TOTAL_CHUNKS, 10, '23'),
-    ingest('lever', 50, '23'),
-    ...chunkedIngest('workday', WORKDAY_TOTAL_CHUNKS, 5, '0'),
-    ingest('smartrecruiters', 35, '0'),
-    ingest('ashby', 40, '0'),
-    ingest('bamboohr', 45, '0'),
-    ingest('jazzhr', 48, '0'),
-    ingest('workable', 52, '0'),
-    { path: '/api/cron/ingest-wave-summary', schedule: '55 0 * * *' },
+    ...chunkedIngest('greenhouse', GREENHOUSE_TOTAL_CHUNKS, 23, 2),
+    ingest('lever', 22, '23'),
+    ingest('smartrecruiters', 27, '23'),
+    ingest('ashby', 32, '23'),
+    ingest('bamboohr', 37, '23'),
+    ingest('jazzhr', 42, '23'),
+    ingest('workable', 47, '23'),
+    ...chunkedIngest('workday', WORKDAY_TOTAL_CHUNKS, 0, 2),
+    { path: '/api/cron/ingest-wave-summary', schedule: '30 1 * * *' },
 ];
 
 // ─── Housekeeping batches (B106 cron-limit consolidation) ────────────
 //
-// Vercel Pro caps a project at 40 cron entries; the previous schedule had
-// 58. The 21 low-frequency housekeeping crons below are consolidated into
+// Written when the cron limit was believed to be 40 (it is 100, see fork
+// note 3); the previous schedule had 58. The consolidation is kept for its
+// serialized database load, not for the count.
+// The 21 low-frequency housekeeping crons below are consolidated into
 // 3 sequential batch dispatchers served by app/api/cron/batch/[group].
 // The dispatcher invokes each target route over HTTP (with the CRON_SECRET
 // bearer) ONE AT A TIME, so DB-load characteristics stay serialized —

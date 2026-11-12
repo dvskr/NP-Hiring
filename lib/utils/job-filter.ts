@@ -136,8 +136,23 @@ function isPsychEmployer(employer: string | null | undefined): boolean {
     );
 }
 
+/**
+ * A spelled-out NP role and a spelled-out PA role in the same title, in
+ * either order and with any separator: 'Nurse Practitioner/Physician
+ * Assistant', 'Nurse Practitioner (NP)/Physician Assistant (PA)',
+ * 'Physician Assistant Nurse Practitioner Per Diem', 'Nurse Practitioner or
+ * Physician Associate'. DUAL_ROLE_PATTERNS lists the spaced separators only
+ * ('nurse practitioner / physician assistant'), so the unspaced slash that
+ * hospital ATS titles use fell through to the bare 'physician' negative and
+ * the posting was rejected as a wrong role (2026-11: 49 distinct open NP
+ * jobs a week at Mass General Brigham, Corewell, UMass Memorial, Ennoble).
+ */
+const SPELLED_NP_ROLE_RE = /nurse\s+practitioner|advanced\s+practice\s+registered\s+nurse|\b(?:aprn|arnp)\b/;
+const SPELLED_PA_ROLE_RE = /physician\s+(?:assistant|associate)/;
+
 function isDualRoleTitle(titleLower: string): boolean {
-    return DUAL_ROLE_PATTERNS.some((p) => titleLower.includes(p));
+    if (DUAL_ROLE_PATTERNS.some((p) => titleLower.includes(p))) return true;
+    return SPELLED_NP_ROLE_RE.test(titleLower) && SPELLED_PA_ROLE_RE.test(titleLower);
 }
 
 function hasOffSpecialtyTitle(titleLower: string): boolean {

@@ -52,7 +52,7 @@ describe('P3 #12 — llms files carry no frozen inventory claim', () => {
 
     it('llms.txt still states the sourcing + salary honesty policy', () => {
         const src = read('public/llms.txt');
-        expect(src).toMatch(/8 ATS sources/);
+        expect(src).toMatch(/10 job sources, refreshed daily: 8 employer applicant tracking systems/);
         expect(src).toMatch(/we do not estimate or fabricate pay/i);
     });
 });

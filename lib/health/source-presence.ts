@@ -302,22 +302,23 @@ async function findRepresentativeJobId(
 // per-chunk cron entries (chunked-presence sums all chunks into one cycle).
 // Derived directly from vercel.json: a drifted value miscalibrates the presence
 // guard (too-low baseline → false skipped_partial_fetch; too-high → missed
-// orphan detection). Verified 2026-07-02 against the ATS-only rebuild of
-// config/cron-schedule.ts: all 8 ATS sources run 2 cycles/day (Wave A + Wave B).
+// orphan detection). Verified 2026-11-12 against config/cron-schedule.ts: the
+// 8 ATS sources run 2 cycles/day (Wave A + Wave B); usajobs and adzuna run 1.
 const RUNS_PER_DAY: Readonly<Record<string, number>> = {
     // ── ATS sources (scheduled twice daily; see config/cron-schedule.ts) ──
     greenhouse: 2,       // 4 chunks × 2 cycles, presence math uses cycles
-    lever: 2,            // runs at 10:50 and 23:50
-    workday: 2,          // 5 chunks × 2 cycles, presence math uses cycles
-    smartrecruiters: 2,  // runs at 11:35 and 00:35
-    ashby: 2,            // runs at 11:40 and 00:40
-    bamboohr: 2,         // runs at 11:50 and 00:45
-    jazzhr: 2,           // runs at 11:55 and 00:48
-    workable: 2,         // runs at 12:00 and 00:52
+    lever: 2,            // runs at 09:32 and 23:22
+    workday: 2,          // 16 chunks × 2 cycles, presence math uses cycles
+    smartrecruiters: 2,  // runs at 09:37 and 23:27
+    ashby: 2,            // runs at 09:42 and 23:32
+    bamboohr: 2,         // runs at 09:47 and 23:37
+    jazzhr: 2,           // runs at 09:52 and 23:42
+    workable: 2,         // runs at 09:57 and 23:47
+    // ── Once-a-day sources (added 2026-11-12) ──
+    usajobs: 1,          // runs at 09:00
+    adzuna: 1,           // runs at 09:05
     // ── Disabled on this board (DISABLED_SOURCES in config/cron-schedule.ts);
     //    values kept as template defaults for boards that re-enable them ──
-    adzuna: 3,
-    usajobs: 1,
     'fantastic-jobs-db': 2,
     doccafe: 2,
     healthcareercenter: 2,

@@ -6,8 +6,8 @@
  *   B104 — jobs has the (isPublished, expiresAt) composite index the
  *          cleanup/sitemap/listing queries rely on.
  *   B105 — the cron watchdog Inngest function is registered on the serve route.
- *   B106 — vercel.json stays within Vercel Pro's 40-cron limit, and every
- *          batch-dispatcher target resolves to a real cron route.
+ *   B106 — vercel.json stays within Vercel's 100-crons-per-project limit,
+ *          and every batch-dispatcher target resolves to a real cron route.
  *   B107 — instrumentation.ts wires validateEnvironmentAtStartup().
  *   B109 — EmailSend carries the unique dedupeKey the webhook email guard needs.
  *   B110 — purge-soft-deleted prunes processed_stripe_events and rolls
@@ -20,18 +20,23 @@ import * as path from 'node:path';
 
 import { CRON_ENTRIES, CRON_BATCHES } from '@/config/cron-schedule';
 
-/** Vercel Pro plan documented cron-job cap. */
-const VERCEL_PRO_CRON_LIMIT = 40;
+/**
+ * Vercel's cron-job cap: 100 per project on every plan since 2026-01-20,
+ * with the per-team caps removed (vercel.com/changelog/
+ * cron-jobs-now-support-100-per-project-on-every-plan, checked 2026-11-12).
+ * This test used to pin 40, the Pro per-team cap that change retired.
+ */
+const VERCEL_CRON_LIMIT = 100;
 
 function read(relPath: string): string {
   return fs.readFileSync(path.join(process.cwd(), relPath), 'utf-8');
 }
 
 describe('B106 — cron-limit headroom', () => {
-  it('vercel.json schedules at most 40 cron entries (Vercel Pro cap)', () => {
+  it('vercel.json schedules at most 100 cron entries (Vercel per-project cap)', () => {
     const vercel = JSON.parse(read('vercel.json')) as { crons: unknown[] };
-    expect(vercel.crons.length).toBeLessThanOrEqual(VERCEL_PRO_CRON_LIMIT);
-    expect(CRON_ENTRIES.length).toBeLessThanOrEqual(VERCEL_PRO_CRON_LIMIT);
+    expect(vercel.crons.length).toBeLessThanOrEqual(VERCEL_CRON_LIMIT);
+    expect(CRON_ENTRIES.length).toBeLessThanOrEqual(VERCEL_CRON_LIMIT);
   });
 
   it('every batch-dispatcher target resolves to an existing cron route file', () => {

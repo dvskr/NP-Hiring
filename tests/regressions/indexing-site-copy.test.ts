@@ -184,7 +184,7 @@ describe('M-08: no hardcoded "50 States Covered"', () => {
     it('the default share card stats make no coverage claim', () => {
         expect(OG_HOMEPAGE_STATS).toEqual([
             { number: 'Free', label: 'For Job Seekers' },
-            { number: '8', label: 'ATS Sources' },
+            { number: '10', label: 'Job Sources' },
             { number: 'Daily', label: 'Job Updates' },
         ]);
         for (const stat of OG_HOMEPAGE_STATS) {
@@ -192,13 +192,13 @@ describe('M-08: no hardcoded "50 States Covered"', () => {
         }
     });
 
-    it('"8 ATS Sources" matches the sources the ingest crons schedule', async () => {
+    it('"10 Job Sources" matches the sources the ingest crons schedule', async () => {
         const { CRON_ENTRIES } = await import('@/config/cron-schedule');
         const scheduled = new Set(
             CRON_ENTRIES.filter((entry) => entry.path.startsWith('/api/cron/ingest?'))
                 .map((entry) => new URL(entry.path, brand.baseUrl).searchParams.get('source')),
         );
-        const stat = OG_HOMEPAGE_STATS.find((entry) => entry.label === 'ATS Sources');
+        const stat = OG_HOMEPAGE_STATS.find((entry) => entry.label === 'Job Sources');
         expect(stat?.number).toBe(String(scheduled.size));
     }, COLD_IMPORT_TIMEOUT_MS);
 
@@ -286,7 +286,7 @@ describe('L-03: the homepage names the brand and the topic', () => {
     it('a plain sentence says what the site lists and where it comes from', () => {
         const hero = code(read('components/HomepageHero.tsx'));
         const intro = hero.slice(hero.indexOf('className="ns-intro"'));
-        expect(intro).toContain("career sites and direct employer posts, updated daily");
+        expect(intro).toContain('employer career sites, USAJOBS, Adzuna and direct employer posts, updated daily');
         expect(intro).toContain('Free for job seekers.');
         expect(intro.slice(0, 400)).not.toMatch(DASHES);
     });

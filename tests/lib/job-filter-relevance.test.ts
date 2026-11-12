@@ -297,3 +297,62 @@ describe('classifyRelevance — donor-vs-engine divergences (documented, intenti
         expect(r.reason).toBe('relevance_no_keyword');
     });
 });
+
+// 2026-11-12: hospital ATS titles join the two roles with an unspaced slash,
+// parentheses, or no separator at all. DUAL_ROLE_PATTERNS lists the spaced
+// forms only, so these were rejected on the bare 'physician' negative: 49
+// distinct open NP jobs a week across Mass General Brigham, Corewell Health,
+// UMass Memorial, Ennoble Care, One Medical and Gundersen.
+describe('classifyRelevance — spelled-out dual-role titles with any separator', () => {
+    const passing = [
+        'Nurse Practitioner/Physician Assistant, Cardiology',
+        'Nurse Practitioner/ Physician Assistant (Boston, MA)',
+        'Physician Assistant/Nurse Practitioner (C), CVICU - Dearborn/Regional',
+        'Nurse Practitioner (NP)/Physician Assistant (PA) Family Medicine, La Crescent',
+        'Nurse Practitioner or Physician Associate/Physician Assistant - New Grad Program: Pearl',
+        'Nurse Practitioner or Physician Associate - Elmwood Primary Care',
+        'Provider (Physician Assistant/Nurse Practitioner) - East Region',
+        'Physician Assistant Nurse Practitioner Faulkner Per Diem',
+        'Advanced Practice Registered Nurse/Physician Assistant- Adult Psychiatry',
+    ];
+    for (const title of passing) {
+        it(`passes: ${title}`, () => {
+            expect(classifyRelevance(title, '', '')).toEqual({ passes: true, reason: 'pass' });
+        });
+    }
+
+    it('still rejects a PA-only title', () => {
+        expect(classifyRelevance('Physician Assistant - Orthopedics', '', '').passes).toBe(false);
+    });
+
+    it('still rejects a PA-only title whose description mentions nurse practitioners', () => {
+        const r = classifyRelevance(
+            'Physician Assistant - Orthopedic Surgery',
+            'You will work alongside physicians and nurse practitioners in a busy clinic.',
+            '',
+        );
+        expect(r).toEqual({ passes: false, reason: 'relevance_wrong_role' });
+    });
+
+    it('still rejects a physician title', () => {
+        expect(classifyRelevance('Physician - Family Medicine', 'Supervise nurse practitioners.', '').passes).toBe(false);
+    });
+
+    it('still rejects a dual-role talent-community posting', () => {
+        const r = classifyRelevance(
+            'Nurse Practitioner / Physician Assistant - Full Spectrum Primary Care - Remote - Talent Community',
+            '',
+            '',
+        );
+        expect(r).toEqual({ passes: false, reason: 'relevance_wrong_role' });
+    });
+
+    it('passes ARNP spelled out despite the bare "registered nurse" negative', () => {
+        const r = classifyRelevance('Certified Psychiatric Advanced Registered Nurse Practitioner', '', 'Centerstone');
+        expect(r).toEqual({ passes: true, reason: 'pass' });
+    });
+
+    it('still rejects a staff registered nurse', () => {
+        expect(classifyRelevance('Registered Nurse - ICU', '', '').passes).toBe(false);
+    });
+});
