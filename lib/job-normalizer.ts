@@ -1032,6 +1032,27 @@ export function normalizeJob(rawJob: Record<string, unknown>, source: string): N
   return result.job;
 }
 
+/** Lifetime of an aggregated posting, counted from its posting date. */
+const DEFAULT_JOB_LIFETIME_DAYS = 60;
+
+/**
+ * Sources that get a shorter lifetime than the default.
+ *
+ * adzuna: its apply links cannot be probed (Adzuna answers the checker with
+ * 403, see KNOWN_403_HOSTS in lib/health/check-job-health.ts), so the only
+ * dead-posting signal is the posting dropping out of the daily fetch, and
+ * that check is skipped whenever a run uses its whole time budget. Fourteen
+ * days bounds how long a posting nobody can verify stays listed. Owner
+ * decision, 2026-11-12.
+ */
+const SOURCE_LIFETIME_DAYS: Readonly<Record<string, number>> = {
+  adzuna: 14,
+};
+
+export function jobLifetimeDays(source: string): number {
+  return SOURCE_LIFETIME_DAYS[source] ?? DEFAULT_JOB_LIFETIME_DAYS;
+}
+
 export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: string): NormalizeResult {
   try {
     const config = getConfig(source);
@@ -1064,10 +1085,13 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
     // to align ingest inventory with user-facing "Posted Within" filter
     // ceiling and reduce drift between source-claimed dates and what we
     // present as "fresh". Applies to every source.
+    // A source with a shorter lifetime (jobLifetimeDays) is gated at that
+    // lifetime instead, so nothing is accepted already past its expiry.
+    const lifetimeDays = jobLifetimeDays(source);
     if (originalPostedAt && !isNaN(originalPostedAt.getTime())) {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      if (originalPostedAt < thirtyDaysAgo) {
+      const staleCutoff = new Date();
+      staleCutoff.setDate(staleCutoff.getDate() - Math.min(30, lifetimeDays));
+      if (originalPostedAt < staleCutoff) {
         return { job: null, rejectionReason: 'normalizer_stale_post' };
       }
     }
@@ -1204,12 +1228,13 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
     //   Source did NOT          → expiresAt = now + 30 days  (shorter half-life
     //                              for jobs we don't actually know the age of)
     // Single clock — no renewal extensions. Once set, expiresAt stays.
-    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
-    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    // A source listed in SOURCE_LIFETIME_DAYS uses its own, shorter number
+    // for both cases (see jobLifetimeDays).
+    const DAY_MS = 24 * 60 * 60 * 1000;
     const expiresAt =
       originalPostedAt && !isNaN(originalPostedAt.getTime())
-        ? new Date(originalPostedAt.getTime() + SIXTY_DAYS_MS)
-        : new Date(Date.now() + THIRTY_DAYS_MS);
+        ? new Date(originalPostedAt.getTime() + lifetimeDays * DAY_MS)
+        : new Date(Date.now() + Math.min(30, lifetimeDays) * DAY_MS);
 
     // Normalize salary to annual equivalent
     const normalizedSalaryData = normalizeSalary({

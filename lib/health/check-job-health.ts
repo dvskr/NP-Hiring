@@ -98,6 +98,9 @@ const SOURCES_NEVER_NEED_BODY = new Set<string>([
  *      Detection latency: N × 12h ≈ 36h with the current 3-miss threshold.
  *   2. Engagement-anomaly cron (when it accumulates views with zero apply
  *      clicks for ≥14 days → /api/cron/engagement-anomaly).
+ *   3. A 14-day lifetime for adzuna postings (SOURCE_LIFETIME_DAYS in
+ *      lib/job-normalizer.ts), which bounds the blind spot when the
+ *      presence check is skipped because a run used its whole time budget.
  * Acceptable as long as we monitor both. If the latency becomes a problem,
  * we'd need to register a paid Adzuna app key that the probe could attach
  * for an authenticated request (no current contract for that).

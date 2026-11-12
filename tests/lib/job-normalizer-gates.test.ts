@@ -17,6 +17,7 @@ import {
     extractSalary,
     computeCompleteness,
     detectJobType,
+    jobLifetimeDays,
 } from '@/lib/job-normalizer';
 
 const goodDesc = 'We are seeking a Psychiatric Nurse Practitioner to join our outpatient clinic full time.';
@@ -487,5 +488,59 @@ describe('smart description summary (smartSummarize via normalizer)', () => {
         expect(result.job).not.toBeNull();
         // No marker — summary just starts from beginning
         expect(result.job!.descriptionSummary?.startsWith('A A A')).toBe(true);
+    });
+});
+
+describe('normalizeJobWithReason: Adzuna lifetime (14 days)', () => {
+    // Adzuna apply links cannot be probed for dead postings, so the owner
+    // capped how long one stays listed (2026-11-12). Every other source
+    // keeps the 60-day lifetime.
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS);
+    const adzunaJob = (postedAt?: Date) =>
+        rawJob({
+            applyLink: 'https://www.adzuna.com/land/ad/123',
+            externalId: 'adzuna_123',
+            ...(postedAt ? { postedAt: postedAt.toISOString() } : {}),
+        });
+
+    it('only adzuna has a shorter lifetime', () => {
+        expect(jobLifetimeDays('adzuna')).toBe(14);
+        for (const source of ['greenhouse', 'lever', 'workday', 'usajobs', 'jazzhr']) {
+            expect(jobLifetimeDays(source)).toBe(60);
+        }
+    });
+
+    it('expires an Adzuna posting 14 days after it was posted', () => {
+        const postedAt = daysAgo(2);
+        const result = normalizeJobWithReason(adzunaJob(postedAt), 'adzuna');
+        expect(result.job).not.toBeNull();
+        const expected = postedAt.getTime() + 14 * DAY_MS;
+        expect(Math.abs(result.job!.expiresAt!.getTime() - expected)).toBeLessThan(1000);
+    });
+
+    it('rejects an Adzuna posting that is already past 14 days', () => {
+        const result = normalizeJobWithReason(adzunaJob(daysAgo(15)), 'adzuna');
+        expect(result.job).toBeNull();
+        expect(result.rejectionReason).toBe('normalizer_stale_post');
+    });
+
+    it('gives an undated Adzuna posting 14 days from now, not 30', () => {
+        const result = normalizeJobWithReason(adzunaJob(), 'adzuna');
+        expect(result.job).not.toBeNull();
+        const days = (result.job!.expiresAt!.getTime() - Date.now()) / DAY_MS;
+        expect(days).toBeGreaterThan(13.9);
+        expect(days).toBeLessThan(14.1);
+    });
+
+    it('leaves a 15-day-old posting from another source alone', () => {
+        const result = normalizeJobWithReason(
+            rawJob({ postedDate: daysAgo(15).toISOString() }),
+            'lever',
+        );
+        expect(result.job).not.toBeNull();
+        const days = (result.job!.expiresAt!.getTime() - Date.now()) / DAY_MS;
+        expect(days).toBeGreaterThan(44.9);
+        expect(days).toBeLessThan(45.1);
     });
 });

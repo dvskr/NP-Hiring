@@ -416,6 +416,7 @@ All in [lib/ingestion-service.ts](../lib/ingestion-service.ts) and
 | Vercel cron timeout | 300s | `vercel.json` `maxDuration` |
 | Ingest internal time budget | 240s | `lib/ingestion-service.ts:87` |
 | Initial job expiry | `originalPostedAt + 60 days` | `lib/job-normalizer.ts` (Gate 3 + expiry rule) |
+| Adzuna job expiry | `originalPostedAt + 14 days` (links cannot be probed; owner decision 2026-11-12) | `lib/job-normalizer.ts` `SOURCE_LIFETIME_DAYS` |
 | Renewal extension | **none — `expiresAt` is set at insert and never extended** | (removed 2026-05-05) |
 | Hard max-age cap | **60 days from `originalPostedAt`** (= the same value as initial expiry — single clock) | `lib/ingestion-service.ts` `MAX_JOB_AGE_MS` |
 | Normalizer freshness gate (all sources) | 60 days | `lib/job-normalizer.ts` Gate 3 |
