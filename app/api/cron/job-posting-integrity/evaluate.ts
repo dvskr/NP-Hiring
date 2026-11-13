@@ -19,7 +19,7 @@
  * Mode-only drift (the flags already agree) is reported, not failed.
  */
 import { planWorkModeRepair, workModeViolations, type WorkModeRow, type WorkModeViolation } from '@/lib/work-mode-integrity';
-import { hasJobPostingLocation, isStubJobDescription, type JobPostingFactsInput } from '@/app/jobs/[slug]/job-posting-facts';
+import { hasJobPostingLocation, isSynthesizedStubDescription, type JobPostingFactsInput } from '@/app/jobs/[slug]/job-posting-facts';
 
 /** The row the check reads: the work-mode columns plus the location columns the page reads. */
 export interface IntegrityRow extends WorkModeRow {
@@ -113,7 +113,9 @@ export function evaluateJobPostingIntegrity(rows: readonly IntegrityRow[]): Inte
 
   for (const row of rows) {
     const facts = factsInput(row);
-    if (isStubJobDescription(facts)) note(report.stubDescriptions, row);
+    // Synthesized stubs only: a truncated aggregator snippet (Adzuna) is
+    // noindexed by the same page rule but is expected, not an adapter fault.
+    if (isSynthesizedStubDescription(facts)) note(report.stubDescriptions, row);
     if (!hasJobPostingLocation(facts)) note(report.missingJobPostingLocation, row, row.location ?? '(no location)');
     for (const violation of workModeViolations(row)) {
       note(report.workModeViolations[violation], row, `mode ${row.mode ?? 'null'}, remote ${row.isRemote}, hybrid ${row.isHybrid}`);

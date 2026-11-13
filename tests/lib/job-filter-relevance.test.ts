@@ -356,3 +356,41 @@ describe('classifyRelevance — spelled-out dual-role titles with any separator'
         expect(classifyRelevance('Registered Nurse - ICU', '', '').passes).toBe(false);
     });
 });
+
+describe('classifyRelevance: the title must name a provider role', () => {
+    // Served on the board on 2026-11-13: each passed on a description that
+    // mentions the role in boilerplate, with a title on no negative list.
+    const boilerplate =
+        'Our health centers are staffed by physicians, nurse practitioners and medical assistants.';
+
+    it.each([
+        'Controller',
+        'Security Officer Part Time',
+        'Assistant General Counsel - Healthcare',
+        'Office Assistant - Behavioral Health',
+        'Health Services Site Trainer',
+        'Manager, Credentialing & Medical Staff Services',
+        'Mental Health Clinician (LMHC) Long-Term Therapy',
+        'Psych Tech-Part Time 2nd Shift',
+    ])('rejects "%s" even though the description mentions the role', (title) => {
+        expect(classifyRelevance(title, boilerplate, 'Community Health Center')).toEqual({
+            passes: false,
+            reason: 'relevance_no_keyword',
+        });
+    });
+
+    it.each([
+        'Advanced Practice Provider',
+        'Advance Practice Provider (SUD) - $2,000 Sign-On Bonus',
+        'Advanced Care Provider - House Calls',
+        'Psychiatric Clinician',
+        'Primary Care Clinician (Part-Time)',
+        'Psychiatric Prescriber',
+        'Hospitalist APP - Nights',
+        'Urgent Care Provider',
+    ])('keeps "%s" when the description names the role', (title) => {
+        expect(
+            classifyRelevance(title, 'This role is open to a nurse practitioner or physician assistant.', 'Clinic').passes,
+        ).toBe(true);
+    });
+});

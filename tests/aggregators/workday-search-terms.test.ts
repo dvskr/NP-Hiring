@@ -101,3 +101,27 @@ describe('passesWorkdayTitlePrefilter', () => {
         }
     });
 });
+
+describe('single-state tenants give a facility-name location a state', () => {
+    it('appends the state to a facility name or a bare city', async () => {
+        const { withTenantState } = await import('@/lib/aggregators/workday');
+        expect(withTenantState('Anna Jaques Hospital', 'MA')).toBe('Anna Jaques Hospital, MA');
+        expect(withTenantState('Oklahoma City', 'OK')).toBe('Oklahoma City, OK');
+    });
+
+    it('leaves a location alone when it already names a state, is vague, or the tenant has no state', async () => {
+        const { withTenantState } = await import('@/lib/aggregators/workday');
+        expect(withTenantState('Tulsa, OK', 'OK')).toBe('Tulsa, OK');
+        expect(withTenantState('Kansas City, MO', 'KS')).toBe('Kansas City, MO');
+        expect(withTenantState('2 Locations', 'OK')).toBe('2 Locations');
+        expect(withTenantState('United States', 'OK')).toBe('United States');
+        expect(withTenantState('Avon Hospital', undefined)).toBe('Avon Hospital');
+    });
+
+    it('every tenant state is a two-letter code', async () => {
+        const { WORKDAY_TENANTS } = await import('@/lib/aggregators/tenants/workday');
+        const withState = WORKDAY_TENANTS.filter((t) => t.state !== undefined);
+        expect(withState.length).toBeGreaterThan(20);
+        for (const t of withState) expect(t.state).toMatch(/^[A-Z]{2}$/);
+    });
+});

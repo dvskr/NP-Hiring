@@ -14,6 +14,8 @@ import {
   resolveEmploymentTypes,
   isJobPostingEligible,
   isStubJobDescription,
+  isSynthesizedStubDescription,
+  isTruncatedSnippetDescription,
   hasJobPostingLocation,
   isUsListing,
   isVerifiedFullyRemote,
@@ -596,5 +598,30 @@ describe('CQ-02: plausibleLocality', () => {
     expect(plausibleLocality('Behavioral Associates')).toBeNull();
     expect(plausibleLocality('1730')).toBeNull();
     expect(plausibleLocality('Virginia Beach')).toBe('Virginia Beach');
+  });
+});
+
+describe('truncated aggregator snippets are incomplete descriptions', () => {
+  // Adzuna returns the first 500 characters of a posting and an ellipsis.
+  const snippet = `${'Join our team as a Nurse Practitioner in a busy outpatient clinic. '.repeat(7).trim().slice(0, 499)}…`;
+  const full = 'Join our team as a Nurse Practitioner in a busy outpatient clinic. '.repeat(40);
+
+  it('flags a short description that ends in an ellipsis', () => {
+    expect(isTruncatedSnippetDescription(snippet)).toBe(true);
+    expect(isTruncatedSnippetDescription(`${snippet.slice(0, 300)}...`)).toBe(true);
+    expect(isTruncatedSnippetDescription(`<p>${snippet}</p>`)).toBe(true);
+  });
+
+  it('leaves complete descriptions alone', () => {
+    expect(isTruncatedSnippetDescription(full)).toBe(false);
+    expect(isTruncatedSnippetDescription(`${full} and more...`)).toBe(false);
+    expect(isTruncatedSnippetDescription('Short but complete posting text.')).toBe(false);
+    expect(isTruncatedSnippetDescription(null)).toBe(false);
+  });
+
+  it('a snippet counts as a stub for the page, but not as a synthesized stub', () => {
+    const job = { title: 'Nurse Practitioner', description: snippet };
+    expect(isStubJobDescription(job)).toBe(true);
+    expect(isSynthesizedStubDescription(job)).toBe(false);
   });
 });

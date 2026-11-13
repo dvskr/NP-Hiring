@@ -136,6 +136,19 @@ export function resolveWorkdayLocation(
 }
 
 /**
+ * Append a single-state tenant's state code to a location that names a
+ * place but no state ("Anna Jaques Hospital" -> "Anna Jaques Hospital, MA",
+ * "Oklahoma City" -> "Oklahoma City, OK"). A location that already parses
+ * to a US state is left alone, and so is a vague one ("2 Locations",
+ * "United States"): there the tenant's state would be a guess about a
+ * posting that did not say where it is.
+ */
+export function withTenantState(location: string, state: string | undefined): string {
+    if (!state || isVagueWorkdayLocation(location) || namesUsPlace(location)) return location;
+    return `${location}, ${state}`;
+}
+
+/**
  * The countries a Workday requisition is in, for the normalizer's non-US
  * gate, or undefined when the detail endpoint names none. Its country field
  * describes the primary site only, so a requisition whose further sites
@@ -471,7 +484,7 @@ async function fetchCompanyJobs(company: WorkdayCompany): Promise<WorkdayJobRaw[
                         company: company.name,
                         // "2 Locations" / "United States" name no place;
                         // the detail endpoint's primary location does.
-                        location: resolveWorkdayLocation(posting.locationsText, details),
+                        location: withTenantState(resolveWorkdayLocation(posting.locationsText, details), company.state),
                         description: details.description,
                         applyLink: `${applyBase}${posting.externalPath}`,
                         postedDate,

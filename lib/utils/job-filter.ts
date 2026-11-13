@@ -37,6 +37,7 @@ import {
     APRN_NEGATIVE_OVERRIDES,
     ROLE_TITLE_MARKERS,
     ROLE_TITLE_REGEX,
+    TITLE_ROLE_GATE_REGEX,
     CATCH_ALL_TERM,
     TITLE_CONTEXT_WORDS,
     WRONG_ROLE_CO_OCCURRENCE_EXCEPTIONS,
@@ -352,6 +353,17 @@ export function classifyRelevance(
 
     if (isWrongRole) {
         return { passes: false, reason: 'relevance_wrong_role' };
+    }
+
+    // 4. TITLE ROLE GATE. Everything that reaches this line passed on a
+    // keyword found only in the description, with a title that is on no
+    // negative list. That is boilerplate far more often than it is the job
+    // ("Controller", "Security Officer" at a clinic whose description
+    // mentions the role), so the title itself must name a provider role
+    // (see TITLE_ROLE_GATE_REGEX). A posting with no title is left alone:
+    // there is nothing to judge.
+    if (titleLower && !TITLE_ROLE_GATE_REGEX.test(titleLower)) {
+        return { passes: false, reason: 'relevance_no_keyword' };
     }
 
     return { passes: true, reason: 'pass' };

@@ -463,6 +463,8 @@ const PSYCH_EMPLOYER_SIGNALS = [
 // podiatrist).
 const NP_TITLE_RESCUE_SIGNALS = [
   'Practitioner', 'PMHNP', 'APRN', 'ARNP', ' NP', 'NP-C', 'CRNA', 'Midwife',
+  // Dual-role titles where no space precedes 'NP': '(NP/PA-C)', '(PA/NP)'.
+  '/NP', 'NP/',
 ];
 
 /**
@@ -564,6 +566,12 @@ export const GLOBAL_EXCLUSIONS: Prisma.JobWhereInput[] = [
       { NOT: { title: { contains: ' NP', mode: 'insensitive' } } },
       { NOT: { title: { contains: 'APP', mode: 'insensitive' } } },
       { NOT: { title: { contains: 'Collaborat', mode: 'insensitive' } } },
+      // 'Physician Assistant or ACNP' / 'Physician Assistant or FNP-C': the
+      // NP half is an abbreviation none of the tokens above match.
+      { NOT: { title: { contains: 'ACNP', mode: 'insensitive' } } },
+      { NOT: { title: { contains: 'FNP', mode: 'insensitive' } } },
+      { NOT: { title: { contains: '/NP', mode: 'insensitive' } } },
+      { NOT: { title: { contains: 'NP/', mode: 'insensitive' } } },
     ],
   },
   // Exclude pure MD/DO roles

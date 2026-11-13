@@ -569,6 +569,43 @@ export const ROLE_TITLE_REGEX =
     /\b(?:np|fnp|agnp|agpcnp|agacnp|pnp|acpnp|cpnp|nnp|whnp|acnp|enp|onp|pmhnp|crna|cnm|cns|apn|app)\b/;
 
 /**
+ * Title role gate. An ingested posting is kept only when its TITLE names a
+ * provider role. The positive keywords above also match the description,
+ * and a health employer's description mentions the role in boilerplate
+ * ("works with our nurse practitioners"), so without this gate any title
+ * that is not on the negative list gets through: on 2026-11-13 the board
+ * was serving "Controller", "Security Officer Part Time", "Assistant
+ * General Counsel", "Office Assistant" and "Licensed Vocational Nurse".
+ *
+ * Deliberately broad: it only has to tell a provider title from a
+ * non-provider one. The vetoes after it still decide which provider.
+ * Measured on 3,543 live titles the same day, it missed 54: about 30 leaks
+ * of the kind above, and the rest "Psychiatric Clinician" /
+ * "Primary Care Clinician", which are listed explicitly. A bare "clinician"
+ * is left out because it is a therapist title ("Mental Health Clinician
+ * (LMHC)").
+ */
+export const TITLE_ROLE_GATE_REGEX = new RegExp(
+    [
+        'nurse[\\s-]*practitioner',
+        'practitioner',
+        'prescriber',
+        '\\bproviders?\\b',
+        'mid[\\s-]?level',
+        'advanced?[\\s-]+practice',
+        'advanced?[\\s-]+(?:care[\\s-]+)?(?:provider|clinician)',
+        '(?:psychiatric|primary care)[\\s-]+clinician',
+        'nurse[\\s-]+anesthetist',
+        'midwi(?:fe|ves|fery)',
+        'clinical nurse specialist',
+        '\\bn\\.?p\\.?(?![a-z])',
+        '\\b(?:nps|aprn|arnp|crnp|apn|apc|apps?|crna|cnm|cns|enp)\\b',
+        '\\b(?:pmhnp|fnp|agnp|agacnp|agpcnp|acnp|acpnp|cpnp|pnp|nnp|whnp|onp)',
+    ].join('|'),
+    'i',
+);
+
+/**
  * Tier-3 catch-all: a mention ANYWHERE (title or description) passes
  * Tier 1. 'nurse practitioner' spelled out is the donor's #1 positive
  * (job-filter.ts:35) and is safe as a substring; wrong-role titles that
@@ -685,6 +722,10 @@ export const PSYCH_TITLE_SIGNALS = [
     'nurse practitioner', 'pmhnp', 'aprn', 'arnp', 'fnp', 'crna', 'cnm',
     'nurse anesthetist', 'nurse midwife', 'clinical nurse specialist',
     ' np', 'np-c', 'np/pa', 'np or pa',
+    // Slash and abbreviation forms the ' np' token misses because nothing
+    // but a slash or a letter precedes them: '(PA/NP)', 'NP /PA PRN',
+    // 'Physician Assistant or ACNP' (hidden while published, 2026-11-13).
+    '/np', 'np/', 'np /', 'acnp', 'agnp', 'pnp', 'nnp', 'whnp',
 ];
 
 /**

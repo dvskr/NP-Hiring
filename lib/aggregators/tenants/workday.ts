@@ -19,6 +19,17 @@ export interface WorkdayTenant {
     instance: number;
     site: string;
     name: string;
+    /**
+     * Two-letter state code, set ONLY when every site of the employer is in
+     * that one state. Many tenants list a posting under a facility name or a
+     * bare city ("Anna Jaques Hospital", "Oklahoma City"), which names no
+     * state: the job then gets no state page and no JobPosting markup (341
+     * of 1,565 live Workday jobs on 2026-11-13). The adapter appends this
+     * code to such a location. Leave it off a multi-state system (Cleveland
+     * Clinic, Advocate, Intermountain, ProMedica): a wrong state on a job is
+     * worse than none.
+     */
+    state?: string;
 }
 
 // AUDIT 2026-02-20: removed 28 dead slugs (HTTP 404/422/500)
@@ -40,7 +51,7 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
 
     // === Verified Hospitals & Health Systems ===
     { slug: 'adventhealth', instance: 12, site: 'AH_External_Career_Site', name: 'AdventHealth' },
-    { slug: 'archildrens', instance: 1, site: 'External_Career_Site', name: "Arkansas Children's" },
+    { slug: 'archildrens', instance: 1, site: 'External_Career_Site', name: "Arkansas Children's", state: 'AR' },
     { slug: 'bannerhealth', instance: 108, site: 'Careers', name: 'Banner Health' },
     { slug: 'baptistfirst', instance: 12, site: 'baptistfirst', name: 'Baptist Health (AL)' },
     { slug: 'bhs', instance: 1, site: 'careers', name: 'Baptist Health (KY)' },
@@ -54,8 +65,8 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'coxhealth', instance: 5, site: 'CoxHealth_External', name: 'CoxHealth' },
     { slug: 'davita', instance: 1, site: 'DKC_External', name: 'DaVita' },
     { slug: 'denverhealth', instance: 1, site: 'DHHA-Main', name: 'Denver Health' },
-    { slug: 'nshs', instance: 1, site: 'ns-eeh', name: 'Endeavor Health' },
-    { slug: 'gbmc', instance: 1, site: 'GBMC', name: 'GBMC HealthCare' },
+    { slug: 'nshs', instance: 1, site: 'ns-eeh', name: 'Endeavor Health', state: 'IL' },
+    { slug: 'gbmc', instance: 1, site: 'GBMC', name: 'GBMC HealthCare', state: 'MD' },
     { slug: 'geisinger', instance: 5, site: 'GeisingerExternal', name: 'Geisinger' },
     { slug: 'gohealthuc', instance: 12, site: 'External', name: 'GoHealth Urgent Care' },
     { slug: 'halifaxhealth', instance: 12, site: 'HalifaxHealth', name: 'Halifax Health' },
@@ -64,17 +75,17 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'jeffersonhealth', instance: 5, site: 'ThomasJeffersonExternal', name: 'Jefferson Health' },
     { slug: 'luriechildrens', instance: 1, site: 'externalportal', name: "Lurie Children's" },
     { slug: 'massgeneralbrigham', instance: 1, site: 'MGBExternal', name: 'Mass General Brigham' },
-    { slug: 'memorialhealthcare', instance: 1, site: 'MHS_Careers', name: 'Memorial Healthcare (FL)' },
+    { slug: 'memorialhealthcare', instance: 1, site: 'MHS_Careers', name: 'Memorial Healthcare (FL)', state: 'FL' },
     { slug: 'multicare', instance: 1, site: 'multicare', name: 'MultiCare Health' },
     { slug: 'nationwidechildrens', instance: 5, site: 'NCHCareers', name: "Nationwide Children's" },
     { slug: 'ochsner', instance: 1, site: 'Ochsner', name: 'Ochsner Health' },
-    { slug: 'oumedicine', instance: 5, site: 'OUHealthCareers', name: 'OU Health' },
-    { slug: 'rrhs', instance: 5, site: 'RRH', name: 'Rochester Regional Health' },
+    { slug: 'oumedicine', instance: 5, site: 'OUHealthCareers', name: 'OU Health', state: 'OK' },
+    { slug: 'rrhs', instance: 5, site: 'RRH', name: 'Rochester Regional Health', state: 'NY' },
     { slug: 'sanford', instance: 5, site: 'SanfordHealth', name: 'Sanford Health' },
     { slug: 'sentara', instance: 1, site: 'SCS', name: 'Sentara Healthcare' },
     // REMOVED 2026-11-12 — SSM Health: tenant migrated to ssmh.wd115/ssmhealth (HTTP 200) but lists 0 NP/APRN/CRNA postings; provider roles are not on this site
-    { slug: 'stanfordmedicine', instance: 115, site: 'SHC_External_Career_Site', name: 'Stanford Health Care' }, // REPAIRED 2026-11-12 — was stanfordhealthcare.wd5 (HTTP 422)
-    { slug: 'sutterhealth', instance: 1, site: 'sh', name: 'Sutter Health' },
+    { slug: 'stanfordmedicine', instance: 115, site: 'SHC_External_Career_Site', name: 'Stanford Health Care', state: 'CA' }, // REPAIRED 2026-11-12 — was stanfordhealthcare.wd5 (HTTP 422)
+    { slug: 'sutterhealth', instance: 1, site: 'sh', name: 'Sutter Health', state: 'CA' },
     { slug: 'uvmhealth', instance: 1, site: 'CVPH', name: 'UVM Health Network' },
     { slug: 'vumc', instance: 1, site: 'vumccareers', name: 'Vanderbilt UMC' },
 
@@ -106,7 +117,7 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'devoted', instance: 1, site: 'devoted', name: 'Devoted Health' },
     { slug: 'evolent', instance: 1, site: 'External', name: 'Evolent Health' },
     { slug: 'sharecare', instance: 1, site: 'sharecare_careers', name: 'Sharecare' },
-    { slug: 'tuftsmedicine', instance: 1, site: 'jobs', name: 'Tufts Medicine' },
+    { slug: 'tuftsmedicine', instance: 1, site: 'jobs', name: 'Tufts Medicine', state: 'MA' },
     { slug: 'umchealthsystem', instance: 1, site: 'External', name: 'UMC Health System (Lubbock)' },
 
     // === ADDED 2026-02-19 — ats-jobs-db API discovery ===
@@ -115,10 +126,10 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'mainegeneral', instance: 5, site: 'mainegeneralcareers', name: 'MaineGeneral Health' },
     { slug: 'monarch', instance: 5, site: 'monarch', name: 'Monarch' },
     { slug: 'bmc', instance: 1, site: 'bmc', name: 'Boston Medical Center' },
-    { slug: 'brownhealth', instance: 12, site: 'External_Careers', name: 'Brown Medicine' },
+    { slug: 'brownhealth', instance: 12, site: 'External_Careers', name: 'Brown Medicine', state: 'RI' },
     { slug: 'centerstone', instance: 5, site: 'centerstonecareers', name: 'Centerstone' },
     { slug: 'meharrymedicalcollege', instance: 12, site: 'External', name: 'Meharry Medical College' },
-    { slug: 'seamar', instance: 12, site: 'sea_mar', name: 'Sea Mar Community Health Centers' },
+    { slug: 'seamar', instance: 12, site: 'sea_mar', name: 'Sea Mar Community Health Centers', state: 'WA' },
 
     // === ADDED 2026-02-20 — Production DB apply_link mining ===
     { slug: 'rogersbh', instance: 1, site: 'RBHCareer', name: 'Rogers Behavioral Health' },
@@ -145,12 +156,12 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'tamus', instance: 1, site: 'System-wide_External', name: 'Texas A&M System-wide' },                    // 24 / 663 (additional TAMU site)
     { slug: 'nyp', instance: 1, site: 'nypcareers', name: 'NewYork-Presbyterian Hospital' },                        // 23 / 362
     { slug: 'ummh', instance: 1, site: 'Careers', name: 'UMass Memorial Health' },                                  // 21 / 960
-    { slug: 'musc', instance: 1, site: 'MUSC', name: 'Medical University of South Carolina' },                      // 17 / 2000
+    { slug: 'musc', instance: 1, site: 'MUSC', name: 'Medical University of South Carolina', state: 'SC' },                      // 17 / 2000
     { slug: 'bilh', instance: 1, site: 'External', name: 'Beth Israel Lahey Health' },                              // 16 / 1880
     { slug: 'lvhn', instance: 1, site: 'LVHN', name: 'Lehigh Valley Health Network' },                              // 16 / 957
     { slug: 'methodisthealth', instance: 5, site: 'MLH', name: 'Methodist Le Bonheur Healthcare' },                 // 15 / 615
     { slug: 'stelizabeth', instance: 115, site: 'StElizabethExternalCareerSite', name: 'St. Elizabeth Healthcare' },// 15 / 288
-    { slug: 'baptistjax', instance: 1, site: 'External_Careers', name: 'Baptist Health (Jacksonville)' },           // 15 / 661
+    { slug: 'baptistjax', instance: 1, site: 'External_Careers', name: 'Baptist Health (Jacksonville)', state: 'FL' },           // 15 / 661
     { slug: 'searhc', instance: 5, site: 'SEARHC', name: 'SEARHC' },                                                // 15 / 246
     { slug: 'nus', instance: 1, site: 'Careers', name: 'National University' },                                     // 14 / 55
     { slug: 'broadlawns', instance: 501, site: 'Broadlawns_Careers', name: 'Broadlawns Medical Center' },           // 14 / 72
@@ -161,7 +172,7 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'wgu', instance: 5, site: 'External', name: 'Western Governors University' },                           // 11 / 98
     { slug: 'mhctn', instance: 12, site: 'mhc_careers', name: 'Mental Health Cooperative' },                        // 10 / 66
     { slug: 'cascadia', instance: 12, site: 'cascadiahealth', name: 'Cascadia Health' },                            // 10 / 62
-    { slug: 'marywashingtonhealthcare', instance: 5, site: 'Externalcareers', name: 'Mary Washington Healthcare' },// 9 / 300
+    { slug: 'marywashingtonhealthcare', instance: 5, site: 'Externalcareers', name: 'Mary Washington Healthcare', state: 'VA' },// 9 / 300
 
     // === Added 2026-11-12: NP-wide expansion, each verified live ===
     // The oneoncology sites are individual partner practices. All are named
@@ -179,14 +190,14 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'marathonhealth', instance: 501, site: 'Marathon-Health-Careers', name: 'Marathon Health' },                   // NP-family: 60
     { slug: 'alpinephysicians', instance: 1, site: 'External', name: 'Alpine Physician Partners' },                        // NP-family: 19
     { slug: 'loganhealth', instance: 1, site: 'One_Sky_Careers', name: 'Logan Health' },                                   // NP-family: 8
-    { slug: 'wth', instance: 501, site: 'wth', name: 'West Tennessee Healthcare' },                                        // NP-family: 4
-    { slug: 'wellstar', instance: 1, site: 'wellstarprovidercareers', name: 'Wellstar Health System' },                    // NP-family: 50
+    { slug: 'wth', instance: 501, site: 'wth', name: 'West Tennessee Healthcare', state: 'TN' },                                        // NP-family: 4
+    { slug: 'wellstar', instance: 1, site: 'wellstarprovidercareers', name: 'Wellstar Health System', state: 'GA' },                    // NP-family: 50
     { slug: 'nyuhs', instance: 12, site: 'nyuhscareers1', name: 'United Health Services (NY)' },                           // NP-family: 19
-    { slug: 'montefiore', instance: 12, site: 'MMC', name: 'Montefiore Medical Center' },                                  // NP-family: 7
+    { slug: 'montefiore', instance: 12, site: 'MMC', name: 'Montefiore Medical Center', state: 'NY' },                                  // NP-family: 7
     { slug: 'napaanesthesia', instance: 1, site: 'NAPA_Careers', name: 'North American Partners in Anesthesia' },          // NP-family: 3
     { slug: 'mcw', instance: 503, site: 'ExternalCareers', name: 'Medical College of Wisconsin' },                         // NP-family: 49
     { slug: 'christianacare', instance: 5, site: 'CCHS', name: 'ChristianaCare' },                                         // NP-family: 16
-    { slug: 'montefiore', instance: 12, site: 'WP', name: 'White Plains Hospital (Montefiore)' },                          // NP-family: 7
+    { slug: 'montefiore', instance: 12, site: 'WP', name: 'White Plains Hospital (Montefiore)', state: 'NY' },                          // NP-family: 7
     { slug: 'stph', instance: 5, site: 'STPH', name: 'St. Tammany Health System' },                                        // NP-family: 3
     { slug: 'mercy', instance: 1, site: 'mercycareers', name: 'Mercy' },                                                   // NP-family: 44
     { slug: 'covenanthealth', instance: 12, site: 'CovenantHealthCareers', name: 'Covenant Health (New England)' },        // NP-family: 16
@@ -205,10 +216,10 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'oneoncology', instance: 1, site: 'TNONC', name: 'OneOncology' },                         // NP-family: 6
     { slug: 'reidhealth', instance: 12, site: 'Physician_Careers', name: 'Reid Health' },                                  // NP-family: 3
     { slug: 'franciscanalliance', instance: 5, site: 'FA_External_Career_Site', name: 'Franciscan Health' },               // NP-family: 38
-    { slug: 'virtua', instance: 1, site: 'Virtua_Health_External_Career_Site', name: 'Virtua Health' },                    // NP-family: 15
+    { slug: 'virtua', instance: 1, site: 'Virtua_Health_External_Career_Site', name: 'Virtua Health', state: 'NJ' },                    // NP-family: 15
     { slug: 'oneoncology', instance: 1, site: 'CHC', name: 'OneOncology' },                  // NP-family: 6
     { slug: 'montagehealth', instance: 5, site: 'Montage_Health', name: 'Montage Health' },                                // NP-family: 3
-    { slug: 'lcmchealth', instance: 1, site: 'LCMCHealth', name: 'LCMC Health' },                                          // NP-family: 36
+    { slug: 'lcmchealth', instance: 1, site: 'LCMCHealth', name: 'LCMC Health', state: 'LA' },                                          // NP-family: 36
     { slug: 'shrinerschildrens', instance: 12, site: 'Shriners', name: "Shriners Children's" },                            // NP-family: 14
     { slug: 'oneoncology', instance: 1, site: 'NYH', name: 'OneOncology' },                              // NP-family: 6
     { slug: 'cherryhealth', instance: 12, site: 'CH', name: 'Cherry Health' },                                             // NP-family: 2
@@ -220,10 +231,10 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'owensborohealth', instance: 1, site: 'owensborohealth', name: 'Owensboro Health' },                           // NP-family: 13
     { slug: 'honorhealth', instance: 12, site: 'HonorHealth_careers', name: 'HonorHealth' },                               // NP-family: 6
     { slug: 'cityblockhealth', instance: 1, site: 'CityblockExternalCareerSite', name: 'Cityblock Health' },               // NP-family: 2
-    { slug: 'choa', instance: 12, site: 'externalcareers', name: "Children's Healthcare of Atlanta" },                     // NP-family: 33
+    { slug: 'choa', instance: 12, site: 'externalcareers', name: "Children's Healthcare of Atlanta", state: 'GA' },                     // NP-family: 33
     { slug: 'capitalhealth', instance: 1, site: 'CapitalHealthCareers', name: 'Capital Health (NJ)' },                     // NP-family: 13
-    { slug: 'valleyhealth', instance: 12, site: 'Valley_Health_System_Careers_', name: 'Valley Health System (NJ)' },      // NP-family: 6
-    { slug: 'okgov', instance: 1, site: 'okgovjobs', name: 'State of Oklahoma' },                                          // NP-family: 2
+    { slug: 'valleyhealth', instance: 12, site: 'Valley_Health_System_Careers_', name: 'Valley Health System (NJ)', state: 'NJ' },      // NP-family: 6
+    { slug: 'okgov', instance: 1, site: 'okgovjobs', name: 'State of Oklahoma', state: 'OK' },                                          // NP-family: 2
     { slug: 'uw', instance: 5, site: 'UWHires', name: 'UW Medicine (University of Washington)' },                          // NP-family: 32
     { slug: 'cookchildrens', instance: 1, site: 'Cook_Childrens_Careers', name: "Cook Children's" },                       // NP-family: 12
     { slug: 'driscoll', instance: 1, site: 'DHS', name: "Driscoll Children's Hospital" },                                  // NP-family: 6
@@ -232,7 +243,7 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'genesishcs', instance: 1, site: 'GenesisHCS', name: 'Genesis HealthCare System (OH)' },                       // NP-family: 12
     { slug: 'stcharles', instance: 1, site: 'External', name: 'St. Charles Health System' },                               // NP-family: 6
     { slug: 'oneoncology', instance: 1, site: 'Astera', name: 'OneOncology' },                        // NP-family: 2
-    { slug: 'phsorg', instance: 1, site: 'Careers', name: 'Presbyterian Healthcare Services' },                            // NP-family: 29
+    { slug: 'phsorg', instance: 1, site: 'Careers', name: 'Presbyterian Healthcare Services', state: 'NM' },                            // NP-family: 29
     { slug: 'nmhs', instance: 108, site: 'NMHS', name: 'North Mississippi Health Services' },                              // NP-family: 12
     { slug: 'altamed', instance: 1, site: 'Careers', name: 'AltaMed Health Services' },                                    // NP-family: 6
     { slug: 'oneoncology', instance: 1, site: 'UCBC', name: 'OneOncology' },            // NP-family: 2
@@ -242,7 +253,7 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'oneoncology', instance: 1, site: 'MFCC', name: 'OneOncology' },                  // NP-family: 2
     { slug: 'albanymed', instance: 5, site: 'Albany_Med', name: 'Albany Med Health System' },                              // NP-family: 27
     { slug: 'stormontvail', instance: 1, site: 'SVH', name: 'Stormont Vail Health' },                                      // NP-family: 11
-    { slug: 'roswellpark', instance: 5, site: 'ExternalCareers', name: 'Roswell Park Comprehensive Cancer Center' },       // NP-family: 6
+    { slug: 'roswellpark', instance: 5, site: 'ExternalCareers', name: 'Roswell Park Comprehensive Cancer Center', state: 'NY' },       // NP-family: 6
     { slug: 'daytonchildrens', instance: 1, site: 'dayton_childrens_career_site', name: "Dayton Children's" },             // NP-family: 1
     { slug: 'sluhn', instance: 1, site: 'SLUHNAP', name: "St. Luke's University Health Network" },                         // NP-family: 27
     { slug: 'oneoncology', instance: 1, site: 'NYCBS', name: 'OneOncology' },        // NP-family: 11
@@ -256,7 +267,7 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'umphysicians', instance: 1, site: 'umpcareers', name: 'University of Minnesota Physicians' },                 // NP-family: 9
     { slug: 'fhcsd', instance: 1, site: 'DOC', name: 'Family Health Centers of San Diego' },                               // NP-family: 5
     { slug: 'upenn', instance: 1, site: 'careers-at-penn', name: 'University of Pennsylvania' },                           // NP-family: 1
-    { slug: 'osu', instance: 1, site: 'OSUCareers', name: 'Ohio State University Wexner Medical Center' },                 // NP-family: 24
+    { slug: 'osu', instance: 1, site: 'OSUCareers', name: 'Ohio State University Wexner Medical Center', state: 'OH' },                 // NP-family: 24
     { slug: 'phoebehealth', instance: 503, site: 'phoebehealth', name: 'Phoebe Putney Health System' },                    // NP-family: 9
     { slug: 'centerlight', instance: 5, site: 'TeamCare', name: 'CenterLight Health System' },                             // NP-family: 5
     { slug: 'palomarhealth', instance: 5, site: 'PH', name: 'Palomar Health' },                                            // NP-family: 1
@@ -268,7 +279,7 @@ export const WORKDAY_TENANTS: readonly WorkdayTenant[] = [
     { slug: 'msk', instance: 108, site: 'MSKCC_Careers_Primary', name: 'Memorial Sloan Kettering Cancer Center' },         // NP-family: 8
     { slug: 'ctca', instance: 1, site: 'CancerCenter_Careers', name: 'City of Hope Cancer Centers (CTCA)' },               // NP-family: 4
     { slug: 'empathhealth', instance: 108, site: 'Empath_Health', name: 'Empath Health' },                                 // NP-family: 1
-    { slug: 'memorialhealth', instance: 108, site: 'Memorial_Health_External_Career_Site', name: 'Memorial Health (IL)' }, // NP-family: 20
+    { slug: 'memorialhealth', instance: 108, site: 'Memorial_Health_External_Career_Site', name: 'Memorial Health (IL)', state: 'IL' }, // NP-family: 20
     { slug: 'chas', instance: 1, site: 'CHASHealth', name: 'CHAS Health' },                                                // NP-family: 8
     { slug: 'verawholehealth', instance: 1, site: 'CareMore', name: 'CareMore Health' },                                   // NP-family: 4
     { slug: 'hebrewseniorlife', instance: 501, site: 'HebrewSeniorLifeCareers', name: 'Hebrew SeniorLife' },               // NP-family: 1

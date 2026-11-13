@@ -478,7 +478,32 @@ export function hasJobPostingLocation(job: JobPostingFactsInput): boolean {
  * descriptions", and the page has nothing else to offer a searcher.
  */
 export function isStubJobDescription(job: Pick<JobPostingFactsInput, 'title' | 'description'>): boolean {
+  return isSynthesizedStubDescription(job) || isTruncatedSnippetDescription(job.description);
+}
+
+/** The synthesized-stub half of isStubJobDescription (the ingest gate's own test). */
+export function isSynthesizedStubDescription(job: Pick<JobPostingFactsInput, 'title' | 'description'>): boolean {
   return analyzeDescriptionStub(job.description, job.title).isStub;
+}
+
+/** Longest stored text that can still be a search-result snippet. */
+const TRUNCATED_SNIPPET_MAX_CHARS = 600;
+
+/**
+ * True when the stored description is a search-result snippet cut off
+ * mid-sentence: short, and ending in an ellipsis. Adzuna's API returns the
+ * first 500 characters of a posting followed by an ellipsis, never the
+ * full text (848 of 863 Adzuna rows on 2026-11-13; no row from any other
+ * source matched). Ingest keeps such a job, because the listing and the
+ * apply link are real, but it is an incomplete job description, so the page
+ * treats it exactly like a stub: no JobPosting, `noindex, follow`, no
+ * sitemap entry, no Indexing API submission. A long description that
+ * happens to end in an ellipsis is not a snippet.
+ */
+export function isTruncatedSnippetDescription(description: string | null | undefined): boolean {
+  if (!description) return false;
+  const text = description.replace(/<[^>]*>/g, ' ').trim();
+  return text.length <= TRUNCATED_SNIPPET_MAX_CHARS && /(?:\u2026|\.\.\.)$/.test(text);
 }
 
 /**
