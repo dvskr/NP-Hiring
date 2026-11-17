@@ -246,9 +246,9 @@ describe('P5 A5 (4) — page integration: main column, every breakpoint, ISR int
         );
     });
 
-    it('ISR is untouched: revalidate stays 3600 and no Dynamic API crept in', () => {
+    it('ISR is untouched: revalidate stays a day and no Dynamic API crept in', () => {
         const src = pageSrc();
-        expect(src).toMatch(/export const revalidate = 3600/);
+        expect(src).toMatch(/export const revalidate = 86400;/);
         expect(src).not.toMatch(/\b(?:cookies|headers)\s*\(/);
     });
 });

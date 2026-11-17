@@ -11,6 +11,7 @@ import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
 import { parseLocation } from '@/lib/location-parser';
 import { contentChangeStamp } from '@/lib/job-content-change';
+import { revalidateJobPage } from '@/lib/job-page-revalidation';
 import {
   WORK_MODES,
   normalizeWorkMode,
@@ -313,6 +314,9 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+
+    // The job page is cached for a day: show the edit now.
+    revalidateJobPage(updatedJob.slug, 'Job Update');
 
     return NextResponse.json({
       success: true,

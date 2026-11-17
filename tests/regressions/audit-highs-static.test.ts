@@ -78,6 +78,8 @@ describe('H10 — job-detail page stays ISR-cacheable', () => {
     // Guard on the import: you can't call it without importing it, and this
     // isn't fooled by the explanatory comment that mentions the name.
     expect(src).not.toMatch(/import\s*\{[^}]*getCurrentUser[^}]*\}\s*from/);
-    expect(src).toMatch(/export const revalidate\s*=\s*3600/);
+    // A day since 2026-11-17 (crawler load at 6,000+ jobs); edits refresh the
+    // page at once through lib/job-page-revalidation.ts.
+    expect(src).toMatch(/export const revalidate\s*=\s*86400;/);
   });
 });

@@ -92,9 +92,9 @@ describe('F5 — root layout stays static/ISR-compatible', () => {
     expect(mw).toMatch(/!isJobDetailUrl/);
   });
 
-  it('job-detail page keeps its ISR revalidate', () => {
+  it('job-detail page keeps its ISR revalidate (a day; edits refresh it at once)', () => {
     const src = read('app/jobs/[slug]/page.tsx');
-    expect(src).toMatch(/export const revalidate\s*=\s*3600/);
+    expect(src).toMatch(/export const revalidate\s*=\s*86400;/);
   });
 });
 

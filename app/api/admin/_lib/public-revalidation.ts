@@ -7,9 +7,9 @@ import { companyProfilePath, type CompanySlugSource } from '@/lib/company-slug';
  * Cache invalidation for public ISR pages that render admin moderation
  * decisions (P10 admin-revalidate #3 and #4).
  *
- * Every page below is ISR (`revalidate = 3600`). Without an explicit
- * revalidatePath after an admin write, a page rendered before the decision
- * keeps serving the stale answer for up to an hour: /testimonials stays a
+ * Every page below is ISR (`revalidate = 3600`, job pages 86400). Without an
+ * explicit revalidatePath after an admin write, a page rendered before the
+ * decision keeps serving the stale answer until its window ends: /testimonials stays a
  * 404 after a testimonial is featured, a company profile keeps offering
  * "Claim this profile" after approval, and job pages keep rendering
  * AboutEmployer without the Claimed badge.

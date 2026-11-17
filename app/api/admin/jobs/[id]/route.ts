@@ -5,6 +5,7 @@ import { inngest } from '@/lib/inngest/client';
 import { logger } from '@/lib/logger';
 import { logAudit } from '@/lib/audit-log';
 import { contentChangeStamp } from '@/lib/job-content-change';
+import { revalidateJobPage } from '@/lib/job-page-revalidation';
 import {
     UPDATE_FIELD_KINDS,
     patchAuditAction,
@@ -144,9 +145,12 @@ export async function PATCH(
             data,
             select: {
                 id: true, title: true, employer: true, isPublished: true,
-                isFeatured: true, updatedAt: true, expiresAt: true,
+                isFeatured: true, updatedAt: true, expiresAt: true, slug: true,
             },
         });
+
+        // The job page is cached for a day: show the edit now.
+        revalidateJobPage(job.slug, 'Admin Jobs');
 
         // Refresh the embedding when an embedded-text field changes; the
         // Inngest 30s throttle dedupes. No-op if Inngest env is not set.

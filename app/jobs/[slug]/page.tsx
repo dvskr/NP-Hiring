@@ -77,10 +77,20 @@ import { displayText } from '@/lib/display-text';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-// ISR: Cache job detail pages for 1 hour.
+// ISR: Cache job detail pages for 24 hours.
 // Each job page runs 10-12 DB queries (relatedJobs, companyInfo, salaryData, blogPosts, etc.).
-// Without caching, Googlebot crawling thousands of pages simultaneously exhausts the DB
-// connection pool → 5xx errors. 3600s trades freshness for stability.
+// Without caching, crawlers fetching thousands of pages at once exhaust the DB
+// connection pool → "timeout exceeded when trying to connect" and error pages.
+//
+// 2026-11-17: an hour was too short once the board passed 6,000 jobs. AI and
+// SEO crawlers (meta-externalagent, GPTBot, MJ12bot, PerplexityBot) revisit
+// each page several times a day, so almost every hit found an expired page
+// and re-rendered it (1,552 job-page hits in an hour: 931 STALE, 264 MISS,
+// 255 HIT), and the pool timed out on 1,000+ requests an hour at peaks. A day
+// re-renders each page about once a day instead. Freshness does not depend
+// on the window: middleware.ts answers a closed job's URL with a 410 before
+// this cache is read, and an employer or admin edit refreshes the page at
+// once (lib/job-page-revalidation.ts).
 //
 // ISR fix F5: this revalidate is only REAL while the whole layout tree stays
 // free of Dynamic APIs — a single headers()/cookies() read in app/layout.tsx
@@ -89,7 +99,7 @@ import { notFound } from 'next/navigation';
 // URLs because THIS is supposed to cover them — see middleware.ts, the
 // "Edge-cache public pSEO listing pages" block, and the F5 comment in
 // app/layout.tsx). Guarded by tests/regressions/shell-isr-static-layout.test.ts.
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 // P7 runtime fix D3: `revalidate` alone does NOT make a dynamic segment
 // ISR — without a generateStaticParams export, Next renders the route
@@ -843,8 +853,8 @@ export default async function JobPage({ params }: JobPageProps) {
   // miss render of the hottest page on the site. Pulled into the same
   // fan-out so all six independent reads start at the same tick.
   // NOTE: do NOT call getCurrentUser() (or any cookies()/headers() reader) here.
-  // This page declares `revalidate = 3600` specifically so Googlebot crawling
-  // thousands of detail URLs hits the ISR cache instead of exhausting the DB
+  // This page declares `revalidate = 86400` specifically so crawlers fetching
+  // thousands of detail URLs hit the ISR cache instead of exhausting the DB
   // connection pool. Reading cookies is a Dynamic API that silently opts the
   // whole route out of ISR — making every request a full uncached render.
   // Per-user personalization (auth state, own-job detection) is resolved

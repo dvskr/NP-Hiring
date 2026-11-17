@@ -39,6 +39,19 @@ const FLAGGED_DETAIL_ROUTES = [
     'app/jobs/locations/[state]/page.tsx',
 ] as const;
 
+/**
+ * Each route's ISR window. Job detail pages hold a day (2026-11-17: an hour
+ * re-rendered nearly every crawler hit once the board passed 6,000 jobs);
+ * edits refresh them at once through lib/job-page-revalidation.ts.
+ */
+const REVALIDATE_SECONDS: Readonly<Record<(typeof FLAGGED_DETAIL_ROUTES)[number], number>> = {
+    'app/jobs/[slug]/page.tsx': 86400,
+    'app/blog/[slug]/page.tsx': 3600,
+    'app/companies/[slug]/page.tsx': 3600,
+    'app/jobs/city/[slug]/page.tsx': 3600,
+    'app/jobs/locations/[state]/page.tsx': 3600,
+};
+
 describe('D3 — detail routes export generateStaticParams so revalidate is real ISR', () => {
     for (const rel of FLAGGED_DETAIL_ROUTES) {
         describe(rel, () => {
@@ -49,7 +62,7 @@ describe('D3 — detail routes export generateStaticParams so revalidate is real
             });
 
             it('keeps its revalidate export (the half generateStaticParams activates)', () => {
-                expect(src).toMatch(/export const revalidate\s*=\s*3600/);
+                expect(src).toMatch(new RegExp(`export const revalidate\\s*=\\s*${REVALIDATE_SECONDS[rel]};`));
             });
 
             it('returns an empty array (no build-time DB fan-out over live slugs)', () => {

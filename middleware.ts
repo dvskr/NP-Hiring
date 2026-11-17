@@ -1517,7 +1517,7 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
     // change second-by-second).
     //
     // Job-detail pages are excluded because they are covered by ISR
-    // (`export const revalidate = 3600` in app/jobs/[slug]/page.tsx).
+    // (`export const revalidate = 86400` in app/jobs/[slug]/page.tsx).
     // That ISR is only REAL while TWO conditions hold:
     //   1. the root layout stays free of Dynamic APIs — a single
     //      headers()/cookies() read in app/layout.tsx opts every route
