@@ -489,7 +489,11 @@ tests fail until every side agrees:
   board passed 6,000 jobs; the Supabase pooler also hit its 200-client cap). In one hour, job pages took 1,552
   hits: meta-externalagent 874, GPTBot 197, MJ12bot 107, PerplexityBot 91, Googlebot 9. `171bef4` caches job
   pages for a day instead of an hour and refreshes one at once after an employer or admin edit
-  (`lib/job-page-revalidation.ts`). D50 (owner, same day): MJ12bot is blocked in robots.txt, and
+  (`lib/job-page-revalidation.ts`). That window only takes effect with the footer fix of 2026-11-18: the
+  sitewide footer read its category links through an hourly `unstable_cache`, and Next.js gives a page the
+  shortest window in its tree, so every job page still re-rendered hourly; the footer now reads through a
+  daily cache (`FOOTER_LANDING_VERDICT_CACHE_SECONDS`, guarded by
+  `tests/regressions/job-page-isr-window.test.ts`). D50 (owner, same day): MJ12bot is blocked in robots.txt, and
   meta-externalagent gets a 10 second Crawl-delay plus a middleware cap of 10 requests a minute across all of
   its IPs (`lib/crawler-policy.ts`); every other crawler keeps the open posture of 2026-05-11. Reading the logs:
   `vercel logs --scope sathishs-projects-ca92cf45 --project np-hiring`.

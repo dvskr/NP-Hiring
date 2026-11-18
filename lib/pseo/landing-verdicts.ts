@@ -16,8 +16,8 @@
  * lib/pseo/hub-category-links.ts). Links written into content and page code
  * read the looser loadEmptyLandingSlugs below instead: they may point at a
  * landing that renders `noindex`, never at one that 404s. Each read is cached
- * across requests for an hour, so a page that renders per request adds no
- * query per render.
+ * across requests (an hour, the footer a day), so a page that renders per
+ * request adds no query per render.
  */
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
@@ -71,18 +71,44 @@ const cachedIndexableLandingSlugs = unstable_cache(readIndexableLandingSlugs, ['
 });
 
 /**
+ * Seconds the sitewide footer reuses the verdict list: a day.
+ *
+ * The footer renders on every page through the root layout, and Next.js
+ * gives a page the shortest cache window anywhere in its tree, so an hourly
+ * read here held every job page (`revalidate = 86400`) to an hour: crawlers
+ * then re-rendered job pages hourly and exhausted the database pool
+ * (2026-11-17). The verdicts change once a day anyway, when the
+ * aggregate-pseo cron writes them. Pages that need an hour export it
+ * themselves, and the shorter window still wins there.
+ */
+export const FOOTER_LANDING_VERDICT_CACHE_SECONDS = 86400;
+
+const dailyIndexableLandingSlugs = unstable_cache(readIndexableLandingSlugs, ['indexable-landing-slugs-daily'], {
+  revalidate: FOOTER_LANDING_VERDICT_CACHE_SECONDS,
+});
+
+async function loadVerdicts(read: () => Promise<string[]>, surface: string): Promise<ReadonlySet<string> | null> {
+  try {
+    return new Set(await read());
+  } catch (error) {
+    console.error(`[${surface}] category-landing index verdicts unavailable:`, error);
+    return null;
+  }
+}
+
+/**
  * Indexable landing slugs, or null when the verdicts cannot be read. Each
  * caller decides what null means (the footer falls back to its standing
  * list; the /jobs hub links no landing). `surface` names the caller in the
  * error log.
  */
 export async function loadIndexableLandingSlugs(surface: string): Promise<ReadonlySet<string> | null> {
-  try {
-    return new Set(await cachedIndexableLandingSlugs());
-  } catch (error) {
-    console.error(`[${surface}] category-landing index verdicts unavailable:`, error);
-    return null;
-  }
+  return loadVerdicts(cachedIndexableLandingSlugs, surface);
+}
+
+/** loadIndexableLandingSlugs through the footer's daily cache (FOOTER_LANDING_VERDICT_CACHE_SECONDS). */
+export async function loadIndexableLandingSlugsDaily(surface: string): Promise<ReadonlySet<string> | null> {
+  return loadVerdicts(dailyIndexableLandingSlugs, surface);
 }
 
 /**
