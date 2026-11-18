@@ -496,7 +496,16 @@ tests fail until every side agrees:
   `tests/regressions/job-page-isr-window.test.ts`). D50 (owner, same day): MJ12bot is blocked in robots.txt, and
   meta-externalagent gets a 10 second Crawl-delay plus a middleware cap of 10 requests a minute across all of
   its IPs (`lib/crawler-policy.ts`); every other crawler keeps the open posture of 2026-05-11. Reading the logs:
-  `vercel logs --scope sathishs-projects-ca92cf45 --project np-hiring`.
+  `vercel logs --scope sathishs-projects-ca92cf45 --project np-hiring`. Checked in the first 70 minutes after
+  the footer fix: one job page served stale (931 an hour before), no pooler cap errors, no meta-externalagent
+  requests. The 71 pool timeouts left all came in one nine minute burst from a scraper on rotating proxies just
+  after the deploy had emptied the page cache, so the hours after a deploy are the weak spot. Page 1 of /jobs,
+  the one listing still rendered on every visit (176 renders in those 70 minutes), is now held at the edge for a
+  minute for every visitor (`JOBS_BOARD_EDGE_CACHE` in `middleware.ts`, guarded by
+  `tests/regressions/middleware-listing-edge-cache.test.ts`). Since the edge stores any 200, a failed database
+  read on /jobs now answers 500 instead of an empty board at 200, and a failed count in its metadata (logged
+  with digest 3466345125 on a response that went out as 200) drops the number from the title instead of
+  failing the page (`tests/regressions/jobs-board-db-failure.test.ts`).
 - 2.37 Ingest renewal and takedowns (2026-11-11): a posting a source lists no longer republishes a stored job
   just because the duplicate check matched the two (`lib/health/renewal-decision.ts`, `renewExistingJob` in
   `lib/ingestion-service.ts`).

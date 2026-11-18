@@ -3,10 +3,16 @@
  * per request and their ISR revalidate never applies (cold TTFB 1.2 to 3.3 s).
  * The middleware now holds page 1 of every /jobs/{segment} listing at the edge
  * for an hour, served stale for a day while it revalidates, for every user
- * agent, as long as the response sets no cookie. Deeper pages and /jobs itself
- * keep the short crawler-only cache, and job-detail URLs stay uncached (ISR and
- * the 410 gate cover them). Page 1 of the /companies and /blog hubs, which
- * read ?page the same way, gets the same page-1 cache.
+ * agent, as long as the response sets no cookie. Deeper pages keep the short
+ * crawler-only cache, and job-detail URLs stay uncached (ISR and the 410 gate
+ * cover them). Page 1 of the /companies and /blog hubs, which read ?page the
+ * same way, gets the same page-1 cache.
+ *
+ * 2026-11-18: page 1 of the /jobs board itself (any filters, no ?page) follows
+ * the same rule with a one-minute window, served stale for up to an hour while
+ * it revalidates, so with steady traffic a new posting shows within about a
+ * minute. It had been the one listing rendered on every visit (176 renders in
+ * 70 minutes of production traffic).
  *
  * For that to reach users, the consent cookies are written only when their
  * value changes: a returning visitor whose region cookie and consent mirror
@@ -39,6 +45,7 @@ import { CONSENT_COOKIE, CONSENT_MIRROR_COOKIE } from '@/lib/consent';
 const HOST = new URL(brand.baseUrl).host;
 const LONG = 'public, s-maxage=3600, stale-while-revalidate=86400';
 const SHORT = 'public, s-maxage=300, stale-while-revalidate=600';
+const BOARD = 'public, s-maxage=60, stale-while-revalidate=3600';
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36';
 const GOOGLEBOT_UA = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 // No geo header in tests, so the middleware resolves the strict region.
@@ -165,6 +172,52 @@ describe('page 1 of the /companies and /blog hubs gets the same edge cache (M-03
     });
 });
 
+describe('page 1 of the /jobs board is edge-cached for a minute for every user agent (2026-11-18)', () => {
+    it.each(['/jobs', '/jobs?q=telehealth', '/jobs?sort=newest'])(
+        '%s: a returning visitor with no cookie to write gets the one-minute edge cache',
+        async (path) => {
+            const res = await middleware(request(path, { cookies: returningVisitor }));
+            expect(res.headers.get('set-cookie')).toBeNull();
+            expect(res.headers.get('CDN-Cache-Control')).toBe(BOARD);
+        },
+    );
+
+    it('a crawler gets the same one-minute edge cache, not the five-minute crawler window', async () => {
+        const res = await middleware(request('/jobs', { ua: GOOGLEBOT_UA }));
+        expect(res.headers.get('set-cookie')).toBeNull();
+        expect(res.headers.get('CDN-Cache-Control')).toBe(BOARD);
+    });
+
+    it('a response that writes a cookie is never marked cacheable', async () => {
+        const firstVisit = await middleware(request('/jobs'));
+        expect(firstVisit.headers.get('set-cookie')).toContain(`pmhnp_consent_region=${REGION}`);
+        expect(firstVisit.headers.get('CDN-Cache-Control')).toBeNull();
+
+        updateSession.mockImplementation(async () => {
+            const next = NextResponse.next();
+            next.cookies.set('sb-access-token', 'refreshed', { path: '/' });
+            return next;
+        });
+        const sessionRefresh = await middleware(request('/jobs', { cookies: returningVisitor }));
+        expect(sessionRefresh.headers.get('set-cookie')).toContain('sb-access-token=refreshed');
+        expect(sessionRefresh.headers.get('CDN-Cache-Control')).toBeNull();
+    });
+
+    it('/jobs?page=2 and later keep the old policy: crawlers get the short cache, users get none', async () => {
+        const crawler = await middleware(request('/jobs?page=2', { ua: GOOGLEBOT_UA }));
+        expect(crawler.headers.get('CDN-Cache-Control')).toBe(SHORT);
+        expect(crawler.headers.get('X-Robots-Tag')).toBe('noindex, follow');
+
+        const user = await middleware(request('/jobs?page=2', { cookies: returningVisitor }));
+        expect(user.headers.get('CDN-Cache-Control')).toBeNull();
+    });
+
+    it('the one-minute window applies to /jobs alone: category listings keep the hour', async () => {
+        const res = await middleware(request('/jobs/remote', { cookies: returningVisitor }));
+        expect(res.headers.get('CDN-Cache-Control')).toBe(LONG);
+    });
+});
+
 describe('everything else keeps the old policy', () => {
     it('page 2 and later: crawlers get the short cache, users get none', async () => {
         const crawler = await middleware(request('/jobs/state/texas?page=2', { ua: GOOGLEBOT_UA }));
@@ -172,14 +225,6 @@ describe('everything else keeps the old policy', () => {
         expect(crawler.headers.get('X-Robots-Tag')).toBe('noindex, follow');
 
         const user = await middleware(request('/jobs/state/texas?page=2', { cookies: returningVisitor }));
-        expect(user.headers.get('CDN-Cache-Control')).toBeNull();
-    });
-
-    it('/jobs itself (the filterable search page): crawlers get the short cache, users get none', async () => {
-        const crawler = await middleware(request('/jobs', { ua: GOOGLEBOT_UA }));
-        expect(crawler.headers.get('CDN-Cache-Control')).toBe(SHORT);
-
-        const user = await middleware(request('/jobs', { cookies: returningVisitor }));
         expect(user.headers.get('CDN-Cache-Control')).toBeNull();
     });
 

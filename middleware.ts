@@ -593,9 +593,14 @@ function canonicalHostRedirect(request: NextRequest): NextResponse | null {
 
 // Edge-cache directives for listing pages (M-03; see the CDN-Cache-Control
 // block at the end of routeRequest). Page 1 of a listing is held for an hour
-// and served stale for a day while it revalidates; any other crawler-fetched
-// listing view is held for 5 minutes.
+// and served stale for a day while it revalidates. Page 1 of the /jobs board
+// itself is held for a minute and served stale for up to an hour while it
+// revalidates: with steady traffic a new posting shows within about a minute,
+// and after a quiet spell the first visitor gets the older copy while the edge
+// fetches a fresh one. Any other crawler-fetched listing view is held for
+// 5 minutes.
 const LISTING_FIRST_PAGE_EDGE_CACHE = 'public, s-maxage=3600, stale-while-revalidate=86400';
+const JOBS_BOARD_EDGE_CACHE = 'public, s-maxage=60, stale-while-revalidate=3600';
 const CRAWLER_LISTING_EDGE_CACHE = 'public, s-maxage=300, stale-while-revalidate=600';
 
 // Directory hubs outside /jobs that read ?page, so they render per request
@@ -1556,9 +1561,19 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
     // (the root layout reads no cookies or headers), and a response that
     // sets a cookie (a first visit, a consent change or a Supabase session
     // refresh) is never marked cacheable for a user. ?page=1 already 301s to
-    // the bare URL, so no page param means page 1. Deeper pages and /jobs
-    // itself keep the short crawler-only cache. Job-detail URLs stay out
-    // (isJobDetailUrl), so the 410 gate above is untouched.
+    // the bare URL, so no page param means page 1. Deeper pages keep the
+    // short crawler-only cache. Job-detail URLs stay out (isJobDetailUrl), so
+    // the 410 gate above is untouched.
+    //
+    // 2026-11-18: page 1 of the /jobs board itself (any filters, no ?page)
+    // follows the same rule with a one-minute window (JOBS_BOARD_EDGE_CACHE).
+    // It was the one listing still rendered on every visit, about 10 queries
+    // each time (176 renders in 70 minutes of production traffic), and its
+    // HTML is just as user-neutral: app/jobs/page.tsx reads only the URL and
+    // the database. The short window keeps the busiest listing close to live
+    // while people browse (JOBS_BOARD_EDGE_CACHE covers the quiet-spell case),
+    // and the page answers 500, never a storable 200, when a database read
+    // fails (tests/regressions/jobs-board-db-failure.test.ts).
     //
     // The same page-1 rule covers the /companies and /blog hubs
     // (EDGE_CACHED_HUB_PATHS): they read ?page too, and their HTML is just
@@ -1567,14 +1582,15 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
     const isJobDetailUrl =
         /\/jobs\/[^/]*[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(pathname);
     const isEdgeCachedHub = EDGE_CACHED_HUB_PATHS.has(pathname);
+    const isJobsBoard = pathname === '/jobs';
     const isEdgeCacheCandidate =
         request.method === 'GET' &&
         !isNoindexPath &&
         !isJobDetailUrl &&
-        (pathname === '/jobs' || pathname.startsWith('/jobs/') || isEdgeCachedHub);
-    const isListingFirstPage = (pathname.startsWith('/jobs/') || isEdgeCachedHub) && !pageParam;
+        (isJobsBoard || pathname.startsWith('/jobs/') || isEdgeCachedHub);
+    const isListingFirstPage = !pageParam;
     if (isEdgeCacheCandidate && isListingFirstPage && (isCrawler || !response.headers.has('set-cookie'))) {
-        response.headers.set('CDN-Cache-Control', LISTING_FIRST_PAGE_EDGE_CACHE);
+        response.headers.set('CDN-Cache-Control', isJobsBoard ? JOBS_BOARD_EDGE_CACHE : LISTING_FIRST_PAGE_EDGE_CACHE);
     } else if (isEdgeCacheCandidate && isCrawler) {
         response.headers.set('CDN-Cache-Control', CRAWLER_LISTING_EDGE_CACHE);
     }

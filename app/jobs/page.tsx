@@ -52,6 +52,23 @@ function isBoardPageOutOfRange(page: number, total: number): boolean {
   return page > 1 && page > Math.ceil(total / limit);
 }
 
+/**
+ * The job count for the page metadata, or null when the database cannot
+ * answer. A thrown count must not fail the page: on 2026-11-18 a pool timeout
+ * here (digest 3466345125) went out to a crawler inside a 200 response, and
+ * the edge stores page 1 of /jobs for every visitor (middleware.ts
+ * JOBS_BOARD_EDGE_CACHE). Without a count the title and description drop the
+ * number; the page body still fails on its own reads.
+ */
+async function countJobsForMetadata(where: ReturnType<typeof buildWhereClause>): Promise<number | null> {
+  try {
+    return await prisma.job.count({ where });
+  } catch (error) {
+    console.error('[jobs] metadata job count unavailable:', error);
+    return null;
+  }
+}
+
 // ─── /jobs hub editorial + citable FAQ (P1 #17) ─────────────────────────────
 // TRUTH RULE: every figure below derives from lib/stats-sources.ts or the
 // live DB count passed in — never an invented statistic. The FAQPage schema
@@ -122,12 +139,15 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
 
   const filters = parseFiltersFromParams(urlParams);
 
-  // Get total job count
-  const whereClause = buildWhereClause(filters);
-  const totalJobs = await prisma.job.count({ where: whereClause });
-  const jobCountDisplay = totalJobs > 1000
-    ? `${(Math.floor(totalJobs / 100) * 100).toLocaleString()}+`
-    : totalJobs.toLocaleString();
+  // Total job count, or null when the database cannot answer.
+  const totalJobs = await countJobsForMetadata(buildWhereClause(filters));
+  const jobCountDisplay = totalJobs === null
+    ? null
+    : totalJobs > 1000
+      ? `${(Math.floor(totalJobs / 100) * 100).toLocaleString()}+`
+      : totalJobs.toLocaleString();
+  // "638 " in front of a noun phrase, or nothing when the count is unknown.
+  const countLead = jobCountDisplay === null ? '' : `${jobCountDisplay} `;
 
   // Build dynamic title and description based on filters.
   //
@@ -138,10 +158,10 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   const nicheTitlePair = brand.niche.short === brand.niche.medium
     ? brand.niche.short
     : `${brand.niche.short} & ${brand.niche.medium}`;
-  let title = `Browse ${jobCountDisplay} ${nicheTitlePair} Jobs Near Me`;
+  let title = `Browse ${countLead}${nicheTitlePair} Jobs Near Me`;
   // SEO Fix #7: trim default desc to ≤160 chars (Google SERP cap). Previous
   // 280-char default got truncated and lost the value-prop tail.
-  let description = `Search ${jobCountDisplay} ${brand.niche.short} & ${brand.niche.adjective} NP jobs by state, salary, and type: remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;
+  let description = `Search ${countLead}${brand.niche.short} & ${brand.niche.adjective} NP jobs by state, salary, and type: remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;
 
   // Customize based on active filters
   const titleParts: string[] = [];
@@ -157,8 +177,8 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   }
 
   if (titleParts.length > 0) {
-    title = `${jobCountDisplay} ${titleParts.join(' ')} ${brand.niche.short} Jobs`;
-    description = `Find ${jobCountDisplay} ${titleParts.join(' ').toLowerCase()} ${brand.niche.adjective} nurse practitioner positions. ${description}`;
+    title = `${countLead}${titleParts.join(' ')} ${brand.niche.short} Jobs`;
+    description = `Find ${countLead}${titleParts.join(' ').toLowerCase()} ${brand.niche.adjective} nurse practitioner positions. ${description}`;
   }
 
   // Distinguish user filters from nav params (?page, ?sort).
@@ -174,7 +194,9 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   const pageNum = boardPage(params.page);
   // TECH-09: /jobs?page=999 used to answer 200 with an empty list and the
   // title "Browse 638 NP Jobs Near Me (Page 999)".
-  if (isBoardPageOutOfRange(pageNum, totalJobs)) notFound();
+  // Without a count the range is unknown here; the page body still 404s a
+  // page past the last one from its own count.
+  if (totalJobs !== null && isBoardPageOutOfRange(pageNum, totalJobs)) notFound();
   const isPaginated = pageNum > 1;
   const isEmpty = totalJobs === 0;
   const shouldNoindex = hasUserFilters || isPaginated || isEmpty;
@@ -199,13 +221,13 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
       // social share of /jobs and every filtered jobs URL. The board's own
       // /api/og edge renderer carries the live filter-aware title instead
       // (same pattern as app/for-employers/page.tsx).
-      images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${jobCountDisplay} ${brand.niche.short} Jobs`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} Job Board: Browse ${brand.niche.adjective} nurse practitioner jobs` }],
+      images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${countLead}${brand.niche.short} Jobs`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} Job Board: Browse ${brand.niche.adjective} nurse practitioner jobs` }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [`${brand.baseUrl}/api/og?title=${encodeURIComponent(`${jobCountDisplay} ${brand.niche.short} Jobs`)}&type=page`],
+      images: [`${brand.baseUrl}/api/og?title=${encodeURIComponent(`${countLead}${brand.niche.short} Jobs`)}&type=page`],
     },
     alternates: {
       canonical,
@@ -315,18 +337,12 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     total = jobCount;
   } catch (error) {
     console.error('Error fetching jobs on server:', error);
-
-    // Fallback: render client with empty data
-    return (
-      <>
-        <JobsPageClient
-          initialJobs={[]}
-          initialTotal={0}
-          initialPage={1}
-          initialTotalPages={0}
-        />
-      </>
-    );
+    // Rethrown, never an empty board: the empty board answered 200, the edge
+    // stores a 200 for every visitor (middleware.ts JOBS_BOARD_EDGE_CACHE),
+    // and the browser does not refetch on load, so everyone would have seen
+    // "no jobs". Thrown, the render answers 500, which the edge never stores,
+    // so visitors keep the last good copy while the database recovers.
+    throw error;
   }
 
   // TECH-09: a page past the last one is a 404 (outside the try above, so
