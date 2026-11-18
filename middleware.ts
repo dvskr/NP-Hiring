@@ -6,7 +6,8 @@ import { matchIndexNowKeyPath } from '@/lib/indexnow-key-file';
 import { REQUEST_PATHNAME_HEADER } from '@/lib/auth/admin-return-path';
 import { CONSENT_COOKIE, CONSENT_MIRROR_COOKIE, CONSENT_REGION_COOKIE } from '@/lib/consent';
 import { updateSession } from '@/lib/supabase/middleware';
-import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimit, rateLimitShared, RATE_LIMITS } from '@/lib/rate-limit';
+import { isThrottledCrawler, THROTTLED_CRAWLER } from '@/lib/crawler-policy';
 import { isKnownCitySlug } from '@/lib/pseo/city-data/city-slugs-edge';
 import { resolveStateSlug } from '@/lib/pseo/setting-state-config';
 import { getAllMetroSlugs } from '@/lib/metro-data';
@@ -1252,6 +1253,18 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
     //   - GET only (POSTs go through their own API rate limits)
     //   - Skipped on _next/data/ JSON fetches (handled by Next.js itself)
     const userAgent = request.headers.get('user-agent') || '';
+
+    // ── Meta's AI crawler: one cap shared by all of its IPs ──────────
+    // Owner decision 2026-11-17 (lib/crawler-policy.ts): it crawls from
+    // many IPs, so the per-IP limits below never bind, and its bursts
+    // re-rendered job pages faster than the database pool could serve
+    // them. Past the cap it gets 429 with Retry-After; robots.txt (never
+    // matched by this middleware) also asks it for a Crawl-delay.
+    if (request.method === 'GET' && isThrottledCrawler(userAgent)) {
+        const limited = await rateLimitShared(`crawler:${THROTTLED_CRAWLER}`, RATE_LIMITS.metaAiCrawler);
+        if (limited) return limited;
+    }
+
     const isCrawler = isKnownCrawler(userAgent);
     if (
         request.method === 'GET' &&

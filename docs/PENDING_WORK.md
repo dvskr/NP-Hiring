@@ -484,6 +484,15 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
+- Crawler load (2026-11-17): readers got error pages and a slow /jobs because crawler bursts exhausted the
+  database pool ("timeout exceeded when trying to connect", up to 1,000+ an hour since about 2026-11-12, when the
+  board passed 6,000 jobs; the Supabase pooler also hit its 200-client cap). In one hour, job pages took 1,552
+  hits: meta-externalagent 874, GPTBot 197, MJ12bot 107, PerplexityBot 91, Googlebot 9. `171bef4` caches job
+  pages for a day instead of an hour and refreshes one at once after an employer or admin edit
+  (`lib/job-page-revalidation.ts`). D50 (owner, same day): MJ12bot is blocked in robots.txt, and
+  meta-externalagent gets a 10 second Crawl-delay plus a middleware cap of 10 requests a minute across all of
+  its IPs (`lib/crawler-policy.ts`); every other crawler keeps the open posture of 2026-05-11. Reading the logs:
+  `vercel logs --scope sathishs-projects-ca92cf45 --project np-hiring`.
 - 2.37 Ingest renewal and takedowns (2026-11-11): a posting a source lists no longer republishes a stored job
   just because the duplicate check matched the two (`lib/health/renewal-decision.ts`, `renewExistingJob` in
   `lib/ingestion-service.ts`).

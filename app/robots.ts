@@ -1,5 +1,6 @@
 import { brand } from '@/config/brand'
 import { MetadataRoute } from 'next'
+import { BLOCKED_CRAWLERS, THROTTLED_CRAWLER, THROTTLED_CRAWL_DELAY_SECONDS } from '@/lib/crawler-policy'
 
 // Opt out of build-time prerender so robots.txt regenerates on every request.
 // Diagnosed 2026-05-10 (issue #162): the d916ec2 Crawl-delay directives were
@@ -170,7 +171,7 @@ const AI_CRAWLERS = [
   'Diffbot',           // Diffbot AI
   'YouBot',            // You.com
   'Amazonbot',         // Amazon AI
-  'meta-externalagent', // Meta AI
+  // meta-externalagent (Meta AI) has its own throttled block below.
   'Applebot-Extended', // Apple Intelligence training
   // Newer 2025-2026 crawlers picked up since the original list was set —
   // each was active in production logs but had no entry, falling through
@@ -204,11 +205,13 @@ const SOCIAL_BOTS = [
 const SEO_CRAWLERS = [
   'AhrefsBot',
   'SemrushBot',
-  'MJ12bot',
   'DotBot',
   'PetalBot',
   'YandexBot',
 ] as const
+
+// MJ12bot is blocked and meta-externalagent throttled (owner decision
+// 2026-11-17): lib/crawler-policy.ts holds both, shared with middleware.ts.
 
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
@@ -286,6 +289,19 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: [...SEO_CRAWLERS],
         allow: PUBLIC_ALLOW,
         disallow: FULL_DISALLOW,
+      },
+      // Meta AI: the same public access as the AI group, with a wait between
+      // requests (owner decision 2026-11-17, see THROTTLED_CRAWLER).
+      {
+        userAgent: THROTTLED_CRAWLER,
+        allow: ['/', ...PUBLIC_ALLOW],
+        disallow: FULL_DISALLOW,
+        crawlDelay: THROTTLED_CRAWL_DELAY_SECONDS,
+      },
+      // Blocked outright (owner decision 2026-11-17, see BLOCKED_CRAWLERS).
+      {
+        userAgent: [...BLOCKED_CRAWLERS],
+        disallow: '/',
       },
       // Social / link-preview bots grouped — fetch a single URL on
       // demand for the preview card, so they need access to almost

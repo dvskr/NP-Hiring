@@ -59,6 +59,8 @@ export const RATE_LIMITS = {
     publicDetail: { limit: 240, windowSeconds: 60 },
     /** Public company pages: 60 req/min per IP (rarely deep-browsed) */
     publicCompany: { limit: 60, windowSeconds: 60 },
+    /** Meta's AI crawler (lib/crawler-policy.ts THROTTLED_CRAWLER), across all of its IPs: one request every 6 seconds on average, its robots.txt Crawl-delay order. */
+    metaAiCrawler: { limit: 10, windowSeconds: 60 },
     /** DSAR submission: 3 per hour per IP — privacy requests don't burst */
     dataRequest: { limit: 3, windowSeconds: 3600 },
     /** Short-link redirects (/r/<code>): 120 req/min per IP. Real social
@@ -211,6 +213,17 @@ export async function rateLimit(
     }
 
     return null;
+}
+
+/**
+ * A limit shared by every request with the same key, whatever its IP: for a
+ * client identified another way, such as a crawler by its user agent
+ * (middleware.ts, lib/crawler-policy.ts). Answers 429 with Retry-After past
+ * the limit, null otherwise.
+ */
+export async function rateLimitShared(sharedKey: string, config: RateLimitConfig): Promise<NextResponse | null> {
+    const { success, reset } = await checkRateLimit(`ratelimit:shared:${sharedKey}`, config);
+    return success ? null : rateLimitExceeded(reset);
 }
 
 export { rateLimit as default };
