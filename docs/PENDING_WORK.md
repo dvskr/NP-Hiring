@@ -317,6 +317,14 @@ source PDFs and the scripts that clean them are in the ignored `NP Guides/origin
 the machine that built them; after any edit, upload with `scripts/guides/upload-guides.ts` from the main
 checkout and keep each guide's `pages` in `lib/guides/catalog.ts` equal to the PDF (cover excluded).
 
+**2.38 Job alerts made from an APRN filter miss most of its jobs.** "Create Alert for This Search" turns a
+checked specialty into the alert keyword, and the digest matches that keyword as a substring of the job title
+or employer name (`app/jobs/JobsPageClient.tsx`). The plain labels "Anesthesia" and "Midwifery" are not in
+titles such as "Certified Registered Nurse Anesthetist" or "Certified Nurse Midwife (CNM)", so those alerts
+catch only the few jobs that use the word itself. The same holds for an alert made from the /jobs/anesthesia and
+/jobs/midwifery pages. Fix: store the category slug on the alert and match it through `Job.categoryTags`, as
+the filter does.
+
 ## 3. Decisions (DECISION)
 
 Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
@@ -366,8 +374,6 @@ change any of them.
 | D9 | Classify companies (direct employer or staffing) | On 2026-11-19 none of the 1,422 companies was classified (1,020 have live jobs), so the /jobs Employer Type filter stays hidden: it appears once a job in view has a classified employer, with a count on each option. The 25 companies with the most live jobs hold 2,523 of them and the top 100 hold 3,963 of 6,136, so start there. Claude can draft a list of likely staffing agencies for you to check and apply in the admin page | `/admin/companies`, `components/jobs/employer-type-facet.ts` |
 | D12 | Re-admit the specialty and setting by state pages (`/jobs/{specialty}/{state}`, for example /jobs/telehealth/texas) about 2026-10-29? | They are out of the sitemap and noindexed (`SETTING_STATE_INDEXING_ENABLED` is false); 10 pass the strict content gate today. Say go once Search Console shows the first month indexing cleanly ("Crawled, currently not indexed" low), and Claude flips the switch for those 10 only | `lib/pseo/render-gate.ts`, `lib/gsc-coverage.ts` |
 | D14 | Per-state compact verdicts in the multi-state planner and licensure checker? | The NLC member set is verified (2026-08-11) and the metro guides use it, but these two tools state the compact rules and link NCSBN instead of printing "member" or "not a member" per state. A verdict there is personal licensing advice, only as current as the last roster check. Recommended: keep it this way; lifting it needs a fixed re-check cadence and the check date beside every verdict | `components/tools/MultiStatePlanner.tsx`, `app/tools/licensure-checker/page.tsx` |
-| D52 | List the APRN roles in the /jobs Specialty filter? | The filter lists the 17 NP specialties only. Nurse anesthetist (723 live jobs on 2026-11-19), midwifery (139) and clinical nurse specialist (47) sit on the registry's APRN axis, so a CRNA can reach them only through their landing pages or search. Recommended: add the three as options; their badges come from the same counts route | `lib/filters.ts` (`SPECIALTY_FILTER_OPTIONS`), `lib/pseo/taxonomy-registry.ts` |
-
 ### 3.4 Copy approvals
 
 | # | Question | Today | Where |
@@ -524,7 +530,13 @@ tests fail until every side agrees:
   /companies pages for visitors outside the US and India, verified crawlers excepted by user agent), was staged
   the same day for the owner's approval; replayed over the 2026-11-18 request logs it would have caught 65 of the
   68 server errors in the 05:48 UTC burst and 257 of 273 in the 11:49 UTC one. Check it with
-  `vercel firewall rules list --scope sathishs-projects-ca92cf45 --project np-hiring`.
+  `vercel firewall rules list --scope sathishs-projects-ca92cf45 --project np-hiring`. The owner approved it the
+  same day and it was published at 23:41 UTC.
+- D52 (owner, 2026-11-19): the /jobs Specialty filter lists the APRN roles after the 17 NP specialties, as
+  "Nurse Anesthesia (CRNA)", "Nurse Midwifery (CNM)" and "Clinical Nurse Specialist (CNS)" (the labels the
+  /jobs hub links use), with counts like every other option (`SPECIALTY_FILTER_OPTIONS` in `lib/filters.ts`,
+  `tests/regressions/p0-filters-taxonomy-specialty-filter.test.ts`). On 2026-11-19 they held 723, 139 and 47
+  live jobs that no filter reached. Alerts made from them are 2.38.
 - 2.37 Ingest renewal and takedowns (2026-11-11): a posting a source lists no longer republishes a stored job
   just because the duplicate check matched the two (`lib/health/renewal-decision.ts`, `renewExistingJob` in
   `lib/ingestion-service.ts`).

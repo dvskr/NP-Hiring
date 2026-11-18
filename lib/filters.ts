@@ -141,13 +141,15 @@ export function categoryFilterLabel(slug: string): string {
 
 /**
  * /jobs Specialty filter — the clinical specialty axis from the taxonomy
- * registry, matched at query time via the precomputed Job.categoryTags
- * column (withTagFallback keeps not-yet-backfilled rows visible through
- * the ingest classifier's legacy keyword OR). Option values ARE the
- * registry slugs, so the filter UI, the ?specialty= URL param, and the
- * pSEO category pages can never drift. The legacy 'Telehealth' / 'Travel'
- * param values are NOT in this list — they are work-type filters with a
- * pre-registry URL contract, handled separately in buildWhereClause.
+ * registry, then the APRN roles (owner decision D52, 2026-11-19: nurse
+ * anesthesia alone had 723 live jobs no filter could reach), matched at
+ * query time via the precomputed Job.categoryTags column (withTagFallback
+ * keeps not-yet-backfilled rows visible through the ingest classifier's
+ * legacy keyword OR). Option values ARE the registry slugs, so the filter
+ * UI, the ?specialty= URL param, and the pSEO category pages can never
+ * drift. The legacy 'Telehealth' / 'Travel' param values are NOT in this
+ * list — they are work-type filters with a pre-registry URL contract,
+ * handled separately in buildWhereClause.
  */
 export interface SpecialtyFilterOption {
     /** URL param value — a taxonomy-registry specialty slug. */
@@ -156,10 +158,26 @@ export interface SpecialtyFilterOption {
     label: string;
 }
 
-export const SPECIALTY_FILTER_OPTIONS: readonly SpecialtyFilterOption[] =
-    CATEGORY_AXES.specialty.map((slug) => ({ value: slug, label: categoryFilterLabel(slug) }));
+/**
+ * Sidebar labels for the APRN roles, as the /jobs hub links them
+ * (lib/pseo/hub-category-links.ts). Option labels only: categoryFilterLabel
+ * keeps the plain form, because a job alert created from the filter uses it
+ * as a title substring (app/jobs/JobsPageClient.tsx), which
+ * "Nurse Anesthesia (CRNA)" would never match.
+ */
+const APRN_OPTION_LABELS: Readonly<Record<string, string>> = {
+    'anesthesia': 'Nurse Anesthesia (CRNA)',
+    'midwifery': 'Nurse Midwifery (CNM)',
+    'clinical-nurse-specialist': 'Clinical Nurse Specialist (CNS)',
+};
 
-const SPECIALTY_FILTER_SLUG_SET: ReadonlySet<string> = new Set<string>(CATEGORY_AXES.specialty);
+export const SPECIALTY_FILTER_OPTIONS: readonly SpecialtyFilterOption[] =
+    [...CATEGORY_AXES.specialty, ...CATEGORY_AXES.aprn].map((slug) => ({
+        value: slug,
+        label: APRN_OPTION_LABELS[slug] ?? categoryFilterLabel(slug),
+    }));
+
+const SPECIALTY_FILTER_SLUG_SET: ReadonlySet<string> = new Set<string>(SPECIALTY_FILTER_OPTIONS.map((opt) => opt.value));
 
 function isCanonicalCategorySlug(slug: string): slug is CategoryTag {
     return (CANONICAL_CATEGORY_SLUGS as readonly string[]).includes(slug);

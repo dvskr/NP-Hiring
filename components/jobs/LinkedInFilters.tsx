@@ -666,9 +666,10 @@ export default function LinkedInFilters() {
               </FilterSection>
             )}
 
-            {/* Specialty — the taxonomy registry's clinical specialty axis
-                (SPECIALTY_FILTER_OPTIONS in lib/filters.ts), riding the same
-                `specialty` URL param as the legacy work-type values. */}
+            {/* Specialty — the taxonomy registry's clinical specialty axis,
+                then the APRN roles (SPECIALTY_FILTER_OPTIONS in
+                lib/filters.ts), riding the same `specialty` URL param as the
+                legacy work-type values. */}
             <FilterSection title="Specialty">
               {SPECIALTY_FILTER_OPTIONS.map((option) => (
                 <CheckboxFilter

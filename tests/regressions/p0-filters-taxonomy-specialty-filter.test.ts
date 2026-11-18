@@ -9,6 +9,10 @@
  *       category pill labels must be registry-derived so removed donor
  *       slugs can't linger in components/jobs/LinkedInFilters.tsx.
  *
+ *       D52 (owner, 2026-11-19): the APRN roles (nurse anesthesia, nurse
+ *       midwifery, clinical nurse specialist) follow the specialties, with
+ *       the labels the /jobs hub links use.
+ *
  *   #12 lib/filters.ts still carried donor-board category keys
  *       (behavioral-health, substance-abuse, child-adolescent, crisis,
  *       addiction) and senior/lead matchers hardcoded to a single
@@ -30,6 +34,7 @@ import { ALL_CATEGORY_SLUGS, CATEGORY_AXES } from '@/lib/pseo/taxonomy-registry'
 
 const ROOT = path.resolve(__dirname, '../..');
 const SPECIALTY_SLUGS: readonly string[] = CATEGORY_AXES.specialty;
+const OPTION_SLUGS: readonly string[] = [...CATEGORY_AXES.specialty, ...CATEGORY_AXES.aprn];
 
 const REMOVED_DONOR_KEYS = [
   'behavioral-health',
@@ -56,13 +61,26 @@ function slugMatchesTitle(slug: string, jobTitle: string): boolean {
 }
 
 describe('P0 #11 — specialty filter options derive from the taxonomy registry', () => {
-  it('exposes every clinical specialty slug, in axis order', () => {
-    expect(SPECIALTY_FILTER_OPTIONS.map((opt) => opt.value)).toEqual([...SPECIALTY_SLUGS]);
+  it('exposes every clinical specialty slug, then the APRN roles, in axis order', () => {
+    expect(SPECIALTY_FILTER_OPTIONS.map((opt) => opt.value)).toEqual([...OPTION_SLUGS]);
   });
 
-  it('is the full 14-specialty axis (not the old 2-checkbox set)', () => {
-    expect(SPECIALTY_FILTER_OPTIONS.length).toBe(SPECIALTY_SLUGS.length);
-    expect(SPECIALTY_FILTER_OPTIONS.length).toBeGreaterThanOrEqual(14);
+  it('is the full specialty axis plus the APRN axis (not the old 2-checkbox set)', () => {
+    expect(SPECIALTY_FILTER_OPTIONS.length).toBe(SPECIALTY_SLUGS.length + CATEGORY_AXES.aprn.length);
+    expect(SPECIALTY_FILTER_OPTIONS.length).toBeGreaterThanOrEqual(17);
+  });
+
+  it('labels the APRN roles as the /jobs hub links do', () => {
+    const labels = Object.fromEntries(SPECIALTY_FILTER_OPTIONS.map((opt) => [opt.value, opt.label]));
+    expect(labels.anesthesia).toBe('Nurse Anesthesia (CRNA)');
+    expect(labels.midwifery).toBe('Nurse Midwifery (CNM)');
+    expect(labels['clinical-nurse-specialist']).toBe('Clinical Nurse Specialist (CNS)');
+  });
+
+  it('keeps the plain category label, which job alerts match as a title substring', () => {
+    expect(categoryFilterLabel('clinical-nurse-specialist')).toBe('Clinical Nurse Specialist');
+    expect(categoryFilterLabel('midwifery')).toBe('Midwifery');
+    expect(categoryFilterLabel('anesthesia')).toBe('Anesthesia');
   });
 
   it('labels every option in display form (never the raw slug)', () => {
@@ -83,7 +101,7 @@ describe('P0 #11 — specialty filter options derive from the taxonomy registry'
 describe('P0 #11 — buildWhereClause wires specialty slugs through categoryTags', () => {
   it('every specialty option value produces a real, slug-specific condition', () => {
     const base = whereJson({});
-    for (const slug of SPECIALTY_SLUGS) {
+    for (const slug of OPTION_SLUGS) {
       const json = whereJson({ specialty: [slug] });
       expect(json).not.toBe(base);
       expect(json).toContain(`"categoryTags":{"has":"${slug}"}`);
