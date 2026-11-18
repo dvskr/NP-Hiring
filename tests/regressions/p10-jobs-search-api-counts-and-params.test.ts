@@ -6,6 +6,9 @@
  *     memory with lib/filters.ts's own facet clauses. These tests pin that the
  *     tally equals the old per-facet COUNT formula (brute-forced here with the
  *     same evaluator over fixture rows), including the DB id-set path.
+ *     Since 2026-11-19 it also counts each registry specialty and each
+ *     employer type: the sidebar showed those two sections without numbers
+ *     because the route never reported them.
  *  #3 physician-specialty titles with a NULL professionClass leaked.
  *  #4 zero-result hint formatting / parsing.
  *  #5 /api/jobs page/limit garbage reached Prisma as NaN / negative skip.
@@ -28,10 +31,14 @@ import {
   freshnessClause,
   anySalaryClause,
   salaryClause,
+  recruitmentTypeClause,
+  specialtyClause,
   telehealthSpecialtyClause,
   travelSpecialtyClause,
+  SPECIALTY_FILTER_OPTIONS,
+  type RecruitmentFilterState,
 } from '@/lib/filters';
-import { DEFAULT_FILTERS, type FilterCounts, type FilterState } from '@/types/filters';
+import { DEFAULT_FILTERS, type FilterCounts } from '@/types/filters';
 import {
   COUNT_ROW_COLUMNS,
   computeFilterCounts,
@@ -73,9 +80,15 @@ function job(overrides: Partial<MemoryRow>): MemoryRow {
     location: 'Austin, TX',
     // A non-null column (default 0): /jobs search reads the dead-link gate.
     healthConsecutiveMissing: 0,
+    // The linked company as the counts SELECT loads it: null = no company.
+    company: null,
     ...overrides,
   };
 }
+
+const DIRECT = { recruitmentType: 'direct_hire' };
+const STAFFING = { recruitmentType: 'staffing_agency' };
+const UNCLASSIFIED = { recruitmentType: null };
 
 const FIXTURE: MemoryRow[] = [
   job({ isRemote: true, jobType: 'Full-Time', normalizedMinSalary: 160000, originalPostedAt: daysAgo(1), createdAt: daysAgo(0.5) }),
@@ -89,9 +102,17 @@ const FIXTURE: MemoryRow[] = [
   job({ isRemote: true, isHybrid: true, jobType: 'Full-Time', normalizedMinSalary: 100000, normalizedMaxSalary: 150000 }),
   job({ title: 'Obstetrician/Gynecologist- Hospitalist', professionClass: null }),
   job({ title: 'Remote PMHNP', employer: 'Other Co', isRemote: false }),
+  // Employer types and registry specialties: tagged rows match by tag,
+  // untagged rows through the title keywords of the legacy arm.
+  job({ title: 'Family Nurse Practitioner', company: DIRECT, isRemote: true, jobType: 'Contract' }),
+  job({ title: 'Nurse Practitioner', categoryTags: ['family-practice'], company: DIRECT, jobType: 'Part-Time' }),
+  job({ title: 'Pediatric Nurse Practitioner', company: STAFFING, normalizedMinSalary: 130000 }),
+  job({ title: 'Nurse Practitioner (FNP) Urgent Care', categoryTags: ['urgent-care'], company: UNCLASSIFIED }),
+  job({ title: 'Cardiology NP', categoryTags: ['cardiology'], company: STAFFING, isHybrid: true, newGradFriendly: true }),
+  job({ title: 'Dermatology Nurse Practitioner', company: UNCLASSIFIED, originalPostedAt: daysAgo(2) }),
 ];
 
-const ALL_COLUMNS: ReadonlySet<string> = new Set(Object.keys(FIXTURE[0]));
+const ALL_COLUMNS: ReadonlySet<string> = new Set([...Object.keys(FIXTURE[0]), 'company.recruitmentType']);
 const rowsMatching = (where: Prisma.JobWhereInput) => {
   expect(isMemoryEvaluable(where, ALL_COLUMNS)).toBe(true);
   return FIXTURE.filter((row) => matchesWhere(where, row));
@@ -99,8 +120,8 @@ const rowsMatching = (where: Prisma.JobWhereInput) => {
 const count = (where: Prisma.JobWhereInput) => rowsMatching(where).length;
 
 /** The pre-P10 route's formula: one COUNT per badge over per-facet bases. */
-function bruteForceCounts(filters: FilterState): FilterCounts {
-  const B = (f: FilterState) => buildWhereClause(f);
+function bruteForceCounts(filters: RecruitmentFilterState): FilterCounts {
+  const B = (f: RecruitmentFilterState) => buildWhereClause(f);
   const A = (a: Prisma.JobWhereInput, b: Prisma.JobWhereInput): Prisma.JobWhereInput => ({ AND: [a, b] });
   const wm = B({ ...filters, workMode: [] });
   const jt = rowsMatching(B({ ...filters, jobType: [] }));
@@ -110,6 +131,10 @@ function bruteForceCounts(filters: FilterState): FilterCounts {
   const el = rowsMatching(B({ ...filters, experienceLevel: [] }));
   const ng = B({ ...filters, newGradFriendly: null });
   const my = B({ ...filters, minYearsExperience: null });
+  const rt = B({ ...filters, recruitmentType: null });
+  const bySpecialty = Object.fromEntries(
+    SPECIALTY_FILTER_OPTIONS.map(({ value }) => [value, count(A(sp, specialtyClause([value])!))]),
+  );
   const byType = (t: string | null) => jt.filter((r) => r.jobType === t).length;
   const byLevel = (l: string) => el.filter((r) => r.experienceLevel === l).length;
   return {
@@ -131,15 +156,24 @@ function bruteForceCounts(filters: FilterState): FilterCounts {
       '7d': count(A(po, freshnessClause(NOW, '7d'))),
       '30d': count(A(po, freshnessClause(NOW, '30d'))),
     },
-    specialty: { Telehealth: count(A(sp, telehealthSpecialtyClause())), Travel: count(A(sp, travelSpecialtyClause())) },
+    specialty: {
+      Telehealth: count(A(sp, telehealthSpecialtyClause())),
+      Travel: count(A(sp, travelSpecialtyClause())),
+      ...bySpecialty,
+    },
     experienceLevel: { 'New Grad': byLevel('New Grad'), 'Mid-Level': byLevel('Mid-Level'), 'Senior': byLevel('Senior') },
     newGradFriendly: count(A(ng, newGradWhereClause())),
     minYears: { 1: count(A(my, minYearsQualifyClause(1))), 2: count(A(my, minYearsQualifyClause(2))), 5: count(A(my, minYearsQualifyClause(5))) },
+    recruitmentType: {
+      direct_hire: count(A(rt, recruitmentTypeClause('direct_hire'))),
+      staffing_agency: count(A(rt, recruitmentTypeClause('staffing_agency'))),
+      unclassified: count(A(rt, recruitmentTypeClause('unclassified'))),
+    },
     total: count(B(filters)),
   };
 }
 
-const F = (overrides: Partial<FilterState>): FilterState => ({ ...DEFAULT_FILTERS, ...overrides });
+const F = (overrides: Partial<RecruitmentFilterState>): RecruitmentFilterState => ({ ...DEFAULT_FILTERS, ...overrides });
 
 describe('the /jobs base where drops dead links (EDGE-CRONS handoff 20)', () => {
   it('a row at the dead-link threshold is not counted; one miss short of it is', () => {
@@ -150,7 +184,7 @@ describe('the /jobs base where drops dead links (EDGE-CRONS handoff 20)', () => 
   });
 });
 
-const CASES: Array<[string, FilterState]> = [
+const CASES: Array<[string, RecruitmentFilterState]> = [
   ['no filters', F({})],
   ['remote', F({ workMode: ['remote'] })],
   ['remote + Full-Time', F({ workMode: ['remote'], jobType: ['Full-Time'] })],
@@ -160,6 +194,9 @@ const CASES: Array<[string, FilterState]> = [
   ['slug specialty + travel + new grad', F({ specialty: ['acute-care', 'Travel'], newGradFriendly: true })],
   ['min years + legacy level + Other type', F({ minYearsExperience: 2, experienceLevel: ['Senior'], jobType: ['Other', 'Contract'] })],
   ['every facet at once', F({ workMode: ['remote', 'onsite'], jobType: ['Full-Time'], salaryMin: 100000, postedWithin: '7d', specialty: ['Telehealth'], experienceLevel: ['New Grad'], newGradFriendly: true, minYearsExperience: 1 })],
+  ['registry specialties', F({ specialty: ['family-practice', 'pediatric'] })],
+  ['employer type: direct', F({ recruitmentType: 'direct_hire' })],
+  ['employer type: unclassified + specialty + remote', F({ recruitmentType: 'unclassified', specialty: ['dermatology', 'Telehealth'], workMode: ['remote', 'onsite'] })],
 ];
 
 describe('#1 filter-counts in-memory tally equals the per-facet COUNT formula', () => {
@@ -174,6 +211,25 @@ describe('#1 filter-counts in-memory tally equals the per-facet COUNT formula', 
     // the hybrid "Mix of telemedicine and in person" row no longer counts.
     expect(all.specialty.Telehealth).toBe(1);
     expect(bruteForceCounts(F({ workMode: ['remote'], jobType: ['Full-Time'] })).total).toBe(3);
+    // One tagged row and one untagged FNP title each; the "(FNP) Urgent
+    // Care" row is tagged urgent-care only, so its title keyword does not
+    // count (the legacy arm reads untagged rows alone).
+    expect(all.specialty['family-practice']).toBe(2);
+    expect(all.specialty.pediatric).toBe(1);
+    expect(all.specialty.cardiology).toBe(1);
+    expect(all.specialty.oncology).toBe(0);
+    expect(all.recruitmentType).toEqual({ direct_hire: 2, staffing_agency: 2, unclassified: all.total - 4 });
+  });
+
+  it('counts every registry specialty in memory, from the title and the stored tags', () => {
+    const plan = planFilterCounts(F({}), NOW);
+    expect(Object.keys(plan.specialtyOptions).sort()).toEqual(SPECIALTY_FILTER_OPTIONS.map((o) => o.value).sort());
+    for (const [slug, clause] of Object.entries(plan.specialtyOptions)) {
+      expect(isMemoryEvaluable(clause, COUNT_ROW_COLUMNS), slug).toBe(true);
+    }
+    for (const clause of Object.values(plan.recruitmentOptions)) {
+      expect(isMemoryEvaluable(clause, COUNT_ROW_COLUMNS)).toBe(true);
+    }
   });
 
   it.each(CASES)('%s (all clauses in memory)', (_name, filters) => {
@@ -197,7 +253,12 @@ describe('#1 filter-counts in-memory tally equals the per-facet COUNT formula', 
     // in memory from title, tags and the work mode like every other badge.
     expect(plan.dbClauses).not.toContain(plan.options.telehealth);
     expect(plan.dbClauses).not.toContain(plan.options.travel);
-    // Query budget: one row fetch plus a handful of id lookups, not ~21 COUNTs.
+    // Query budget: one row fetch, with no id lookup for the 17 specialty
+    // badges or the employer-type badges (they read the title, the tags and
+    // the company the row SELECT already loads), never ~21 COUNTs.
+    for (const clause of [...Object.values(plan.specialtyOptions), ...Object.values(plan.recruitmentOptions)]) {
+      expect(plan.dbClauses).not.toContain(clause);
+    }
     expect(plan.dbClauses.length).toBeLessThanOrEqual(3);
   });
 });
@@ -228,6 +289,34 @@ describe('#1 where-evaluator follows SQL three-valued logic', () => {
     expect(isMemoryEvaluable({ company: { is: null } }, cols)).toBe(false);
     expect(isMemoryEvaluable({ title: { search: 'x' } }, cols)).toBe(false);
     expect(isMemoryEvaluable({ jobType: { not: null } }, cols)).toBe(true);
+  });
+
+  it('evaluates a company relation filter against the company the row carries', () => {
+    const withCompany = new Set(['company', 'company.recruitmentType']);
+    const direct = { company: { is: { recruitmentType: 'direct_hire' } } };
+    const noCompany = { company: { is: null } };
+    const unclassified = { company: { is: { recruitmentType: null } } };
+    for (const clause of [direct, noCompany, unclassified, recruitmentTypeClause('unclassified')]) {
+      expect(isMemoryEvaluable(clause, withCompany)).toBe(true);
+    }
+    const none = { id: 'a', company: null } as MemoryRow;
+    const unset = { id: 'b', company: { recruitmentType: null } } as MemoryRow;
+    const hire = { id: 'c', company: { recruitmentType: 'direct_hire' } } as MemoryRow;
+    expect([none, unset, hire].map((r) => matchesWhere(direct, r))).toEqual([false, false, true]);
+    expect([none, unset, hire].map((r) => matchesWhere(noCompany, r))).toEqual([true, false, false]);
+    expect([none, unset, hire].map((r) => matchesWhere(unclassified, r))).toEqual([false, true, false]);
+    expect([none, unset, hire].map((r) => matchesWhere(recruitmentTypeClause('unclassified'), r))).toEqual([true, true, false]);
+  });
+
+  it('leaves relation filters it cannot model to the database', () => {
+    const withCompany = new Set(['company', 'company.recruitmentType']);
+    // Under NOT, SQL's answer for a job with no company depends on the
+    // subquery Prisma writes, so the evaluator does not guess.
+    expect(isMemoryEvaluable({ NOT: { company: { is: null } } }, withCompany)).toBe(false);
+    expect(isMemoryEvaluable({ NOT: [{ OR: [{ company: { is: { recruitmentType: null } } }] }] }, withCompany)).toBe(false);
+    expect(isMemoryEvaluable({ company: { isNot: null } }, withCompany)).toBe(false);
+    expect(isMemoryEvaluable({ company: { is: { name: 'Acme' } } }, withCompany)).toBe(false);
+    expect(isMemoryEvaluable({ company: { is: { recruitmentType: 'direct_hire' } } }, new Set(['company']))).toBe(false);
   });
 });
 
@@ -269,6 +358,14 @@ describe('#6 filter-counts body handling', () => {
     expect(n.minYearsExperience).toBeNull();
     expect(n.postedWithin).toBe('7d');
     expect(normalizeFilterCountsBody({ salaryMin: '150000', minYearsExperience: 2 })).toMatchObject({ salaryMin: 150000, minYearsExperience: 2 });
+  });
+
+  it('keeps the employer-type filter, so the total and every badge honor it', () => {
+    expect(normalizeFilterCountsBody({ recruitmentType: 'direct_hire' })!.recruitmentType).toBe('direct_hire');
+    expect(normalizeFilterCountsBody({ recruitmentType: 'unclassified' })!.recruitmentType).toBe('unclassified');
+    for (const bad of ['agency', 5, ['direct_hire'], null, undefined]) {
+      expect(normalizeFilterCountsBody({ recruitmentType: bad })!.recruitmentType, String(bad)).toBeNull();
+    }
   });
 });
 

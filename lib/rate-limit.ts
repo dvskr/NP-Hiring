@@ -59,8 +59,8 @@ export const RATE_LIMITS = {
     publicDetail: { limit: 240, windowSeconds: 60 },
     /** Public company pages: 60 req/min per IP (rarely deep-browsed) */
     publicCompany: { limit: 60, windowSeconds: 60 },
-    /** Meta's AI crawler (lib/crawler-policy.ts THROTTLED_CRAWLER), across all of its IPs: one request every 6 seconds on average, its robots.txt Crawl-delay order. */
-    metaAiCrawler: { limit: 10, windowSeconds: 60 },
+    /** Each throttled crawler (lib/crawler-policy.ts THROTTLED_CRAWLERS), across all of its IPs: one request every 6 seconds on average, its robots.txt Crawl-delay order. */
+    throttledCrawler: { limit: 10, windowSeconds: 60 },
     /** DSAR submission: 3 per hour per IP — privacy requests don't burst */
     dataRequest: { limit: 3, windowSeconds: 3600 },
     /** Short-link redirects (/r/<code>): 120 req/min per IP. Real social

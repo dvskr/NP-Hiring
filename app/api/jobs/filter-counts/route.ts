@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import type { FilterCounts, FilterState } from '@/types/filters';
+import type { FilterCounts } from '@/types/filters';
+import type { RecruitmentFilterState } from '@/lib/filters';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import {
   COUNT_ROW_SELECT,
@@ -28,7 +29,7 @@ const dataSource: FilterCountsDataSource = {
     (await prisma.job.findMany({ where, select: { id: true } })).map((row) => row.id),
 };
 
-function cachedFilterCounts(filters: FilterState): Promise<FilterCounts> {
+function cachedFilterCounts(filters: RecruitmentFilterState): Promise<FilterCounts> {
   const key = JSON.stringify(filters);
   const now = Date.now();
   const hit = countsCache.get(key);

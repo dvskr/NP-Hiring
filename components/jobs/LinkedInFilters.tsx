@@ -15,6 +15,7 @@ import {
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
 import { trackSearch, trackFilterChange } from '@/lib/analytics';
+import { showsEmployerTypeFacet } from './employer-type-facet';
 
 // Human-readable names for the active-category pill — derived from the
 // taxonomy registry (single source of truth), so removed donor slugs can't
@@ -35,8 +36,7 @@ interface CheckboxFilterProps {
   label: string;
   /**
    * Result-count badge. `0` renders a gray zero badge; omit (undefined) to
-   * hide the badge entirely — used for filter values the counts API does
-   * not report yet, so we never fabricate a "0 jobs" signal.
+   * hide the badge entirely, for a value the counts API does not report.
    */
   count?: number;
   checked: boolean;
@@ -159,12 +159,6 @@ export default function LinkedInFilters() {
     setSearchInput(filters.search || '');
     setLocationInput(filters.location || '');
   }
-  // `recruitmentTotal` is the true total while an employer-type filter is
-  // active: the filter-counts API normalizes its POST body to the fixed
-  // FilterState shape and drops recruitmentType, so counts.total would
-  // overstate results whenever this filter is on. null = unknown (fetch
-  // failed/pending) and renders as NOTHING — never a fabricated zero.
-  const [recruitmentTotal, setRecruitmentTotal] = useState<number | null>(null);
 
   // Fetch filter counts (includes category param for accurate counts).
   // Counts are stamped with the query string they were computed for, and
@@ -214,49 +208,6 @@ export default function LinkedInFilters() {
       else window.clearTimeout(handle);
     };
   }, [fetchCounts]);
-
-  // Employer-type total (see the state declaration above). Deferred off the
-  // critical path exactly like fetchCounts, and only fetched while an
-  // employer-type filter is active; /api/jobs re-parses its own URL through
-  // parseFiltersFromParams, so the total honors recruitmentType even though
-  // the filter-counts POST route does not.
-  useEffect(() => {
-    let cancelled = false;
-    const probeTotal = async (state: RecruitmentFilterState): Promise<number | null> => {
-      try {
-        const params = filtersToParams(state);
-        params.set('limit', '1');
-        const res = await fetch(`/api/jobs?${params.toString()}`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return typeof data.total === 'number' ? data.total : null;
-      } catch {
-        return null;
-      }
-    };
-    const run = async () => {
-      const parsed = parseFiltersFromParams(new URLSearchParams(searchParams.toString()));
-      const activeTotal = parsed.recruitmentType ? await probeTotal(parsed) : null;
-      if (cancelled) return;
-      setRecruitmentTotal(activeTotal);
-    };
-    type IdleHandle = number;
-    const idleApi = (typeof window !== 'undefined' && 'requestIdleCallback' in window)
-      ? (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => IdleHandle; cancelIdleCallback: (h: IdleHandle) => void })
-      : null;
-    let handle: number | null = null;
-    if (idleApi) {
-      handle = idleApi.requestIdleCallback(() => void run(), { timeout: 2000 });
-    } else {
-      handle = window.setTimeout(() => void run(), 250) as unknown as number;
-    }
-    return () => {
-      cancelled = true;
-      if (handle == null) return;
-      if (idleApi) idleApi.cancelIdleCallback(handle);
-      else window.clearTimeout(handle);
-    };
-  }, [searchParams]);
 
   // Route every filter mutation through one place so the employer-type filter
   // can stay honest. JobsPageClient.fetchJobs now serializes its /api/jobs
@@ -312,12 +263,6 @@ export default function LinkedInFilters() {
     navigateWithFilters(newFilters as RecruitmentFilterState);
   };
 
-  // Per-specialty counts: the typed FilterCounts.specialty only declares the
-  // two legacy work-type keys; registry-slug keys flow through untyped once
-  // the filter-counts API reports them. Undefined hides the badge (we never
-  // fabricate a zero).
-  const specialtyCounts = (counts?.specialty ?? {}) as Partial<Record<string, number>>;
-
   // Count active filters through the SHARED helper (lib/filters.ts) — the
   // same rule JobsPageClient uses, so the sidebar and the page can never
   // disagree again about what counts as active (P6 #3). Includes the
@@ -325,13 +270,9 @@ export default function LinkedInFilters() {
   // "Clear all" appear when they are the sole filters.
   const activeFilterCount = countActiveFilters(filters);
 
-  // Displayed results total. The filter-counts POST route normalizes its body
-  // to the fixed FilterState shape and drops recruitmentType, so counts.total
-  // ignores an active employer-type filter — substitute the /api/jobs probe
-  // total (which honors it) whenever that filter is on.
-  const displayedTotal = filters.recruitmentType
-    ? recruitmentTotal
-    : (counts?.total ?? null);
+  // Displayed results total, from filter-counts, which honors every filter
+  // including the employer type. null renders the loading placeholder.
+  const displayedTotal = counts?.total ?? null;
 
   // Get active filter pills
   const getActiveFilters = () => {
@@ -535,7 +476,7 @@ export default function LinkedInFilters() {
         }}>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500, margin: 0 }}>
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-              {displayedTotal === null || (isLoading && !filters.recruitmentType) ? '...' : displayedTotal.toLocaleString()}
+              {displayedTotal === null || isLoading ? '...' : displayedTotal.toLocaleString()}
             </span>
             {' '}jobs found
           </p>
@@ -701,37 +642,39 @@ export default function LinkedInFilters() {
                 classification (Company.recruitmentType, written only from
                 /admin/companies). Three states: Any (both unchecked), Direct,
                 Staffing. The option labels carry no explanatory copy (owner
-                call, 2026-10-12). No count badges on the two options: the
-                filter-counts API doesn't report this facet yet, and we never
-                fabricate a zero (see CheckboxFilter's count contract above). */}
-            <FilterSection title="Employer Type">
-              <CheckboxFilter
-                label="Direct employers"
-                checked={filters.recruitmentType === 'direct_hire'}
-                onChange={() =>
-                  setSingleFilter('recruitmentType', filters.recruitmentType === 'direct_hire' ? null : 'direct_hire')
-                }
-              />
-              <CheckboxFilter
-                label="Staffing agencies"
-                checked={filters.recruitmentType === 'staffing_agency'}
-                onChange={() =>
-                  setSingleFilter('recruitmentType', filters.recruitmentType === 'staffing_agency' ? null : 'staffing_agency')
-                }
-              />
-            </FilterSection>
+                call, 2026-10-12). Rendered only while it can narrow the view
+                or is active (showsEmployerTypeFacet): with no classified
+                company both options would match nothing. */}
+            {showsEmployerTypeFacet(counts, filters.recruitmentType) && (
+              <FilterSection title="Employer Type">
+                <CheckboxFilter
+                  label="Direct employers"
+                  count={counts?.recruitmentType?.direct_hire ?? 0}
+                  checked={filters.recruitmentType === 'direct_hire'}
+                  onChange={() =>
+                    setSingleFilter('recruitmentType', filters.recruitmentType === 'direct_hire' ? null : 'direct_hire')
+                  }
+                />
+                <CheckboxFilter
+                  label="Staffing agencies"
+                  count={counts?.recruitmentType?.staffing_agency ?? 0}
+                  checked={filters.recruitmentType === 'staffing_agency'}
+                  onChange={() =>
+                    setSingleFilter('recruitmentType', filters.recruitmentType === 'staffing_agency' ? null : 'staffing_agency')
+                  }
+                />
+              </FilterSection>
+            )}
 
             {/* Specialty — the taxonomy registry's clinical specialty axis
                 (SPECIALTY_FILTER_OPTIONS in lib/filters.ts), riding the same
-                `specialty` URL param as the legacy work-type values. Count
-                badges appear per specialty once the filter-counts API
-                reports keys for these slugs. */}
+                `specialty` URL param as the legacy work-type values. */}
             <FilterSection title="Specialty">
               {SPECIALTY_FILTER_OPTIONS.map((option) => (
                 <CheckboxFilter
                   key={option.value}
                   label={option.label}
-                  count={specialtyCounts[option.value]}
+                  count={counts?.specialty?.[option.value] ?? 0}
                   checked={filters.specialty?.includes(option.value) || false}
                   onChange={() => toggleArrayFilter('specialty', option.value)}
                 />

@@ -48,6 +48,17 @@ export interface FilterCounts {
   specialty: {
     Telehealth: number;
     Travel: number;
+    /** One badge per registry specialty slug (SPECIALTY_FILTER_OPTIONS in lib/filters.ts). */
+    [specialtySlug: string]: number;
+  };
+  /**
+   * Employer type (Company.recruitmentType). `unclassified` also covers jobs
+   * with no linked company; the three buckets add up to the facet's base.
+   */
+  recruitmentType: {
+    direct_hire: number;
+    staffing_agency: number;
+    unclassified: number;
   };
   experienceLevel: {
     'New Grad': number;

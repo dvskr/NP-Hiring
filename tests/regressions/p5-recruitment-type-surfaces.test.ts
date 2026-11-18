@@ -71,9 +71,12 @@ describe('/jobs facet (components/jobs/LinkedInFilters.tsx)', () => {
         expect(helperCalls.length).toBeGreaterThanOrEqual(4);
     });
 
-    it('substitutes an accurate total while the filter is active (filter-counts drops the param)', () => {
+    it('shows the total filter-counts computes, which honors the employer type (2026-11-19)', () => {
+        // filter-counts used to drop the param, so the sidebar probed
+        // /api/jobs for a second total. It now counts the facet itself
+        // (tests/regressions/jobs-filter-facet-badges.test.ts).
         expect(src).toContain('displayedTotal');
-        expect(src).toMatch(/filters\.recruitmentType\s*\?\s*recruitmentTotal/);
+        expect(src).not.toContain('recruitmentTotal');
     });
 });
 

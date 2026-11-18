@@ -11,11 +11,20 @@
  * TRUE. Any operator or column this evaluator does not model makes
  * `isMemoryEvaluable` return false, and the caller resolves that clause with
  * a database query instead, so an unsupported shape can never be guessed at.
+ *
+ * To-one relation filters (`company: { is: null }`, `company: { is: {...} }`)
+ * are evaluated against the related row the caller loaded as a nested object
+ * (null when there is none). Their nested columns are named
+ * `<relation>.<column>` in the column set. Under NOT they go to the database:
+ * there SQL's answer for a row without the relation depends on the subquery
+ * Prisma writes.
  */
 
 type Tri = boolean | null;
 
 export type MemoryRow = { id: string } & Record<string, unknown>;
+
+type Fields = Record<string, unknown>;
 
 const LOGICAL_KEYS = new Set(['AND', 'OR', 'NOT']);
 
@@ -52,43 +61,68 @@ function isFieldFilterEvaluable(filter: unknown): boolean {
   return true;
 }
 
-/** True when every node of `clause` can be evaluated against `columns`. */
-export function isMemoryEvaluable(clause: unknown, columns: ReadonlySet<string>): boolean {
+/** A to-one relation filter: `{ is: ... }` or `{ isNot: ... }` on a relation key. */
+function isRelationFilter(value: unknown): value is Fields {
+  return isPlainObject(value) && ('is' in value || 'isNot' in value);
+}
+
+/** The relation's own columns: `company.recruitmentType` becomes `recruitmentType`. */
+function relationColumns(relation: string, columns: ReadonlySet<string>): ReadonlySet<string> {
+  const prefix = `${relation}.`;
+  return new Set([...columns].filter((c) => c.startsWith(prefix)).map((c) => c.slice(prefix.length)));
+}
+
+function isRelationFilterEvaluable(relation: string, filter: Fields, columns: ReadonlySet<string>): boolean {
+  const ops = Object.keys(filter).filter((op) => filter[op] !== undefined);
+  if (ops.length !== 1 || ops[0] !== 'is') return false;
+  return filter.is === null || evaluable(filter.is, relationColumns(relation, columns), false);
+}
+
+function evaluable(clause: unknown, columns: ReadonlySet<string>, negated: boolean): boolean {
   if (!isPlainObject(clause)) return false;
   for (const [key, value] of Object.entries(clause)) {
     if (value === undefined) continue;
     if (LOGICAL_KEYS.has(key)) {
       const children = Array.isArray(value) ? value : [value];
       if (key === 'OR' && !Array.isArray(value)) return false;
-      if (!children.every((child) => isMemoryEvaluable(child, columns))) return false;
+      const childNegated = negated || key === 'NOT';
+      if (!children.every((child) => evaluable(child, columns, childNegated))) return false;
       continue;
     }
     if (!columns.has(key)) return false;
+    if (isRelationFilter(value)) {
+      if (negated || !isRelationFilterEvaluable(key, value, columns)) return false;
+      continue;
+    }
     if (!isFieldFilterEvaluable(value)) return false;
   }
   return true;
 }
 
-function triAnd(values: Iterable<Tri>): Tri {
-  let unknown = false;
-  for (const v of values) {
-    if (v === false) return false;
-    if (v === null) unknown = true;
-  }
-  return unknown ? null : true;
+/** True when every node of `clause` can be evaluated against `columns`. */
+export function isMemoryEvaluable(clause: unknown, columns: ReadonlySet<string>): boolean {
+  return evaluable(clause, columns, false);
 }
 
-function triOr(values: Iterable<Tri>): Tri {
-  let unknown = false;
-  for (const v of values) {
-    if (v === true) return true;
-    if (v === null) unknown = true;
-  }
-  return unknown ? null : false;
-}
+/*
+ * Evaluation compiles each clause once into a predicate, cached per clause
+ * object, so the counts route walks a clause's structure once per request
+ * instead of once per row (6,000+ rows times every badge). Clause objects
+ * must not be mutated after they are evaluated.
+ *
+ * AND, OR and NOT stop at the first child that decides them (FALSE for AND,
+ * TRUE for OR, TRUE for NOT): three-valued logic gives the same answer
+ * whatever the remaining children are. A tagged row thus skips the title
+ * keywords of every category's legacy arm, which only untagged rows read.
+ */
 
-function triNot(value: Tri): Tri {
-  return value === null ? null : !value;
+type Predicate = (row: Fields) => Tri;
+type ColumnTest = (column: unknown) => Tri;
+
+const compiledClauses = new WeakMap<object, Predicate>();
+
+function isNullish(value: unknown): boolean {
+  return value === null || value === undefined;
 }
 
 function comparable(value: unknown, insensitive: boolean): unknown {
@@ -109,77 +143,151 @@ function compareOp(op: string, column: unknown, operand: unknown): Tri {
   }
 }
 
-function stringOp(op: string, column: unknown, operand: unknown, insensitive: boolean): Tri {
-  if (typeof column !== 'string' || typeof operand !== 'string') return null;
-  const haystack = insensitive ? column.toLowerCase() : column;
+function compileStringOp(op: string, operand: unknown, insensitive: boolean): ColumnTest {
+  if (typeof operand !== 'string') return () => null;
   const needle = insensitive ? operand.toLowerCase() : operand;
-  if (op === 'contains') return haystack.includes(needle);
-  if (op === 'startsWith') return haystack.startsWith(needle);
-  return haystack.endsWith(needle);
+  const test =
+    op === 'contains' ? (h: string) => h.includes(needle)
+      : op === 'startsWith' ? (h: string) => h.startsWith(needle)
+        : (h: string) => h.endsWith(needle);
+  return (column) => {
+    if (typeof column !== 'string') return null;
+    return test(insensitive ? column.toLowerCase() : column);
+  };
 }
 
-function evaluateOperator(op: string, operand: unknown, column: unknown, insensitive: boolean): Tri {
-  const isNull = column === null || column === undefined;
-  if (op === 'not') return !isNull; // only `not: null` is evaluable
-  if (op === 'equals') {
-    if (operand === null) return isNull;
-    return isNull ? null : comparable(column, insensitive) === comparable(operand, insensitive);
-  }
-  if (isNull) return null;
+function compileOperator(op: string, operand: unknown, insensitive: boolean): ColumnTest {
   switch (op) {
+    case 'not':
+      return (column) => !isNullish(column); // only `not: null` is evaluable
+    case 'equals': {
+      if (operand === null) return (column) => isNullish(column);
+      const target = comparable(operand, insensitive);
+      return (column) => (isNullish(column) ? null : comparable(column, insensitive) === target);
+    }
     case 'in':
     case 'notIn': {
-      const needle = comparable(column, insensitive);
-      const found = (operand as unknown[]).some((v) => comparable(v, insensitive) === needle);
-      return op === 'in' ? found : !found;
+      const values = (operand as unknown[]).map((v) => comparable(v, insensitive));
+      const wanted = op === 'in';
+      return (column) => {
+        if (isNullish(column)) return null;
+        const needle = comparable(column, insensitive);
+        return values.some((v) => v === needle) === wanted;
+      };
     }
     case 'lt':
     case 'lte':
     case 'gt':
     case 'gte':
-      return compareOp(op, column, operand);
+      return (column) => (isNullish(column) ? null : compareOp(op, column, operand));
     case 'contains':
     case 'startsWith':
     case 'endsWith':
-      return stringOp(op, column, operand, insensitive);
+      return compileStringOp(op, operand, insensitive);
     case 'has':
-      return Array.isArray(column) ? column.includes(operand) : null;
+      return (column) => (Array.isArray(column) ? column.includes(operand) : null);
     case 'isEmpty':
-      return Array.isArray(column) ? (column.length === 0) === operand : null;
+      return (column) => (Array.isArray(column) ? (column.length === 0) === operand : null);
     default:
-      return null;
+      return () => null;
   }
 }
 
-function evaluateField(filter: unknown, column: unknown): Tri {
-  if (filter === null) return column === null || column === undefined;
-  if (isScalar(filter)) return evaluateOperator('equals', filter, column, false);
-  const ops = filter as Record<string, unknown>;
+function compileField(key: string, filter: unknown): Predicate {
+  if (filter === null) return (row) => isNullish(row[key]);
+  if (isScalar(filter)) {
+    const test = compileOperator('equals', filter, false);
+    return (row) => test(row[key]);
+  }
+  const ops = filter as Fields;
   const insensitive = ops.mode === 'insensitive';
-  return triAnd(
-    Object.entries(ops)
-      .filter(([op, operand]) => op !== 'mode' && operand !== undefined)
-      .map(([op, operand]) => evaluateOperator(op, operand, column, insensitive)),
-  );
+  const tests = Object.entries(ops)
+    .filter(([op, operand]) => op !== 'mode' && operand !== undefined)
+    .map(([op, operand]) => compileOperator(op, operand, insensitive));
+  return (row) => {
+    const column = row[key];
+    let unknown = false;
+    for (const test of tests) {
+      const v = test(column);
+      if (v === false) return false;
+      if (v === null) unknown = true;
+    }
+    return unknown ? null : true;
+  };
 }
 
-function evaluateTri(clause: Record<string, unknown>, row: MemoryRow): Tri {
-  const parts: Tri[] = [];
-  for (const [key, value] of Object.entries(clause)) {
-    if (value === undefined) continue;
-    if (key === 'AND') {
-      const children = Array.isArray(value) ? value : [value];
-      parts.push(triAnd(children.map((c) => evaluateTri(c as Record<string, unknown>, row))));
-    } else if (key === 'OR') {
-      parts.push(triOr((value as unknown[]).map((c) => evaluateTri(c as Record<string, unknown>, row))));
-    } else if (key === 'NOT') {
-      const children = Array.isArray(value) ? value : [value];
-      parts.push(triAnd(children.map((c) => triNot(evaluateTri(c as Record<string, unknown>, row)))));
-    } else {
-      parts.push(evaluateField(value, row[key]));
+function allOf(parts: readonly Predicate[]): Predicate {
+  if (parts.length === 1) return parts[0];
+  return (row) => {
+    let unknown = false;
+    for (const part of parts) {
+      const v = part(row);
+      if (v === false) return false;
+      if (v === null) unknown = true;
     }
-  }
-  return triAnd(parts);
+    return unknown ? null : true;
+  };
+}
+
+function anyOf(parts: readonly Predicate[]): Predicate {
+  if (parts.length === 1) return parts[0];
+  return (row) => {
+    let unknown = false;
+    for (const part of parts) {
+      const v = part(row);
+      if (v === true) return true;
+      if (v === null) unknown = true;
+    }
+    return unknown ? null : false;
+  };
+}
+
+/** `NOT: [a, b]` is `NOT a AND NOT b`. */
+function noneOf(parts: readonly Predicate[]): Predicate {
+  return (row) => {
+    let unknown = false;
+    for (const part of parts) {
+      const v = part(row);
+      if (v === true) return false;
+      if (v === null) unknown = true;
+    }
+    return unknown ? null : true;
+  };
+}
+
+/** `is: null` matches a row without the relation; `is: {...}` a related row that matches. */
+function compileRelation(key: string, filter: Fields): Predicate {
+  if (filter.is === null) return (row) => !isPlainObject(row[key]);
+  if (!isPlainObject(filter.is)) return () => null;
+  const nested = compileClause(filter.is);
+  return (row) => {
+    const related = row[key];
+    return isPlainObject(related) && nested(related) === true;
+  };
+}
+
+function compileChildren(value: unknown): Predicate[] {
+  return (Array.isArray(value) ? value : [value]).map((child) => compileClause(child as Fields));
+}
+
+function compileEntry(key: string, value: unknown): Predicate {
+  if (key === 'AND') return allOf(compileChildren(value));
+  if (key === 'OR') return anyOf(compileChildren(value));
+  if (key === 'NOT') return noneOf(compileChildren(value));
+  if (isRelationFilter(value)) return compileRelation(key, value);
+  return compileField(key, value);
+}
+
+function compileClause(clause: Fields): Predicate {
+  const cached = compiledClauses.get(clause);
+  if (cached) return cached;
+  const predicate = allOf(
+    Object.entries(clause)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => compileEntry(key, value)),
+  );
+  compiledClauses.set(clause, predicate);
+  return predicate;
 }
 
 /**
@@ -187,5 +295,5 @@ function evaluateTri(clause: Record<string, unknown>, row: MemoryRow): Tri {
  * Callers must have checked `isMemoryEvaluable` first.
  */
 export function matchesWhere(clause: object, row: MemoryRow): boolean {
-  return evaluateTri(clause as Record<string, unknown>, row) === true;
+  return compileClause(clause as Fields)(row) === true;
 }

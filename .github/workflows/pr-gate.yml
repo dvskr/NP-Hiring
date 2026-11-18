@@ -48,6 +48,11 @@ jobs:
         run: npx prisma generate
 
       - name: Typecheck
+        # tsc needs about 2.5 GB here. On 2026-11-18 the run for 047aca6
+        # aborted with exit 134 (a Node abort, typically the heap limit)
+        # while the same code passed locally; the runner has 16 GB.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npx tsc --noEmit --pretty false
 
       - name: Run Vitest suite

@@ -109,9 +109,9 @@ describe('buildWhereClause integration', () => {
     });
 
     it('still accepts a plain FilterState with no recruitmentType key (old call sites)', () => {
-        // The filter-counts route and job-alert matcher build plain
-        // FilterState literals; the extension must stay optional so they
-        // compile and behave identically.
+        // The job-alert matcher builds plain FilterState literals; the
+        // extension must stay optional so they compile and behave
+        // identically.
         const plain: FilterState = { ...DEFAULT_FILTERS };
         const where = buildWhereClause(plain);
         expect(JSON.stringify(where)).not.toContain('recruitmentType');

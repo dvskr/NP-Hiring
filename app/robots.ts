@@ -1,6 +1,11 @@
 import { brand } from '@/config/brand'
 import { MetadataRoute } from 'next'
-import { BLOCKED_CRAWLERS, THROTTLED_CRAWLER, THROTTLED_CRAWL_DELAY_SECONDS } from '@/lib/crawler-policy'
+import {
+  BLOCKED_CRAWLERS,
+  PAGED_LISTING_DISALLOW,
+  THROTTLED_CRAWLERS,
+  THROTTLED_CRAWL_DELAY_SECONDS,
+} from '@/lib/crawler-policy'
 
 // Opt out of build-time prerender so robots.txt regenerates on every request.
 // Diagnosed 2026-05-10 (issue #162): the d916ec2 Crawl-delay directives were
@@ -99,6 +104,10 @@ const FULL_DISALLOW = [
   // Raw media assets (sitemap exposes the indexable ones)
   '/videos/',
 ]
+
+// AI crawlers also skip numbered listing pages (owner decision 2026-11-19,
+// lib/crawler-policy.ts PAGED_LISTING_DISALLOW); search engines keep them.
+const AI_DISALLOW = [...FULL_DISALLOW, ...PAGED_LISTING_DISALLOW]
 
 // Lighter disallow for social/link-preview bots — they only fetch the
 // exact URL shared, so they need access to almost everything that isn't
@@ -210,8 +219,9 @@ const SEO_CRAWLERS = [
   'YandexBot',
 ] as const
 
-// MJ12bot is blocked and meta-externalagent throttled (owner decision
-// 2026-11-17): lib/crawler-policy.ts holds both, shared with middleware.ts.
+// MJ12bot is blocked (owner decision 2026-11-17); meta-externalagent and
+// ShapBot are throttled (2026-11-17 and 2026-11-19). lib/crawler-policy.ts
+// holds the lists, shared with middleware.ts.
 
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
@@ -253,6 +263,7 @@ export default function robots(): MetadataRoute.Robots {
           '/employer/settings',
           '/settings',
           '/my-applications',
+          ...PAGED_LISTING_DISALLOW,
         ],
       },
       // Catch-all rule (Googlebot, Bingbot, anyone unlisted). Implicit
@@ -267,8 +278,8 @@ export default function robots(): MetadataRoute.Robots {
       // AI search & LLM crawlers grouped into one block. Named explicitly
       // (rather than letting them fall through to the catch-all) so the
       // signal "we welcome these crawlers" is unmistakable to AI tools
-      // that scan robots.txt for per-bot rules. Same disallow list as
-      // the catch-all — no throttle, full public coverage.
+      // that scan robots.txt for per-bot rules. The catch-all's disallow
+      // list plus the numbered listing pages (AI_DISALLOW); no throttle.
       //
       // Explicit `Allow: /` (2026-07-18, audit B46): the ClaudeBot
       // incident above proved that real-world AI-crawler parsers fall
@@ -279,7 +290,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: [...AI_CRAWLERS],
         allow: ['/', ...PUBLIC_ALLOW],
-        disallow: FULL_DISALLOW,
+        disallow: AI_DISALLOW,
       },
       // SEO link-graph crawlers grouped. Same posture: explicit allow
       // for max backlink-graph coverage so Ahrefs/Semrush/etc. can keep
@@ -290,12 +301,13 @@ export default function robots(): MetadataRoute.Robots {
         allow: PUBLIC_ALLOW,
         disallow: FULL_DISALLOW,
       },
-      // Meta AI: the same public access as the AI group, with a wait between
-      // requests (owner decision 2026-11-17, see THROTTLED_CRAWLER).
+      // Meta AI and ShapBot: the same public access as the AI group, with a
+      // wait between requests (owner decisions 2026-11-17 and 2026-11-19,
+      // see THROTTLED_CRAWLERS).
       {
-        userAgent: THROTTLED_CRAWLER,
+        userAgent: [...THROTTLED_CRAWLERS],
         allow: ['/', ...PUBLIC_ALLOW],
-        disallow: FULL_DISALLOW,
+        disallow: AI_DISALLOW,
         crawlDelay: THROTTLED_CRAWL_DELAY_SECONDS,
       },
       // Blocked outright (owner decision 2026-11-17, see BLOCKED_CRAWLERS).

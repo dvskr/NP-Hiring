@@ -1,8 +1,13 @@
 /**
- * Owner decision 2026-11-17 (lib/crawler-policy.ts): Majestic's MJ12bot is
- * blocked, Meta's AI crawler is asked for a Crawl-delay in robots.txt and
- * capped in middleware across all of its IPs, and every other crawler keeps
- * the open posture it had.
+ * Crawler policy (lib/crawler-policy.ts).
+ *
+ * Owner decision 2026-11-17: Majestic's MJ12bot is blocked, Meta's AI crawler
+ * is asked for a Crawl-delay in robots.txt and capped in middleware across
+ * all of its IPs, and every other crawler keeps the open posture it had.
+ *
+ * Owner decision 2026-11-19 ("fix all of them"): Parallel's ShapBot gets the
+ * same delay and cap, and AI crawlers skip numbered listing pages (?page=N),
+ * which render on every request; search engines keep them.
  */
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
@@ -11,9 +16,10 @@ import type { MetadataRoute } from 'next';
 import robots from '@/app/robots';
 import {
     BLOCKED_CRAWLERS,
-    THROTTLED_CRAWLER,
+    PAGED_LISTING_DISALLOW,
+    THROTTLED_CRAWLERS,
     THROTTLED_CRAWL_DELAY_SECONDS,
-    isThrottledCrawler,
+    throttledCrawlerOf,
 } from '@/lib/crawler-policy';
 import { RATE_LIMITS, rateLimitShared } from '@/lib/rate-limit';
 
@@ -24,6 +30,25 @@ const agentsOf = (rule: Rule): string[] => (Array.isArray(rule.userAgent) ? rule
 const rulesFor = (agent: string): Rule[] => rules.filter((rule) => agentsOf(rule).includes(agent));
 const asList = (value: string | string[] | undefined): string[] => (value === undefined ? [] : Array.isArray(value) ? value : [value]);
 
+/** RFC 9309 matching: `*` is any run of characters, `$` anchors the end, the longest pattern wins and Allow wins a tie. */
+function allowed(rule: Rule, url: string): boolean {
+    const matchLength = (patterns: string[]) =>
+        Math.max(-1, ...patterns
+            .filter((pattern) => {
+                const body = pattern.endsWith('$') ? pattern.slice(0, -1) : pattern;
+                const source = body.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+                return new RegExp(`^${source}${pattern.endsWith('$') ? '$' : ''}`).test(url);
+            })
+            .map((pattern) => pattern.length));
+    const allow = matchLength(asList(rule.allow));
+    const disallow = matchLength(asList(rule.disallow));
+    return disallow < 0 || allow >= disallow;
+}
+
+const AI_AGENTS = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot', 'Amazonbot', 'meta-externalagent', 'ShapBot'];
+const PAGED_URLS = ['/jobs?page=2', '/jobs/remote?page=3', '/jobs?specialty=pediatric&page=4', '/companies?page=2'];
+const FIRST_PAGES = ['/jobs', '/jobs?specialty=pediatric', '/jobs/remote', '/jobs/state/texas', '/companies', '/blog/page-speed-for-np-clinics'];
+
 describe('robots.txt', () => {
     it('blocks MJ12bot from the whole site, in one rule of its own', () => {
         expect(BLOCKED_CRAWLERS).toEqual(['MJ12bot']);
@@ -33,16 +58,39 @@ describe('robots.txt', () => {
         expect(asList(blocked[0].allow)).toEqual([]);
     });
 
-    it('asks Meta\'s AI crawler to wait between requests, and keeps its access', () => {
-        const meta = rulesFor(THROTTLED_CRAWLER);
-        expect(meta).toHaveLength(1);
-        expect(meta[0].crawlDelay).toBe(THROTTLED_CRAWL_DELAY_SECONDS);
-        expect(asList(meta[0].allow)).toContain('/');
-        expect(asList(meta[0].disallow)).not.toContain('/');
+    it('asks Meta\'s AI crawler and ShapBot to wait between requests, and keeps their access', () => {
+        expect(THROTTLED_CRAWLERS).toEqual(['meta-externalagent', 'ShapBot']);
+        for (const agent of THROTTLED_CRAWLERS) {
+            const found = rulesFor(agent);
+            expect(found, agent).toHaveLength(1);
+            expect(found[0].crawlDelay, agent).toBe(THROTTLED_CRAWL_DELAY_SECONDS);
+            expect(asList(found[0].allow), agent).toContain('/');
+            expect(asList(found[0].disallow), agent).not.toContain('/');
+        }
     });
 
-    it('leaves search engines and the other AI crawlers as they were: allowed, no delay', () => {
-        for (const agent of ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot', 'AhrefsBot', 'SemrushBot', '*']) {
+    it('keeps AI crawlers off numbered listing pages and on every first page', () => {
+        expect(PAGED_LISTING_DISALLOW).toEqual(['/*?page=', '/*&page=']);
+        for (const agent of AI_AGENTS) {
+            const [rule] = rulesFor(agent);
+            expect(rule, agent).toBeDefined();
+            for (const url of PAGED_URLS) expect(allowed(rule, url), `${agent} ${url}`).toBe(false);
+            for (const url of FIRST_PAGES) expect(allowed(rule, url), `${agent} ${url}`).toBe(true);
+            expect(allowed(rule, '/api/sitemaps/index'), agent).toBe(true);
+        }
+    });
+
+    it('leaves search engines, SEO and social crawlers on numbered pages, with no delay', () => {
+        for (const agent of ['*', 'AhrefsBot', 'SemrushBot', 'Twitterbot', 'LinkedInBot']) {
+            const found = rulesFor(agent);
+            expect(found, agent).toHaveLength(1);
+            expect(found[0].crawlDelay, agent).toBeUndefined();
+            for (const url of PAGED_URLS) expect(allowed(found[0], url), `${agent} ${url}`).toBe(true);
+        }
+    });
+
+    it('leaves the other AI crawlers without a delay', () => {
+        for (const agent of ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot']) {
             const found = rulesFor(agent);
             expect(found, agent).toHaveLength(1);
             expect(found[0].crawlDelay, agent).toBeUndefined();
@@ -56,14 +104,16 @@ describe('robots.txt', () => {
     });
 });
 
-describe('isThrottledCrawler', () => {
-    it('matches Meta\'s AI crawler and nothing else Meta sends', () => {
-        expect(isThrottledCrawler('meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)')).toBe(true);
-        expect(isThrottledCrawler('Meta-ExternalAgent/1.1')).toBe(true);
-        expect(isThrottledCrawler('facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)')).toBe(false);
-        expect(isThrottledCrawler('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')).toBe(false);
-        expect(isThrottledCrawler('')).toBe(false);
-        expect(isThrottledCrawler(null)).toBe(false);
+describe('throttledCrawlerOf', () => {
+    it('names the throttled crawler a user agent belongs to, and nothing else', () => {
+        expect(throttledCrawlerOf('meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)')).toBe('meta-externalagent');
+        expect(throttledCrawlerOf('Meta-ExternalAgent/1.1')).toBe('meta-externalagent');
+        expect(throttledCrawlerOf('Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ShapBot/0.1.0')).toBe('ShapBot');
+        expect(throttledCrawlerOf('facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)')).toBeNull();
+        expect(throttledCrawlerOf('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')).toBeNull();
+        expect(throttledCrawlerOf('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36')).toBeNull();
+        expect(throttledCrawlerOf('')).toBeNull();
+        expect(throttledCrawlerOf(null)).toBeNull();
     });
 });
 
@@ -77,18 +127,18 @@ describe('rateLimitShared', () => {
         expect(Number(refused?.headers.get('Retry-After'))).toBeGreaterThan(0);
     });
 
-    it('caps Meta\'s AI crawler at about one request every 6 seconds', () => {
-        expect(RATE_LIMITS.metaAiCrawler).toEqual({ limit: 10, windowSeconds: 60 });
+    it('caps each throttled crawler at about one request every 6 seconds', () => {
+        expect(RATE_LIMITS.throttledCrawler).toEqual({ limit: 10, windowSeconds: 60 });
     });
 });
 
 describe('middleware', () => {
     const src = fs.readFileSync(path.join(process.cwd(), 'middleware.ts'), 'utf8');
 
-    it('caps Meta\'s AI crawler with the shared limiter, before the per-IP limits', () => {
-        const cap = src.indexOf('rateLimitShared(`crawler:${THROTTLED_CRAWLER}`, RATE_LIMITS.metaAiCrawler)');
+    it('caps each throttled crawler under its own shared key, before the per-IP limits', () => {
+        const cap = src.indexOf('rateLimitShared(`crawler:${throttledCrawler}`, RATE_LIMITS.throttledCrawler)');
         expect(cap).toBeGreaterThan(-1);
-        expect(src).toMatch(/request\.method === 'GET' && isThrottledCrawler\(userAgent\)/);
+        expect(src).toMatch(/request\.method === 'GET' \? throttledCrawlerOf\(userAgent\) : null/);
         expect(cap).toBeLessThan(src.indexOf("limitKey = 'public:job-detail'"));
     });
 });

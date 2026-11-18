@@ -1,19 +1,26 @@
 import type { Prisma } from '@prisma/client';
-import type { FilterCounts, FilterState } from '@/types/filters';
+import type { FilterCounts } from '@/types/filters';
 import {
   FACET_KEYS,
+  RECRUITMENT_TYPE_VALUES,
+  SPECIALTY_FILTER_OPTIONS,
   anySalaryClause,
   buildFacetClauses,
   buildWhereClause,
   clearFacets,
   minYearsQualifyClause,
   newGradWhereClause,
+  parseRecruitmentTypeParam,
   postedWithinClause,
+  recruitmentTypeClause,
   salaryClause,
+  specialtyClause,
   telehealthSpecialtyClause,
   travelSpecialtyClause,
   workModeClause,
   type FacetKey,
+  type RecruitmentFilterState,
+  type RecruitmentTypeParam,
 } from '@/lib/filters';
 import { buildSearchConditionSet, extractSearchQueryIntent } from '@/lib/search-query-intent';
 import { isMemoryEvaluable, matchesWhere, type MemoryRow } from './where-evaluator';
@@ -34,6 +41,11 @@ import { isMemoryEvaluable, matchesWhere, type MemoryRow } from './where-evaluat
  *   3. Every badge is tallied in a single in-memory pass, evaluating the SAME
  *      clause objects buildWhereClause composes (lib/filters.ts facet
  *      builders), so counts cannot drift from the filters they preview.
+ *
+ * The 17 registry specialty badges read the stored tags and title keywords,
+ * and the employer-type badges read the company the row SELECT loads, so
+ * neither adds a query (2026-11-19: until then the route reported neither
+ * and the sidebar showed both sections without numbers).
  */
 
 export const COUNT_ROW_SELECT = {
@@ -50,9 +62,22 @@ export const COUNT_ROW_SELECT = {
   minYearsExperience: true,
   newGradFriendly: true,
   categoryTags: true,
+  // null when the job has no company: the employer-type facet's relation filter.
+  company: { select: { recruitmentType: true } },
 } as const satisfies Prisma.JobSelect;
 
-export const COUNT_ROW_COLUMNS: ReadonlySet<string> = new Set(Object.keys(COUNT_ROW_SELECT));
+/** Column names a SELECT loads; a nested relation's columns read `<relation>.<column>`. */
+function selectedColumns(select: Record<string, unknown>, prefix = ''): string[] {
+  return Object.entries(select).flatMap(([key, value]) => {
+    const nested = typeof value === 'object' && value !== null ? (value as { select?: Record<string, unknown> }).select : undefined;
+    return [`${prefix}${key}`, ...(nested ? selectedColumns(nested, `${prefix}${key}.`) : [])];
+  });
+}
+
+export const COUNT_ROW_COLUMNS: ReadonlySet<string> = new Set(selectedColumns(COUNT_ROW_SELECT));
+
+/** Employer-type buckets in badge order; `unclassified` covers no company too. */
+const RECRUITMENT_BUCKETS: readonly RecruitmentTypeParam[] = [...RECRUITMENT_TYPE_VALUES, 'unclassified'];
 
 export interface FilterCountsPlan {
   /** Facet-free WHERE: the one result set every badge is tallied over. */
@@ -84,25 +109,32 @@ export interface FilterCountsPlan {
     minYears2: Prisma.JobWhereInput;
     minYears5: Prisma.JobWhereInput;
   };
+  /** Per registry specialty slug: the filter with only that option checked. */
+  specialtyOptions: Record<string, Prisma.JobWhereInput>;
+  /** Per employer-type bucket: the filter with only that bucket chosen. */
+  recruitmentOptions: Record<RecruitmentTypeParam, Prisma.JobWhereInput>;
   /** Clauses the in-memory evaluator cannot model: resolve each to an id set. */
   dbClauses: Prisma.JobWhereInput[];
 }
 
-export function planFilterCounts(filters: FilterState, now: Date = new Date()): FilterCountsPlan {
-  const hasExplicitWorkMode = filters.workMode.length > 0;
-  const baseWhere = buildWhereClause(clearFacets(filters), { hasExplicitWorkMode });
-  const active = buildFacetClauses(filters, now);
+function specialtyOptionClauses(): Record<string, Prisma.JobWhereInput> {
+  const entries = SPECIALTY_FILTER_OPTIONS.flatMap(({ value }): Array<[string, Prisma.JobWhereInput]> => {
+    const clause = specialtyClause([value]);
+    return clause ? [[value, clause]] : [];
+  });
+  return Object.fromEntries(entries);
+}
 
-  let searchWorkMode: Prisma.JobWhereInput | null = null;
-  if (hasExplicitWorkMode && filters.search && filters.search.trim()) {
-    searchWorkMode = buildSearchConditionSet(extractSearchQueryIntent(filters.search), {
-      hasExplicitWorkMode: false,
-      hasExplicitLocation: Boolean(filters.location || filters.stateCode),
-    }).workMode;
-  }
+function recruitmentOptionClauses(): Record<RecruitmentTypeParam, Prisma.JobWhereInput> {
+  return Object.fromEntries(
+    RECRUITMENT_BUCKETS.map((bucket) => [bucket, recruitmentTypeClause(bucket)]),
+  ) as Record<RecruitmentTypeParam, Prisma.JobWhereInput>;
+}
 
+/** One clause per fixed badge (work mode, salary, date posted, work type, experience). */
+function badgeOptionClauses(now: Date): FilterCountsPlan['options'] {
   const nonNull = (clause: Prisma.JobWhereInput | null): Prisma.JobWhereInput => clause ?? {};
-  const options: FilterCountsPlan['options'] = {
+  return {
     remote: nonNull(workModeClause(['remote'])),
     hybrid: nonNull(workModeClause(['hybrid'])),
     onsite: nonNull(workModeClause(['onsite'])),
@@ -121,15 +153,36 @@ export function planFilterCounts(filters: FilterState, now: Date = new Date()): 
     minYears2: minYearsQualifyClause(2),
     minYears5: minYearsQualifyClause(5),
   };
+}
+
+/** The search's work-mode terms that an explicit Work Mode facet suppresses (see FilterCountsPlan). */
+function suppressedSearchWorkMode(filters: RecruitmentFilterState): Prisma.JobWhereInput | null {
+  if (filters.workMode.length === 0 || !filters.search || !filters.search.trim()) return null;
+  return buildSearchConditionSet(extractSearchQueryIntent(filters.search), {
+    hasExplicitWorkMode: false,
+    hasExplicitLocation: Boolean(filters.location || filters.stateCode),
+  }).workMode;
+}
+
+export function planFilterCounts(filters: RecruitmentFilterState, now: Date = new Date()): FilterCountsPlan {
+  const hasExplicitWorkMode = filters.workMode.length > 0;
+  const baseWhere = buildWhereClause(clearFacets(filters), { hasExplicitWorkMode });
+  const active = buildFacetClauses(filters, now);
+  const searchWorkMode = suppressedSearchWorkMode(filters);
+  const options = badgeOptionClauses(now);
+  const specialtyOptions = specialtyOptionClauses();
+  const recruitmentOptions = recruitmentOptionClauses();
 
   const candidates: Prisma.JobWhereInput[] = [
     ...Object.values(active),
     ...(searchWorkMode ? [searchWorkMode] : []),
     ...Object.values(options),
+    ...Object.values(specialtyOptions),
+    ...Object.values(recruitmentOptions),
   ];
   const dbClauses = candidates.filter((clause) => !isMemoryEvaluable(clause, COUNT_ROW_COLUMNS));
 
-  return { baseWhere, active, searchWorkMode, options, dbClauses };
+  return { baseWhere, active, searchWorkMode, options, specialtyOptions, recruitmentOptions, dbClauses };
 }
 
 export type ClauseIdSets = ReadonlyMap<Prisma.JobWhereInput, ReadonlySet<string>>;
@@ -150,12 +203,92 @@ function emptyCounts(): FilterCounts {
     jobType: { 'Full-Time': 0, 'Part-Time': 0, 'Contract': 0, 'Per Diem': 0, 'Other': 0 },
     salary: { any: 0, over100k: 0, over150k: 0, over200k: 0 },
     postedWithin: { '24h': 0, '3d': 0, '7d': 0, '30d': 0 },
-    specialty: { Telehealth: 0, Travel: 0 },
+    specialty: {
+      Telehealth: 0,
+      Travel: 0,
+      ...Object.fromEntries(SPECIALTY_FILTER_OPTIONS.map(({ value }) => [value, 0])),
+    },
     experienceLevel: { 'New Grad': 0, 'Mid-Level': 0, 'Senior': 0 },
     newGradFriendly: 0,
     minYears: { 1: 0, 2: 0, 5: 0 },
+    recruitmentType: { direct_hire: 0, staffing_agency: 0, unclassified: 0 },
     total: 0,
   };
+}
+
+/** One tally pass: the accumulator it fills and what every row is checked against. */
+interface Tally {
+  counts: FilterCounts;
+  plan: FilterCountsPlan;
+  matches: (clause: Prisma.JobWhereInput, row: MemoryRow) => boolean;
+  specialtyOptions: ReadonlyArray<[string, Prisma.JobWhereInput]>;
+}
+
+/**
+ * Whether a row counts toward `key`'s badges: it passes every active facet,
+ * or fails only `key` itself (a badge never self-filters).
+ */
+function countsToward(onlyFails: FacetKey | undefined, key: FacetKey): boolean {
+  return onlyFails === undefined || onlyFails === key;
+}
+
+/** Work mode, job type, salary and date posted badges for one row. */
+function tallyListingBadges({ counts, plan, matches }: Tally, row: MemoryRow, onlyFails: FacetKey | undefined): void {
+  const { options } = plan;
+  if (countsToward(onlyFails, 'workMode') && (!plan.searchWorkMode || matches(plan.searchWorkMode, row))) {
+    if (matches(options.remote, row)) counts.workMode.remote += 1;
+    if (matches(options.hybrid, row)) counts.workMode.hybrid += 1;
+    if (matches(options.onsite, row)) counts.workMode.onsite += 1;
+  }
+  if (countsToward(onlyFails, 'jobType')) {
+    const jobType = row.jobType;
+    if (jobType === null || jobType === undefined) counts.jobType.Other += 1;
+    else if ((JOB_TYPE_KEYS as readonly unknown[]).includes(jobType)) {
+      counts.jobType[jobType as (typeof JOB_TYPE_KEYS)[number]] += 1;
+    }
+  }
+  if (countsToward(onlyFails, 'salary')) {
+    if (matches(options.salaryAny, row)) counts.salary.any += 1;
+    if (matches(options.salary100k, row)) counts.salary.over100k += 1;
+    if (matches(options.salary150k, row)) counts.salary.over150k += 1;
+    if (matches(options.salary200k, row)) counts.salary.over200k += 1;
+  }
+  if (countsToward(onlyFails, 'postedWithin')) {
+    if (matches(options.posted24h, row)) counts.postedWithin['24h'] += 1;
+    if (matches(options.posted3d, row)) counts.postedWithin['3d'] += 1;
+    if (matches(options.posted7d, row)) counts.postedWithin['7d'] += 1;
+    if (matches(options.posted30d, row)) counts.postedWithin['30d'] += 1;
+  }
+}
+
+/** Specialty and work type, experience and employer type badges for one row. */
+function tallyProfileBadges(tally: Tally, row: MemoryRow, onlyFails: FacetKey | undefined): void {
+  const { counts, plan, matches, specialtyOptions } = tally;
+  const { options } = plan;
+  if (countsToward(onlyFails, 'specialty')) {
+    if (matches(options.telehealth, row)) counts.specialty.Telehealth += 1;
+    if (matches(options.travel, row)) counts.specialty.Travel += 1;
+    for (const [slug, clause] of specialtyOptions) {
+      if (matches(clause, row)) counts.specialty[slug] += 1;
+    }
+  }
+  if (countsToward(onlyFails, 'experienceLevel')) {
+    const level = row.experienceLevel;
+    if ((EXPERIENCE_LEVEL_KEYS as readonly unknown[]).includes(level)) {
+      counts.experienceLevel[level as (typeof EXPERIENCE_LEVEL_KEYS)[number]] += 1;
+    }
+  }
+  if (countsToward(onlyFails, 'newGrad') && matches(options.newGrad, row)) counts.newGradFriendly += 1;
+  if (countsToward(onlyFails, 'minYears')) {
+    if (matches(options.minYears1, row)) counts.minYears[1] += 1;
+    if (matches(options.minYears2, row)) counts.minYears[2] += 1;
+    if (matches(options.minYears5, row)) counts.minYears[5] += 1;
+  }
+  if (countsToward(onlyFails, 'recruitmentType')) {
+    for (const bucket of RECRUITMENT_BUCKETS) {
+      if (matches(plan.recruitmentOptions[bucket], row)) counts.recruitmentType[bucket] += 1;
+    }
+  }
 }
 
 /**
@@ -168,63 +301,24 @@ export function tallyFilterCounts(
   plan: FilterCountsPlan,
   idSets: ClauseIdSets = new Map(),
 ): FilterCounts {
-  const matches = matcher(idSets);
-  const counts = emptyCounts();
-  const { options } = plan;
-
+  const tally: Tally = {
+    counts: emptyCounts(),
+    plan,
+    matches: matcher(idSets),
+    specialtyOptions: Object.entries(plan.specialtyOptions),
+  };
   for (const row of rows) {
     const failing = FACET_KEYS.filter((key) => {
       const clause = plan.active[key];
-      return clause !== undefined && !matches(clause, row);
+      return clause !== undefined && !tally.matches(clause, row);
     });
     if (failing.length > 1) continue;
     const onlyFails = failing[0] as FacetKey | undefined;
-    const passesExcept = (key: FacetKey) => onlyFails === undefined || onlyFails === key;
-
-    if (onlyFails === undefined) counts.total += 1;
-
-    if (passesExcept('workMode') && (!plan.searchWorkMode || matches(plan.searchWorkMode, row))) {
-      if (matches(options.remote, row)) counts.workMode.remote += 1;
-      if (matches(options.hybrid, row)) counts.workMode.hybrid += 1;
-      if (matches(options.onsite, row)) counts.workMode.onsite += 1;
-    }
-    if (passesExcept('jobType')) {
-      const jobType = row.jobType;
-      if (jobType === null || jobType === undefined) counts.jobType.Other += 1;
-      else if ((JOB_TYPE_KEYS as readonly unknown[]).includes(jobType)) {
-        counts.jobType[jobType as (typeof JOB_TYPE_KEYS)[number]] += 1;
-      }
-    }
-    if (passesExcept('salary')) {
-      if (matches(options.salaryAny, row)) counts.salary.any += 1;
-      if (matches(options.salary100k, row)) counts.salary.over100k += 1;
-      if (matches(options.salary150k, row)) counts.salary.over150k += 1;
-      if (matches(options.salary200k, row)) counts.salary.over200k += 1;
-    }
-    if (passesExcept('postedWithin')) {
-      if (matches(options.posted24h, row)) counts.postedWithin['24h'] += 1;
-      if (matches(options.posted3d, row)) counts.postedWithin['3d'] += 1;
-      if (matches(options.posted7d, row)) counts.postedWithin['7d'] += 1;
-      if (matches(options.posted30d, row)) counts.postedWithin['30d'] += 1;
-    }
-    if (passesExcept('specialty')) {
-      if (matches(options.telehealth, row)) counts.specialty.Telehealth += 1;
-      if (matches(options.travel, row)) counts.specialty.Travel += 1;
-    }
-    if (passesExcept('experienceLevel')) {
-      const level = row.experienceLevel;
-      if ((EXPERIENCE_LEVEL_KEYS as readonly unknown[]).includes(level)) {
-        counts.experienceLevel[level as (typeof EXPERIENCE_LEVEL_KEYS)[number]] += 1;
-      }
-    }
-    if (passesExcept('newGrad') && matches(options.newGrad, row)) counts.newGradFriendly += 1;
-    if (passesExcept('minYears')) {
-      if (matches(options.minYears1, row)) counts.minYears[1] += 1;
-      if (matches(options.minYears2, row)) counts.minYears[2] += 1;
-      if (matches(options.minYears5, row)) counts.minYears[5] += 1;
-    }
+    if (onlyFails === undefined) tally.counts.total += 1;
+    tallyListingBadges(tally, row, onlyFails);
+    tallyProfileBadges(tally, row, onlyFails);
   }
-  return counts;
+  return tally.counts;
 }
 
 export interface FilterCountsDataSource {
@@ -235,7 +329,7 @@ export interface FilterCountsDataSource {
 }
 
 export async function computeFilterCounts(
-  filters: FilterState,
+  filters: RecruitmentFilterState,
   source: FilterCountsDataSource,
   now: Date = new Date(),
 ): Promise<FilterCounts> {
@@ -275,11 +369,11 @@ function nonNegativeNumber(value: unknown): number | null {
 }
 
 /**
- * Coerce an untrusted POST body into a FilterState. Wrong-typed fields fall
+ * Coerce an untrusted POST body into a filter state. Wrong-typed fields fall
  * back to "inactive" instead of reaching Prisma (a string salaryMin used to
  * throw inside the query and answer 500). Returns null for a non-object body.
  */
-export function normalizeFilterCountsBody(raw: unknown): FilterState | null {
+export function normalizeFilterCountsBody(raw: unknown): RecruitmentFilterState | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
   const body = raw as Record<string, unknown>;
   const minYears = nonNegativeNumber(body.minYearsExperience);
@@ -298,5 +392,6 @@ export function normalizeFilterCountsBody(raw: unknown): FilterState | null {
     stateCode: stringValue(body.stateCode),
     employer: stringValue(body.employer),
     category: stringValue(body.category),
+    recruitmentType: parseRecruitmentTypeParam(stringValue(body.recruitmentType)),
   };
 }

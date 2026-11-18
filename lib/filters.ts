@@ -780,7 +780,7 @@ export function isRemoteLocationAlias(location: string): boolean {
 
 /* ─── Facet clauses ──────────────────────────────────────────────────────────
  *
- * The eight sidebar facets whose option badges are counted by
+ * The sidebar facets whose option badges are counted by
  * /api/jobs/filter-counts. Each builder is the ONE place its predicate is
  * written: buildWhereClause composes them, and the counts route evaluates the
  * very same clause objects, so a badge count and the filter it previews can
@@ -794,11 +794,12 @@ export type FacetKey =
   | 'specialty'
   | 'experienceLevel'
   | 'newGrad'
-  | 'minYears';
+  | 'minYears'
+  | 'recruitmentType';
 
 export const FACET_KEYS: readonly FacetKey[] = [
   'workMode', 'jobType', 'salary', 'postedWithin',
-  'specialty', 'experienceLevel', 'newGrad', 'minYears',
+  'specialty', 'experienceLevel', 'newGrad', 'minYears', 'recruitmentType',
 ];
 
 export function workModeClause(workMode: readonly string[]): Prisma.JobWhereInput | null {
@@ -923,6 +924,7 @@ export function buildFacetClauses(
       ? minYearsQualifyClause(filters.minYearsExperience)
       : null,
   );
+  set('recruitmentType', filters.recruitmentType ? recruitmentTypeClause(filters.recruitmentType) : null);
   return clauses;
 }
 
@@ -938,6 +940,7 @@ export function clearFacets<T extends RecruitmentFilterState>(filters: T): T {
     experienceLevel: [],
     newGradFriendly: null,
     minYearsExperience: null,
+    recruitmentType: null,
   };
 }
 
@@ -1086,9 +1089,7 @@ export function buildWhereClause(
   // Employer type (direct hire / staffing agency / unclassified) — company-
   // level, admin-classified. See recruitmentTypeClause above for why the
   // three buckets partition the board exactly.
-  if (filters.recruitmentType) {
-    andConditions.push(recruitmentTypeClause(filters.recruitmentType));
-  }
+  if (facets.recruitmentType) andConditions.push(facets.recruitmentType);
 
   if (andConditions.length > 0) {
     where.AND = andConditions;

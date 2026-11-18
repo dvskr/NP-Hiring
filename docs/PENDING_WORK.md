@@ -363,9 +363,10 @@ change any of them.
 | # | Question | Today | Where |
 |---|---|---|---|
 | D8 | Turn on semantic search? | `ai.search.semantic` is off; UI, endpoint and eval suites exist. Run the evals, review the cost, then decide | `lib/ai/feature-flags.ts` |
-| D9 | Classify companies (direct employer or staffing) | All 168 are unclassified. Badges and the /jobs filter appear as you classify; start with the largest job counts | `/admin/companies` |
+| D9 | Classify companies (direct employer or staffing) | On 2026-11-19 none of the 1,422 companies was classified (1,020 have live jobs), so the /jobs Employer Type filter stays hidden: it appears once a job in view has a classified employer, with a count on each option. The 25 companies with the most live jobs hold 2,523 of them and the top 100 hold 3,963 of 6,136, so start there. Claude can draft a list of likely staffing agencies for you to check and apply in the admin page | `/admin/companies`, `components/jobs/employer-type-facet.ts` |
 | D12 | Re-admit the specialty and setting by state pages (`/jobs/{specialty}/{state}`, for example /jobs/telehealth/texas) about 2026-10-29? | They are out of the sitemap and noindexed (`SETTING_STATE_INDEXING_ENABLED` is false); 10 pass the strict content gate today. Say go once Search Console shows the first month indexing cleanly ("Crawled, currently not indexed" low), and Claude flips the switch for those 10 only | `lib/pseo/render-gate.ts`, `lib/gsc-coverage.ts` |
 | D14 | Per-state compact verdicts in the multi-state planner and licensure checker? | The NLC member set is verified (2026-08-11) and the metro guides use it, but these two tools state the compact rules and link NCSBN instead of printing "member" or "not a member" per state. A verdict there is personal licensing advice, only as current as the last roster check. Recommended: keep it this way; lifting it needs a fixed re-check cadence and the check date beside every verdict | `components/tools/MultiStatePlanner.tsx`, `app/tools/licensure-checker/page.tsx` |
+| D52 | List the APRN roles in the /jobs Specialty filter? | The filter lists the 17 NP specialties only. Nurse anesthetist (723 live jobs on 2026-11-19), midwifery (139) and clinical nurse specialist (47) sit on the registry's APRN axis, so a CRNA can reach them only through their landing pages or search. Recommended: add the three as options; their badges come from the same counts route | `lib/filters.ts` (`SPECIALTY_FILTER_OPTIONS`), `lib/pseo/taxonomy-registry.ts` |
 
 ### 3.4 Copy approvals
 
@@ -506,6 +507,24 @@ tests fail until every side agrees:
   read on /jobs now answers 500 instead of an empty board at 200, and a failed count in its metadata (logged
   with digest 3466345125 on a response that went out as 200) drops the number from the title instead of
   failing the page (`tests/regressions/jobs-board-db-failure.test.ts`).
+- /jobs filter counts and D51 (2026-11-19): the Specialty and Employer Type sections of the /jobs sidebar showed
+  no numbers, because `POST /api/jobs/filter-counts` never reported them. It now counts each of the 17 registry
+  specialties and each employer type from the rows it already loads (no extra query) and honors the employer
+  type in the total, so the sidebar's second request for that total is gone
+  (`tests/regressions/jobs-filter-facet-badges.test.ts`,
+  `tests/regressions/p10-jobs-search-api-counts-and-params.test.ts`). The in-memory evaluator now compiles each
+  clause once instead of walking it for every row: the whole tally for 6,200 jobs takes about 80 ms, less than
+  before the new badges. Employer Type stays hidden while no job in view has a classified employer, which on
+  2026-11-19 was every job (D9). D51 (owner, same day, "fix all of them"): ShapBot, Parallel's AI search crawler
+  (4,477 requests in 43 minutes on 2026-11-18), gets the Crawl-delay and the per-crawler middleware cap Meta's
+  crawler has, and AI crawlers skip numbered listing pages (`?page=`) in robots.txt, since each renders on
+  every request; Google and Bing keep them (`lib/crawler-policy.ts`, `tests/lib/crawler-policy.test.ts`). The CI
+  typecheck runs with a 6 GB heap after the 047aca6 run aborted with exit 134. A Vercel firewall rule for the
+  scraper on rotating residential proxies, "Scraper guard: non-US job pages" (a browser challenge on /jobs and
+  /companies pages for visitors outside the US and India, verified crawlers excepted by user agent), was staged
+  the same day for the owner's approval; replayed over the 2026-11-18 request logs it would have caught 65 of the
+  68 server errors in the 05:48 UTC burst and 257 of 273 in the 11:49 UTC one. Check it with
+  `vercel firewall rules list --scope sathishs-projects-ca92cf45 --project np-hiring`.
 - 2.37 Ingest renewal and takedowns (2026-11-11): a posting a source lists no longer republishes a stored job
   just because the duplicate check matched the two (`lib/health/renewal-decision.ts`, `renewExistingJob` in
   `lib/ingestion-service.ts`).
