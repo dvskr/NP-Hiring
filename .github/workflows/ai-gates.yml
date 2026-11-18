@@ -79,6 +79,10 @@ jobs:
         run: npm ci
 
       - name: Type-check
+        # Same heap as pr-gate.yml's Typecheck: on 2026-11-18 this step
+        # aborted with exit 134 for 36dd499 while that one passed with it.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npm run type-check
 
       - name: Vitest (unit + integration)

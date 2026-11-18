@@ -77,5 +77,8 @@ jobs:
         # Project-wide tsc is fast enough on this codebase to run as a
         # belt-and-suspenders gate. Catches drift between the route
         # handler, tracker, and admin stats endpoint that vitest alone
-        # wouldn't surface.
+        # wouldn't surface. Same heap as pr-gate.yml's Typecheck (tsc aborted
+        # with exit 134 at the default heap on 2026-11-18).
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npx tsc --noEmit --pretty false
