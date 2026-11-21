@@ -62,6 +62,24 @@ function sectionHeadV2(text: string): string {
 function statBlockV2(value: string, label: string, width: string = '33%'): string {
   return `<td width="${width}" style="padding:16px 12px;background:#ffffff;text-align:center;border-radius:12px;border:1px solid #E8ECE9;box-shadow:0 2px 6px rgba(0,0,0,0.04);"><div style="font-family:${SANS_V2};font-size:30px;font-weight:800;color:${V2.teal};letter-spacing:-0.5px;">${value}</div><div style="font-family:${SANS_V2};font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;">${label}</div></td>`;
 }
+
+/**
+ * A posting's figures in an employer mail: views and apply clicks always,
+ * applications only when there are some. Most applicants apply on the
+ * employer's own site, which the apply clicks count, so a zero there reads as
+ * a failure it is not. The blocks share the row: three at 33%, two at 50%.
+ */
+function employerStatsRowV2(views: number, applyClicks: number, applications: number): string {
+  const blocks: Array<readonly [string, string]> = [
+    [views.toLocaleString(), 'Views'],
+    [applyClicks.toLocaleString(), 'Apply Clicks'],
+    ...(applications > 0 ? [[applications.toLocaleString(), 'Applications'] as const] : []),
+  ];
+  const width = `${Math.floor(100 / blocks.length)}%`;
+  return `<tr><td class="content-pad" style="padding:0 40px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>${blocks
+    .map(([value, label]) => statBlockV2(value, label, width))
+    .join('<td width="8"></td>')}</tr></table></td></tr>`;
+}
 const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || brand.assets.salaryGuidePdf;
 
 // ── Sender addresses — separate transactional from marketing ──
@@ -1778,6 +1796,8 @@ export async function sendPerformanceReportEmail(
     const totalViews = jobs.reduce((s, j) => s + j.views, 0);
     const totalClicks = jobs.reduce((s, j) => s + j.applyClicks, 0);
     const totalApps = jobs.reduce((s, j) => s + j.applications, 0);
+    // Applications only when there are some (employerStatsRowV2): views and apply clicks otherwise.
+    const showApps = totalApps > 0;
     const unsubToken = await getOrCreateUnsubToken(email);
     // Convert adverb form to noun for "this {period}" prose. "Monthly"
     // → "month" reads natural ("performed this month"), avoids the
@@ -1786,29 +1806,12 @@ export async function sendPerformanceReportEmail(
       ({ Monthly: 'month', Weekly: 'week', Daily: 'day', Quarterly: 'quarter' } as Record<string, string>)[periodLabel]
       ?? periodLabel.toLowerCase().replace(/ly$/, '');
 
-    const jobRowsHtml = jobs.slice(0, 5).map((job, i) => {
-      const isLast = i === Math.min(jobs.length, 5) - 1;
-      const ctr = job.views > 0 ? ((job.applyClicks / job.views) * 100).toFixed(1) : '0';
-      return `<tr><td style="padding:14px 20px;${!isLast ? 'border-bottom:1px solid #F0F3F1;' : ''}">
-        <p style="margin:0 0 4px;font-family:${SANS_V2};font-size:14px;font-weight:700;color:${V2.textHeading};">${escapeHtml(job.title)}</p>
-        <p style="margin:0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};">${job.views.toLocaleString()} views &middot; ${job.applyClicks.toLocaleString()} clicks &middot; ${job.applications} apps &middot; ${ctr}% CTR</p>
-      </td></tr>`;
-    }).join('');
-
-    const statPill = (val: string, label: string) =>
-      `<td style="width:25%;padding:4px;">
-        <div style="background:#ffffff;border:1px solid #E8ECE9;border-radius:12px;padding:16px 12px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
-          <p style="margin:0;font-family:${SANS_V2};font-size:24px;font-weight:800;color:${V2.textHeading};letter-spacing:-0.5px;">${val}</p>
-          <p style="margin:4px 0 0;font-family:${SANS_V2};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:1px;">${label}</p>
-        </div>
-      </td>`;
-
     const html = emailShellV2(`
       ${headerBlockV2(`Your ${periodLabel} Hiring Report`, '')}
       ${spacerV2(12)}
       ${simpleBlock('hero-performance.png', `Here is how your listings performed this ${periodNoun}. Use these insights to optimize your postings and attract stronger candidates.`)}
       ${spacerV2(24)}
-      <tr><td class="content-pad" style="padding:0 40px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>${statBlockV2(totalViews.toLocaleString(), 'Views')}<td width="8"></td>${statBlockV2(totalClicks.toLocaleString(), 'Apply Clicks')}<td width="8"></td>${statBlockV2(totalApps.toLocaleString(), 'Applications')}</tr></table></td></tr>
+      ${employerStatsRowV2(totalViews, totalClicks, totalApps)}
       ${spacerV2(28)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('View Full Report', `${BASE_URL}/employer/dashboard`)}
@@ -1816,13 +1819,13 @@ export async function sendPerformanceReportEmail(
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubToken),
-      `Your ${periodLabel.toLowerCase()} report: ${totalViews} views, ${totalClicks} clicks, ${totalApps} applications`
+      `Your ${periodLabel.toLowerCase()} report: ${totalViews} views, ${totalClicks} clicks${showApps ? `, ${totalApps} applications` : ''}`
     );
 
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: `📊 ${periodLabel} Report for ${employerName}: ${totalViews} views, ${totalApps} applications`,
+      subject: `${periodLabel} Report for ${employerName}: ${totalViews} views, ${showApps ? `${totalApps} applications` : `${totalClicks} apply clicks`}`,
       html,
     }, 'performance_report', { employerName, totalViews, totalApps }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
