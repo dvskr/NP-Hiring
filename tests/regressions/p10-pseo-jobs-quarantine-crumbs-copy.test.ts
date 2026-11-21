@@ -174,7 +174,9 @@ describe('1. profession quarantine on pSEO listing predicates', () => {
         expect(src).toMatch(/if \(result\.status === 'gone' \|\| result\.status === 'quarantined'\) \{\s*return \{\s*title: 'Page Not Found'/);
         // Related-job and internal-link buckets never surface a quarantined row either.
         expect(src).not.toMatch(/isPublished: true \}/);
-        expect(src.match(/\{ id: \{ not: currentJobId \}, \.\.\.PUBLISHED_LISTING_WHERE \}/g)?.length).toBe(2);
+        // One shared base since the related feed and the link buckets read
+        // through getJobLinkLists (2026-11-21).
+        expect(src.match(/\{ id: \{ not: currentJobId \}, \.\.\.PUBLISHED_LISTING_WHERE \}/g)?.length).toBe(1);
     });
 
     it('the category x city and setting x state templates wrap every buildWhere call', () => {

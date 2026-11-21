@@ -103,13 +103,29 @@ export function buildTrackedJobItem(job: TrackedJob): JobItem {
 }
 
 /**
- * Fires `view_item` (GA4) when the job detail page mounts.
+ * Counts one view on the server (employer dashboards read it as "views").
+ * Fire and forget. The job page is cached for a day, so the count is posted
+ * from the browser rather than written during the render (2026-11-21).
+ */
+function postJobView(jobId: string): void {
+  try {
+    fetch(`/api/jobs/${encodeURIComponent(jobId)}/track-view`, { method: 'POST', keepalive: true }).catch(() => { });
+  } catch { }
+}
+
+/**
+ * Fires `view_item` (GA4) when the job detail page mounts, and counts the
+ * view for the employer's dashboard once per job id.
  * Drop this into any server-rendered job page — it's a zero-UI component.
  */
 export function JobViewTracker({ job }: { job: TrackedJob }) {
   useEffect(() => {
     trackJobView(buildTrackedJobItem(job));
   }, [job]);
+
+  useEffect(() => {
+    postJobView(job.id);
+  }, [job.id]);
 
   return null;
 }

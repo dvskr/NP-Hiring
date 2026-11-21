@@ -241,8 +241,13 @@ describe('P5 A5 (4) — page integration: main column, every breakpoint, ISR int
         // Same shape getCityStats uses on app/jobs/city/[slug]/page.tsx. P10
         // pseo-jobs #1: both sides now spread the quarantined listing base in
         // place of the bare isPublished flag, so they still count alike.
+        // The count reads through the daily place cache (2026-11-21), keyed by
+        // the dataset record's state and code.
         expect(src).toMatch(
-            /\.\.\.PUBLISHED_LISTING_WHERE,\s*city:\s*\{\s*equals:\s*job\.city,\s*mode:\s*'insensitive'\s*\},\s*OR:\s*\[\s*\{\s*state:\s*locationCityRecord\.state\s*\},\s*\{\s*stateCode:\s*locationCityRecord\.stateCode\s*\},?\s*\]/,
+            /getCachedCityJobCount\(job\.city, locationCityRecord\.state, locationCityRecord\.stateCode\)/,
+        );
+        expect(read('app/jobs/[slug]/place-cache.ts')).toMatch(
+            /\.\.\.PUBLISHED_LISTING_WHERE,\s*city:\s*\{\s*equals:\s*city,\s*mode:\s*'insensitive'\s*\},\s*OR:\s*\[\s*\{\s*state:\s*stateName\s*\},\s*\{\s*stateCode\s*\},?\s*\]/,
         );
     });
 
