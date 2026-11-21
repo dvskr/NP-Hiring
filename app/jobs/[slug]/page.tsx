@@ -42,7 +42,6 @@ import GuidePromo from '@/components/guides/GuidePromo';
 import { guideForJob } from '@/lib/guides/job-guide';
 import { prisma } from '@/lib/prisma';
 import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
-import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
 // Indexing audit 2026-09: one module decides what the markup AND the page
 // may claim (verified remote, places, role title, posted date), one builds
@@ -59,6 +58,7 @@ import {
   resolveWorkModeLabel,
 } from './job-posting-facts';
 import { buildJobBreadcrumbs } from './job-breadcrumbs';
+import { getCachedCityJobCount, getCachedStateSalaryMedianK } from './place-cache';
 import {
   buildJobMetaDescription,
   buildJobPageTitle,
@@ -78,7 +78,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 // ISR: Cache job detail pages for 24 hours.
-// Each job page runs 10-12 DB queries (relatedJobs, companyInfo, salaryData, blogPosts, etc.).
+// An uncached job page ran about 25 DB queries before 2026-11-21 (related jobs,
+// company, employer facts, breadcrumb verdicts, salary and city figures).
 // Without caching, crawlers fetching thousands of pages at once exhaust the DB
 // connection pool → "timeout exceeded when trying to connect" and error pages.
 //
@@ -137,16 +138,20 @@ type JobResult =
 
 const getJob = cache(async function getJob(id: string): Promise<JobResult> {
   try {
-    // First check if job exists at all (any status)
-    const anyJob = await prisma.job.findUnique({
-      where: { id },
-      select: { id: true, isPublished: true, expiresAt: true, healthConsecutiveMissing: true, employer: true, title: true },
+    // One query on the common path (2026-11-21): a live job is fetched once,
+    // with its employer relation, through the site-wide profession quarantine
+    // (P10 pseo-jobs #1: GLOBAL_EXCLUSIONS via PUBLISHED_LISTING_WHERE). Only
+    // when that finds nothing does the narrow lookup below run to tell a
+    // deleted row from a closed or quarantined one. Before, every render paid
+    // for both reads, on a 2-connection pool that crawler bursts exhausted.
+    const jobWithRelation = await prisma.job.findFirst({
+      where: { id, ...PUBLISHED_LISTING_WHERE },
+      include: {
+        employerJobs: {
+          select: { companyLogoUrl: true, companyWebsite: true, userId: true },
+        },
+      },
     });
-
-    if (!anyJob) {
-      // Job was deleted from DB entirely — return 410 Gone so Google stops recrawling
-      return { status: 'gone' };
-    }
 
     // Expired-job contract (B31) — ONE behavior, implemented in two layers:
     //   1. middleware.ts (job-410 gate) is the AUTHORITATIVE response: it
@@ -168,6 +173,16 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
     // consecutive source misses the sitemaps already drop the job
     // (activeIndexableJobWhere) and middleware answers 410. This fallback
     // presents it as closed too: noindexed, no JobPosting, no apply button.
+    const anyJob = jobWithRelation ?? await prisma.job.findUnique({
+      where: { id },
+      select: { id: true, isPublished: true, expiresAt: true, healthConsecutiveMissing: true, employer: true, title: true },
+    });
+
+    if (!anyJob) {
+      // Job was deleted from DB entirely — return 410 Gone so Google stops recrawling
+      return { status: 'gone' };
+    }
+
     const dateExpired = !!anyJob.expiresAt && anyJob.expiresAt.getTime() < Date.now();
     const deadLink = anyJob.healthConsecutiveMissing >= DEAD_LINK_MISS_THRESHOLD;
     if (!anyJob.isPublished || dateExpired || deadLink) {
@@ -175,37 +190,20 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
       return { status: 'expired', employer: anyJob.employer, title: anyJob.title, reason };
     }
 
-    // Job is published — fetch full data with employer info
-    //
-    // P10 pseo-jobs #1: the fetch carries the site-wide profession quarantine
-    // (GLOBAL_EXCLUSIONS via PUBLISHED_LISTING_WHERE). A published, unexpired
-    // row it rejects is a non-NP listing (e.g. professionClass other_clinical)
-    // that every browse surface already hides; its slug-plus-UUID URL must not
-    // be the one place it still renders as a live, indexable 200. Middleware
-    // answers such a row with a real 410 first (P10 not-found-status #1, the
-    // same GLOBAL_EXCLUSIONS via lib/pseo/listing-gates-edge.ts); this branch
-    // is the fallback when that gate cannot run. Its notFound() alone cannot
-    // set the status: this route streams behind loading.tsx.
-    const jobWithRelation = await prisma.job.findFirst({
-      where: { id, ...PUBLISHED_LISTING_WHERE },
-      include: {
-        employerJobs: {
-          select: { companyLogoUrl: true, companyWebsite: true, userId: true },
-        },
-      },
-    });
+    // A published, unexpired row the quarantine rejects is a non-NP listing
+    // (e.g. professionClass other_clinical) that every browse surface already
+    // hides; its slug-plus-UUID URL must not be the one place it still renders
+    // as a live, indexable 200. Middleware answers such a row with a real 410
+    // first (P10 not-found-status #1, the same GLOBAL_EXCLUSIONS via
+    // lib/pseo/listing-gates-edge.ts); this branch is the fallback when that
+    // gate cannot run. Its notFound() alone cannot set the status: this route
+    // streams behind loading.tsx.
     if (!jobWithRelation) return { status: 'quarantined' };
 
-    // Increment view count AND create view event for analytics funnel
-    Promise.all([
-      prisma.job.update({
-        where: { id },
-        data: { viewCount: { increment: 1 } },
-      }),
-      prisma.jobViewEvent.create({
-        data: { jobId: id },
-      }),
-    ]).catch(() => { });
+    // Views are counted by the visitor's browser (JobViewTracker posts to
+    // /api/jobs/[id]/track-view), not here: this render runs once per ISR
+    // window, mostly for crawlers, so a write here counted cache refreshes
+    // and spent two pool connections on each one.
 
     // Attach employer logo to the job object for rendering
     const jobData = {
@@ -229,108 +227,99 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
   }
 });
 
-interface RelatedJobsParams {
+interface JobLinkListParams {
   currentJobId: string;
   employer: string;
   city?: string | null;
   state?: string | null;
   mode?: string | null;
-  limit?: number;
+  newGradFriendly?: boolean;
+  /** Size of the "Similar jobs" feed. */
+  relatedLimit?: number;
+  /** Size of each internal-link bucket. */
+  bucketLimit?: number;
 }
 
 /**
- * Phase 3 #20 — three explicit internal-linking buckets surfaced as
- * separate sections on the JD page (more from this employer, more in
- * city, more new-grad jobs). Distinct from getRelatedJobs which mixes
- * everything into a single "Similar PMHNP jobs" feed. SEO impact:
- * named anchor links into category/employer/city pages compound the
- * pSEO surface area.
+ * The job page's two link surfaces from one set of reads (2026-11-21):
+ *
+ *   - `related`: the "Similar jobs" feed (audit 18 M-3), same employer, then
+ *     same city, same state, same work mode, deduplicated in that order.
+ *   - `buckets`: Phase 3 #20's three named internal-linking sections (more
+ *     from this employer, more in this city, more new-grad jobs). SEO impact:
+ *     named anchor links into category/employer/city pages compound the pSEO
+ *     surface area.
+ *
+ * The two used to run as separate functions that each read the employer and
+ * the city lists, with the same filter and order and only a different
+ * `take`. Each bucket is now the first `bucketLimit` rows of the feed's
+ * candidate list for that scope, so a render runs five queries instead of
+ * seven. All of them run in parallel.
  */
-export async function getInternalLinkBuckets(params: {
-  currentJobId: string;
-  employer: string;
-  city?: string | null;
-  state?: string | null;
-  newGradFriendly?: boolean;
-}) {
-  const { currentJobId, employer, city, state, newGradFriendly } = params;
-  const baseWhere = { id: { not: currentJobId }, ...PUBLISHED_LISTING_WHERE };
-  const baseOrder = { createdAt: 'desc' as const };
-
-  const [moreFromEmployer, moreInCity, moreNewGrad] = await Promise.all([
-    prisma.job.findMany({ where: { ...baseWhere, employer }, take: 3, orderBy: baseOrder }),
-    city
-      ? prisma.job.findMany({
-          where: { ...baseWhere, city: { equals: city, mode: 'insensitive' } },
-          take: 3,
-          orderBy: baseOrder,
-        })
-      : Promise.resolve([] as Job[]),
-    newGradFriendly
-      ? prisma.job.findMany({
-          where: { ...baseWhere, newGradFriendly: true },
-          take: 3,
-          orderBy: baseOrder,
-        })
-      : Promise.resolve([] as Job[]),
-  ]);
-
-  return {
-    moreFromEmployer: moreFromEmployer as Job[],
-    moreInCity: moreInCity as Job[],
-    moreNewGrad: moreNewGrad as Job[],
-    cityName: city ?? null,
-    stateName: state ?? null,
-  };
-}
-
-async function getRelatedJobs({
+async function getJobLinkLists({
   currentJobId,
   employer,
   city,
   state,
   mode,
-  limit = 4,
-}: RelatedJobsParams) {
-  // All four candidate queries run in parallel (audit 18 M-3). Previously
-  // they were sequential because each `notIn` clause filtered out IDs
-  // returned by the prior query, making four DB round-trips on every job
-  // detail render. Parallelizing fetches up to `limit` candidates per
-  // bucket (slightly more bytes) but cuts wall-clock latency by ~3x on
-  // a typical render. Dedup happens in-memory below in priority order.
+  newGradFriendly,
+  relatedLimit = 4,
+  bucketLimit = 3,
+}: JobLinkListParams) {
   const baseWhere = { id: { not: currentJobId }, ...PUBLISHED_LISTING_WHERE };
   const baseOrder = { createdAt: 'desc' as const };
+  const candidateLimit = Math.max(relatedLimit, bucketLimit);
+  const none = Promise.resolve([] as Awaited<ReturnType<typeof prisma.job.findMany>>);
 
-  const [sameEmployerJobs, sameCityJobs, sameStateJobs, sameModeJobs] = await Promise.all([
-    prisma.job.findMany({ where: { ...baseWhere, employer }, take: limit, orderBy: baseOrder }),
+  const [sameEmployerJobs, sameCityJobs, sameStateJobs, sameModeJobs, newGradJobs] = await Promise.all([
+    prisma.job.findMany({ where: { ...baseWhere, employer }, take: candidateLimit, orderBy: baseOrder }),
     city ? prisma.job.findMany({
       where: { ...baseWhere, city: { equals: city, mode: 'insensitive' } },
-      take: limit, orderBy: baseOrder,
-    }) : Promise.resolve([] as Awaited<ReturnType<typeof prisma.job.findMany>>),
+      take: candidateLimit, orderBy: baseOrder,
+    }) : none,
     state ? prisma.job.findMany({
       where: { ...baseWhere, state: { equals: state, mode: 'insensitive' } },
-      take: limit, orderBy: baseOrder,
-    }) : Promise.resolve([] as Awaited<ReturnType<typeof prisma.job.findMany>>),
+      take: relatedLimit, orderBy: baseOrder,
+    }) : none,
     mode ? prisma.job.findMany({
       where: { ...baseWhere, mode: { equals: mode, mode: 'insensitive' } },
-      take: limit, orderBy: baseOrder,
-    }) : Promise.resolve([] as Awaited<ReturnType<typeof prisma.job.findMany>>),
+      take: relatedLimit, orderBy: baseOrder,
+    }) : none,
+    newGradFriendly ? prisma.job.findMany({
+      where: { ...baseWhere, newGradFriendly: true },
+      take: bucketLimit, orderBy: baseOrder,
+    }) : none,
   ]);
 
   // Merge in priority order, deduplicating by id. Stops as soon as we
-  // have `limit` items so we don't pay for sorting beyond the budget.
+  // have `relatedLimit` items so we don't pay for sorting beyond the budget.
   const seen = new Set<string>([currentJobId]);
-  const result: Job[] = [];
-  for (const bucket of [sameEmployerJobs, sameCityJobs, sameStateJobs, sameModeJobs]) {
+  const related: Job[] = [];
+  for (const bucket of [
+    sameEmployerJobs.slice(0, relatedLimit),
+    sameCityJobs.slice(0, relatedLimit),
+    sameStateJobs,
+    sameModeJobs,
+  ]) {
     for (const job of bucket) {
-      if (result.length >= limit) break;
+      if (related.length >= relatedLimit) break;
       if (seen.has(job.id)) continue;
       seen.add(job.id);
-      result.push(job as Job);
+      related.push(job as Job);
     }
-    if (result.length >= limit) break;
+    if (related.length >= relatedLimit) break;
   }
-  return result;
+
+  return {
+    related,
+    buckets: {
+      moreFromEmployer: sameEmployerJobs.slice(0, bucketLimit) as Job[],
+      moreInCity: sameCityJobs.slice(0, bucketLimit) as Job[],
+      moreNewGrad: newGradJobs as Job[],
+      cityName: city ?? null,
+      stateName: state ?? null,
+    },
+  };
 }
 
 /**
@@ -426,17 +415,6 @@ async function getEmployerFactsSafe(
  * whole $k. 0 below the n ≥ 5 / 3-employer publishing gate — the widget
  * is omitted entirely rather than showing an ungated posting mean.
  */
-async function getStateSalaryMedianK(stateName: string | null, stateCode: string | null) {
-  if (!stateName && !stateCode) return 0;
-
-  return getGatedMedianKForWhere({
-    OR: [
-      ...(stateName ? [{ state: stateName }] : []),
-      ...(stateCode ? [{ stateCode: stateCode }] : []),
-    ],
-  });
-}
-
 /**
  * Get relevant blog posts for this job
  */
@@ -869,55 +847,44 @@ export default async function JobPage({ params }: JobPageProps) {
   // Company row; everything else fans out beside it.
   const companyInfoPromise = getCompanyInfo(job.companyId, job.employer, job.id);
   const [
-    relatedJobs,
+    linkLists,
     companyInfo,
     employerFacts,
     breadcrumbItems,
     stateMedianSalaryK,
     relevantBlogPosts,
-    internalLinkBuckets,
     locationCityJobCount,
   ] = await Promise.all([
-    getRelatedJobs({
+    getJobLinkLists({
       currentJobId: job.id,
       employer: job.employer,
       city: job.city,
       state: job.state,
       mode: job.mode,
-      limit: 5, // Increased from 4 to 5 for more related content
+      newGradFriendly: job.newGradFriendly,
+      relatedLimit: 5, // Increased from 4 to 5 for more related content
+      bucketLimit: 3,
     }),
     companyInfoPromise,
     companyInfoPromise.then((company) => getEmployerFactsSafe(job, company)),
     // H-02 / L-04 / GFJ-14: the one trail, each crumb gated on its target
     // page's own index verdict.
     buildJobBreadcrumbs(job, `${displayTitle} at ${displayEmployer}`),
-    getStateSalaryMedianK(job.state, job.stateCode),
+    // Place-scoped figures are shared by every job in the same state or city,
+    // so they come from a daily cache (./place-cache.ts) instead of being
+    // re-read on each job's render.
+    getCachedStateSalaryMedianK(job.state, job.stateCode),
     getRelevantBlogPosts(job),
-    getInternalLinkBuckets({
-      currentJobId: job.id,
-      employer: job.employer,
-      city: job.city,
-      state: job.state,
-      newGradFriendly: job.newGradFriendly,
-    }),
     // P5 A5: live inventory behind the module's /jobs/city link. Same
     // predicate as getCityStats on app/jobs/city/[slug]/page.tsx (isPublished
     // + insensitive city + state OR stateCode), so this gate counts exactly
-    // what that page's MIN_JOBS render gate counts — a link emitted here can
-    // never land on its notFound().
+    // what that page's MIN_JOBS render gate counts.
     locationCityRecord && job.city
-      ? prisma.job.count({
-          where: {
-            ...PUBLISHED_LISTING_WHERE,
-            city: { equals: job.city, mode: 'insensitive' },
-            OR: [
-              { state: locationCityRecord.state },
-              { stateCode: locationCityRecord.stateCode },
-            ],
-          },
-        })
+      ? getCachedCityJobCount(job.city, locationCityRecord.state, locationCityRecord.stateCode)
       : Promise.resolve(0),
   ]);
+  const relatedJobs = linkLists.related;
+  const internalLinkBuckets = linkLists.buckets;
   const employerUserId = (job as unknown as Record<string, unknown>).employerUserId as string | null | undefined;
 
   // Live-review fix #1 (profession conditioning): stored column when the

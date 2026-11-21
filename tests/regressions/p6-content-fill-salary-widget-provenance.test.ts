@@ -110,7 +110,9 @@ describe('P6 #9 hardening — job-page call site keeps the widget alive ($k unit
         // into lib/salary-analytics. If this call site ever changes to raw
         // dollars, the call-site pin below must be reconciled in the same
         // commit — this failure is the tripwire.
-        expect(pageSrc).toContain('getGatedMedianKForWhere({');
+        // The read moved into the job page's daily place cache (2026-11-21).
+        expect(pageSrc).toContain('getCachedStateSalaryMedianK(job.state, job.stateCode)');
+        expect(read('app/jobs/[slug]/place-cache.ts')).toContain('getGatedMedianKForWhere({');
         const analytics = read('lib/salary-analytics.ts');
         expect(analytics).toContain('Math.round(row.median / 1000)');
     });

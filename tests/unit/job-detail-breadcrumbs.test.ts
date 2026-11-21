@@ -15,6 +15,11 @@ vi.mock('@/lib/pseo/listing-facts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/pseo/listing-facts')>()),
   getListingFacts: listingFacts.getListingFacts,
 }));
+// The crumb verdicts go through the daily place cache (unstable_cache),
+// which needs Next's incremental cache; here each call runs the lookup.
+vi.mock('next/cache', () => ({
+  unstable_cache: <A extends unknown[], R>(fn: (...args: A) => Promise<R>) => fn,
+}));
 vi.mock('@/lib/salary-analytics', () => ({
   getPublishableSalaryGuideStates: salary.getPublishableSalaryGuideStates,
 }));
