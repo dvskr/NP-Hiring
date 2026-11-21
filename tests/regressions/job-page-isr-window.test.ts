@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FOOTER_VERDICT_CACHE_SECONDS } from '@/lib/pseo/footer-category-loader';
 import { FOOTER_LANDING_VERDICT_CACHE_SECONDS } from '@/lib/pseo/landing-verdicts';
+import { JOB_PAGE_PLACE_CACHE_SECONDS } from '@/app/jobs/[slug]/place-cache';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -45,5 +46,22 @@ describe('the job page keeps its whole ISR window', () => {
             const match = read(layout).match(/^export const revalidate = (\d+);/m);
             if (match) expect(Number(match[1]), layout).toBeGreaterThanOrEqual(window);
         }
+    });
+
+    it('the place-scoped figures (salary median, city count, crumb verdicts) cache at least as long as the job page', () => {
+        expect(JOB_PAGE_PLACE_CACHE_SECONDS).toBeGreaterThanOrEqual(jobPageWindow());
+        const place = read('app/jobs/[slug]/place-cache.ts');
+        expect(place.match(/revalidate: JOB_PAGE_PLACE_CACHE_SECONDS,/g) ?? []).toHaveLength(2);
+        expect(place).not.toMatch(/revalidate: \d/);
+        const crumbs = read('app/jobs/[slug]/job-breadcrumbs.ts');
+        expect(crumbs.match(/revalidate: JOB_PAGE_PLACE_CACHE_SECONDS,/g) ?? []).toHaveLength(2);
+        expect(crumbs).not.toMatch(/revalidate: \d/);
+    });
+
+    it('the job page counts views from the browser, never during its cached render', () => {
+        const page = read('app/jobs/[slug]/page.tsx');
+        expect(page).not.toMatch(/viewCount|jobViewEvent/);
+        expect(read('components/analytics/ViewTrackers.tsx')).toContain('/track-view`');
+        expect(fs.existsSync(path.join(ROOT, 'app/api/jobs/[id]/track-view/route.ts'))).toBe(true);
     });
 });

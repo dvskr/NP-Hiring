@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "prisma migrate deploy && next dev",
     "dev:nomigrate": "next dev",
-    "build": "prisma migrate deploy && prisma generate && next build",
+    "build": "node scripts/migrate-deploy-with-retry.mjs && prisma generate && next build",
     "build:mcp-widgets": "node scripts/build-mcp-widgets.mjs",
     "start": "next start",
     "lint": "eslint",

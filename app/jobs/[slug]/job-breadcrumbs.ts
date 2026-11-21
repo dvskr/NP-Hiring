@@ -17,6 +17,7 @@
  * URL that 404s below 3 jobs, or one that 308s to its metro twin; a second
  * BreadcrumbList without the city disagreed with it on every page.
  */
+import { unstable_cache } from 'next/cache';
 import { getMetroCity } from '@/lib/metro-data';
 import { getListingFacts, metroScopeWhere } from '@/lib/pseo/listing-facts';
 import { shouldIndexLocalListingPage, shouldIndexMetro, shouldIndexStateHub } from '@/lib/pseo/render-gate';
@@ -31,6 +32,7 @@ import {
   stateBucketWhere,
 } from '@/app/jobs/locations/[state]/directory';
 import { stateNameForCode, toStateCode } from '@/app/jobs/[slug]/job-posting-facts';
+import { JOB_PAGE_PLACE_CACHE_SECONDS } from '@/app/jobs/[slug]/place-cache';
 
 export interface JobCrumb {
   label: string;
@@ -92,6 +94,21 @@ export async function resolveLocalCrumb(city: string, stateCode: string): Promis
 }
 
 /**
+ * The two verdicts through the daily place cache (./place-cache.ts), shared
+ * by every server instance: a crawler burst spreads job pages across many
+ * instances, each with an empty in-memory memo, so the memo below alone
+ * still re-read the same state and city facts once per instance. The window
+ * matches the job page's own, so a crumb is never older than the page HTML
+ * it is rendered into could already be.
+ */
+const cachedStateCrumb = unstable_cache(resolveStateCrumb, ['job-page-state-crumb'], {
+  revalidate: JOB_PAGE_PLACE_CACHE_SECONDS,
+});
+const cachedLocalCrumb = unstable_cache(resolveLocalCrumb, ['job-page-local-crumb'], {
+  revalidate: JOB_PAGE_PLACE_CACHE_SECONDS,
+});
+
+/**
  * Verdicts are memoised per target page for a few minutes inside a warm
  * server instance. A first crawl renders hundreds of job pages at once, and
  * they share about 50 state hubs and a few hundred cities; without the memo
@@ -142,10 +159,10 @@ export async function buildJobBreadcrumbs(
   const city = job.city?.trim() ?? '';
   const [stateCrumb, localCrumb] = await Promise.all([
     stateCode
-      ? settle('state hub', () => memoCrumb(`state:${stateCode}`, () => resolveStateCrumb(stateCode)))
+      ? settle('state hub', () => memoCrumb(`state:${stateCode}`, () => cachedStateCrumb(stateCode)))
       : Promise.resolve(null),
     stateCode && city
-      ? settle('city', () => memoCrumb(`city:${stateCode}:${city}`, () => resolveLocalCrumb(city, stateCode)))
+      ? settle('city', () => memoCrumb(`city:${stateCode}:${city}`, () => cachedLocalCrumb(city, stateCode)))
       : Promise.resolve(null),
   ]);
   return [
