@@ -286,7 +286,7 @@ export default async function ForJobSeekersPage() {
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src="/images/job-seekers/bento-guides.webp" alt="50-state licensure guides" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src="/images/job-seekers/bento-guides.webp" alt="50-state licensure guides" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} quality={90} />
               </div>
             </div>
 
@@ -295,7 +295,7 @@ export default async function ForJobSeekersPage() {
               display: 'flex', flexDirection: 'column',
             }}>
               <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src="/images/job-seekers/bento-salary.webp" alt="Salary transparency" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
+                <Image src="/images/job-seekers/bento-salary.webp" alt="Salary transparency" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} quality={90} />
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <div style={iconBg}>
@@ -415,7 +415,7 @@ export default async function ForJobSeekersPage() {
                 ...clayCard, padding: '0', overflow: 'hidden', textDecoration: 'none', display: 'block',
               }}>
                 <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden' }}>
-                  <Image src={t.img} alt={t.title} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+                  <Image src={t.img} alt={t.title} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" quality={90} />
                 </div>
                 <div style={{ padding: '20px 18px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{t.title}</h3>
@@ -510,7 +510,7 @@ export default async function ForJobSeekersPage() {
                   alt={`Start your ${brand.niche.short} job search`}
                   width={280} height={220}
                   style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
-                />
+                quality={90} />
               </div>
               <div style={{ padding: '28px 24px' }}>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>

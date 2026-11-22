@@ -203,7 +203,7 @@ export default function StateImage(props: StateImageProps) {
                 sizes={sizes}
                 loading={loading}
                 priority={priority}
-            />
+            quality={90} />
         );
     }
 
@@ -218,6 +218,6 @@ export default function StateImage(props: StateImageProps) {
             sizes={sizes}
             loading={loading}
             priority={priority}
-        />
+        quality={90} />
     );
 }

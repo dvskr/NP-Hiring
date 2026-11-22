@@ -88,7 +88,7 @@ export function ListingsWithSidebar({
               height={ALERT_ART_SIZE}
               sizes={`${ALERT_ART_SIZE}px`}
               style={{ width: ALERT_ART_SIZE, height: ALERT_ART_SIZE, objectFit: 'contain' }}
-            />
+            quality={90} />
             <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: CLAY_ACCENT_DEEP, margin: '12px 0 8px' }}>
               {alert.title}
             </h3>

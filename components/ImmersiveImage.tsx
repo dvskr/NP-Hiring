@@ -59,13 +59,13 @@ export default function ImmersiveImage({
   return (
     <div className={className} style={{ ...style, position: 'relative', overflow: 'hidden', minHeight, background }}>
       <div aria-hidden="true" style={{ ...edgeBox, left: 0, aspectRatio, transformOrigin: 'left center', transform: `scaleX(${EDGE_STRETCH})` }}>
-        <Image src={src} alt="" fill sizes={hint} style={{ objectFit: 'fill' }} />
+        <Image src={src} alt="" fill sizes={hint} style={{ objectFit: 'fill' }} quality={90} />
       </div>
       <div aria-hidden="true" style={{ ...edgeBox, right: 0, aspectRatio, transformOrigin: 'right center', transform: `scaleX(${EDGE_STRETCH})` }}>
-        <Image src={src} alt="" fill sizes={hint} style={{ objectFit: 'fill' }} />
+        <Image src={src} alt="" fill sizes={hint} style={{ objectFit: 'fill' }} quality={90} />
       </div>
       <div style={{ ...edgeBox, left: '50%', transform: 'translateX(-50%)', aspectRatio, maxWidth: '100%' }}>
-        <Image src={src} alt={alt} fill sizes={hint} priority={priority} style={{ objectFit: 'contain' }} />
+        <Image src={src} alt={alt} fill sizes={hint} priority={priority} style={{ objectFit: 'contain' }} quality={90} />
       </div>
     </div>
   );

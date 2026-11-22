@@ -80,7 +80,7 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
             width={32}
             height={32}
             className="w-8 h-8 rounded-full object-cover"
-          />
+          quality={90} />
         ) : (
           <div style={{
             width: '32px', height: '32px', borderRadius: '50%',

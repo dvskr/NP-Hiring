@@ -280,7 +280,7 @@ export default function Header() {
                 // page. `56px` lets it pick the smallest matching candidate.
                 sizes="56px"
                 style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0 }}
-              />
+              quality={90} />
               <span
                 className="font-heading hidden sm:inline"
                 style={{

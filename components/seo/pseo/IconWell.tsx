@@ -44,7 +44,7 @@ export default function IconWell({ icon, size = 'md', className, style }: IconWe
           height={d.art}
           sizes={`${d.art}px`}
           style={{ width: d.art, height: d.art, objectFit: 'contain' }}
-        />
+        quality={90} />
       </span>
     );
   }

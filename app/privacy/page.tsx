@@ -93,7 +93,7 @@ export default function PrivacyPage() {
               <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: November 7, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Image src="/images/pages/privacy-hero.webp" alt="Privacy Policy" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
+              <Image src="/images/pages/privacy-hero.webp" alt="Privacy Policy" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority quality={90} />
             </div>
           </div>
         </header>

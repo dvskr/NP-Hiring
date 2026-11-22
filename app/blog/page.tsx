@@ -392,7 +392,7 @@ export default async function BlogIndexPage({
                                                     alt={post.title}
                                                     fill
                                                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 360px"
-                                                    quality={85}
+                                                    quality={90}
                                                     className="object-cover"
                                                     style={{ transition: 'transform 0.4s ease' }}
                                                 />

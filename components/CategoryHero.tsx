@@ -264,13 +264,13 @@ export default function CategoryHero({
                 and renders at the panel height, so the size hint is the
                 panel height, not the column width. */}
             <div aria-hidden="true" className="cath5-photo-edge" style={{ left: 0, transformOrigin: 'left center' }}>
-              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} />
+              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} quality={90} />
             </div>
             <div aria-hidden="true" className="cath5-photo-edge" style={{ right: 0, transformOrigin: 'right center' }}>
-              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} />
+              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} quality={90} />
             </div>
             <div className="cath5-photo-art">
-              <Image src={heroImage} alt={heroAlt} fill priority sizes={HERO_ART_SIZES} style={{ objectFit: 'contain' }} />
+              <Image src={heroImage} alt={heroAlt} fill priority sizes={HERO_ART_SIZES} style={{ objectFit: 'contain' }} quality={90} />
             </div>
             {/* Same defect as the badge: both photo-tag props were
                 destructured and dropped while .cath5-photo-tag sat unused in

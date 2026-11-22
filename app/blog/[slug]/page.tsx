@@ -662,7 +662,7 @@ export default async function BlogPostPage({ params }: Props) {
                                     priority
                                     sizes="(max-width: 900px) 100vw, 45vw"
                                     style={{ objectFit: 'cover', objectPosition: 'center' }}
-                                />
+                                quality={90} />
                             )}
                             <div className="ed-hero-photo-caption">
                                 <strong>{categoryLabel}</strong>

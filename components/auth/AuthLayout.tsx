@@ -106,7 +106,7 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
             boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
           }}>
             <Image src={illustration} alt="" width={440} height={280}
-              style={{ width: '100%', height: 'auto', display: 'block' }} priority />
+              style={{ width: '100%', height: 'auto', display: 'block' }} priority quality={90} />
           </div>
         )}
 

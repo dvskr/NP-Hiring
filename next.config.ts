@@ -49,9 +49,10 @@ const nextConfig: NextConfig = {
 
   // Image optimization
   images: {
-    formats: ['image/avif', 'image/webp'],
+    formats: ['image/webp'],
+    qualities: [75, 85, 90, 95],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    imageSizes: [128, 256, 384, 512],
     // SEO Fix H2: bumped from 30d → 1y. The hero LCP image is served by
     // Supabase with `Cache-Control: no-cache`, but next/image's `/_next/image`
     // proxy honors `minimumCacheTTL` regardless of upstream headers — so by

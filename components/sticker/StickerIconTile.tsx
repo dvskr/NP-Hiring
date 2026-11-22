@@ -23,7 +23,7 @@ export default function StickerIconTile({ icon, size = 'md', className }: Sticke
     classes.push('stk-icon-art');
     return (
       <span className={classes.filter(Boolean).join(' ')} style={{ background: icon.bg }} aria-hidden="true">
-        <Image src={icon.src} alt="" fill sizes={`${TILE_PX[size]}px`} style={{ objectFit: 'cover' }} />
+        <Image src={icon.src} alt="" fill sizes={`${TILE_PX[size]}px`} style={{ objectFit: 'cover' }} quality={90} />
       </span>
     );
   }

@@ -143,7 +143,7 @@ export default function ContactPage() {
                         </h1>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Image src="/images/contact/hero.webp" alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                        <Image src="/images/contact/hero.webp" alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority quality={90} />
                     </div>
                 </div>
             </section>

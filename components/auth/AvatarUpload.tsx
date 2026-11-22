@@ -129,7 +129,7 @@ export default function AvatarUpload({
               width={128}
               height={128}
               className="w-full h-full object-cover"
-            />
+            quality={90} />
           ) : (
             <div className="w-full h-full bg-pink-100 flex items-center justify-center">
               <User className="w-10 h-10 text-pink-700" />

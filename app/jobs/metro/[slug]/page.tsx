@@ -58,7 +58,7 @@ import { notFound } from 'next/navigation';
  * This template used to pull ten distinct images from the retired remote
  * asset bucket (hero_wc_states, three bento illustrations and six clay
  * icons) and every one of them returned HTTP 400, so roughly thirteen
- * <Image> elements were broken on each of the 20 metro pages, the LCP hero
+ * <Image quality={90}> elements were broken on each of the 20 metro pages, the LCP hero
  * included. That is the same purge P0/P1 already applied to the sibling
  * surfaces (see app/jobs/state/[state]/page.tsx and the salary guide).
  *

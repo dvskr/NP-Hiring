@@ -585,14 +585,13 @@ div {
   }
 }
 
-/* Prevent fractional pixels causing blur */
+/* Use high-quality bicubic/Lanczos resampling when scaling raster images */
 img,
 svg,
 video,
 canvas,
 iframe {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
+  image-rendering: auto;
 }
 
 /* Ensure buttons and inputs have sharp text */
