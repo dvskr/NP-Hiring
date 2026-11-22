@@ -179,7 +179,7 @@ All tools are free and live under https://nphiring.com/tools.
 ## Contact & Legal
 
 - Website: https://nphiring.com
-- Email: contact@nphiring.com
+- Email: support@nphiring.com
 - Privacy Policy: https://nphiring.com/privacy
 - Terms of Service: https://nphiring.com/terms
 - Security & vulnerability disclosure: https://nphiring.com/security

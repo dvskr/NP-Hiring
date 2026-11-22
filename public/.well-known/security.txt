@@ -1,5 +1,4 @@
-Contact: mailto:security@nphiring.com
-Contact: mailto:contact@nphiring.com
+Contact: mailto:support@nphiring.com
 Expires: 2027-07-01T00:00:00.000Z
 Preferred-Languages: en
 Canonical: https://nphiring.com/.well-known/security.txt

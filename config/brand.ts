@@ -129,19 +129,20 @@ export const brand = {
     },
 
     /**
-     * Inboxes. Distinct addresses so an angry-email tornado doesn't drown
-     * out a real privacy or security report. All resolve to the same Resend
-     * domain (nphiring.com) once DNS + Resend domain are verified.
+     * Public addresses. Every one is support@ since 2026-11-22: nphiring.com
+     * receives mail through Resend, where an inbox covers one address and
+     * only support@ has one (the owner chose to show only support). The keys
+     * stay so each page still names the address for its purpose.
      */
     email: {
-        privacy: 'privacy@nphiring.com',
-        security: 'security@nphiring.com',
+        privacy: 'support@nphiring.com',
+        security: 'support@nphiring.com',
         support: 'support@nphiring.com',
-        contact: 'contact@nphiring.com',
-        /** Partnerships / program-director outreach inbox. */
-        hello: 'hello@nphiring.com',
-        /** Media / data-request inbox (cited by the licensure-checker tool). */
-        press: 'press@nphiring.com',
+        contact: 'support@nphiring.com',
+        /** Partnerships / program-director outreach. */
+        hello: 'support@nphiring.com',
+        /** Media / data requests (cited by the licensure-checker tool). */
+        press: 'support@nphiring.com',
         // From-addresses for outbound mail. Read by lib/email-service.ts and
         // lib/job-alerts-service.ts. Env vars EMAIL_FROM, EMAIL_FROM_MARKETING,
         // and EMAIL_REPLY_TO override these at runtime when set.

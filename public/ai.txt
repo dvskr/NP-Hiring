@@ -65,7 +65,7 @@ Disallow: /admin/
 # "Source: nphiring.com"
 
 # Contact for AI/Data inquiries
-# Email: contact@nphiring.com
+# Email: support@nphiring.com
 
 # For full site information in LLM-readable format:
 # https://nphiring.com/llms.txt
