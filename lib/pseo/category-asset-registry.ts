@@ -113,14 +113,6 @@ const DEFAULT_GLYPH = 'Briefcase';
 const ground = (src: string): string => ART_GROUND[src] ?? UNSAMPLED_GROUND;
 const sampled = (src: string): Art => ({ src, bg: ground(src) });
 
-/** Legacy local sage illustrations, kept for slugs without category art. */
-const LEGACY = {
-  telehealthVisit: { src: '/images/job-seekers/remote-telehealth.webp', bg: '#bfd4c2' },
-  clinicBuilding: { src: '/images/job-seekers/clinical-inperson.webp', bg: '#bfd4c2' },
-  practiceSign: { src: '/images/job-seekers/private-practice.webp', bg: '#c3d7c0' },
-  celebrateNurse: { src: '/images/job-seekers/cta-dream-role.webp', bg: '#cad8c7' },
-} satisfies Record<string, Art>;
-
 const heroPath = (name: string): string => `/images/categories/heroes/${name}.webp`;
 const hero = (name: string, bg: string): Art => ({ src: heroPath(name), bg });
 const bentoArt = (name: string, bg: string): Art => ({ src: `/images/categories/bento/${name}.webp`, bg });
@@ -128,7 +120,7 @@ const bento = (name: string): string => `/images/categories/bento/${name}.webp`;
 const nav = (name: string): Art => sampled(`/images/categories/nav/${name}.webp`);
 const icon = (name: string): Art => sampled(`/images/categories/icons/${name}.webp`);
 
-/** Ported heroes. Some scenes are clay bento art used at hero size. */
+/** Ported and newly commissioned category heroes paired with sampled grounds. */
 const HERO = {
   remote: hero('remote', '#fbf5ec'),
   telehealth: hero('telehealth', '#f0d39b'),
@@ -140,6 +132,7 @@ const HERO = {
   contract: hero('contract', '#adc3d9'),
   perDiem: hero('per-diem', '#dbbb74'),
   locumTenens: hero('locum-tenens', '#95c9e7'),
+  independent1099: sampled(heroPath('1099')),
   geriatric: hero('geriatric', '#d4c6e6'),
   hospital: hero('hospital', '#a0c4d8'),
   therapySession: hero('therapy-session', '#bda4cc'),
@@ -154,12 +147,17 @@ const HERO = {
   lgbtq: hero('lgbtq', '#dfc7a8'),
   urgentCare: sampled(heroPath('urgent-care')),
   emergency: sampled(heroPath('emergency')),
+  oncology: sampled(heroPath('oncology')),
+  dermatology: sampled(heroPath('dermatology')),
   orthopedic: sampled(heroPath('orthopedic')),
+  aesthetics: sampled(heroPath('aesthetics')),
+  painManagement: sampled(heroPath('pain-management')),
+  anesthesia: sampled(heroPath('anesthesia')),
+  midwifery: sampled(heroPath('midwifery')),
   neonatal: sampled(heroPath('neonatal')),
   womenHealth: sampled(heroPath('women-health')),
   cardiology: sampled(heroPath('cardiology')),
-  homeVisits: bentoArt('community-health-impact', '#fdcb95'),
-  taxDesk: bentoArt('1099-tax', '#f6dfa7'),
+  homeVisits: sampled('/images/categories/bento/home-health-visit.webp'),
   familyClinic: sampled('/images/categories/bento/family-clinic.webp'),
   pediatricPlayroom: bentoArt('pediatric-playroom', '#b0ebd0'),
   careTeamTable: bentoArt('care-team-table', '#bce8d3'),
@@ -306,7 +304,7 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
   'contract': categoryAssets('Why Choose Contract', HERO.contract, 'contract-signing', 'locum-salary'),
   'per-diem': categoryAssets('Why Choose Per Diem', HERO.perDiem, 'per-diem-shifts', 'per-diem-salary'),
   'locum-tenens': categoryAssets('Why Choose Locum Tenens', HERO.locumTenens, 'locum-travel', 'locum-salary'),
-  '1099': categoryAssets('Why Choose 1099', HERO.taxDesk, 'contract-flexibility', '1099-salary'),
+  '1099': categoryAssets('Why Choose 1099', HERO.independent1099, 'contract-flexibility', '1099-salary'),
   // ── specialty ────────────────────────────────────────────────────────
   'family-practice': categoryAssets('Why Choose Family Practice', HERO.familyClinic, 'care-team-table', 'state-salary'),
   'adult-gerontology': categoryAssets('Why Choose Adult-Gerontology', HERO.geriatric, 'geriatric-snf', 'geriatric-salary'),
@@ -316,18 +314,18 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
   'acute-care': categoryAssets('Why Choose Acute Care', HERO.hospital, 'hospital-acute', 'hospital-salary'),
   'emergency': categoryAssets('Why Choose Emergency', HERO.emergency, 'rapid-response-team', 'rapid-response-salary'),
   [PSYCH_SPECIALTY_SLUG]: categoryAssets('Why Choose Psychiatric Care', HERO.therapySession, 'community-clinic-sign', 'rapid-response-salary'),
-  'oncology': categoryAssets('Why Choose Oncology', LEGACY.clinicBuilding, 'hospital-team', 'hospital-salary'),
+  'oncology': categoryAssets('Why Choose Oncology', HERO.oncology, 'hospital-team', 'hospital-salary'),
   'cardiology': categoryAssets('Why Choose Cardiology', HERO.cardiology, 'hospital-acute', 'hospital-salary'),
   'primary-care': categoryAssets('Why Choose Primary Care', HERO.careTeamTable, 'family-clinic', 'state-salary'),
   'hospitalist': categoryAssets('Why Choose Hospitalist', HERO.inpatient, 'inpatient-ward', 'inpatient-pay'),
-  'dermatology': categoryAssets('Why Choose Dermatology', LEGACY.practiceSign, 'private-practice-office', 'private-practice-salary'),
+  'dermatology': categoryAssets('Why Choose Dermatology', HERO.dermatology, 'private-practice-office', 'private-practice-salary'),
   'orthopedic': categoryAssets('Why Choose Orthopedic', HERO.orthopedic, 'hospital-team', 'hospital-salary'),
-  'aesthetics': categoryAssets('Why Choose Aesthetics', LEGACY.practiceSign, 'private-practice-office', 'private-practice-salary'),
-  'pain-management': categoryAssets('Why Choose Pain Management', LEGACY.clinicBuilding, 'outpatient-panel', 'outpatient-salary'),
+  'aesthetics': categoryAssets('Why Choose Aesthetics', HERO.aesthetics, 'private-practice-office', 'private-practice-salary'),
+  'pain-management': categoryAssets('Why Choose Pain Management', HERO.painManagement, 'outpatient-panel', 'outpatient-salary'),
   'palliative-hospice': categoryAssets('Why Choose Palliative & Hospice', HERO.geriatric, 'geriatric-snf', 'geriatric-salary'),
   // ── aprn ─────────────────────────────────────────────────────────────
-  'anesthesia': categoryAssets('Why Choose Anesthesia', LEGACY.clinicBuilding, 'hospital-acute', 'hospital-salary'),
-  'midwifery': categoryAssets('Why Choose Midwifery', LEGACY.celebrateNurse, 'outpatient-clinic', 'outpatient-salary'),
+  'anesthesia': categoryAssets('Why Choose Anesthesia', HERO.anesthesia, 'hospital-acute', 'hospital-salary'),
+  'midwifery': categoryAssets('Why Choose Midwifery', HERO.midwifery, 'outpatient-clinic', 'outpatient-salary'),
   'clinical-nurse-specialist': categoryAssets('Why Choose CNS Roles', HERO.midCareer, 'mid-career-specialize', 'mid-career-salary'),
   // ── experience ───────────────────────────────────────────────────────
   'entry-level': categoryAssets('Why Choose Entry Level', HERO.entryLevel, 'entry-level-mentorship', 'entry-level-salary'),

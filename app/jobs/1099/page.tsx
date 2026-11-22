@@ -326,8 +326,8 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
-        bgColor="#f6dfa7"
-        heroImage="/images/categories/bento/1099-tax.webp"
+        bgColor="#eccc92"
+        heroImage="/images/categories/heroes/1099.webp"
         heroAlt={`${brand.niche.short} independent contractor workspace`}
         badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
         breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
@@ -465,7 +465,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
             </div>
 
             <div className="cat-bento-hero-2 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <ImmersiveImage src="/images/categories/bento/locum-pay.webp" alt="1099 tax planning" minHeight={200} />
+              <ImmersiveImage src="/images/categories/bento/1099-tax.webp" alt="1099 tax planning" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Tax Treatment</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
