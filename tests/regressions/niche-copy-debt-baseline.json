@@ -123,6 +123,5 @@
   "public/.well-known/ai-plugin.json": 1,
   "public/humans.txt": 1,
   "public/llms-full.txt": 12,
-  "public/llms.txt": 8,
-  "public/site.webmanifest": 2
+  "public/llms.txt": 8
 }

@@ -122,7 +122,9 @@ export const metadata: Metadata = {
     other: [
       {
         rel: 'manifest',
-        url: '/site.webmanifest?v=4',
+        // ?v=5: until 2026-11-22 the manifest carried another site's app name;
+        // a new address makes browsers and caches fetch the corrected file.
+        url: '/site.webmanifest?v=5',
       },
       {
         rel: 'android-chrome-192x192',
