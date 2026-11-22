@@ -15,107 +15,19 @@
  */
 
 import { inngest } from '@/lib/inngest/client';
-import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
-import { sendAndLog, escapeHtml } from '@/lib/email-service';
+import { sendAndLog } from '@/lib/email-service';
 import { getBaseUrl } from '@/lib/env';
-
-interface DigestJob {
-    id: string;
-    title: string;
-    slug: string | null;
-    employer: string;
-    location: string | null;
-    state: string | null;
-    isRemote: boolean;
-    displaySalary: string | null;
-    tier: 'easy_apply' | 'direct_apply' | 'external';
-}
+import {
+    buildRecommendationDigestHtml,
+    recommendationDigestHeadline,
+    type RecommendationDigestJob,
+} from '@/lib/email/recommendation-digest-template';
 
 const DIGEST_TOP_N = 5;
 const FRESH_BATCH_WINDOW_DAYS = 7;
-
-function tierBadgeHtml(tier: DigestJob['tier']): string {
-    if (tier === 'easy_apply') {
-        return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#A7F3D0;color:#065F46;font-size:11px;font-weight:700;">⚡ Easy Apply</span>`;
-    }
-    if (tier === 'direct_apply') {
-        return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#FCE7F3;color:#9D174D;font-size:11px;font-weight:700;">↗ Apply on employer site</span>`;
-    }
-    return '';
-}
-
-function renderJobRow(job: DigestJob, baseUrl: string): string {
-    const url = job.slug ? `${baseUrl}/jobs/${job.slug}` : `${baseUrl}/jobs/${job.id}`;
-    const salaryLine = job.displaySalary ? `<div style="margin-top:4px;font-size:13px;color:#065F46;font-weight:600;">${escapeHtml(job.displaySalary)}</div>` : '';
-    const locationParts: string[] = [];
-    if (job.state) locationParts.push(escapeHtml(job.state));
-    if (job.isRemote) locationParts.push('Remote');
-    else if (job.location) locationParts.push(escapeHtml(job.location));
-    const locationLine = locationParts.join(' · ');
-
-    return `
-<tr>
-  <td style="padding:14px 0;border-bottom:1px solid #E5E7EB;">
-    <table cellpadding="0" cellspacing="0" border="0" width="100%">
-      <tr>
-        <td>
-          ${tierBadgeHtml(job.tier)}
-          <div style="margin-top:8px;font-size:16px;font-weight:700;font-family:Georgia,serif;color:#1A2E35;">
-            <a href="${url}" style="color:#1A2E35;text-decoration:none;">${escapeHtml(job.title)}</a>
-          </div>
-          <div style="margin-top:2px;font-size:13px;color:#6B7F8A;">${escapeHtml(job.employer)}</div>
-          ${locationLine ? `<div style="margin-top:4px;font-size:12px;color:#8A9BA6;">${locationLine}</div>` : ''}
-          ${salaryLine}
-          <div style="margin-top:10px;">
-            <a href="${url}" style="display:inline-block;padding:8px 18px;border-radius:10px;background:#BE185D;color:#FFFFFF;text-decoration:none;font-size:13px;font-weight:600;">View role →</a>
-          </div>
-        </td>
-      </tr>
-    </table>
-  </td>
-</tr>`;
-}
-
-function renderDigestHtml(args: {
-    firstName: string | null;
-    jobs: DigestJob[];
-    unsubscribeUrl: string;
-    settingsUrl: string;
-}): string {
-    const greeting = args.firstName ? `Hi ${escapeHtml(args.firstName)},` : 'Hi there,';
-    const rows = args.jobs.map((j) => renderJobRow(j, getBaseUrl())).join('');
-    return `<!doctype html>
-<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A2E35;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FDFBF7;padding:32px 16px;">
-  <tr>
-    <td align="center">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background:#FFFFFF;border-radius:20px;padding:32px;border:1px solid rgba(0,0,0,0.06);">
-        <tr><td>
-          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#BE185D;">${escapeHtml(brand.name)} · Weekly Digest</p>
-          <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:26px;font-weight:800;color:#1A2E35;">${args.jobs.length} new role${args.jobs.length === 1 ? '' : 's'} match your profile</h1>
-          <p style="margin:0 0 20px;font-size:14px;color:#6B7F8A;">${greeting} Here are your latest recommendations, with Easy Apply jobs first.</p>
-
-          <table cellpadding="0" cellspacing="0" border="0" width="100%">
-            ${rows}
-          </table>
-
-          <div style="margin-top:24px;padding-top:18px;border-top:1px solid #E5E7EB;font-size:12px;color:#8A9BA6;line-height:1.5;">
-            You're getting this because you opted into email recommendations.
-            <br>
-            <a href="${args.settingsUrl}" style="color:#BE185D;text-decoration:underline;">Manage email preferences</a>
-            &nbsp;·&nbsp;
-            <a href="${args.unsubscribeUrl}" style="color:#BE185D;text-decoration:underline;">Unsubscribe</a>
-          </div>
-        </td></tr>
-      </table>
-    </td>
-  </tr>
-</table>
-</body></html>`;
-}
 
 interface CandidateForDigest {
     supabase_id: string;
@@ -135,7 +47,11 @@ export const recommendationDigestWeekly = inngest.createFunction(
     async ({ step }) => {
         // Find candidates who:
         //   - have at least one rec in the past 7 days
-        //   - have a known email and aren't hard-suppressed (bounce/complaint)
+        //   - have a known email, aren't suppressed (a bounce or complaint, and
+        //     every opt-out: app/api/email/_lib/subscription.ts sets
+        //     is_suppressed with is_subscribed) and aren't marked unsubscribed
+        //     any other way (is_subscribed=false). sendAndLog has no opt-out
+        //     gate of its own, so this query is what honours both.
         //   - have an email_leads row for the unsubscribe token
         //
         // NOTE: We deliberately do NOT require `newsletter_opt_in = true` here.
@@ -157,6 +73,7 @@ export const recommendationDigestWeekly = inngest.createFunction(
                 WHERE cr.created_at >= NOW() - INTERVAL '${FRESH_BATCH_WINDOW_DAYS} days'
                   AND cr.dismissed_at IS NULL
                   AND el.is_suppressed = false
+                  AND el.is_subscribed = true
                   AND up.deleted_at IS NULL
                   AND up.role = 'job_seeker'
                   AND up.email IS NOT NULL;
@@ -198,7 +115,7 @@ export const recommendationDigestWeekly = inngest.createFunction(
                 });
                 if (recs.length === 0) return;
 
-                const jobs: DigestJob[] = recs.map((r) => ({
+                const jobs: RecommendationDigestJob[] = recs.map((r) => ({
                     id: r.job.id,
                     title: r.job.title,
                     slug: r.job.slug,
@@ -207,20 +124,21 @@ export const recommendationDigestWeekly = inngest.createFunction(
                     state: r.job.state,
                     isRemote: r.job.isRemote,
                     displaySalary: r.job.displaySalary,
-                    tier: r.tier as DigestJob['tier'],
+                    tier: r.tier as RecommendationDigestJob['tier'],
                 }));
 
                 const baseUrl = getBaseUrl();
+                // The List-Unsubscribe target; the mail's own footer links
+                // /unsubscribe and /email-preferences with the same token.
                 const unsubscribeUrl = cand.unsubscribe_token
                     ? `${baseUrl}/email-preferences?token=${cand.unsubscribe_token}`
                     : `${baseUrl}/email-preferences`;
-                const settingsUrl = `${baseUrl}/settings?tab=account`;
 
-                const html = renderDigestHtml({
+                const html = buildRecommendationDigestHtml({
                     firstName: cand.first_name,
                     jobs,
-                    unsubscribeUrl,
-                    settingsUrl,
+                    unsubscribeToken: cand.unsubscribe_token,
+                    baseUrl,
                 });
 
                 try {
@@ -228,7 +146,7 @@ export const recommendationDigestWeekly = inngest.createFunction(
                         {
                             from: '', // sendAndLog overrides with marketing sender
                             to: cand.email,
-                            subject: `${jobs.length} new ${jobs.length === 1 ? 'role' : 'roles'} match your profile`,
+                            subject: recommendationDigestHeadline(jobs.length),
                             html,
                         },
                         'recommendation_digest',
