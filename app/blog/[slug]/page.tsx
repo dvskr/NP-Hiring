@@ -257,7 +257,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ? licenseGuideDescription(license.env, license.facts.total)
         : post.meta_description || `Read this ${brand.niche.short} career article on ${brand.name}: guides, salary insights, and licensure updates for ${brand.niche.descriptor}s.`;
 
-    const ogImage = post.image_url || `${brand.baseUrl}/api/og`;
+    // OpenGraph cards declare 1200x630 dimensions; use an external absolute
+    // editorial image when present, and the 1200x630 /api/og share card for
+    // square local illustrations or posts without an external hero photo.
+    const ogImage = (post.image_url && /^https?:\/\//.test(post.image_url))
+        ? post.image_url
+        : `${brand.baseUrl}/api/og?title=${encodeURIComponent(title)}&type=page`;
     const url = `${brand.baseUrl}/blog/${slug}`;
 
     // Audit CQ-03 / FB-2: a license guide stays live and linked, but renders
@@ -499,7 +504,9 @@ export default async function BlogPostPage({ params }: Props) {
             '@type': 'WebPage',
             '@id': currentUrl,
         },
-        image: post.image_url || `${brand.baseUrl}/api/og`,
+        image: post.image_url
+            ? (post.image_url.startsWith('/') ? `${brand.baseUrl}${post.image_url}` : post.image_url)
+            : `${brand.baseUrl}/api/og`,
         keywords: post.target_keyword || undefined,
         articleSection: categoryLabel,
         url: currentUrl,
@@ -530,7 +537,9 @@ export default async function BlogPostPage({ params }: Props) {
         '@type': 'VideoObject',
         name: post.title,
         description: post.meta_description || post.title,
-        thumbnailUrl: post.image_url || `${brand.baseUrl}/api/og`,
+        thumbnailUrl: post.image_url
+            ? (post.image_url.startsWith('/') ? `${brand.baseUrl}${post.image_url}` : post.image_url)
+            : `${brand.baseUrl}/api/og`,
         uploadDate: post.publish_date || post.created_at,
         contentUrl: post.video_url,
         publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },

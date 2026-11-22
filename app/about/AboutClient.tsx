@@ -141,7 +141,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts, 
       <section className="ab-pad ab-emp-section"><div className="ab-wrap">
         <div className="ab-two-col flip">
           <div>
-            <div className="ab-diorama-card peach" style={{ padding: 0 }}>
+            <div className="ab-diorama-card sky" style={{ padding: 0 }}>
               <img src="/images/how-it-works/step-employer-track-v5.webp" alt="Employer hiring dashboard" width={572} height={572} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '40px 40px 0 0' }} />
               <div style={{ padding: '20px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontFamily: "var(--font-lora), 'Lora', serif", fontSize: 18 }}>A team room, not a newsstand.</b>

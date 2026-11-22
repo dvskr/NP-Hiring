@@ -437,7 +437,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Lead Clinical Programs</h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Direct {brand.niche.adjective} programs, mentor {brand.niche.short} teams, and drive quality improvement initiatives as a clinical leader.</p>
               </div>
-              <ImmersiveImage src="/images/categories/bento/mid-career-specialize.webp" alt={`${brand.niche.short} leadership diorama`} minHeight={240} />
+              <ImmersiveImage src="/images/categories/bento/care-team-table.webp" alt={`${brand.niche.short} leadership diorama`} minHeight={240} />
             </div>
             <div className="cat-bento-card cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
               <ImmersiveImage src="/images/categories/bento/senior-strategy.webp" alt="Strategic planning diorama" minHeight={200} />

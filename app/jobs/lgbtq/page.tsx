@@ -431,7 +431,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
           <div className="pseo-clay-split" style={{ gap: '14px', alignItems: 'stretch' }}>
             <PostedPay variant={{ kind: 'category', slug: SLUG }} facts={facts} />
             <div className="pseo-clay-card" style={{ ...clayCard, padding: 0, overflow: 'hidden', display: 'grid' }}>
-              <ImmersiveImage src="/images/categories/bento/pediatric-salary.webp" alt={`LGBTQ+ affirming ${brand.niche.short} pay illustration`} minHeight={240} />
+              <ImmersiveImage src="/images/categories/bento/state-salary.webp" alt={`LGBTQ+ affirming ${brand.niche.short} pay illustration`} minHeight={240} />
             </div>
           </div>
         </Band>

@@ -31,6 +31,55 @@ const MDX_EXTENSION = '.mdx';
 
 const VALID_CATEGORIES = new Set<string>(BLOG_CATEGORIES.map((c) => c.id));
 
+/**
+ * Local editorial cover art for authored content/blog/*.mdx guides when a file
+ * does not set an explicit `image` field in frontmatter. Every path points at
+ * a verified general-practice asset under public/images/categories/.
+ */
+const MDX_COVER_IMAGES: Readonly<Record<string, string>> = {
+    'agacnp-vs-agpcnp': '/images/categories/heroes/hospital.webp',
+    'aprn-compact-states': '/images/categories/heroes/us-map.webp',
+    'can-nurse-practitioners-prescribe-controlled-substances': '/images/categories/bento/state-practice.webp',
+    'fnp-certification-aanp-vs-ancc': '/images/categories/bento/mid-career-specialize.webp',
+    'highest-paying-np-specialties': '/images/categories/bento/hospital-salary.webp',
+    'how-to-become-a-nurse-practitioner': '/images/categories/heroes/entry-level.webp',
+    'how-to-evaluate-np-programs': '/images/categories/bento/entry-level-growth.webp',
+    'new-grad-np-first-job': '/images/categories/heroes/new-grad.webp',
+    'non-clinical-nurse-practitioner-jobs': '/images/categories/heroes/remote.webp',
+    'np-1099-vs-w2': '/images/categories/bento/1099-tax.webp',
+    'np-certification-overview': '/images/categories/bento/full-time-benefits.webp',
+    'np-ceu-requirements-by-state': '/images/categories/bento/multistate-map.webp',
+    'np-cover-letter-guide': '/images/categories/bento/contract-signing.webp',
+    'np-credentialing-checklist': '/images/categories/bento/state-practice.webp',
+    'np-fellowship-residency-programs': '/images/categories/bento/entry-level-mentorship.webp',
+    'np-interview-questions': '/images/categories/bento/mid-career-lead.webp',
+    'np-malpractice-insurance-guide': '/images/categories/bento/full-time-stability.webp',
+    'np-preceptor-guide': '/images/categories/bento/hospital-team.webp',
+    'np-resume-guide': '/images/categories/heroes/mid-career.webp',
+    'np-salary-guide': '/images/categories/bento/state-salary.webp',
+    'np-salary-negotiation-guide': '/images/categories/bento/full-time-salary.webp',
+    'np-student-loan-limits-professional-degree': '/images/categories/bento/correctional-loan.webp',
+    'nurse-practitioner-job-outlook': '/images/categories/bento/outpatient-salary.webp',
+    'nurse-practitioner-noncompete-laws': '/images/categories/heroes/contract.webp',
+    'nurse-practitioner-week-2026': '/images/categories/heroes/outpatient.webp',
+    'remote-telehealth-np-jobs-guide': '/images/categories/heroes/telehealth.webp',
+    'what-is-an-aprn': '/images/categories/bento/family-clinic.webp',
+};
+
+const CATEGORY_COVER_FALLBACK: Readonly<Partial<Record<BlogCategory, string>>> = {
+    salary_negotiation: '/images/categories/bento/state-salary.webp',
+    state_spotlight: '/images/categories/heroes/us-map.webp',
+    job_seeker_attraction: '/images/categories/heroes/mid-career.webp',
+    career_opportunities: '/images/categories/bento/care-team-table.webp',
+};
+
+function defaultMdxCover(slug: string, category: BlogCategory): string {
+    if (MDX_COVER_IMAGES[slug]) return MDX_COVER_IMAGES[slug];
+    if (slug.startsWith('fnp-vs-')) return '/images/categories/bento/care-team-table.webp';
+    if (slug.endsWith('-certification-guide')) return '/images/categories/heroes/private-practice.webp';
+    return CATEGORY_COVER_FALLBACK[category] ?? '/images/categories/bento/family-clinic.webp';
+}
+
 type Frontmatter = Record<string, unknown>;
 
 /** Frontmatter parser with the same semantics as scripts/sync-blog-to-db.ts. */
@@ -115,6 +164,7 @@ export function mdxFileToBlogPost(fileName: string, raw: string): BlogPost | nul
     }
     const reviewedAt = toIsoDate(data.reviewed);
     const tags = Array.isArray(data.tags) ? data.tags.filter((t): t is string => typeof t === 'string') : [];
+    const frontmatterImage = typeof data.image === 'string' && data.image.trim() ? data.image.trim() : null;
     const body = content.trim();
     return {
         id: `mdx-${slug}`,
@@ -126,7 +176,7 @@ export function mdxFileToBlogPost(fileName: string, raw: string): BlogPost | nul
         category: category as BlogCategory,
         status: 'published',
         publish_date: publishDate,
-        image_url: null,
+        image_url: frontmatterImage ?? defaultMdxCover(slug, category as BlogCategory),
         youtube_video_id: null,
         video_url: null,
         reviewed_at: reviewedAt,

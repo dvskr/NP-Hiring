@@ -12,9 +12,10 @@
 //   - art with an implied unsourced figure or a stale date cue is excluded;
 //   - psych-only scenes are ported once and allowed on one slug (PSYCH_ONLY_ART).
 // Slugs with category-relevant art use it; the rest keep the sage set until
-// new art is commissioned (urgent-care, neonatal, women-health, emergency,
-// oncology, cardiology, dermatology, orthopedic, aesthetics, pain-management,
-// anesthesia, midwifery). That list is the art commission list.
+// new art is commissioned (oncology, dermatology, aesthetics,
+// pain-management, anesthesia, midwifery). That list is the remaining art
+// commission list (urgent-care, emergency, orthopedic, neonatal, women-health
+// and cardiology now have dedicated watercolor heroes on disk).
 //
 // It cannot be closed from existing files. A full-size review on 2026-09-23
 // of every unported reference-board file and every unreferenced file under
@@ -149,11 +150,17 @@ const HERO = {
   communityHealth: hero('community-health', '#5a7455'),
   va: hero('va', '#98b1cb'),
   correctional: hero('correctional', '#97aabd'),
-  veterans: hero('veterans', '#f0fcfa'),
+  veterans: sampled(heroPath('veterans')),
   lgbtq: hero('lgbtq', '#dfc7a8'),
+  urgentCare: sampled(heroPath('urgent-care')),
+  emergency: sampled(heroPath('emergency')),
+  orthopedic: sampled(heroPath('orthopedic')),
+  neonatal: sampled(heroPath('neonatal')),
+  womenHealth: sampled(heroPath('women-health')),
+  cardiology: sampled(heroPath('cardiology')),
   homeVisits: bentoArt('community-health-impact', '#fdcb95'),
   taxDesk: bentoArt('1099-tax', '#f6dfa7'),
-  familyClinic: bentoArt('family-clinic', '#fce9b6'),
+  familyClinic: sampled('/images/categories/bento/family-clinic.webp'),
   pediatricPlayroom: bentoArt('pediatric-playroom', '#b0ebd0'),
   careTeamTable: bentoArt('care-team-table', '#bce8d3'),
   seniorLeadership: bentoArt('senior-leadership', '#dac6a6'),
@@ -291,7 +298,7 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
   'inpatient': categoryAssets('Why Choose Inpatient', HERO.inpatient, 'inpatient-ward', 'inpatient-pay'),
   'outpatient': categoryAssets('Why Choose Outpatient', HERO.outpatient, 'outpatient-clinic', 'outpatient-salary'),
   'travel': categoryAssets('Why Choose Travel', HERO.travel, 'travel-adventure', 'travel-compensation'),
-  'urgent-care': categoryAssets('Why Choose Urgent Care', LEGACY.clinicBuilding, 'rapid-response-team', 'rapid-response-salary'),
+  'urgent-care': categoryAssets('Why Choose Urgent Care', HERO.urgentCare, 'rapid-response-team', 'rapid-response-salary'),
   'home-health': categoryAssets('Why Choose Home Health', HERO.homeVisits, 'geriatric-snf', 'state-salary'),
   // ── jobType ──────────────────────────────────────────────────────────
   'full-time': categoryAssets('Why Choose Full-Time', HERO.fullTime, 'full-time-benefits', 'full-time-salary'),
@@ -304,17 +311,17 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
   'family-practice': categoryAssets('Why Choose Family Practice', HERO.familyClinic, 'care-team-table', 'state-salary'),
   'adult-gerontology': categoryAssets('Why Choose Adult-Gerontology', HERO.geriatric, 'geriatric-snf', 'geriatric-salary'),
   'pediatric': categoryAssets('Why Choose Pediatric', HERO.pediatricPlayroom, 'community-health-impact', 'pediatric-salary'),
-  'neonatal': categoryAssets('Why Choose Neonatal', LEGACY.clinicBuilding, 'hospital-acute', 'hospital-salary'),
-  'women-health': categoryAssets("Why Choose Women's Health", LEGACY.celebrateNurse, 'outpatient-clinic', 'outpatient-salary'),
+  'neonatal': categoryAssets('Why Choose Neonatal', HERO.neonatal, 'hospital-acute', 'hospital-salary'),
+  'women-health': categoryAssets("Why Choose Women's Health", HERO.womenHealth, 'outpatient-clinic', 'outpatient-salary'),
   'acute-care': categoryAssets('Why Choose Acute Care', HERO.hospital, 'hospital-acute', 'hospital-salary'),
-  'emergency': categoryAssets('Why Choose Emergency', LEGACY.clinicBuilding, 'rapid-response-team', 'rapid-response-salary'),
+  'emergency': categoryAssets('Why Choose Emergency', HERO.emergency, 'rapid-response-team', 'rapid-response-salary'),
   [PSYCH_SPECIALTY_SLUG]: categoryAssets('Why Choose Psychiatric Care', HERO.therapySession, 'community-clinic-sign', 'rapid-response-salary'),
   'oncology': categoryAssets('Why Choose Oncology', LEGACY.clinicBuilding, 'hospital-team', 'hospital-salary'),
-  'cardiology': categoryAssets('Why Choose Cardiology', LEGACY.clinicBuilding, 'hospital-acute', 'hospital-salary'),
+  'cardiology': categoryAssets('Why Choose Cardiology', HERO.cardiology, 'hospital-acute', 'hospital-salary'),
   'primary-care': categoryAssets('Why Choose Primary Care', HERO.careTeamTable, 'family-clinic', 'state-salary'),
   'hospitalist': categoryAssets('Why Choose Hospitalist', HERO.inpatient, 'inpatient-ward', 'inpatient-pay'),
   'dermatology': categoryAssets('Why Choose Dermatology', LEGACY.practiceSign, 'private-practice-office', 'private-practice-salary'),
-  'orthopedic': categoryAssets('Why Choose Orthopedic', LEGACY.clinicBuilding, 'hospital-team', 'hospital-salary'),
+  'orthopedic': categoryAssets('Why Choose Orthopedic', HERO.orthopedic, 'hospital-team', 'hospital-salary'),
   'aesthetics': categoryAssets('Why Choose Aesthetics', LEGACY.practiceSign, 'private-practice-office', 'private-practice-salary'),
   'pain-management': categoryAssets('Why Choose Pain Management', LEGACY.clinicBuilding, 'outpatient-panel', 'outpatient-salary'),
   'palliative-hospice': categoryAssets('Why Choose Palliative & Hospice', HERO.geriatric, 'geriatric-snf', 'geriatric-salary'),
@@ -336,7 +343,7 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
   // ── population ───────────────────────────────────────────────────────
   'geriatric': categoryAssets('Why Choose Geriatric', HERO.geriatric, 'geriatric-memory', 'geriatric-salary'),
   'veterans': categoryAssets('Why Choose Veterans Care', HERO.veterans, 'full-time-stability', 'state-salary'),
-  'lgbtq': categoryAssets('Why Choose LGBTQ+ Care', HERO.lgbtq, 'lgbtq-inclusive', 'pediatric-salary'),
+  'lgbtq': categoryAssets('Why Choose LGBTQ+ Care', HERO.lgbtq, 'lgbtq-inclusive', 'state-salary'),
 };
 
 /**

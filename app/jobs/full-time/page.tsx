@@ -416,8 +416,8 @@ export default async function FullTimePage({ searchParams }: PageProps) {
             {/* ROW 2: Icon Cards */}
             {[
               { icon: '/images/categories/icons/full-time-benefits.webp', t: 'Benefits Listed', d: 'Each listing names the health cover, retirement plan and allowances it carries.' },
-              { icon: '/images/categories/icons/full-time-security.webp', t: 'Salaried Pay', d: 'Full-time listings quote an annual salary rather than an hourly or per shift rate.' },
-              { icon: '/images/categories/icons/full-time-balance.webp', t: 'Stated Schedule', d: 'Listings name the weekly schedule and any on-call coverage the role carries.' },
+              { icon: '/images/categories/icons/travel-dollar.webp', t: 'Salaried Pay', d: 'Full-time listings quote an annual salary rather than an hourly or per shift rate.' },
+              { icon: '/images/categories/icons/outpatient-clock.webp', t: 'Stated Schedule', d: 'Listings name the weekly schedule and any on-call coverage the role carries.' },
               { icon: '/images/categories/icons/full-time-team.webp', t: 'Team Integration', d: 'Become a core member of multidisciplinary care teams.' },
             ].map((c, i) => (
               <div key={i} className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>

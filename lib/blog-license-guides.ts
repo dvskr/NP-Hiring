@@ -58,6 +58,7 @@
  */
 // Relative imports (not '@/') so scripts/sync-blog-to-db.ts can load this
 // module under plain tsx/ts-node without tsconfig-path registration.
+import { stateDioramaSrc } from '../components/StateImage';
 import { brand } from '../config/brand';
 import { LICENSE_GUIDE_SLUG_REGEX, licenseGuideSlug } from '../config/niche/content-map';
 import {
@@ -1061,7 +1062,7 @@ export function getLicenseGuidePost(
         category: 'state_spotlight',
         status: 'published',
         publish_date: LICENSE_GUIDE_PUBLISH_DATE,
-        image_url: null,
+        image_url: stateDioramaSrc(s.stateSlug),
         youtube_video_id: null,
         video_url: null,
         reviewed_at: reviewedAt,

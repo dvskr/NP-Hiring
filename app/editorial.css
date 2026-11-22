@@ -211,6 +211,14 @@ html:has(.ed-page) body {
 .ed-hero-photo[style*="background-image"]::after {
   display: none;
 }
+.ed-hero-photo--has-image .ed-hero-photo-caption {
+  right: auto;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(253, 251, 247, 0.88);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(26, 46, 53, 0.08);
+}
 .ed-hero-photo-caption {
   position: absolute;
   bottom: 16px;

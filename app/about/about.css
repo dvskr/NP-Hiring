@@ -80,6 +80,7 @@
 .ab-diorama-card{aspect-ratio:1/1;border-radius:40px;padding:28px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;box-shadow:var(--clay-shadow)}
 .ab-diorama-card.mint{background:linear-gradient(160deg,#CDE8DD,#A4D0C1)}
 .ab-diorama-card.peach{background:linear-gradient(160deg,#F7CBB0,#E8A587)}
+.ab-diorama-card.sky{background:linear-gradient(160deg,#CBE7F5,#A8D9EF)}
 .ab-diorama-card .placeholder-scene{flex:1;margin:16px 0;border-radius:24px;background:repeating-linear-gradient(135deg,rgba(255,255,255,0.22) 0 12px,rgba(255,255,255,0) 12px 24px),rgba(255,255,255,0.25);box-shadow:inset 4px 4px 10px rgba(0,0,0,0.12),inset -4px -4px 10px rgba(255,255,255,0.5);display:grid;place-items:center;font-size:12px;text-align:center;padding:16px}
 .ab-diorama-card .caption{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-lora),'Lora',serif;font-size:18px}
 .ab-diorama-card .chip{background:rgba(255,255,255,0.6);padding:6px 12px;border-radius:999px;font-weight:800;font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink)}
