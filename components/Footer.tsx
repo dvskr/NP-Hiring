@@ -6,6 +6,7 @@ import { XLogo, FacebookLogo, InstagramLogo, LinkedinLogo, YoutubeLogo } from '@
 import { reopenConsentBanner } from '@/lib/consent';
 import { brand } from '@/config/brand';
 import { selectFooterCategoryColumns, type FooterColumn } from '@/lib/pseo/footer-category-links';
+import { sisterBoards } from '@/lib/job-board-network';
 /* ──────────────────────────────────────────────
  *  Footer — Dark, clean, professional
  *  Uses inline styles for background/color to
@@ -150,6 +151,7 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
   ];
   const AUTH_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/employer/login', '/employer/signup'];
   if (AUTH_ROUTES.some(r => pathname?.startsWith(r))) return null;
+  const moreBoards = sisterBoards();
 
   return (
     <>
@@ -225,6 +227,29 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
                 </ul>
               </nav>
             ))}
+
+            {/* The company's other job boards (lib/job-board-network.ts), as
+                plain links that open in the same tab: a board appears here
+                once it is open to the public. */}
+            {moreBoards.length > 0 && (
+              <nav aria-label="More Job Boards">
+                <h3 style={columnTitleStyle}>More Job Boards</h3>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {moreBoards.map((board) => (
+                    <li key={board.url}>
+                      <a
+                        href={board.url}
+                        style={linkStyle}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#a8a29e'; }}
+                      >
+                        {board.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            )}
           </div>
 
           {/* ── Bottom area: legal sub-row + 3-cell brand row.
