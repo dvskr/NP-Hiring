@@ -67,7 +67,12 @@ import {
   resolveHeroLocation,
   resolveTitleLocation,
 } from './job-page-meta';
-import { getEmployerFacts, type EmployerFacts } from './employer-facts';
+import type { EmployerFacts } from './employer-facts';
+import {
+  getCachedCompanyMatch,
+  getCachedEmployerFacts,
+  getCachedEmployerJobCount,
+} from './employer-cache';
 import { getPostBySlug } from '@/lib/blog';
 // Employer-authored title / employer / location strings often carry dashes as
 // separators. They stay raw in the row, in every DB query and in JSON-LD
@@ -148,7 +153,16 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
       where: { id, ...PUBLISHED_LISTING_WHERE },
       include: {
         employerJobs: {
-          select: { companyLogoUrl: true, companyWebsite: true, userId: true },
+          // The description and name feed the synthesized About card when
+          // the employer has no Company row (getCompanyInfo), so that
+          // fallback needs no read of its own.
+          select: {
+            companyLogoUrl: true,
+            companyWebsite: true,
+            companyDescription: true,
+            employerName: true,
+            userId: true,
+          },
         },
       },
     });
@@ -211,6 +225,14 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
       companyLogoUrl: jobWithRelation.employerJobs?.companyLogoUrl || null,
       companyWebsite: jobWithRelation.employerJobs?.companyWebsite || null,
       employerUserId: jobWithRelation.employerJobs?.userId || null,
+      employerJobProfile: jobWithRelation.employerJobs
+        ? {
+            companyLogoUrl: jobWithRelation.employerJobs.companyLogoUrl ?? null,
+            companyWebsite: jobWithRelation.employerJobs.companyWebsite ?? null,
+            companyDescription: jobWithRelation.employerJobs.companyDescription ?? null,
+            employerName: jobWithRelation.employerJobs.employerName ?? null,
+          }
+        : null,
     };
 
     return { status: 'found', job: jobData as Job };
@@ -322,47 +344,31 @@ async function getJobLinkLists({
   };
 }
 
+/** The EmployerJob columns getJob already read, passed in so no query repeats them. */
+interface EmployerJobProfile {
+  companyLogoUrl: string | null;
+  companyWebsite: string | null;
+  companyDescription: string | null;
+  employerName: string | null;
+}
+
 /**
  * Fetch company information for employer section.
  *
- * H8 fix: previously this issued up to 5 sequential DB round-trips
- * (company by id → employerJob by jobId → company by name → employerJob
- * again → job.count) for each cache-miss render of a job page. Now the
- * three independent lookups fan out in parallel, the EmployerJob is
- * fetched once with all the columns we might read, and the count only
- * runs in the fall-through "no Company row" branch.
+ * H8 fix: this used to issue up to 5 sequential DB round-trips per
+ * cache-miss render. Since 2026-11-23 the Company match and the fallback
+ * job count come from a daily per-employer cache (./employer-cache.ts), and
+ * the EmployerJob columns come from getJob's own read, so a render usually
+ * makes no query here at all.
  */
-async function getCompanyInfo(companyId: string | null, employerName: string, jobId?: string) {
+async function getCompanyInfo(
+  companyId: string | null,
+  employerName: string,
+  jobId: string | undefined,
+  employerJobRow: EmployerJobProfile | null,
+) {
   const normalizedName = employerName.toLowerCase().trim();
-
-  // Fan out all three independent reads in parallel. Each one may be
-  // null; we pick based on availability below.
-  const [companyById, companyByName, employerJobRow] = await Promise.all([
-    companyId
-      ? prisma.company.findUnique({ where: { id: companyId } })
-      : Promise.resolve(null),
-    prisma.company.findFirst({
-      where: {
-        OR: [
-          { normalizedName },
-          { name: { equals: employerName, mode: 'insensitive' } },
-        ],
-      },
-    }),
-    jobId
-      ? prisma.employerJob.findUnique({
-          where: { jobId },
-          select: {
-            companyLogoUrl: true,
-            companyWebsite: true,
-            companyDescription: true,
-            employerName: true,
-          },
-        })
-      : Promise.resolve(null),
-  ]);
-
-  const company = companyById ?? companyByName;
+  const company = await getCachedCompanyMatch(companyId, employerName);
   if (company) {
     if (!company.logoUrl && employerJobRow?.companyLogoUrl) {
       return { ...company, logoUrl: employerJobRow.companyLogoUrl } as Company;
@@ -372,9 +378,7 @@ async function getCompanyInfo(companyId: string | null, employerName: string, jo
 
   // No Company record — synthesize one from the EmployerJob fields.
   if (employerJobRow && (employerJobRow.companyLogoUrl || employerJobRow.companyDescription)) {
-    const jobCount = await prisma.job.count({
-      where: { employer: employerName, ...PUBLISHED_LISTING_WHERE },
-    });
+    const jobCount = await getCachedEmployerJobCount(employerName);
     return {
       id: 'employer-' + (jobId ?? 'unknown'),
       name: employerJobRow.employerName || employerName,
@@ -399,7 +403,7 @@ async function getEmployerFactsSafe(
   company: Awaited<ReturnType<typeof getCompanyInfo>>,
 ): Promise<EmployerFacts | null> {
   try {
-    return await getEmployerFacts(job, company);
+    return await getCachedEmployerFacts(job, company);
   } catch (error) {
     console.error('[job-page] employer facts failed; the About card omits them', error);
     return null;
@@ -845,7 +849,12 @@ export default async function JobPage({ params }: JobPageProps) {
 
   // The company lookup starts first because the employer facts need its
   // Company row; everything else fans out beside it.
-  const companyInfoPromise = getCompanyInfo(job.companyId, job.employer, job.id);
+  const companyInfoPromise = getCompanyInfo(
+    job.companyId,
+    job.employer,
+    job.id,
+    (job as Job & { employerJobProfile?: EmployerJobProfile | null }).employerJobProfile ?? null,
+  );
   const [
     linkLists,
     companyInfo,
