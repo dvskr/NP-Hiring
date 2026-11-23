@@ -223,8 +223,8 @@ export default function HowToHireGuidePage() {
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: brand.name },
-            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name },
+            publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
             mainEntityOfPage: PAGE_URL,
           }),
         }}

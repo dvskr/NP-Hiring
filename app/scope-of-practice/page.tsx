@@ -176,8 +176,8 @@ export default function ScopeOfPracticePage() {
                         datePublished: SOP_PUBLISHED_AT,
                         dateModified: SOP_LAST_REVIEWED,
                         image: HERO_IMAGE,
-                        author: { '@type': 'Organization', name: brand.name },
-                        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+                        author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name },
+                        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
                         // {} while brand.editorial.author and .reviewer are
                         // null; the real people's Person records when
                         // configured. Never a fabricated name.

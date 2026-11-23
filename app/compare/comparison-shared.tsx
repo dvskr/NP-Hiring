@@ -88,8 +88,8 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                         dateModified: COMPARE_REVIEW_DATE,
                         image: ogImageFor(profile),
                         mainEntityOfPage: pageUrl,
-                        author: { '@type': 'Organization', name: brand.name },
-                        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+                        author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name },
+                        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
                     }),
                 }}
             />

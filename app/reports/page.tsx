@@ -97,7 +97,7 @@ export default async function ReportsHubPage() {
         name: PAGE_TITLE,
         url: PAGE_URL,
         description: PAGE_DESCRIPTION,
-        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
         hasPart: ALL_REPORTS.map((report) => ({
             '@type': 'Article',
             headline: report.title,

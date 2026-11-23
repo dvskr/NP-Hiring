@@ -191,8 +191,11 @@ export default async function PressPage() {
     const inventory = await getInventorySnapshot();
 
     // Derived at render time from the practice-authority dataset itself, so
-    // these counts and the state pages can never disagree.
-    const fullPracticeCount = getStatesByAuthority('full').length;
+    // these counts and the state pages can never disagree. D.C. is a
+    // jurisdiction in the dataset, not a state: the full tier counts states
+    // only and the tile names DC beside it, so this tile and the cited
+    // "states + DC" figure agree, as /resources/fpa-guide does.
+    const fullPracticeCount = getStatesByAuthority('full').filter((s) => s !== 'District of Columbia').length;
     const reducedPracticeCount = getStatesByAuthority('reduced').length;
     const restrictedPracticeCount = getStatesByAuthority('restricted').length;
 
@@ -212,6 +215,7 @@ export default async function PressPage() {
     const orgSchema = {
         '@context': 'https://schema.org',
         '@type': 'Organization',
+        '@id': `${brand.baseUrl}/#organization`,
         name: brand.name,
         legalName: brand.legal.entityName,
         url: brand.baseUrl,
@@ -382,7 +386,7 @@ export default async function PressPage() {
                             // used to state a rule per tier ("Physician supervision
                             // required"), which is untrue of several states in each
                             // tier; what one state requires is its own details.
-                            { n: fullPracticeCount, label: 'Full practice', hint: 'Exclusive licensure authority of the state board of nursing, though some states first require a transition period' },
+                            { n: fullPracticeCount, label: 'Full practice states, plus DC', hint: 'Exclusive licensure authority of the state board of nursing, though some states first require a transition period' },
                             { n: reducedPracticeCount, label: 'Reduced practice', hint: 'State law reduces at least one element of practice' },
                             { n: restrictedPracticeCount, label: 'Restricted practice', hint: 'State law restricts at least one element of practice' },
                         ].map((s) => (

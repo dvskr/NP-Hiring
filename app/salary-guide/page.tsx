@@ -429,15 +429,18 @@ export default async function SalaryGuidePage() {
     "headline": GUIDE_NAME,
     "description": `${brand.niche.long} salary data: the BLS ${NATIONAL_SALARY_VINTAGE} median and 10th and 90th percentiles, posted pay by state, experience levels, specialty premiums, and practice settings. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
     "image": SALARY_GUIDE_OG_IMAGE,
-    "datePublished": "2026-01-01T00:00:00Z",
+    // No datePublished: the literal "2026-01-01" predated the repository
+    // itself (first commit 2026-07-02), and no record fixes the day this
+    // page went live, so no date is claimed (B54 principle). dateModified is
+    // the real review date the page shows beside the figures.
     "dateModified": `${LAST_REVIEWED_DATE}T00:00:00Z`,
-    "author": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
+    "author": { "@type": "Organization", "@id": `${brand.baseUrl}/#organization`, "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
     // CQ-12: a configured named author replaces the Organization author, and
     // a configured reviewer adds reviewedBy; {} while neither is set.
     ...editorialSchemaFields(),
     // B56: publisher logo previously referenced an SVG path that does not
     // exist in public/ — /logo.png is the real asset.
-    "publisher": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
+    "publisher": { "@type": "Organization", "@id": `${brand.baseUrl}/#organization`, "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
     "mainEntityOfPage": { "@type": "WebPage", "@id": `${brand.baseUrl}/salary-guide` }
   };
 

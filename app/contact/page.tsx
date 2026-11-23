@@ -93,6 +93,7 @@ export default function ContactPage() {
         description: `Reach the ${brand.name} team for support, employer, and partnership inquiries.`,
         mainEntity: {
             '@type': 'Organization',
+            '@id': `${brand.baseUrl}/#organization`,
             name: brand.name,
             url: brand.baseUrl,
             contactPoint: {

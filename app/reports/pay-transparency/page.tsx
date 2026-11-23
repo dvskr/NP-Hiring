@@ -187,8 +187,8 @@ export default async function PayTransparencyReportPage() {
         url: PAGE_URL,
         datePublished: PAY_TRANSPARENCY_REPORT.datePublished,
         ...(snapshot ? { dateModified: snapshot.asOf.slice(0, 10) } : {}),
-        author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
-        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+        author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
+        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
         mainEntityOfPage: PAGE_URL,
     };
 

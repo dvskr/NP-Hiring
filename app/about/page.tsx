@@ -45,6 +45,22 @@ export const metadata: Metadata = {
   alternates: { canonical: `${brand.baseUrl}/about` },
 };
 
+// The About page names the organization the root layout describes, by @id,
+// so search engines read one brand entity across the site rather than a
+// second Organization node. Static brand strings, escaped like every other
+// JSON-LD sink so a stray angle bracket can never close the script element.
+const ABOUT_PAGE_JSON_LD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  '@id': `${brand.baseUrl}/about#aboutpage`,
+  url: `${brand.baseUrl}/about`,
+  name: `About ${brand.name}`,
+  description: BOARD_DESCRIPTION,
+  isPartOf: { '@id': `${brand.baseUrl}/#website` },
+  about: { '@id': `${brand.baseUrl}/#organization` },
+  mainEntity: { '@id': `${brand.baseUrl}/#organization` },
+}).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+
 export default async function AboutPage() {
   // Live review 2026-08-17 items #4a/#4b/#4c: this page previously ran FIVE
   // private count heuristics — a bare `isPublished` total that exceeded what
@@ -95,6 +111,7 @@ export default async function AboutPage() {
   return (
     <>
       <VideoJsonLd pathname="/about" />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ABOUT_PAGE_JSON_LD }} />
       <BreadcrumbSchema items={[
         { name: 'Home', url: brand.baseUrl },
         { name: 'About', url: `${brand.baseUrl}/about` },

@@ -311,7 +311,7 @@ export default async function ResourcesPage() {
         name: `${brand.niche.short} Resources & Career Guides ${currentYear}`,
         description: `Free career resources for ${brand.niche.descriptor}s.`,
         url: `${brand.baseUrl}/resources`,
-        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
         hasPart: [
           { '@type': 'Article', name: `What Full Practice Authority Means for ${brand.niche.short}s`, url: `${brand.baseUrl}/resources/fpa-guide` },
           { '@type': 'Article', name: `1099 vs W2 for ${brand.niche.short}s: Compensation Comparison`, url: `${brand.baseUrl}/resources/1099-vs-w2` },

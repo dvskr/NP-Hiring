@@ -90,6 +90,7 @@ export default function VideoJsonLd({ pathname }: VideoJsonLdProps) {
         },
         publisher: {
             '@type': 'Organization',
+            '@id': `${brand.baseUrl}/#organization`,
             name: brand.name,
             url: brand.baseUrl,
             logo: {

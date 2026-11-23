@@ -235,7 +235,9 @@ describe('P2 #9 — /press derives its numbers instead of stating them', () => {
     });
 
     it('computes practice-authority counts from the dataset, never as literals', () => {
-        expect(pressPage).toContain("getStatesByAuthority('full').length");
+        // The full tier counts states only (DC is named beside the tile), so
+        // the count filters DC out of the same dataset call.
+        expect(pressPage).toMatch(/getStatesByAuthority\('full'\)(?:\.filter\(.+?\))?\.length/);
         expect(pressPage).toContain("getStatesByAuthority('reduced').length");
         expect(pressPage).toContain("getStatesByAuthority('restricted').length");
     });

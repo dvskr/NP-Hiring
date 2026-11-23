@@ -226,8 +226,8 @@ function buildSchemas(snapshot: HiringReportSnapshot | null) {
         url: PAGE_URL,
         datePublished: EDITION.datePublished,
         ...(snapshot ? { dateModified: snapshot.asOf.slice(0, 10) } : {}),
-        author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
-        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+        author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
+        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
         mainEntityOfPage: PAGE_URL,
     };
     // Dataset schema exists ONLY when the live aggregates rendered — schema
@@ -242,7 +242,7 @@ function buildSchemas(snapshot: HiringReportSnapshot | null) {
                   `as of ${snapshot.asOf.slice(0, 10)} (${snapshot.inventory.totalActive} active postings). ` +
                   `Describes this job board's listings only. It is not a national census and not a wage survey.`,
               url: PAGE_URL,
-              creator: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+              creator: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
               dateModified: snapshot.asOf.slice(0, 10),
               spatialCoverage: 'United States',
               variableMeasured: Object.values(LIVE_SECTION_TITLES),

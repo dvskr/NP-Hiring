@@ -132,7 +132,7 @@ export default function SpecialtyFinderPage() {
             browserRequirements: 'Requires JavaScript',
             isAccessibleForFree: true,
             offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
           }),
         }}
       />

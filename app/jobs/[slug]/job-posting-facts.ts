@@ -499,11 +499,21 @@ const TRUNCATED_SNIPPET_MAX_CHARS = 600;
  * treats it exactly like a stub: no JobPosting, `noindex, follow`, no
  * sitemap entry, no Indexing API submission. A long description that
  * happens to end in an ellipsis is not a snippet.
+ *
+ * An excerpt taken from the middle of a posting also opens with an ellipsis,
+ * and some sources store the ellipsis as an HTML entity, so a short text
+ * that starts or ends with any of those forms counts (2026-11-23; the sister
+ * board's rule matches both ends the same way).
  */
+const SNIPPET_ELLIPSIS = String.raw`(?:\u2026|\.\.\.|&hellip;|&#8230;|&#x2026;)`;
+const LEADING_SNIPPET_ELLIPSIS = new RegExp(`^${SNIPPET_ELLIPSIS}`, 'i');
+const TRAILING_SNIPPET_ELLIPSIS = new RegExp(`${SNIPPET_ELLIPSIS}$`, 'i');
+
 export function isTruncatedSnippetDescription(description: string | null | undefined): boolean {
   if (!description) return false;
   const text = description.replace(/<[^>]*>/g, ' ').trim();
-  return text.length <= TRUNCATED_SNIPPET_MAX_CHARS && /(?:\u2026|\.\.\.)$/.test(text);
+  return text.length <= TRUNCATED_SNIPPET_MAX_CHARS
+    && (TRAILING_SNIPPET_ELLIPSIS.test(text) || LEADING_SNIPPET_ELLIPSIS.test(text));
 }
 
 /**

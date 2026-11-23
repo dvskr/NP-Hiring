@@ -489,11 +489,13 @@ export default async function BlogPostPage({ params }: Props) {
         dateModified: post.reviewed_at || post.updated_at,
         author: {
             '@type': 'Organization',
+            '@id': `${brand.baseUrl}/#organization`,
             name: brand.name,
             url: brand.baseUrl,
         },
         publisher: {
             '@type': 'Organization',
+            '@id': `${brand.baseUrl}/#organization`,
             name: brand.name,
             logo: {
                 '@type': 'ImageObject',
@@ -531,7 +533,7 @@ export default async function BlogPostPage({ params }: Props) {
         uploadDate: post.publish_date || post.created_at,
         contentUrl: `https://www.youtube.com/watch?v=${post.youtube_video_id}`,
         embedUrl: `https://www.youtube.com/embed/${post.youtube_video_id}`,
-        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
     } : post.video_url ? {
         '@context': 'https://schema.org',
         '@type': 'VideoObject',
@@ -542,7 +544,7 @@ export default async function BlogPostPage({ params }: Props) {
             : `${brand.baseUrl}/api/og`,
         uploadDate: post.publish_date || post.created_at,
         contentUrl: post.video_url,
-        publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+        publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
     } : null;
 
     // B45: the donor board's slug-keyed FAQ and HowTo maps were removed; a

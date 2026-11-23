@@ -311,8 +311,8 @@ export default async function PrivatePracticeGuidePage() {
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: brand.name },
-            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name },
+            publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
             mainEntityOfPage: { '@type': 'WebPage', '@id': `${brand.baseUrl}/resources/private-practice-guide` },
             // {} while brand.editorial.reviewer is null; the real reviewer's
             // Person record when configured. Never a fabricated name.

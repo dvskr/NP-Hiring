@@ -100,8 +100,8 @@ export default async function JdTemplateDetailPage({ params }: Props) {
             headline: pageTitle,
             description: template.summary,
             image: `${brand.baseUrl}/api/og?title=${encodeURIComponent(pageTitle)}&type=page`,
-            author: { '@type': 'Organization', name: brand.name },
-            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name },
+            publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
             mainEntityOfPage: pageUrl,
           }),
         }}

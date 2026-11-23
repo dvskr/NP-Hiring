@@ -612,6 +612,16 @@ describe('truncated aggregator snippets are incomplete descriptions', () => {
     expect(isTruncatedSnippetDescription(`<p>${snippet}</p>`)).toBe(true);
   });
 
+  it('flags an excerpt that opens with an ellipsis, and the entity forms', () => {
+    const middle = snippet.slice(0, 400).replace(/…$/, '');
+    expect(isTruncatedSnippetDescription(`…${middle}`)).toBe(true);
+    expect(isTruncatedSnippetDescription(`...${middle}`)).toBe(true);
+    expect(isTruncatedSnippetDescription(`${middle}&hellip;`)).toBe(true);
+    expect(isTruncatedSnippetDescription(`<p>${middle}&#8230;</p>`)).toBe(true);
+    // A long posting that happens to open with an ellipsis is not a snippet.
+    expect(isTruncatedSnippetDescription(`...${full}`)).toBe(false);
+  });
+
   it('leaves complete descriptions alone', () => {
     expect(isTruncatedSnippetDescription(full)).toBe(false);
     expect(isTruncatedSnippetDescription(`${full} and more...`)).toBe(false);

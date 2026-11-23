@@ -213,7 +213,10 @@ export default function RootLayout({
                   "@type": "Organization",
                   "@id": `${brand.baseUrl}/#organization`,
                   "name": brand.name,
-                  "alternateName": [`${brand.niche.short} Jobs`, brand.legal.entityName],
+                  // The operating company is the legalName, not another name
+                  // for this brand: the sister board names the same company,
+                  // and a shared alternateName would read as one entity.
+                  "alternateName": [`${brand.niche.short} Jobs`],
                   "legalName": brand.legal.entityName,
                   "url": brand.baseUrl,
                   "logo": `${brand.baseUrl}/logo.png`,

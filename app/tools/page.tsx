@@ -94,7 +94,7 @@ export default function ToolsHubPage() {
             name: PAGE_TITLE,
             description: PAGE_DESCRIPTION,
             url: PAGE_URL,
-            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
             hasPart: TOOLS.map((tool) => ({
               '@type': 'WebApplication',
               name: tool.title,

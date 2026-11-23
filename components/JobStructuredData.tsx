@@ -18,10 +18,18 @@ import {
 } from '@/app/jobs/[slug]/job-posting-facts';
 import { safeExternalHref } from '@/components/jobs/safe-external-href';
 import { titleIndicatesNewGrad } from '@/lib/experience-label';
+import { employerKey } from '@/lib/jobs/employer-key';
 
 // The estimated-pay rule lives with the other page facts so the meta
 // description reads it too; re-exported for existing importers.
 export { isEstimatedSalary };
+
+/**
+ * Google's hiringOrganization.name for an employer that hires anonymously:
+ * "use the confidential value for the hiringOrganization.name field"
+ * (developers.google.com/search/docs/appearance/structured-data/job-posting).
+ */
+const CONFIDENTIAL_EMPLOYER = 'confidential';
 
 // Schema.org accepts: HOUR, DAY, WEEK, MONTH, YEAR. We share the canonical
 // period key with formatSalary so the UI and schema never disagree on whether
@@ -374,15 +382,22 @@ export function buildJobPostingSchema(job: JobStructuredDataProps['job']): Recor
     // every type the posting offers, an array when there are several, the
     // same types the page's chip shows (resolveEmploymentTypes).
     employmentType: mapEmploymentTypes(resolveEmploymentTypes(job)),
-    hiringOrganization: stripUndefined({
-      '@type': 'Organization',
-      name: job.employer,
-      // sameAs lets Google deduplicate employer entities across postings; logo
-      // is what renders next to the listing in Google Jobs results. Only an
-      // absolute http(s) URL is emitted.
-      sameAs: safeExternalHref(job.companyWebsite) ?? undefined,
-      logo: safeExternalHref(job.companyLogoUrl) ?? undefined,
-    }),
+    // What a source writes when it withholds the employer ("Company Not
+    // Listed", "Confidential", a blank: the placeholder list in
+    // lib/jobs/employer-key.ts) is not a company name. Google's value for that
+    // case is "confidential". No name is invented, and no website or logo is
+    // attached to an organization the markup calls confidential.
+    hiringOrganization: employerKey(job.employer) === ''
+      ? { '@type': 'Organization', name: CONFIDENTIAL_EMPLOYER }
+      : stripUndefined({
+          '@type': 'Organization',
+          name: job.employer,
+          // sameAs lets Google deduplicate employer entities across postings; logo
+          // is what renders next to the listing in Google Jobs results. Only an
+          // absolute http(s) URL is emitted.
+          sameAs: safeExternalHref(job.companyWebsite) ?? undefined,
+          logo: safeExternalHref(job.companyLogoUrl) ?? undefined,
+        }),
     ...locationFields,
     baseSalary,
     experienceRequirements,

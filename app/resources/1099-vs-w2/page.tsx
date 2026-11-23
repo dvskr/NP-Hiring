@@ -244,8 +244,8 @@ export default function CompensationGuidePage() {
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: brand.name },
-            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name },
+            publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
             // {} while brand.editorial.reviewer is null; the real reviewer's
             // Person record when configured. Never a fabricated name.
             ...editorialSchemaFields(),
