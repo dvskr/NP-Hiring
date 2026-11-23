@@ -58,6 +58,18 @@ describe('the job page keeps its whole ISR window', () => {
         expect(crumbs).not.toMatch(/revalidate: \d/);
     });
 
+    it('the employer-scoped reads (company match, job count, About-card facts) cache at least as long as the job page', () => {
+        const employer = read('app/jobs/[slug]/employer-cache.ts');
+        expect(employer.match(/revalidate: JOB_PAGE_PLACE_CACHE_SECONDS,/g) ?? []).toHaveLength(3);
+        expect(employer).not.toMatch(/revalidate: \d/);
+        const page = read('app/jobs/[slug]/page.tsx');
+        // The page reads employer data only through the cache: no direct
+        // Company or EmployerJob query, and no uncached employer facts.
+        expect(page).not.toMatch(/prisma\.company\./);
+        expect(page).not.toMatch(/prisma\.employerJob\./);
+        expect(page).not.toMatch(/\bgetEmployerFacts\(/);
+    });
+
     it('the job page counts views from the browser, never during its cached render', () => {
         const page = read('app/jobs/[slug]/page.tsx');
         expect(page).not.toMatch(/viewCount|jobViewEvent/);

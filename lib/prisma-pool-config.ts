@@ -1,7 +1,8 @@
 /**
  * pg Pool sizing for lib/prisma.ts (P10 platform-routing-db #1).
  *
- * The pool used to be hard-coded to `max: 2` with a 10 s connect timeout.
+ * The pool used to be hard-coded to `max: 2` with a 10 s connect timeout
+ * (the serverless default is 3 since 2026-11-23, see SERVERLESS_POOL_MAX).
  * That size was chosen for Vercel serverless, where every function instance
  * owns its own Pool and a crawl burst can spin up 50 to 100 instances (with
  * max=10 that produced 500 to 1000 client connections to PgBouncer and
@@ -33,7 +34,13 @@ export interface PoolSizing {
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-export const SERVERLESS_POOL_MAX = 2;
+// 3 since 2026-11-23 (was 2). With two slots, the job page's parallel reads
+// queued behind each other in a crawler burst and Sentry logged pool connect
+// timeouts on GET /jobs/[slug]. The ceiling to watch is the Supabase pooler's
+// client cap: instances x max must stay under it, and the edge firewall and
+// the job page's daily caches keep the instance count down. Override with
+// DATABASE_POOL_MAX without a code change.
+export const SERVERLESS_POOL_MAX = 3;
 export const LONG_LIVED_POOL_MAX = 10;
 export const POOL_MAX_CEILING = 50;
 
