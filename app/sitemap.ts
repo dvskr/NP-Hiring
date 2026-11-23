@@ -341,6 +341,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/resources/fpa-guide`, lastModified: pageContentDate('/resources/fpa-guide'), changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/private-practice-guide`, lastModified: pageContentDate('/resources/private-practice-guide'), changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/1099-vs-w2`, lastModified: pageContentDate('/resources/1099-vs-w2'), changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${baseUrl}/resources/what-is-a-nurse-practitioner`, lastModified: pageContentDate('/resources/what-is-a-nurse-practitioner'), changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${baseUrl}/resources/np-vs-pa`, lastModified: pageContentDate('/resources/np-vs-pa'), changeFrequency: 'monthly', priority: 0.8 },
   ]
 
   // Repo-authored clusters that always render in full (no soft-404 risk),

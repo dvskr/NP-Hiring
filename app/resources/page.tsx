@@ -22,6 +22,8 @@ import { getLicenseGuideState } from '@/lib/blog-license-guides';
 import { truncateOnWord } from '@/lib/display-text';
 import { getGatedStateBenchmarks } from '@/lib/salary-analytics';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
+import { WHAT_IS_A_NURSE_PRACTITIONER, WHAT_IS_A_NURSE_PRACTITIONER_PATH } from '@/app/resources/what-is-a-nurse-practitioner/content';
+import { NP_VS_PA, NP_VS_PA_PATH } from '@/app/resources/np-vs-pa/content';
 
 export const revalidate = 86400;
 
@@ -220,6 +222,22 @@ const featuredGuides = [
     badge: 'Step-by-Step',
     badgeColor: '#F59E0B',
   },
+  {
+    href: WHAT_IS_A_NURSE_PRACTITIONER_PATH,
+    title: `What Is a ${brand.niche.long}?`,
+    desc: 'What NPs do, the path from RN to APRN license, the boards that certify NPs, the population foci, DNP vs NP, and BLS pay and outlook.',
+    icon: GraduationCap,
+    badge: 'NP Basics',
+    badgeColor: '#0D9488',
+  },
+  {
+    href: NP_VS_PA_PATH,
+    title: `${brand.niche.short} vs PA`,
+    desc: 'Nurse practitioner and physician assistant education, clinical hours, certification, practice authority and pay, side by side.',
+    icon: Scale,
+    badge: 'Comparison',
+    badgeColor: '#3B82F6',
+  },
 ];
 
 export default async function ResourcesPage() {
@@ -316,8 +334,10 @@ export default async function ResourcesPage() {
           { '@type': 'Article', name: `What Full Practice Authority Means for ${brand.niche.short}s`, url: `${brand.baseUrl}/resources/fpa-guide` },
           { '@type': 'Article', name: `1099 vs W2 for ${brand.niche.short}s: Compensation Comparison`, url: `${brand.baseUrl}/resources/1099-vs-w2` },
           { '@type': 'Article', name: `How to Start an ${brand.niche.short} Private Practice`, url: `${brand.baseUrl}/resources/private-practice-guide` },
+          { '@type': 'Article', name: WHAT_IS_A_NURSE_PRACTITIONER.title, url: `${brand.baseUrl}${WHAT_IS_A_NURSE_PRACTITIONER_PATH}` },
+          { '@type': 'Article', name: NP_VS_PA.title, url: `${brand.baseUrl}${NP_VS_PA_PATH}` },
         ],
-        numberOfItems: 3,
+        numberOfItems: 5,
       }) }} />
 
       {/* ═══════════════════════════════════════════════════════════════

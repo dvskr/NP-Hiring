@@ -169,7 +169,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/security': '2026-10-13',
   '/sub-processors': '2026-09-12',
   '/accessibility': '2026-10-13',
-  '/press': '2026-10-13',
+  // 2026-11-23 (definition guides release): the full practice tile counts
+  // states only, beside a 'plus DC' label.
+  '/press': '2026-11-23',
   // 2026-10-04 (backlog 2.2): the article count, the article grid, the
   // "Before you apply" band and the state guide grid now list the posts
   // lib/blog.ts serves from code; they read the empty blog_posts table and
@@ -179,7 +181,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // guides' new titles and descriptions, and three tool cards carry their
   // new titles (app/tools/tools-registry.ts).
   // 2026-11-07 (guides store): a Complete Library card under the deep guides.
-  '/resources': '2026-11-07',
+  // 2026-11-23 (definition guides release): the What Is a Nurse Practitioner
+  // and NP vs PA guide cards.
+  '/resources': '2026-11-23',
   // 2026-11-07 (guides store): a First-Year NP Playbook card.
   '/resources/fpa-guide': '2026-11-07',
   // 2026-10-23 (register 2.25): the private practice jobs card follows that
@@ -188,6 +192,10 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/resources/private-practice-guide': '2026-11-07',
   // 2026-11-07 (guides store): a Negotiate Like an NP card.
   '/resources/1099-vs-w2': '2026-11-07',
+  // 2026-11-23 (definition guides release): new; each page prints this day
+  // (PAGE_DATE in its content.ts).
+  '/resources/what-is-a-nurse-practitioner': '2026-11-23',
+  '/resources/np-vs-pa': '2026-11-23',
   '/scope-of-practice': '2026-10-13',
   // 2026-11-07 (guides store): a Career Bundle card under the tools.
   '/tools': '2026-11-07',

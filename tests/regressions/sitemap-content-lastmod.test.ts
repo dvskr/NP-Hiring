@@ -188,7 +188,6 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
     '/for-job-seekers',
     '/faq',
     '/contact',
-    '/resources',
     '/resources/fpa-guide',
     '/resources/private-practice-guide',
     '/resources/1099-vs-w2',
@@ -205,6 +204,21 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
  * /guides/[slug] left the store's own group, /privacy the AI apps group. Same
  * rule: move the constant and these entries together if they ship later.
  */
+/**
+ * The UTC day the definition guides shipped, and the pages whose copy that
+ * release changed: the two new guides, /resources (their guide cards; it left
+ * the guides store group) and /press (the full practice tile counts states
+ * only, beside "plus DC"; it left the content release default). Same rule:
+ * move the constant and these entries together if they ship later.
+ */
+const DEFINITION_GUIDES_DAY = '2026-11-23';
+const DEFINITION_GUIDES_PAGES: readonly string[] = [
+    '/resources/what-is-a-nurse-practitioner',
+    '/resources/np-vs-pa',
+    '/resources',
+    '/press',
+];
+
 const GUIDES_FOLLOW_UPS_DAY = '2026-11-07';
 const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]', '/privacy'];
 
@@ -399,7 +413,7 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -412,11 +426,14 @@ describe('lastmod helpers', () => {
             ...AI_APPS_RELEASE_PAGES,
             ...GUIDES_RELEASE_PAGES,
             ...GUIDES_FOLLOW_UPS_PAGES,
+            ...DEFINITION_GUIDES_PAGES,
             ...Object.keys(UNTOUCHED_PAGE_DATES),
         ];
         expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = GUIDES_FOLLOW_UPS_PAGES.includes(pagePath)
+            const expected = DEFINITION_GUIDES_PAGES.includes(pagePath)
+                ? DEFINITION_GUIDES_DAY
+                : GUIDES_FOLLOW_UPS_PAGES.includes(pagePath)
                 ? GUIDES_FOLLOW_UPS_DAY
                 : GUIDES_RELEASE_PAGES.includes(pagePath)
                 ? GUIDES_RELEASE_DAY
@@ -446,12 +463,12 @@ describe('lastmod helpers', () => {
         }
     });
 
-    it('content release: /for-programs carries its ship day, and /resources the guides store, on both sides of the promo end', () => {
+    it('content release: /for-programs carries its ship day, and /resources the definition guides release, on both sides of the promo end', () => {
         // Both print post titles served from code (lib/blog.ts). The content
         // release added ten posts and retitled the two education guides, so
         // the article grids and the program guide card changed that day.
-        // /resources then gained the Complete Library card (2026-11-07).
-        for (const [pagePath, day] of [['/for-programs', CONTENT_RELEASE_DAY], ['/resources', GUIDES_RELEASE_DAY]] as const) {
+        // /resources then gained the Complete Library card (2026-11-07) and the two definition guide cards (2026-11-23).
+        for (const [pagePath, day] of [['/for-programs', CONTENT_RELEASE_DAY], ['/resources', DEFINITION_GUIDES_DAY]] as const) {
             expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(day);
             // Neither page's copy follows the promo clock (the guide card
             // prints no price), so the switch never dates it: the copy date
@@ -775,11 +792,11 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         expect(undated, 'a listed page has no content date (add it to PAGE_CONTENT_DATES)').toEqual([]);
     });
 
-    it('content release: /for-programs is listed with its ship day and /resources with the guides store\'s, before and after the promo end', async () => {
+    it('content release: /for-programs is listed with its ship day and /resources with the definition guides release\'s, before and after the promo end', async () => {
         for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
             vi.setSystemTime(at);
             const entries = await byUrl();
-            for (const [pagePath, day] of [['/for-programs', CONTENT_RELEASE_DAY], ['/resources', GUIDES_RELEASE_DAY]] as const) {
+            for (const [pagePath, day] of [['/for-programs', CONTENT_RELEASE_DAY], ['/resources', DEFINITION_GUIDES_DAY]] as const) {
                 expect(entries.get(`${BASE}${pagePath}`)?.lastModified, pagePath).toEqual(new Date(`${day}T00:00:00.000Z`));
             }
         }
