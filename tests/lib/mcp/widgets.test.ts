@@ -159,6 +159,16 @@ describe('jobs and job views', () => {
     expect(cards[0].indexOf('pm-chip--pay')).toBeLessThan(cards[0].indexOf('Full-Time'));
   });
 
+  it('colors the entry-level label green in the words NP Hiring sends', () => {
+    // lib/mcp/tools/shared.ts sends "New grad welcome"; the card matched only "New grads welcome".
+    for (const label of ['New grad welcome', 'New grads welcome']) {
+      const out = renderJobs({ ...jobs, jobs: [{ ...job, experience: label }] }, { busy: null, now: NOW }).__safe;
+      expect(out, label).toContain(`<span class="pm-chip pm-chip--success">${label}</span>`);
+    }
+    const years = renderJobs({ ...jobs, jobs: [{ ...job, experience: '2+ yrs' }] }, { busy: null, now: NOW }).__safe;
+    expect(years).not.toContain('pm-chip--success');
+  });
+
   it('gives every job card, with Easy Apply or without, the hooks its phone layout hangs on', () => {
     // On a phone a card with Easy Apply (the wider button) broke its date over
     // two lines and stacked its buttons, while a card with View job kept one

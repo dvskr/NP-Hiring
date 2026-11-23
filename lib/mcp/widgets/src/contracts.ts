@@ -37,7 +37,7 @@ export interface JobCard {
   payNote?: string | null;
   /** ISO timestamp of the original posting date, when known. */
   postedAt: string | null;
-  /** "New grads welcome", "2+ years", or null. */
+  /** "New grad welcome", "2+ years", or null. */
   experience: string | null;
   /** True when the application can be submitted from the assistant. */
   easyApply: boolean;

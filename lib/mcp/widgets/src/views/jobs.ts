@@ -29,7 +29,9 @@ function cardChips(job: JobCard): SafeHtml {
   // The site's order: pay, schedule, work mode, experience.
   return html`<div class="pm-chips">${chip(job.pay, 'pay')}${chip(job.jobType)}${chip(workMode)}${chip(
     job.experience,
-    job.experience === 'New grads welcome' ? 'success' : 'plain',
+    // NP Hiring sends "New grad welcome" (lib/mcp/tools/shared.ts); match the
+    // word, not one spelling, so either wording is the good news.
+    /\bwelcome\b/i.test(job.experience ?? '') ? 'success' : 'plain',
   )}</div>`;
 }
 
