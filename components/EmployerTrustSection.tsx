@@ -3,6 +3,7 @@ import { getSiteStats } from '@/lib/site-stats';
 import ClayDoughStrip, { type EmployerChip } from '@/components/ClayDoughStrip';
 import { canonicalBucketWhere } from '@/lib/canonical-counts';
 import { companyProfilePath, type CompanySlugSource } from '@/lib/company-slug';
+import { sharedCachedRead } from '@/lib/data-cache';
 import { displayText } from '@/lib/display-text';
 import { shouldIndexCompanyProfile } from '@/lib/pseo/render-gate';
 // FALLBACK_EMPLOYERS pads the strip with fabricated chips whenever the DB
@@ -25,6 +26,14 @@ const MAX_CHIP_NAME_LENGTH = 40;
 /** Below this many real employers the (policy-empty) fallback list pads the strip. */
 const MIN_REAL_EMPLOYERS = 10;
 const MAX_WITH_FALLBACK = 18;
+
+/**
+ * Seconds the strip's employers are reused. The homepage re-renders every
+ * minute and the grouped read behind the strip took 1.7 s on the production
+ * database each time (2026-11-23); the leaders change slowly. Longer than the
+ * homepage's own window, so it does not shorten it.
+ */
+export const EMPLOYER_STRIP_CACHE_SECONDS = 3600;
 
 /** One company's live job count, as grouped from the canonical job pool. */
 export interface CompanyJobCount {
@@ -79,6 +88,30 @@ export function buildEmployerChips(
     return chips;
 }
 
+/** The strip's chips, straight from the database: the companies with the most live jobs. */
+async function readEmployerChips(): Promise<EmployerChip[]> {
+    const now = new Date();
+    const grouped = await prisma.job.groupBy({
+        by: ['companyId'],
+        where: canonicalBucketWhere({ companyId: { not: null } }, now),
+        _count: { companyId: true },
+        orderBy: { _count: { companyId: 'desc' } },
+        take: CANDIDATE_POOL,
+    });
+    const counts: CompanyJobCount[] = grouped.flatMap((row) =>
+        row.companyId ? [{ companyId: row.companyId, activeJobs: row._count.companyId }] : [],
+    );
+    const companies = counts.length === 0
+        ? []
+        : await prisma.company.findMany({
+            where: { id: { in: counts.map((row) => row.companyId) } },
+            select: { id: true, name: true, normalizedName: true },
+        });
+    return buildEmployerChips(counts, companies);
+}
+
+const loadEmployerChips = sharedCachedRead(readEmployerChips, ['homepage-employer-chips', 'v1'], EMPLOYER_STRIP_CACHE_SECONDS);
+
 /**
  * EmployerTrustSection (Server Component)
  *
@@ -90,24 +123,8 @@ export default async function EmployerTrustSection() {
     let employers: EmployerChip[] = [];
 
     try {
-        const now = new Date();
-        const grouped = await prisma.job.groupBy({
-            by: ['companyId'],
-            where: canonicalBucketWhere({ companyId: { not: null } }, now),
-            _count: { companyId: true },
-            orderBy: { _count: { companyId: 'desc' } },
-            take: CANDIDATE_POOL,
-        });
-        const counts: CompanyJobCount[] = grouped.flatMap((row) =>
-            row.companyId ? [{ companyId: row.companyId, activeJobs: row._count.companyId }] : [],
-        );
-        const companies = counts.length === 0
-            ? []
-            : await prisma.company.findMany({
-                where: { id: { in: counts.map((row) => row.companyId) } },
-                select: { id: true, name: true, normalizedName: true },
-            });
-        employers = buildEmployerChips(counts, companies);
+        // A copy: the fallback padding below must not write into a cached array.
+        employers = [...(await loadEmployerChips())];
     } catch (error) {
         console.error('Error fetching employer data:', error);
     }

@@ -37,6 +37,7 @@ import {
     type FaqEntry,
 } from '@/lib/pseo/listing-narrative';
 import ClaimProfileCta from './ClaimProfileCta';
+import { loadLiveCompanies, loadLiveCompaniesAfterMiss } from './live-companies';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
 import {
     companyProfilePath,
@@ -111,28 +112,26 @@ type CompanyRoute =
  *
  * Returns null when the slug matches nothing. A database error throws (5xx),
  * never a cached 404 on a live profile.
+ *
+ * The live companies come from an hourly cache shared by every profile
+ * (./live-companies.ts): reading all of them on each render to resolve one
+ * slug was a fifth of the site's database time. A slug that copy has no
+ * profile under is checked against a second copy at most five minutes old,
+ * so a company whose first job went live within the hour is not answered
+ * with a 404, and an old slug of it still redirects.
  */
-async function resolveCompanyRoute(slug: string, now: Date): Promise<CompanyRoute | null> {
-    const liveWhere = activeIndexableJobWhere(now);
-    const liveCompanies = await prisma.company.findMany({
-        where: { jobs: { some: liveWhere } },
-        select: {
-            name: true,
-            normalizedName: true,
-            _count: { select: { jobs: { where: liveWhere } } },
-        },
-    });
-    const candidates = liveCompanies.map((row) => ({
-        name: row.name,
-        normalizedName: row.normalizedName,
-        activeJobs: row._count.jobs,
-    }));
+async function resolveCompanyRoute(slug: string): Promise<CompanyRoute | null> {
+    const candidates = await loadLiveCompanies();
     const match = pickCompanyForSlug(slug, candidates);
     if (match) return { kind: 'profile', normalizedName: match.normalizedName };
 
+    const recent = await loadLiveCompaniesAfterMiss();
+    const lateMatch = pickCompanyForSlug(slug, recent);
+    if (lateMatch) return { kind: 'profile', normalizedName: lateMatch.normalizedName };
+
     const legacy = await findCompanyByLegacySlug(slug);
     if (!legacy) return null;
-    const isLive = candidates.some((row) => row.normalizedName === legacy.normalizedName);
+    const isLive = [...recent, ...candidates].some((row) => row.normalizedName === legacy.normalizedName);
     const canonicalSlug = companySlugFor(legacy);
     if (!isLive || canonicalSlug === slug) {
         return { kind: 'profile', normalizedName: legacy.normalizedName };
@@ -318,7 +317,7 @@ function tallyTop(values: readonly string[], limit: number): TallyEntry[] {
  */
 const loadCompanyProfile = cache(async (slug: string) => {
     const now = new Date();
-    const route = await resolveCompanyRoute(slug, now);
+    const route = await resolveCompanyRoute(slug);
     if (!route) return null;
     if (route.kind === 'redirect') return route;
     const company = await prisma.company.findUnique({

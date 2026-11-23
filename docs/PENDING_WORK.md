@@ -325,6 +325,16 @@ catch only the few jobs that use the word itself. The same holds for an alert ma
 /jobs/midwifery pages. Fix: store the category slug on the alert and match it through `Job.categoryTags`, as
 the filter does.
 
+**2.39 Store the board's exclusion rule on the job row.** Every listing read (the /jobs list and count, each
+state and category page, the company job counts) repeats the board's exclusion rule for every published row
+(`GLOBAL_EXCLUSIONS` in `lib/filters.ts`: dozens of title and employer patterns, about 14 KB of SQL). That is
+why a count over about 6,000 rows took 780 ms and the live company read 2.4 s on the production database
+(`pg_stat_statements`, 2026-11-14 to 2026-11-23). The caches of 2026-11-23 run the worst of those reads less
+often; they do not make any read faster. Fix: a boolean column set at ingest and on every edit (migration and
+backfill), an index on it, and every listing predicate reading the column. Reads still run on each render and
+worth caching the same way before then: the state pages' list, count and salary rows (130 to 160 ms each, about
+7,000 renders a day) and their top employers (1.2 s).
+
 ## 3. Decisions (DECISION)
 
 Reply with the id (for example "D2: keep Hawaii") and Claude implements it.
@@ -374,6 +384,8 @@ change any of them.
 | D9 | Classify companies (direct employer or staffing) | On 2026-11-19 none of the 1,422 companies was classified (1,020 have live jobs), so the /jobs Employer Type filter stays hidden: it appears once a job in view has a classified employer, with a count on each option. The 25 companies with the most live jobs hold 2,523 of them and the top 100 hold 3,963 of 6,136, so start there. Claude can draft a list of likely staffing agencies for you to check and apply in the admin page | `/admin/companies`, `components/jobs/employer-type-facet.ts` |
 | D12 | Re-admit the specialty and setting by state pages (`/jobs/{specialty}/{state}`, for example /jobs/telehealth/texas) about 2026-10-29? | They are out of the sitemap and noindexed (`SETTING_STATE_INDEXING_ENABLED` is false); 10 pass the strict content gate today. Say go once Search Console shows the first month indexing cleanly ("Crawled, currently not indexed" low), and Claude flips the switch for those 10 only | `lib/pseo/render-gate.ts`, `lib/gsc-coverage.ts` |
 | D14 | Per-state compact verdicts in the multi-state planner and licensure checker? | The NLC member set is verified (2026-08-11) and the metro guides use it, but these two tools state the compact rules and link NCSBN instead of printing "member" or "not a member" per state. A verdict there is personal licensing advice, only as current as the last roster check. Recommended: keep it this way; lifting it needs a fixed re-check cadence and the check date beside every verdict | `components/tools/MultiStatePlanner.tsx`, `app/tools/licensure-checker/page.tsx` |
+| D53 | Move the database to a larger Supabase compute size? | It runs on the smallest class (`max_connections` is 60), and on 2026-11-23 its slow listing reads were the cause of the /jobs error pages. Crawlers make about 80,000 requests a day against roughly 6,000 jobs, and your own Ahrefs Site Audit adds about 10,500 at 30 pages a minute. Recommended: one size up now (more CPU for the same queries, more pooled connections), and a slower crawl speed in the Ahrefs project settings; 2.39 is the code fix that makes the size matter less | Supabase dashboard, Compute and Disk; Ahrefs Site Audit, crawl settings |
+
 ### 3.4 Copy approvals
 
 | # | Question | Today | Where |
@@ -491,6 +503,26 @@ tests fail until every side agrees:
 
 ## Closed since the last version (2026-09-27)
 
+- /jobs error pages (2026-11-23): visitors got the error screen on /jobs and on job pages in bursts ("timeout
+  exceeded when trying to connect": 199 server errors and 1,034 error lines in 48 hours; one iPhone visitor had
+  four /jobs loads fail within three seconds). Cause, from `pg_stat_statements`: the listing reads are slow on
+  the production database (the /jobs count 780 ms and its list 876 ms on average, a read of every live company
+  on each company profile render 2.4 s, two grouped reads on the homepage 1.7 s each), every instance had two
+  database connections (three since 7ec9b0d, the same day), and one filter click on /jobs ran five of those reads (the page's list and count, the
+  title's count, then the browser's `/api/jobs` list and count). A crawler burst or a few quick clicks filled
+  the pool, the next read waited ten seconds, and the page failed. Now the page, its title and `/api/jobs` share
+  one loader (`lib/jobs-board-data.ts`), so each view is read once. For a view built from the sidebar's own
+  options (with a US state or Remote as the location, and four values at most) the count and page 1 of the list
+  are kept in the shared data cache for a minute (`lib/data-cache.ts`), and that copy is served while a refresh
+  runs. A copy more than three minutes old is served only when the database fails or takes longer than 2.5
+  seconds; a search phrase, a city, an employer name and deeper pages are read from the database each time.
+  The same query never runs twice at once in one instance. The live company list behind profile URLs is read
+  once an hour (`app/companies/[slug]/live-companies.ts`), with a second copy at most five minutes old for a
+  slug the hourly one does not know, so a company whose first job just went live is not answered with a 404.
+  The homepage's top states and employer strip are read once an hour too. Those reads were about half of all
+  database time. Tests: `tests/lib/jobs-board-data.test.ts`, `tests/lib/data-cache.test.ts`,
+  `tests/regressions/shared-read-cache-windows.test.ts`, `tests/regressions/jobs-board-db-failure.test.ts`,
+  `tests/regressions/indexing-company-slugs.test.ts`. Left open: 2.39 (the reads themselves stay slow) and D53.
 - Crawler load (2026-11-17): readers got error pages and a slow /jobs because crawler bursts exhausted the
   database pool ("timeout exceeded when trying to connect", up to 1,000+ an hour since about 2026-11-12, when the
   board passed 6,000 jobs; the Supabase pooler also hit its 200-client cap). In one hour, job pages took 1,552

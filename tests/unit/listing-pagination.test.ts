@@ -206,8 +206,12 @@ describe('/jobs (TECH-09, L-06)', () => {
     });
 
     it('never selects the full description for the client list, and cuts the summary', () => {
-        const select = src.slice(src.indexOf('select: {'), src.indexOf('employerJobs: { select'));
+        // The select lives in the loader the page and GET /api/jobs share.
+        const loader = read('lib/jobs-board-data.ts');
+        const select = loader.slice(loader.indexOf('const BOARD_ROW_SELECT = {'), loader.indexOf('employerJobs: { select'));
+        expect(select).toContain('descriptionSummary: true');
         expect(select).not.toMatch(/\bdescription: true/);
+        expect(src).not.toMatch(/select:\s*\{/);
         expect(src).toContain('descriptionSummary: cardSummary(j.descriptionSummary)');
     });
 

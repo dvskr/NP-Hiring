@@ -247,6 +247,36 @@ describe('/companies/[slug]: display-name slug is canonical, every old slug 308s
         expect(metadata.title).toBe('Company Not Found');
         expect(digestOf(await renderError('no-such-employer'))).toContain('404');
     });
+
+    /* 2026-11-23: the live companies are read once an hour for every profile
+     * (./live-companies.ts), so a company whose first job went live inside
+     * the hour is missing from that copy. A slug it does not know is checked
+     * against a second copy, at most five minutes old. Here the first
+     * directory read stands for the hourly copy and the second for that one. */
+
+    /** The hourly copy predates One Medical's first live job; the later copy has it. */
+    function mockNewlyLive() {
+        m(prisma.company.findMany).mockReset();
+        m(prisma.company.findMany).mockResolvedValueOnce([]).mockResolvedValue([ONE_MEDICAL_LIVE]);
+    }
+
+    it('serves the profile of a company that went live after the hourly copy was read', async () => {
+        mockNewlyLive();
+        const metadata = await page.generateMetadata({ params: Promise.resolve({ slug: 'one-medical' }) });
+        expect(metadata.title).not.toBe('Company Not Found');
+        expect(metadata.alternates?.canonical).toMatch(/\/companies\/one-medical$/);
+        expect(m(prisma.company.findMany)).toHaveBeenCalledTimes(2);
+    });
+
+    it('still redirects an old slug of such a company', async () => {
+        mockNewlyLive();
+        expect(redirectTarget(await renderError('one'))).toBe('308 /companies/one-medical');
+    });
+
+    it('reads the second copy only on a miss: a slug the hourly copy knows costs one directory read', async () => {
+        await page.generateMetadata({ params: Promise.resolve({ slug: 'one-medical' }) });
+        expect(m(prisma.company.findMany)).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('every company link builder in this package uses the shared slug', () => {

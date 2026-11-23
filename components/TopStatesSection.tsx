@@ -1,10 +1,19 @@
 import { prisma } from '@/lib/prisma';
 import TopStatesList from '@/components/TopStatesList';
 import { canonicalBucketWhere } from '@/lib/canonical-counts';
+import { sharedCachedRead } from '@/lib/data-cache';
 import { resolveStateSlug, stateToSlug } from '@/lib/pseo/setting-state-config';
 
 /** States the homepage grid shows. */
 const TOP_STATES = 12;
+
+/**
+ * Seconds the state counts are reused. The homepage re-renders every minute
+ * and this grouped read took 1.7 s on the production database each time
+ * (2026-11-23); the counts move slowly, so an hour-old figure is fine. Longer
+ * than the homepage's own window, so it does not shorten it.
+ */
+export const TOP_STATES_CACHE_SECONDS = 3600;
 
 /**
  * Distinct Job.state values fetched. Wider than the grid because one state can
@@ -51,6 +60,20 @@ export function mergeStateCounts(rows: readonly StateValueCount[], limit: number
         .slice(0, limit);
 }
 
+/** The stored state values with the most live jobs, straight from the database. */
+async function readTopStateCounts(): Promise<StateValueCount[]> {
+    const topStates = await prisma.job.groupBy({
+        by: ['state'],
+        where: canonicalBucketWhere({ state: { not: null } }),
+        _count: { state: true },
+        orderBy: { _count: { state: 'desc' } },
+        take: STATE_VALUE_POOL,
+    });
+    return topStates.map((s) => ({ state: s.state, jobs: s._count.state }));
+}
+
+const loadTopStateCounts = sharedCachedRead(readTopStateCounts, ['homepage-top-state-counts', 'v1'], TOP_STATES_CACHE_SECONDS);
+
 /**
  * TopStatesSection (Server Component)
  * Fetches the states with the most live jobs, counted with the canonical
@@ -60,17 +83,7 @@ export default async function TopStatesSection() {
     let states: TopState[] = [];
 
     try {
-        const topStates = await prisma.job.groupBy({
-            by: ['state'],
-            where: canonicalBucketWhere({ state: { not: null } }),
-            _count: { state: true },
-            orderBy: { _count: { state: 'desc' } },
-            take: STATE_VALUE_POOL,
-        });
-
-        states = mergeStateCounts(
-            topStates.map((s) => ({ state: s.state, jobs: s._count.state })),
-        );
+        states = mergeStateCounts(await loadTopStateCounts());
     } catch (error) {
         console.error('Error fetching state data:', error);
     }

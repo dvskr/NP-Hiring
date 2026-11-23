@@ -599,8 +599,11 @@ describe('gap 3: the main /jobs board emits a list impression', () => {
     const block = src.slice(start, end);
     expect(block).toContain('stateCode: j.stateCode');
     expect(block).not.toMatch(/\bstate: j\.state\b/);
-    // The mapping can only read a column the query selected.
-    expect(src).toMatch(/^\s*stateCode: true,$/m);
+    // The mapping can only read a column the query selected. Since
+    // 2026-11-23 the board's rows come from the shared loader, so that is
+    // where the column is selected.
+    expect(src).toContain('loadBoardRows(filters, sort, page, limit)');
+    expect(read('lib/jobs-board-data.ts')).toMatch(/^\s*stateCode: true,$/m);
   });
 
   it('the list name never crosses the server boundary as a bare constant', () => {

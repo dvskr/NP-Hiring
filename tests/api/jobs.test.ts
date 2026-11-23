@@ -7,6 +7,7 @@ import { GET } from '@/app/api/jobs/route';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { BEST_SORT_ORDER_BY, buildJobsOrderBy } from '@/lib/utils/job-sort';
+import { clearBoardMemo } from '@/lib/jobs-board-data';
 
 // Helper to create NextRequest with query params
 function createRequest(params: Record<string, string> = {}): NextRequest {
@@ -65,6 +66,49 @@ const mockJobs = [
 describe('/api/jobs', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // The listing reads through lib/jobs-board-data.ts, which shares a
+        // read between callers for a few seconds: each case starts clean.
+        clearBoardMemo();
+    });
+
+    it('never returns an apply link, a slug or the full description, whatever the loader carries', async () => {
+        const row = {
+            ...mockJobs[0],
+            slug: 'pmhnp-remote-job-1',
+            stateCode: 'CA',
+            applyLink: 'https://employer.example/apply/123',
+            salaryRange: '$150k to $180k',
+            employerJobs: { companyLogoUrl: 'https://cdn.example/logo.png' },
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(prisma.job.findMany).mockResolvedValue([row] as any);
+        vi.mocked(prisma.job.count).mockResolvedValue(1);
+
+        const data = await (await GET(createRequest())).json();
+
+        expect(data.jobs).toHaveLength(1);
+        expect(JSON.stringify(data)).not.toContain('employer.example');
+        expect(data.jobs[0]).not.toHaveProperty('applyLink');
+        expect(data.jobs[0]).not.toHaveProperty('slug');
+        expect(data.jobs[0]).not.toHaveProperty('description');
+        expect(data.jobs[0]).not.toHaveProperty('employerJobs');
+        expect(data.jobs[0]).toMatchObject({
+            id: 'job-1',
+            salaryRange: '$150k to $180k',
+            companyLogoUrl: 'https://cdn.example/logo.png',
+            descriptionSummary: 'Great PMHNP opportunity...',
+        });
+    });
+
+    it('asks the database once for callers of the same view', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(prisma.job.findMany).mockResolvedValue(mockJobs as any);
+        vi.mocked(prisma.job.count).mockResolvedValue(2);
+
+        await Promise.all([GET(createRequest({ workMode: 'remote' })), GET(createRequest({ workMode: 'remote' }))]);
+
+        expect(prisma.job.findMany).toHaveBeenCalledTimes(1);
+        expect(prisma.job.count).toHaveBeenCalledTimes(1);
     });
 
     it('returns paginated jobs', async () => {

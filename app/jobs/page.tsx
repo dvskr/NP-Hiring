@@ -2,9 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/prisma';
-import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
-import { buildJobsOrderBy, type JobSort } from '@/lib/utils/job-sort';
+import { parseFiltersFromParams, type RecruitmentFilterState } from '@/lib/filters';
+import { loadBoardCount, loadBoardRows } from '@/lib/jobs-board-data';
 import { slugify } from '@/lib/utils';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobsPageClient from './JobsPageClient';
@@ -34,7 +33,9 @@ export const revalidate = 60;
  * Jobs per server-rendered page. JobsPageClient pages with the same size
  * (tests/regressions/ga-list-clicks.test.ts pins the pair), and the metadata
  * reads it too, so an out-of-range page 404s by the same arithmetic the
- * listing uses (TECH-09).
+ * listing uses (TECH-09). The shared loader keeps page 1 at this size
+ * (JOBS_BOARD_PAGE_SIZE in lib/jobs-board-data.ts;
+ * tests/regressions/jobs-board-db-failure.test.ts pins the two).
  */
 const limit = 50;
 
@@ -61,10 +62,14 @@ function isBoardPageOutOfRange(page: number, total: number): boolean {
  * the edge stores page 1 of /jobs for every visitor (middleware.ts
  * JOBS_BOARD_EDGE_CACHE). Without a count the title and description drop the
  * number; the page body still fails on its own reads.
+ *
+ * It is the page body's own count (loadBoardCount shares one read between
+ * the two), so the title and the list can never disagree and the metadata
+ * adds no query.
  */
-async function countJobsForMetadata(where: ReturnType<typeof buildWhereClause>): Promise<number | null> {
+async function countJobsForMetadata(filters: RecruitmentFilterState): Promise<number | null> {
   try {
-    return await prisma.job.count({ where });
+    return await loadBoardCount(filters);
   } catch (error) {
     console.error('[jobs] metadata job count unavailable:', error);
     return null;
@@ -142,7 +147,7 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   const filters = parseFiltersFromParams(urlParams);
 
   // Total job count, or null when the database cannot answer.
-  const totalJobs = await countJobsForMetadata(buildWhereClause(filters));
+  const totalJobs = await countJobsForMetadata(filters);
   const jobCountDisplay = totalJobs === null
     ? null
     : totalJobs > 1000
@@ -264,18 +269,11 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
 
   // Parse filters from URL (same logic as API)
   const filters = parseFiltersFromParams(urlParams);
-  const where = buildWhereClause(filters);
 
   // Get page and sort from params
   const page = boardPage(params.page);
   const sort = (params.sort as string) || 'best';
   const skip = (page - 1) * limit;
-
-  // Build orderBy via the single source of truth (lib/utils/job-sort). This is
-  // the bug fix: the SSR render previously inlined a 'best' order WITHOUT the
-  // employer-first lead, so employer jobs appeared mid-list until the client
-  // re-fetched /api/jobs. Now SSR and CSR build the identical order per sort.
-  const orderBy = buildJobsOrderBy(sort as JobSort);
 
   // Fetch inside try/catch, but construct JSX AFTER it — React renders JSX
   // lazily, so component errors would never be caught here anyway
@@ -283,61 +281,26 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   let jobs: Job[] = [];
   let total = 0;
   try {
-    // Fetch jobs with same logic as API route
-    const [rawJobs, jobCount] = await Promise.all([
-      prisma.job.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          employer: true,
-          location: true,
-          city: true,
-          state: true,
-          // Selected for the GA4 list impression below, not for the UI. The
-          // card renders `location`; item_category3 must carry the two-letter
-          // code, because that is what the detail page and the card click
-          // already send for the same job.
-          stateCode: true,
-          jobType: true,
-          isRemote: true,
-          isHybrid: true,
-          displaySalary: true,
-          normalizedMinSalary: true,
-          normalizedMaxSalary: true,
-          salaryPeriod: true,
-          // L-06: never the full description. Every prop JobsPageClient gets
-          // lands in the RSC payload (52 descriptions made a 404 KB payload);
-          // the card reads at most a short summary, cut to 200 characters
-          // below.
-          descriptionSummary: true,
-          createdAt: true,
-          isFeatured: true,
-          isVerifiedEmployer: true,
-          originalPostedAt: true,
-          mode: true,
-          applyLink: true,
-          applyOnPlatform: true,
-          sourceType: true,
-          // Phase 1 experience chip — JobCard renders the pill from these.
-          experienceLabel: true,
-          newGradFriendly: true,
-          employerJobs: { select: { companyLogoUrl: true } },
-        },
-      }),
-      prisma.job.count({ where }),
+    // The list and the count come from the loader GET /api/jobs reads too
+    // (lib/jobs-board-data.ts), so the server render and the browser's
+    // refetch share one read and one sort order, built in the loader.
+    // The loader's select holds no full description (L-06): every prop
+    // JobsPageClient gets lands in the RSC payload, and the card reads at
+    // most a short summary, cut to 200 characters below.
+    const [rows, jobCount] = await Promise.all([
+      loadBoardRows(filters, sort, page, limit),
+      loadBoardCount(filters),
     ]);
 
-    // Map employer logo onto job objects
-    jobs = rawJobs.map(j => ({
+    // The shared rows carry dates as ISO strings (they may come from the
+    // cache); the cards get Date objects, as they did from the database.
+    // salaryRange is the API's field: the server-rendered card never had it.
+    jobs = rows.map(j => ({
       ...j,
       descriptionSummary: cardSummary(j.descriptionSummary),
-      companyLogoUrl: j.employerJobs?.companyLogoUrl || null,
-      employerJobs: undefined,
+      createdAt: new Date(j.createdAt),
+      originalPostedAt: j.originalPostedAt ? new Date(j.originalPostedAt) : null,
+      salaryRange: undefined,
     })) as unknown as Job[];
     total = jobCount;
   } catch (error) {

@@ -215,12 +215,16 @@ describe('job-listing orderBy is centralized (no inlined arrays can re-diverge)'
     expect(offenders, `Inlined listing orderBy found in:\n${offenders.join('\n')}`).toEqual([]);
   });
 
-  it('SSR /jobs page and the /api/jobs route both build order via buildJobsOrderBy(sort)', () => {
-    // Parity by construction: both call the same helper with the same sort, so
-    // the initial server render and the client re-fetch can never disagree.
+  it('SSR /jobs page and the /api/jobs route both list through the one loader, which builds order via buildJobsOrderBy(sort)', () => {
+    // Parity by construction: both read lib/jobs-board-data.ts with the same
+    // sort (2026-11-23), so the initial server render and the client re-fetch
+    // can never disagree, and neither builds an order of its own.
     for (const f of ['app/jobs/page.tsx', 'app/api/jobs/route.ts']) {
-      expect(read(f), `${f} must route through buildJobsOrderBy`).toMatch(/buildJobsOrderBy\(\s*sort/);
+      const src = read(f);
+      expect(src, `${f} must list through loadBoardRows`).toMatch(/loadBoardRows\(filters, sort, page, limit\)/);
+      expect(src, `${f} must not build its own order`).not.toMatch(/buildJobsOrderBy|orderBy:/);
     }
+    expect(read('lib/jobs-board-data.ts')).toMatch(/orderBy: buildJobsOrderBy\(\s*sort\)/);
   });
 });
 

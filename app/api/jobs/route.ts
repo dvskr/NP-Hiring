@@ -10,8 +10,50 @@ import {
 } from '@/lib/search-query-intent';
 import { logger } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
-import { buildJobsOrderBy, type JobSort } from '@/lib/utils/job-sort';
+import { loadBoardCount, loadBoardRows, type BoardJobRow } from '@/lib/jobs-board-data';
 import { parsePagination } from './pagination';
+
+/**
+ * A board row as this API returns it. The shared loader also carries the
+ * page's own fields; `applyLink` must never leave through the listing API
+ * (mass link harvesting: apply links are only on the job's own page), and
+ * the slug and the state code are the server render's.
+ */
+function toListingJob(row: BoardJobRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    employer: row.employer,
+    location: row.location,
+    city: row.city,
+    state: row.state,
+    jobType: row.jobType,
+    isRemote: row.isRemote,
+    isHybrid: row.isHybrid,
+    // Salary fields
+    displaySalary: row.displaySalary,
+    normalizedMinSalary: row.normalizedMinSalary,
+    normalizedMaxSalary: row.normalizedMaxSalary,
+    salaryPeriod: row.salaryPeriod,
+    salaryRange: row.salaryRange,
+    // The full `description` is never in the listing (anti-scrape, and only
+    // the job's own page needs it); the loader does not select it.
+    descriptionSummary: row.descriptionSummary,
+    createdAt: row.createdAt,
+    isFeatured: row.isFeatured,
+    isVerifiedEmployer: row.isVerifiedEmployer,
+    mode: row.mode,
+    originalPostedAt: row.originalPostedAt,
+    // A boolean flag (no scrape value) JobCard needs for the Easy Apply CTA.
+    applyOnPlatform: row.applyOnPlatform,
+    // Lets JobCard label an employer post "Apply on employer site".
+    sourceType: row.sourceType,
+    // Phase 1 experience chip: JobCard renders the pill from these.
+    experienceLabel: row.experienceLabel,
+    newGradFriendly: row.newGradFriendly,
+    companyLogoUrl: row.companyLogoUrl,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,71 +119,20 @@ export async function GET(request: NextRequest) {
     // Malformed page/limit (abc, 0, -1, 1.5) clamp to safe values instead of
     // reaching Prisma as a NaN or negative skip/take (which answered 500).
     const { page, limit } = parsePagination(searchParams);
-    const skip = (page - 1) * limit;
 
     // Parse filters from URL
     const filters = parseFiltersFromParams(searchParams);
-    const where = buildWhereClause(filters);
 
-    // Parse sort option — single source of truth (lib/utils/job-sort) so this
-    // API and the SSR /jobs page build the identical order per sort.
-    const sort = (searchParams.get('sort') || 'best') as JobSort;
-    const orderBy = buildJobsOrderBy(sort);
-
-    // Get jobs
-    const [jobs, total] = await Promise.all([
-      prisma.job.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          employer: true,
-          location: true,
-          city: true,
-          state: true,
-          jobType: true,
-          isRemote: true,
-          isHybrid: true,
-          // Salary fields
-          displaySalary: true,
-          normalizedMinSalary: true,
-          normalizedMaxSalary: true,
-          salaryPeriod: true,
-          salaryRange: true,
-          // Other fields
-          // NOTE: full `description` intentionally excluded from listing API
-          // for the same anti-scrape reason as applyLink — full description
-          // is ~500-3000 chars per row, only needed on the slug detail page.
-          descriptionSummary: true,
-          createdAt: true,
-          isFeatured: true,
-          isVerifiedEmployer: true,
-          mode: true,
-          originalPostedAt: true,
-          // NOTE: applyLink intentionally excluded from listing API
-          // to prevent mass link harvesting by scrapers.
-          // Apply links are only exposed on individual job detail pages.
-          // applyOnPlatform is a boolean flag (no scrape value) and is
-          // needed by JobCard to render the Easy Apply CTA.
-          applyOnPlatform: true,
-          // sourceType lets JobCard label an employer post "Apply on employer site"
-          // for jobs posted directly by employers on our platform.
-          sourceType: true,
-          // Phase 1 experience chip — see comment in the lite-mode SELECT
-          // above. Required for JobCard to render the experience pill.
-          experienceLabel: true,
-          newGradFriendly: true,
-          employerJobs: { select: { companyLogoUrl: true } },
-        },
-      }),
-      prisma.job.count({ where }),
+    // The list and the count come from the loader the SSR /jobs page reads
+    // (lib/jobs-board-data.ts): one read per view, shared with the page that
+    // rendered just before this call, and one sort order for both, built in
+    // the loader.
+    const sort = searchParams.get('sort') || 'best';
+    const [rows, total] = await Promise.all([
+      loadBoardRows(filters, sort, page, limit),
+      loadBoardCount(filters),
     ]);
-
-    // Map employer logo onto job objects
-    const jobsWithLogo = jobs.map(j => ({ ...j, companyLogoUrl: j.employerJobs?.companyLogoUrl || null, employerJobs: undefined }));
+    const jobsWithLogo = rows.map(toListingJob);
 
     // Search transparency (review item #3): echo what the deterministic
     // intent extraction did with the free-text query, and — on a zero-result
