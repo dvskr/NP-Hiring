@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Builds the MCP widget bundle.
  *
@@ -8,12 +7,16 @@
  * The widget sources (lib/mcp/widgets/src) are browser TypeScript that the
  * server never imports, so Next's build never compiles them. esbuild bundles
  * them into one IIFE whose source is committed as a string module. Vercel
- * then needs no extra build step, and tests/lib/mcp/widget-bundle.test.ts
- * fails when someone edits a widget without rebuilding.
+ * then needs no extra build step, and tests/lib/mcp/widgets.test.ts fails
+ * when someone edits a widget without rebuilding.
  *
  * Line endings are normalized before esbuild sees the sources. This tree is
  * checked out with CRLF on Windows and LF in CI, and a template literal would
  * otherwise carry \r\n into the bundle on one machine and \n on the other.
+ *
+ * No #! line: tests/lib/mcp/widgets.test.ts imports this file through
+ * vitest, whose transform cannot strip a #! line that ends in CRLF, so a
+ * Windows checkout failed that test with a SyntaxError. Run it with node.
  */
 import { build } from 'esbuild';
 import { readFile, writeFile } from 'node:fs/promises';
