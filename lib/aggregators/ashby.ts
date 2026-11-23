@@ -50,6 +50,9 @@ interface AshbyJob {
     team?: string;
     employmentType?: string;
     location?: string;
+    /** The date the public job board API sends. */
+    publishedAt?: string;
+    /** An older name for the same date; read only when publishedAt is absent. */
     publishedDate?: string;
     isRemote?: boolean;
     address?: AshbyAddress;
@@ -190,6 +193,9 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
             const salary = mapSalary(j.compensation);
             const applyLink = j.applyUrl || j.jobUrl;
             if (!applyLink) continue;
+            // The API sends publishedAt. Reading only publishedDate left every
+            // Ashby posting undated, so it skipped the 30-day freshness gate.
+            const published = j.publishedAt || j.publishedDate;
 
             out.push({
                 externalId: `ashby-${tenant.slug}-${j.id}`,
@@ -199,8 +205,8 @@ async function fetchTenantJobs(tenant: { slug: string; name: string }): Promise<
                 location: ashbyLocation(j),
                 description,
                 applyLink,
-                postedDate: j.publishedDate,
-                postedAt: j.publishedDate,
+                postedDate: published,
+                postedAt: published,
                 jobType: mapEmploymentType(j.employmentType) ?? undefined,
                 minSalary: salary.minSalary,
                 maxSalary: salary.maxSalary,

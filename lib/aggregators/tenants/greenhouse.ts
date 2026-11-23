@@ -137,6 +137,12 @@ export const GREENHOUSE_SLUGS: readonly string[] = [
     'usenourish',                         // 1 NP / 97 total
     'twinhealth',                         // 1 NP / 43 total
     'prenuvo',                            // 1 NP / 49 total — re-added (dropped 2026-05-05); US-remote NP contract role
+
+    // === Added 2026-11-23: psych employers also posting NP roles (checked 2026-11-23) ===
+    '1pyra)mid_health&care',              // Pyramid Healthcare: NP roles with full descriptions, dated (checked 2026-11-23); the token is real and the fetch URL works unencoded
+    'erc8585757pathlight53t353',          // ERC Pathlight: NP roles with full descriptions, dated (checked 2026-11-23)
+    'twochairs',                          // Two Chairs: NP roles with full descriptions, dated (checked 2026-11-23)
+    'peregrinehealth',                    // Peregrine Health: NP roles with full descriptions, dated (checked 2026-11-23)
 ];
 
 export const GREENHOUSE_NAMES: Record<string, string> = {
@@ -283,4 +289,8 @@ export const GREENHOUSE_NAMES: Record<string, string> = {
     'tuesdayhealth': 'Tuesday Health',
     'usenourish': 'Nourish',
     'twinhealth': 'Twin Health',
+
+    // Added 2026-11-23 (checked 2026-11-23); 'twochairs' and 'peregrinehealth' are named above
+    '1pyra)mid_health&care': 'Pyramid Healthcare',
+    'erc8585757pathlight53t353': 'ERC Pathlight',
 };

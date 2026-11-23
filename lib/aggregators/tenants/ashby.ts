@@ -69,4 +69,8 @@ export const ASHBY_TENANTS: readonly AshbyTenant[] = [
     { slug: 'sprinter-health', name: 'Sprinter Health' },                 // 1 NP / 68 total
     { slug: 'summerhealth', name: 'Summer Health' },                      // 1 NP / 2 total
     { slug: 'you-health', name: 'You Health' },                           // 1 NP / 2 total
+
+    // === Added 2026-11-23 (checked 2026-11-23) ===
+    // Slug has a space; the board is jobs.ashbyhq.com/fort health and fetch() encodes it to fort%20health.
+    { slug: 'fort health', name: 'Fort Health' },                         // NP roles with full descriptions, dated
 ];
