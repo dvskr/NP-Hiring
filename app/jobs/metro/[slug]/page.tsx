@@ -219,14 +219,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const facts = await getMetroFacts(metro);
 
-  // Count only at the display floor; the year keeps the title distinct from
-  // the city hub. Description from reviewed geography (nearby cities and
-  // sub-market names) plus the gated median, never the hero fragment.
+  // Count only at the display floor; "in the {City} Area" keeps the title
+  // distinct from the city hub's "in {City}, {ST}". Description from reviewed
+  // geography (nearby cities and sub-market names) plus the gated median,
+  // never the hero fragment.
   const title = buildMetroTitle({
     city: metro.city,
     stateCode: metro.stateCode,
     total: facts.total,
-    year: new Date().getUTCFullYear(),
   });
   const description = truncateOnWord(buildMetroDescription({
     city: metro.city,

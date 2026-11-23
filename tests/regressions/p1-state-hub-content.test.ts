@@ -481,9 +481,9 @@ describe('HUB-meta and HUB-S10 builders over the hub fixtures', () => {
   it('title prints the count only at the display floor and never the brand name', () => {
     const full = buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: FULL.total, distinctEmployers: FULL.distinctEmployers, benchmark: FULL.benchmark });
     expect(FULL.total).toBeGreaterThanOrEqual(COUNT_DISPLAY_FLOOR);
-    // 2026-11-23: the full role name leads; the median hook outranks the
-    // count when both cannot fit the SERP budget.
-    expect(full).toBe(`${brand.niche.long} Jobs in Texas: $128K Median`);
+    // 2026-11-23: the full role name leads; at the display floor the count
+    // stays and the median drops when both cannot fit the SERP budget.
+    expect(full).toBe(`12 ${brand.niche.long} Jobs in Texas`);
     const thin = buildHubTitle({ stateName: 'Delaware', stateCode: 'DE', total: ONE_JOB.total, distinctEmployers: ONE_JOB.distinctEmployers, benchmark: null });
     expect(thin).toBe(`${brand.niche.long} Jobs in Delaware`);
     // Below the display floor the count never prints.

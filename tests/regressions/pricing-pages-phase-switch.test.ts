@@ -34,6 +34,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { Metadata } from 'next';
 import { brand } from '@/config/brand';
 import { config } from '@/lib/config';
+import { TITLE_PAGE_PART_MAX } from '@/lib/pseo/category-metadata';
 import {
     FULL_PACKAGE,
     LADDER_FROM_LINE,
@@ -475,7 +476,7 @@ describe('/for-employers: the copy builder', () => {
             );
             expect(copy.pricingFaqs[1].a.startsWith('Every post (intro or featured) includes the full package')).toBe(true);
             expect(copy.meta).toEqual({
-                title: `Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs From $${config.introPrice}`,
+                title: `Hire a ${brand.niche.long}: Post Jobs From $${config.introPrice}`,
                 description: `Hire ${brand.niche.long}s. ${LADDER_FROM_LINE} Reach candidates actively searching for ${brand.niche.short} roles.`,
                 ogImageTitle: `Hire ${brand.niche.short}s: posts from $${config.introPrice}`,
             });
@@ -537,10 +538,12 @@ describe('/for-employers: the rendered page and its metadata follow the clock', 
         // The title follows the clock too: no price while posts are free.
         expect(promo.title).toBe(`Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs Free`);
         expect(String(promo.title)).not.toContain('$');
+        expect(String(promo.title).length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
 
         const ladder = await atClock(LADDER_START, () => employersPage.generateMetadata());
-        expect(ladder.title).toBe(`Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs From $${config.introPrice}`);
+        expect(ladder.title).toBe(`Hire a ${brand.niche.long}: Post Jobs From $${config.introPrice}`);
         expect(String(ladder.title)).not.toMatch(/free/i);
+        expect(String(ladder.title).length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
         expect(ladder.description).toBe(`Hire ${brand.niche.long}s. ${LADDER_FROM_LINE} Reach candidates actively searching for ${brand.niche.short} roles.`);
         expect(ogCardTitle(ladder)).toBe(`Hire ${brand.niche.short}s: posts from $${config.introPrice}`);
         expect(offersIn(JSON.stringify(ladder))).toEqual([]);

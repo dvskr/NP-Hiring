@@ -97,7 +97,11 @@ const nextConfig: NextConfig = {
   // unaffected: their metadata resolves before the HTML is cached. A regex
   // that matches everything, rather than a list of crawlers, because a list
   // would replace Next's own one (Bingbot, Twitterbot and the rest) instead of
-  // adding to it.
+  // adding to it, and because middleware holds page 1 of /jobs at the edge
+  // for every visitor: a crawler-only rule would let a visitor's streamed copy
+  // be the one a crawler is served. The cost is that a per-request page sends
+  // its first byte once its metadata resolves; the body waits on the same
+  // listing facts, so its content arrives no later.
   htmlLimitedBots: /.*/,
 
   // Experimental features for better performance

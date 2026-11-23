@@ -1142,9 +1142,11 @@ function firstFittingTitle(candidates: ReadonlyArray<string | null | false>): st
 
 /**
  * HUB-meta title. The full role name leads ("Nurse Practitioner Jobs in
- * Ohio"), the phrasing most state searches use; the count at the display floor
- * and the median or employer hook join while the title fits, and the short
- * form is the last resort.
+ * Ohio"), the phrasing most state searches use. At the display floor the
+ * count comes first, as job search results print it, with the median or
+ * employer hook while it fits; the median without a count is the form below
+ * the floor, so the hub and /salary-guide/[state] ("... Salary in Ohio:
+ * $128K Median") rarely share a tail. The short form is the last resort.
  */
 export function buildHubTitle(input: { stateName: string; stateCode: string; total: number; distinctEmployers: number; benchmark: BenchmarkRow | null }): string {
   const { stateName, total, distinctEmployers, benchmark } = input;
@@ -1154,12 +1156,13 @@ export function buildHubTitle(input: { stateName: string; stateCode: string; tot
     : `: ${formatCount(distinctEmployers, 'Employer')} Hiring`;
   const shortHook = benchmark ? `: ${formatK(benchmark.median)} Median` : null;
   const long = `${NP_LONG} Jobs in ${stateName}`;
+  const counted = count
+    ? [`${count}${long}${hook}`, shortHook && `${count}${long}${shortHook}`, `${count}${long}`]
+    : [];
   return firstFittingTitle([
-    `${count}${long}${hook}`,
-    shortHook && `${count}${long}${shortHook}`,
+    ...counted,
     `${long}${hook}`,
     shortHook && `${long}${shortHook}`,
-    `${count}${long}`,
     long,
     `${NP} Jobs in ${stateName}`,
   ]);
@@ -1316,15 +1319,24 @@ export function buildDirectoryDescription(input: { stateName: string; totalState
   ]);
 }
 
-/** METRO-meta title: the full role name first, the short form for long city names. */
-export function buildMetroTitle(input: { city: string; stateCode: string; total: number; year: number }): string {
-  const { city, stateCode, total, year } = input;
+/**
+ * METRO-meta title. The metro page covers the city and its nearby cities, so
+ * it reads "in the Chicago Area" where the city page reads "in Chicago, IL":
+ * with the full role name on both, a year alone no longer kept the two
+ * titles apart. The count joins at the floor while it fits, the state code
+ * when no count does, and the short form serves the longest names.
+ */
+export function buildMetroTitle(input: { city: string; stateCode: string; total: number }): string {
+  const { city, stateCode, total } = input;
   const count = countPrefix(total);
+  const area = `${NP_LONG} Jobs in the ${city} Area`;
   return firstFittingTitle([
-    `${count}${NP_LONG} Jobs in ${city}, ${stateCode} (${year})`,
-    `${NP_LONG} Jobs in ${city}, ${stateCode} (${year})`,
-    `${NP_LONG} Jobs in ${city}, ${stateCode}`,
-    `${count}${NP} Jobs in ${city}, ${stateCode} (${year})`,
+    count && `${count}${area}`,
+    `${NP_LONG} Jobs in the ${city}, ${stateCode} Area`,
+    area,
+    `${city} Area ${NP_LONG} Jobs`,
+    count && `${count}${NP} Jobs in the ${city} Area`,
+    `${NP} Jobs in the ${city} Area`,
   ]);
 }
 
@@ -1355,23 +1367,26 @@ export function buildMetroDescription(input: {
  * year join while the title fits, and the short form is the last resort.
  */
 export function buildSalaryStateTitle(input: { stateName: string; stateCode: string; benchmark: BenchmarkRow | null; year: number }): string {
-  const { stateName, benchmark, year } = input;
+  const { stateName, stateCode, benchmark, year } = input;
+  // "District of Columbia" never fits beside the full role name; "DC" is how
+  // the place is searched and written.
+  const place = stateCode === 'DC' ? 'DC' : stateName;
   if (benchmark) {
     const median = formatK(benchmark.median);
     return firstFittingTitle([
-      `${NP_LONG} Salary in ${stateName}: ${median} Median, ${year}`,
-      `${NP_LONG} Salary in ${stateName}: ${median} Median`,
-      `${NP_LONG} Salary in ${stateName} (${year})`,
-      `${NP_LONG} Salary in ${stateName}`,
-      `${NP} Salary in ${stateName}: ${median} Median, ${year}`,
-      `${NP} Salary in ${stateName}: ${median} Median`,
+      `${NP_LONG} Salary in ${place}: ${median} Median, ${year}`,
+      `${NP_LONG} Salary in ${place}: ${median} Median`,
+      `${NP_LONG} Salary in ${place} (${year})`,
+      `${NP_LONG} Salary in ${place}`,
+      `${NP} Salary in ${place}: ${median} Median, ${year}`,
+      `${NP} Salary in ${place}: ${median} Median`,
     ]);
   }
   return firstFittingTitle([
-    `${NP_LONG} Jobs and Pay Data in ${stateName}, ${year}`,
-    `${NP_LONG} Jobs and Pay Data in ${stateName}`,
-    `${NP} Jobs and Pay Data in ${stateName}, ${year}`,
-    `${NP} Jobs and Pay Data in ${stateName}`,
+    `${NP_LONG} Jobs and Pay Data in ${place}, ${year}`,
+    `${NP_LONG} Jobs and Pay Data in ${place}`,
+    `${NP} Jobs and Pay Data in ${place}, ${year}`,
+    `${NP} Jobs and Pay Data in ${place}`,
   ]);
 }
 

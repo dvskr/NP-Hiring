@@ -14,6 +14,7 @@ import { cardSummary } from '@/lib/pseo/job-listing-omit';
 import { loadIndexableLandingSlugs } from '@/lib/pseo/landing-verdicts';
 import { parseListingPage } from '@/lib/pseo/listing-pagination';
 import { TITLE_PAGE_PART_MAX } from '@/lib/pseo/category-metadata';
+import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import {
   buildHubCategoryFaqAnswer,
   selectHubCategoryGroups,
@@ -154,14 +155,18 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   //
   // The default title leads with the full role name, the phrasing most
   // searches for this page use ("nurse practitioner jobs near me"); the
-  // layout's " | NP Hiring" suffix carries the abbreviation. The count joins
-  // while the title fits the SERP budget. No niche token pair is built, so
-  // P7 runtime fix D6 ("Browse 851 NP & NP Jobs Near Me") cannot recur.
+  // layout's " | NP Hiring" suffix carries the abbreviation, and the
+  // description names it too ("np jobs near me" is the other common search).
+  // The count joins at the display floor while the title fits the SERP
+  // budget. No niche token pair is built, so P7 runtime fix D6 ("Browse 851
+  // NP & NP Jobs Near Me") cannot recur.
   const baseTitle = `${brand.niche.long} Jobs Near Me`;
-  const countedTitle = jobCountDisplay === null ? null : `${baseTitle}: ${jobCountDisplay} Openings`;
+  const countedTitle = jobCountDisplay === null || totalJobs === null || totalJobs < COUNT_DISPLAY_FLOOR
+    ? null
+    : `${baseTitle}: ${jobCountDisplay} Openings`;
   let title = countedTitle !== null && countedTitle.length <= TITLE_PAGE_PART_MAX ? countedTitle : baseTitle;
   // SEO Fix #7: the default description stays within the SERP cap.
-  let description = `Search ${countLead}${brand.niche.descriptor} jobs by state, specialty, salary and schedule: remote, telehealth, travel, locum and per diem. Updated daily.`;
+  let description = `Search ${countLead}${brand.niche.descriptor} (${brand.niche.short}) jobs by state, specialty, salary and schedule: remote, telehealth, travel, locum and per diem. Updated daily.`;
 
   // Customize based on active filters
   const titleParts: string[] = [];

@@ -601,7 +601,9 @@ describe('P2 #13: thin plan METRO-M1 to M6 (one predicate, gated pay, live facts
 
     it('metadata: title and description come from the shared builders, no keywords, no hero fragment', () => {
         expect(METRO_PAGE_CODE).toContain('buildMetroTitle({');
-        expect(METRO_PAGE_CODE).toContain('year: new Date().getUTCFullYear()');
+        // Since 2026-11-23 the title reads "in the {City} Area" rather than
+        // carrying the year (tests/unit/listing-narrative.test.ts pins it).
+        expect(METRO_PAGE_CODE).not.toContain('year: new Date().getUTCFullYear()');
         expect(METRO_PAGE_CODE).toMatch(/truncateOnWord\(buildMetroDescription\(\{[\s\S]*?\}\), DESCRIPTION_MAX\)/);
         expect(METRO_PAGE_SRC).toMatch(/import \{[^}]*\btruncateOnWord\b[^}]*\} from '@\/lib\/display-text'/);
         expect(METRO_PAGE_CODE).not.toContain('function truncateOnWord');

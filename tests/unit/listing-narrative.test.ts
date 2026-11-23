@@ -708,7 +708,7 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(keep(buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, distinctEmployers: 3, benchmark: BENCH }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP_LONG} Jobs in Texas: $132K Median`);
     // The longest jurisdiction name still fits with the full role name.
     const dc = keep(buildHubTitle({ stateName: 'District of Columbia', stateCode: 'DC', total: 40, distinctEmployers: 9, benchmark: BENCH }));
-    expect(dc).toBe(`40 ${NP_LONG} Jobs in District of Columbia`.length <= TITLE_PAGE_PART_MAX ? `40 ${NP_LONG} Jobs in District of Columbia` : `${NP_LONG} Jobs in District of Columbia`);
+    expect(dc).toBe(`${NP_LONG} Jobs in District of Columbia`);
     expect(dc.length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
     // The tier clause is AANP's classification from the state's own dataset
     // row, attributed; tests/regressions/authority-tier-copy.test.ts pins it
@@ -808,12 +808,16 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(directoryDescription).not.toContain('12');
     expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 3 }))).not.toMatch(new RegExp(`^${NP} Jobs`));
 
-    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1, year: 2026 }))).toBe(`${NP_LONG} Jobs in Austin, TX (2026)`);
-    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, year: 2026 }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP_LONG} Jobs in Austin, TX (2026)`);
-    const longMetro = keep(buildMetroTitle({ city: 'Rancho Santa Margarita', stateCode: 'CA', total: 40, year: 2026 }));
+    // The metro page covers nearby cities: "in the {City} Area" keeps it apart
+    // from the city page's "in {City}, {ST}" (buildCityTitle above).
+    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1 }))).toBe(`${NP_LONG} Jobs in the Austin, TX Area`);
+    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP_LONG} Jobs in the Austin Area`);
+    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: 6 })))
+      .not.toBe(keep(buildCityTitle({ displayName: 'Austin', stateCode: 'TX', total: 6, distinctEmployers: 2, benchmark: BENCH })));
+    const longMetro = keep(buildMetroTitle({ city: 'Rancho Santa Margarita', stateCode: 'CA', total: 40 }));
     expect(longMetro.length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
-    // Too long for the full role name: the short form keeps the count and year.
-    expect(longMetro).toBe(`40 ${NP} Jobs in Rancho Santa Margarita, CA (2026)`);
+    // Too long for the full role name: the short form keeps the count.
+    expect(longMetro).toBe(`40 ${NP} Jobs in the Rancho Santa Margarita Area`);
     const metroInput = { city: 'Austin', stateCode: 'TX', stateName: 'Texas', practiceAuthority: 'Restricted', nearbyCities: ['Round Rock', 'Cedar Park', 'Georgetown'], subMarkets: ['Downtown', 'North Austin'] };
     expect(keep(buildMetroDescription({ ...metroInput, benchmark: null })))
       .toBe(`Open ${NP} roles in Austin, TX and nearby Round Rock and Cedar Park. AANP classification: Restricted Practice. Hiring across Downtown and North Austin.`);
@@ -832,6 +836,9 @@ describe('titles print counts only at the display floor and stay inside the SERP
         expect(keep(buildSalaryStateTitle({ stateName, stateCode: 'XX', benchmark, year: 2026 })).length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
       }
     }
+    // DC keeps the full role name by its short place name.
+    expect(keep(buildSalaryStateTitle({ stateName: 'District of Columbia', stateCode: 'DC', benchmark: BENCH, year: 2026 }))).toBe(`${NP_LONG} Salary in DC: $132K Median`);
+    expect(keep(buildSalaryStateTitle({ stateName: 'District of Columbia', stateCode: 'DC', benchmark: null, year: 2026 }))).toBe(`${NP_LONG} Jobs and Pay Data in DC, 2026`);
     const gated = keep(buildSalaryStateDescription({ env: TEXAS, facts: facts({ total: 9, benchmark: BENCH }) }));
     // No bare tier beside the pay sentence: the attributed clause cannot fit
     // there, and "restricted practice" alone read as a rule for the state.

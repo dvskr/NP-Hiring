@@ -126,7 +126,7 @@ function ladderCopy(now: Date): ForEmployersCopy {
       { q: PACK_FAQ_QUESTION, a: packFaqAnswer(now) },
     ],
     meta: {
-      title: `Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs From $${config.introPrice}`,
+      title: `Hire a ${brand.niche.long}: Post Jobs From $${config.introPrice}`,
       description: `Hire ${brand.niche.long}s. ${LADDER_FROM_LINE} Reach candidates actively searching for ${brand.niche.short} roles.`,
       ogImageTitle: `Hire ${brand.niche.short}s: posts from $${config.introPrice}`,
     },
