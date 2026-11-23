@@ -300,7 +300,7 @@ const HOUSEKEEPING: readonly CronEntry[] = [
         schedule: batch.schedule,
     })),
     { path: '/api/cron/enrich-jobs', schedule: '0 6,12,18,22 * * *' },
-    { path: '/api/cron/aggregate-pseo', schedule: '15 0,6,12,18 * * *' },
+    { path: '/api/cron/aggregate-pseo', schedule: '15 6,18 * * *' }, // twice a day from 2026-11-23: each run chains through every city
     { path: '/api/cron/historical-deindex', schedule: '0 1,7,19 * * *' },
     { path: '/api/cron/expiry-warnings', schedule: '0 22 * * *' },
     { path: '/api/cron/refresh-site-stats', schedule: '15 * * * *' },

@@ -597,11 +597,12 @@ function canonicalHostRedirect(request: NextRequest): NextResponse | null {
 // itself is held for a minute and served stale for up to an hour while it
 // revalidates: with steady traffic a new posting shows within about a minute,
 // and after a quiet spell the first visitor gets the older copy while the edge
-// fetches a fresh one. Any other crawler-fetched listing view is held for
-// 5 minutes.
+// fetches a fresh one. Any other crawler-fetched listing view is held for an
+// hour (five minutes until 2026-11-23): crawlers walk every ?page=N, and each
+// miss renders the listing again.
 const LISTING_FIRST_PAGE_EDGE_CACHE = 'public, s-maxage=3600, stale-while-revalidate=86400';
 const JOBS_BOARD_EDGE_CACHE = 'public, s-maxage=60, stale-while-revalidate=3600';
-const CRAWLER_LISTING_EDGE_CACHE = 'public, s-maxage=300, stale-while-revalidate=600';
+const CRAWLER_LISTING_EDGE_CACHE = 'public, s-maxage=3600, stale-while-revalidate=3600';
 
 // Directory hubs outside /jobs that read ?page, so they render per request
 // like the /jobs listings, and whose HTML reads no cookie or header (M-03:

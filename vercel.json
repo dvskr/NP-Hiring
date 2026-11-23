@@ -242,7 +242,7 @@
     },
     {
       "path": "/api/cron/aggregate-pseo",
-      "schedule": "15 0,6,12,18 * * *"
+      "schedule": "15 6,18 * * *"
     },
     {
       "path": "/api/cron/historical-deindex",
@@ -257,6 +257,7 @@
       "schedule": "15 * * * *"
     }
   ],
+  "ignoreCommand": "bash scripts/vercel-ignore-build.sh",
   "headers": [
     {
       "source": "/(.*)",
