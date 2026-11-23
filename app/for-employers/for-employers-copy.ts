@@ -61,7 +61,12 @@ export interface ForEmployersCopy {
    * ones. They feed the FAQPage JSON-LD as well as the accordion.
    */
   pricingFaqs: EmployerFaq[];
-  meta: { description: string; ogImageTitle: string };
+  /**
+   * `title` is the page part of <title> (the layout appends the brand). It
+   * leads with the hiring search's own words ("hire a nurse practitioner")
+   * and follows the promo clock like the description.
+   */
+  meta: { title: string; description: string; ogImageTitle: string };
 }
 
 /** Every post includes the same package; `kinds` names the post types a reader can buy now. */
@@ -91,6 +96,7 @@ function promoCopy(now: Date): ForEmployersCopy {
       { q: PACK_FAQ_QUESTION, a: packFaqAnswer(now) },
     ],
     meta: {
+      title: `Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs Free`,
       description: `Hire ${brand.niche.long}s. Every post is free through ${config.promoEndsLabel} with all features included. Reach candidates actively searching for ${brand.niche.short} roles.`,
       ogImageTitle: `Hire ${brand.niche.short}s: free through ${config.promoEndsLabel}`,
     },
@@ -120,6 +126,7 @@ function ladderCopy(now: Date): ForEmployersCopy {
       { q: PACK_FAQ_QUESTION, a: packFaqAnswer(now) },
     ],
     meta: {
+      title: `Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs From $${config.introPrice}`,
       description: `Hire ${brand.niche.long}s. ${LADDER_FROM_LINE} Reach candidates actively searching for ${brand.niche.short} roles.`,
       ogImageTitle: `Hire ${brand.niche.short}s: posts from $${config.introPrice}`,
     },

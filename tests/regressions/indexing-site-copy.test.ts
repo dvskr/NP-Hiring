@@ -602,7 +602,11 @@ describe('L-02 / CS-10: no page re-appends the brand the layout template adds', 
     it('the job description guide says "an NP", not "a NP"', async () => {
         const { metadata } = await import('@/app/for-employers/resources/job-description-guide/page');
         expect(String(metadata.title)).not.toMatch(/\ba NP\b/);
-        expect(String(metadata.title)).toMatch(/^Writing an? /);
+        // 2026-11-23: the <title> leads with the search phrase; the H1 and the
+        // OG title keep "Writing an NP Job Description".
+        expect(String(metadata.title)).toBe(`${brand.niche.long} Job Description Guide`);
+        expect(String(metadata.openGraph?.title)).toMatch(/^Writing an? /);
+        expect(String(metadata.openGraph?.title)).not.toMatch(/\ba NP\b/);
     }, COLD_IMPORT_TIMEOUT_MS);
 });
 

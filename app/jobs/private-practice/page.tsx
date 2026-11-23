@@ -36,6 +36,7 @@ import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
 import {
   buildCategoryLandingDescription,
   buildCategoryLandingTitle,
+  labelLongNoun,
   labelNoun,
   labelSentence,
   shouldIndexCategoryLanding,
@@ -78,8 +79,10 @@ export const revalidate = 3600;
 
 const SLUG = 'private-practice';
 const LABEL = 'Private Practice';
-/** Role noun for titles and band heads, e.g. "Private Practice NP". */
+/** Role noun for band heads, e.g. "Private Practice NP". */
 const NOUN = labelNoun(SLUG, LABEL);
+/** Title form of the role noun: the full role name (labelLongNoun). */
+const TITLE_NOUN = labelLongNoun(SLUG, LABEL);
 /** Mid-sentence label, e.g. "private practice". */
 const MID = labelSentence(LABEL);
 
@@ -278,7 +281,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();
   const totalJobs = facts.total;
   return {
-    title: buildCategoryLandingTitle({ role: NOUN, totalJobs, tagline: 'Solo and Group Roles' }),
+    title: buildCategoryLandingTitle({ role: TITLE_NOUN, totalJobs, tagline: 'Solo and Group Roles' }),
     description: buildCategoryLandingDescription({
       role: NOUN,
       totalJobs,

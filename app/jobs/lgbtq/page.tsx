@@ -59,6 +59,7 @@ import {
   buildCategoryLandingDescription,
   buildCategoryLandingTitle,
   categoryLandingRobots,
+  labelLongNoun,
   labelNoun,
   labelSentence,
 } from '@/lib/pseo/category-metadata';
@@ -76,8 +77,10 @@ export const revalidate = 3600;
 
 const SLUG = 'lgbtq';
 const LABEL = 'LGBTQ+';
-/** Role noun for titles and headings, e.g. "LGBTQ+ NP". */
+/** Role noun for headings, e.g. "LGBTQ+ NP". */
 const NOUN = labelNoun(SLUG, LABEL);
+/** Title form of the role noun: the full role name (labelLongNoun). */
+const TITLE_NOUN = labelLongNoun(SLUG, LABEL);
 /** Mid-sentence form of the label; the acronym keeps its case. */
 const MID = labelSentence(LABEL);
 
@@ -210,7 +213,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // TECH-06: 0 canonical jobs is a 404, never an empty "0 positions" 200.
   if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();
   const totalJobs = facts.total;
-  const title = buildCategoryLandingTitle({ role: NOUN, totalJobs });
+  const title = buildCategoryLandingTitle({ role: TITLE_NOUN, totalJobs });
   const description = buildCategoryLandingDescription({
     role: NOUN,
     totalJobs,

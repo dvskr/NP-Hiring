@@ -122,7 +122,7 @@ import {
 interface CategoryCopy {
     /** Short label for breadcrumbs / headings (e.g. "Family Practice"). */
     label: string;
-    /** Full role name for titles (e.g. "Family Practice Nurse Practitioner (FNP)"). */
+    /** Full role name for titles (e.g. "Family Nurse Practitioner (FNP)"). */
     role: string;
     /** One-sentence hero description. TODO(content): per-board editorial copy. */
     blurb: string;
@@ -142,7 +142,9 @@ export const NEW_CATEGORY_COPY: Record<string, CategoryCopy> = {
     },
     'family-practice': {
         label: 'Family Practice',
-        role: 'Family Practice Nurse Practitioner (FNP)',
+        // The credential's own name, which is how searches phrase the role
+        // ("family nurse practitioner jobs").
+        role: 'Family Nurse Practitioner (FNP)',
         blurb: 'FNP roles across primary care clinics, health systems, and community practices treating patients of all ages.',
     },
     'adult-gerontology': {
@@ -177,7 +179,9 @@ export const NEW_CATEGORY_COPY: Record<string, CategoryCopy> = {
     },
     'psychiatric-mental-health': {
         label: 'Psychiatric Mental Health',
-        role: 'Psychiatric Mental Health Nurse Practitioner (PMHNP)',
+        // The longer credential name ran past the SERP title width; this is
+        // also the phrase searches use.
+        role: 'Psychiatric Nurse Practitioner (PMHNP)',
         blurb: 'PMHNP roles spanning outpatient, inpatient, and telepsychiatry settings.',
     },
     oncology: {

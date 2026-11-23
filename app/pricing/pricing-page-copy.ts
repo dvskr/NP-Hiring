@@ -138,7 +138,9 @@ function promoCopy(now: Date): PricingPageCopy {
             packFaq(now),
         ],
         meta: {
-            title: `Pricing | ${brand.niche.short} Job Board | Free Through ${config.promoEndsLabel}`,
+            // The page part of <title>; the layout appends the brand. The old
+            // "Pricing | NP Job Board | Free Through ..." ran past the SERP width.
+            title: `Post ${brand.niche.short} Jobs Free Through ${config.promoEndsLabel}`,
             description: `Every ${brand.niche.short} job post is free through ${config.promoEndsLabel}, all features included. ${ladder} No bidding, no contracts.`,
             ogDescription: `Post ${brand.niche.short} jobs free through ${config.promoEndsLabel}. ${ladder} Every post gets the full package.`,
             ogImageTitle: `Pricing: free through ${config.promoEndsLabel}`,
@@ -181,7 +183,7 @@ function ladderCopy(now: Date): PricingPageCopy {
             packFaq(now),
         ],
         meta: {
-            title: `Pricing | ${brand.niche.short} Job Board | Posts From $${config.introPrice}`,
+            title: `${brand.niche.short} Job Post Pricing: $${config.introPrice} First, $${config.postingPrice} After`,
             description: `Every ${brand.niche.short} job post includes all features. ${LADDER_PRICES} No bidding, no contracts.`,
             ogDescription: `Post ${brand.niche.short} jobs from $${config.introPrice}. ${LADDER_PRICES} Every post gets the full package.`,
             ogImageTitle: `Pricing: posts from $${config.introPrice}`,

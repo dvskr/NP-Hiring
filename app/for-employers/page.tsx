@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // the promo clock like the description.
   const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(meta.ogImageTitle)}&type=page`;
   return {
-    title: `For Employers | Hire ${brand.niche.short}s | ${brand.niche.short} Job Board`,
+    title: meta.title,
     // Trimmed from 189 chars to ~145 for SERP display (audit 09 M-20).
     // Live review WP-5: "Reach thousands actively searching" was an
     // unmeasured audience-size claim (the subscriber counter is nowhere

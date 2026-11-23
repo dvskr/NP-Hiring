@@ -28,7 +28,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
-import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
+import { DESCRIPTION_MAX, TITLE_PAGE_PART_MAX } from '@/lib/pseo/category-metadata';
 import { emptyListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import {
   buildHubCategoriesSentence,
@@ -481,12 +481,17 @@ describe('HUB-meta and HUB-S10 builders over the hub fixtures', () => {
   it('title prints the count only at the display floor and never the brand name', () => {
     const full = buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: FULL.total, distinctEmployers: FULL.distinctEmployers, benchmark: FULL.benchmark });
     expect(FULL.total).toBeGreaterThanOrEqual(COUNT_DISPLAY_FLOOR);
-    expect(full).toBe('12 NP Jobs in Texas (TX): $128K Median Pay');
+    // 2026-11-23: the full role name leads; the median hook outranks the
+    // count when both cannot fit the SERP budget.
+    expect(full).toBe(`${brand.niche.long} Jobs in Texas: $128K Median`);
     const thin = buildHubTitle({ stateName: 'Delaware', stateCode: 'DE', total: ONE_JOB.total, distinctEmployers: ONE_JOB.distinctEmployers, benchmark: null });
-    expect(thin).toBe('NP Jobs in Delaware (DE): 1 Employer Hiring');
+    expect(thin).toBe(`${brand.niche.long} Jobs in Delaware`);
+    // Below the display floor the count never prints.
+    expect(thin).not.toMatch(/^\d/);
     for (const title of [full, thin]) {
       expect(title).not.toContain(brand.name);
       expect(title).not.toMatch(DASHES);
+      expect(title.length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
     }
   });
 

@@ -72,7 +72,7 @@ describe('/jobs metadata survives a failed job count', () => {
     it('drops the number from the title and description instead of throwing', async () => {
         db.job.count.mockRejectedValue(new Error(POOL_TIMEOUT));
         const metadata = await generateMetadata(board());
-        expect(String(metadata.title)).toMatch(/^Browse [^\d]+ Jobs Near Me$/);
+        expect(String(metadata.title)).toMatch(/^[^\d]+ Jobs Near Me$/);
         expect(String(metadata.description)).toMatch(/^Search [^\d]+$/);
         expect(metadata.robots).toBeUndefined();
         expect(metadata.alternates?.canonical).toMatch(/\/jobs$/);
@@ -95,7 +95,9 @@ describe('/jobs metadata survives a failed job count', () => {
     it('a working count keeps the number', async () => {
         db.job.count.mockResolvedValue(638);
         const metadata = await generateMetadata(board());
-        expect(String(metadata.title)).toMatch(/^Browse 638 [^\d]+ Jobs Near Me$/);
+        expect(String(metadata.title)).toMatch(/^[^\d]+ Jobs Near Me: 638 Openings$/);
+        // P7 D6: the title never repeats a niche token ("NP & NP").
+        expect(String(metadata.title)).not.toMatch(/(\b\w+\b) & \1\b/);
         expect(String(metadata.description)).toContain('Search 638 ');
     });
 });

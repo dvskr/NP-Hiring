@@ -24,18 +24,13 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 describe('D6 — /jobs title dedupes the niche pair', () => {
     const src = read('app/jobs/page.tsx');
 
-    it('computes nicheTitlePair with a short===medium collapse', () => {
-        expect(src).toMatch(/brand\.niche\.short === brand\.niche\.medium/);
-        expect(src).toMatch(/nicheTitlePair/);
-    });
-
-    it('the browse title interpolates the deduped pair, not short & medium', () => {
-        const titleLine = src
-            .split('\n')
-            .find((l) => l.includes('Jobs Near Me') && l.includes('let title'));
-        expect(titleLine).toBeDefined();
-        expect(titleLine).toContain('${nicheTitlePair}');
-        expect(titleLine).not.toContain('${brand.niche.medium}');
+    // Since 2026-11-23 the default title is built from the full role name
+    // alone ("Nurse Practitioner Jobs Near Me"), so no short & medium pair
+    // exists to collapse. The rendered title is pinned, with the count and
+    // without it, in tests/regressions/jobs-board-db-failure.test.ts.
+    it('the page no longer builds a short & medium title pair', () => {
+        expect(src).not.toMatch(/\$\{brand\.niche\.short\} & \$\{brand\.niche\.medium\}/);
+        expect(src).toMatch(/const baseTitle = `\$\{brand\.niche\.long\} Jobs Near Me`/);
     });
 
     it("current brand data takes the collapse branch (short === medium === 'NP')", () => {

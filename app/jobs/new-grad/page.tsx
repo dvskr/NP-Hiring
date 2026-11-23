@@ -37,6 +37,7 @@ import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
 import {
   buildCategoryLandingDescription,
   buildCategoryLandingTitle,
+  labelLongNoun,
   labelNoun,
   labelSentence,
   shouldIndexCategoryLanding,
@@ -86,8 +87,10 @@ export const revalidate = 3600; // Revalidate every hour
 
 const SLUG = 'new-grad';
 const LABEL = 'New Grad';
-/** Role noun for titles and band heads, e.g. "New Grad NP". */
+/** Role noun for band heads, e.g. "New Grad NP". */
 const NOUN = labelNoun(SLUG, LABEL);
+/** Title form of the role noun: the full role name (labelLongNoun). */
+const TITLE_NOUN = labelLongNoun(SLUG, LABEL);
 /** Mid-sentence label, e.g. "new grad". */
 const MID = labelSentence(LABEL);
 
@@ -289,7 +292,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // TECH-06: 0 canonical jobs is a 404, never an empty "0 positions" 200.
   if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();
   const totalJobs = facts.total;
-  const title = buildCategoryLandingTitle({ role: NOUN, totalJobs, tagline: 'Entry-Level Positions' });
+  const title = buildCategoryLandingTitle({ role: TITLE_NOUN, totalJobs, tagline: 'Entry-Level Positions' });
   const description = buildCategoryLandingDescription({
     role: NOUN,
     totalJobs,

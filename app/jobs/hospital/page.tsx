@@ -36,6 +36,7 @@ import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
 import {
   buildCategoryLandingDescription,
   buildCategoryLandingTitle,
+  labelLongNoun,
   labelNoun,
   labelSentence,
   shouldIndexCategoryLanding,
@@ -78,8 +79,10 @@ export const revalidate = 3600;
 
 const SLUG = 'hospital';
 const LABEL = 'Hospital';
-/** Role noun for titles and band heads, e.g. "Hospital NP". */
+/** Role noun for band heads, e.g. "Hospital NP". */
 const NOUN = labelNoun(SLUG, LABEL);
+/** Title form of the role noun: the full role name (labelLongNoun). */
+const TITLE_NOUN = labelLongNoun(SLUG, LABEL);
 /** Mid-sentence label, e.g. "hospital". */
 const MID = labelSentence(LABEL);
 
@@ -277,7 +280,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   if (isPageOutOfRange(page, facts.total) || !shouldRenderCategoryLanding(facts.total)) notFound();
   const totalJobs = facts.total;
   return {
-    title: buildCategoryLandingTitle({ role: NOUN, totalJobs, tagline: 'Acute and Inpatient Care' }),
+    title: buildCategoryLandingTitle({ role: TITLE_NOUN, totalJobs, tagline: 'Acute and Inpatient Care' }),
     description: buildCategoryLandingDescription({
       role: NOUN,
       totalJobs,

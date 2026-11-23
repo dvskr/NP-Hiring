@@ -128,6 +128,7 @@ import {
 } from '@/lib/pseo/listing-narrative';
 
 const NP = brand.niche.short;
+const NP_LONG = brand.niche.long;
 const NP_PROSE = brand.niche.descriptor;
 const BRAND = brand.name;
 const BLS = STAT_SOURCES.averageSalary.formatted;
@@ -702,8 +703,13 @@ describe('FAQ arrays drop an entry whenever its answer is missing', () => {
 
 describe('titles print counts only at the display floor and stay inside the SERP budget', () => {
   it('HUB-meta', () => {
-    expect(keep(buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1, distinctEmployers: 1, benchmark: null }))).toBe(`${NP} Jobs in Texas (TX): 1 Employer Hiring`);
-    expect(keep(buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, distinctEmployers: 3, benchmark: BENCH }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP} Jobs in Texas (TX): $132K Median Pay`);
+    // The full role name leads (2026-11-23); hooks join only while they fit.
+    expect(keep(buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1, distinctEmployers: 1, benchmark: null }))).toBe(`${NP_LONG} Jobs in Texas`);
+    expect(keep(buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, distinctEmployers: 3, benchmark: BENCH }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP_LONG} Jobs in Texas: $132K Median`);
+    // The longest jurisdiction name still fits with the full role name.
+    const dc = keep(buildHubTitle({ stateName: 'District of Columbia', stateCode: 'DC', total: 40, distinctEmployers: 9, benchmark: BENCH }));
+    expect(dc).toBe(`40 ${NP_LONG} Jobs in District of Columbia`.length <= TITLE_PAGE_PART_MAX ? `40 ${NP_LONG} Jobs in District of Columbia` : `${NP_LONG} Jobs in District of Columbia`);
+    expect(dc.length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
     // The tier clause is AANP's classification from the state's own dataset
     // row, attributed; tests/regressions/authority-tier-copy.test.ts pins it
     // for every jurisdiction.
@@ -719,9 +725,13 @@ describe('titles print counts only at the display floor and stay inside the SERP
   });
 
   it('CITY-C9', () => {
-    expect(keep(buildCityTitle({ displayName: 'Austin', stateCode: 'TX', total: 6, distinctEmployers: 2, benchmark: BENCH }))).toBe(`6 ${NP} Jobs in Austin, TX: $132K Median`);
-    expect(keep(buildCityTitle({ displayName: 'Austin', stateCode: 'TX', total: 6, distinctEmployers: 2, benchmark: null }))).toBe(`6 ${NP} Jobs in Austin, TX from 2 Employers`);
-    expect(keep(buildCityTitle({ displayName: 'Austin', stateCode: 'TX', total: 3, distinctEmployers: 1, benchmark: null }))).toBe(`${NP} Jobs in Austin, TX`);
+    // The full role name leads (2026-11-23); a hook joins only while it fits.
+    expect(keep(buildCityTitle({ displayName: 'Austin', stateCode: 'TX', total: 6, distinctEmployers: 2, benchmark: BENCH }))).toBe(`6 ${NP_LONG} Jobs in Austin, TX`);
+    expect(keep(buildCityTitle({ displayName: 'Austin', stateCode: 'TX', total: 6, distinctEmployers: 2, benchmark: null }))).toBe(`6 ${NP_LONG} Jobs in Austin, TX`);
+    expect(keep(buildCityTitle({ displayName: 'Austin', stateCode: 'TX', total: 3, distinctEmployers: 1, benchmark: null }))).toBe(`${NP_LONG} Jobs in Austin, TX`);
+    // A short city name leaves room for the median.
+    expect(keep(buildCityTitle({ displayName: 'Ely', stateCode: 'NV', total: 3, distinctEmployers: 1, benchmark: BENCH }))).toBe(`${NP_LONG} Jobs in Ely, NV: $132K Median`);
+    // A city too long for the full role name keeps the count with the short form.
     const long = keep(buildCityTitle({ displayName: 'Rancho Santa Margarita Heights', stateCode: 'CA', total: 6, distinctEmployers: 2, benchmark: BENCH }));
     expect(long.length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
     expect(long).toBe(`6 ${NP} Jobs in Rancho Santa Margarita Heights, CA`);
@@ -798,8 +808,12 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(directoryDescription).not.toContain('12');
     expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 3 }))).not.toMatch(new RegExp(`^${NP} Jobs`));
 
-    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1, year: 2026 }))).toBe(`${NP} Jobs in Austin, TX (2026)`);
-    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, year: 2026 }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP} Jobs in Austin, TX (2026)`);
+    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1, year: 2026 }))).toBe(`${NP_LONG} Jobs in Austin, TX (2026)`);
+    expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, year: 2026 }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP_LONG} Jobs in Austin, TX (2026)`);
+    const longMetro = keep(buildMetroTitle({ city: 'Rancho Santa Margarita', stateCode: 'CA', total: 40, year: 2026 }));
+    expect(longMetro.length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
+    // Too long for the full role name: the short form keeps the count and year.
+    expect(longMetro).toBe(`40 ${NP} Jobs in Rancho Santa Margarita, CA (2026)`);
     const metroInput = { city: 'Austin', stateCode: 'TX', stateName: 'Texas', practiceAuthority: 'Restricted', nearbyCities: ['Round Rock', 'Cedar Park', 'Georgetown'], subMarkets: ['Downtown', 'North Austin'] };
     expect(keep(buildMetroDescription({ ...metroInput, benchmark: null })))
       .toBe(`Open ${NP} roles in Austin, TX and nearby Round Rock and Cedar Park. AANP classification: Restricted Practice. Hiring across Downtown and North Austin.`);
@@ -809,8 +823,15 @@ describe('titles print counts only at the display floor and stay inside the SERP
   });
 
   it('SAL-meta, CO-meta and SPEC-meta', () => {
-    expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: BENCH, year: 2026 }))).toBe(`${NP} Salary in Texas (TX): $132,000 Median, 2026`);
-    expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: null, year: 2026 }))).toBe(`${NP} Jobs and Pay Data in Texas (TX), 2026`);
+    // The full role name leads (2026-11-23); the median joins while it fits.
+    expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: BENCH, year: 2026 }))).toBe(`${NP_LONG} Salary in Texas: $132K Median`);
+    expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: null, year: 2026 }))).toBe(`${NP_LONG} Jobs and Pay Data in Texas`);
+    // Every jurisdiction name fits, from the shortest to the longest.
+    for (const stateName of ['Iowa', 'Massachusetts', 'District of Columbia']) {
+      for (const benchmark of [BENCH, null]) {
+        expect(keep(buildSalaryStateTitle({ stateName, stateCode: 'XX', benchmark, year: 2026 })).length).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
+      }
+    }
     const gated = keep(buildSalaryStateDescription({ env: TEXAS, facts: facts({ total: 9, benchmark: BENCH }) }));
     // No bare tier beside the pay sentence: the attributed clause cannot fit
     // there, and "restricted practice" alone read as a rule for the state.

@@ -13,6 +13,7 @@ import { JobsBoardListViewTracker } from '@/components/analytics/ViewTrackers';
 import { cardSummary } from '@/lib/pseo/job-listing-omit';
 import { loadIndexableLandingSlugs } from '@/lib/pseo/landing-verdicts';
 import { parseListingPage } from '@/lib/pseo/listing-pagination';
+import { TITLE_PAGE_PART_MAX } from '@/lib/pseo/category-metadata';
 import {
   buildHubCategoryFaqAnswer,
   selectHubCategoryGroups,
@@ -151,17 +152,16 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
 
   // Build dynamic title and description based on filters.
   //
-  // P7 runtime fix D6: dedupe the niche pair. The brand data is correct for
-  // this niche (short === medium === 'NP' is a legitimate state — the NP
-  // board has no narrower credential label), so the TEMPLATE must collapse
-  // "X & X" to "X" instead of rendering "Browse 851 NP & NP Jobs Near Me".
-  const nicheTitlePair = brand.niche.short === brand.niche.medium
-    ? brand.niche.short
-    : `${brand.niche.short} & ${brand.niche.medium}`;
-  let title = `Browse ${countLead}${nicheTitlePair} Jobs Near Me`;
-  // SEO Fix #7: trim default desc to ≤160 chars (Google SERP cap). Previous
-  // 280-char default got truncated and lost the value-prop tail.
-  let description = `Search ${countLead}${brand.niche.short} & ${brand.niche.adjective} NP jobs by state, salary, and type: remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;
+  // The default title leads with the full role name, the phrasing most
+  // searches for this page use ("nurse practitioner jobs near me"); the
+  // layout's " | NP Hiring" suffix carries the abbreviation. The count joins
+  // while the title fits the SERP budget. No niche token pair is built, so
+  // P7 runtime fix D6 ("Browse 851 NP & NP Jobs Near Me") cannot recur.
+  const baseTitle = `${brand.niche.long} Jobs Near Me`;
+  const countedTitle = jobCountDisplay === null ? null : `${baseTitle}: ${jobCountDisplay} Openings`;
+  let title = countedTitle !== null && countedTitle.length <= TITLE_PAGE_PART_MAX ? countedTitle : baseTitle;
+  // SEO Fix #7: the default description stays within the SERP cap.
+  let description = `Search ${countLead}${brand.niche.descriptor} jobs by state, specialty, salary and schedule: remote, telehealth, travel, locum and per diem. Updated daily.`;
 
   // Customize based on active filters
   const titleParts: string[] = [];
@@ -214,7 +214,7 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
     title,
     description,
     openGraph: {
-      title: `${title}: Find Your Next Position`,
+      title,
       description,
       type: 'website',
       // P0 OG sweep: the previous Supabase page-screenshot 400'd on every

@@ -234,7 +234,7 @@ describe('/pricing: the copy builder', () => {
                 `${copy.ladderIntro} ${RENEWAL_LINE} Every post, whether promo, intro, or featured, gets exactly the same features. There is no stripped-down tier.`,
             );
             expect(copy.meta).toEqual({
-                title: `Pricing | ${brand.niche.short} Job Board | Free Through ${config.promoEndsLabel}`,
+                title: `Post ${brand.niche.short} Jobs Free Through ${config.promoEndsLabel}`,
                 description: `Every ${brand.niche.short} job post is free through ${config.promoEndsLabel}, all features included. ${copy.ladderIntro} No bidding, no contracts.`,
                 ogDescription: `Post ${brand.niche.short} jobs free through ${config.promoEndsLabel}. ${copy.ladderIntro} Every post gets the full package.`,
                 ogImageTitle: `Pricing: free through ${config.promoEndsLabel}`,
@@ -263,7 +263,7 @@ describe('/pricing: the copy builder', () => {
                 heading: 'Every Post Gets the Full Package',
                 intro: 'No tiers. No downgrades. Whether intro or featured, you get everything.',
             });
-            expect(copy.meta.title).toBe(`Pricing | ${brand.niche.short} Job Board | Posts From $${config.introPrice}`);
+            expect(copy.meta.title).toBe(`${brand.niche.short} Job Post Pricing: $${config.introPrice} First, $${config.postingPrice} After`);
             expect(copy.meta.ogImageTitle).toBe(`Pricing: posts from $${config.introPrice}`);
             expect(copy.meta.description).toContain(LADDER_PRICES);
             expect(offersIn(JSON.stringify(copy))).toEqual([]);
@@ -405,11 +405,11 @@ describe('/pricing: the rendered page and its metadata follow the clock', () => 
 
     it('builds the title, description and OG card for the clock it runs at', async () => {
         const promo = await atClock(DURING_PROMO, () => pricingPage.generateMetadata());
-        expect(promo.title).toBe(`Pricing | ${brand.niche.short} Job Board | Free Through ${config.promoEndsLabel}`);
+        expect(promo.title).toBe(`Post ${brand.niche.short} Jobs Free Through ${config.promoEndsLabel}`);
         expect(ogCardTitle(promo)).toBe(`Pricing: free through ${config.promoEndsLabel}`);
 
         const ladder = await atClock(LADDER_START, () => pricingPage.generateMetadata());
-        expect(ladder.title).toBe(`Pricing | ${brand.niche.short} Job Board | Posts From $${config.introPrice}`);
+        expect(ladder.title).toBe(`${brand.niche.short} Job Post Pricing: $${config.introPrice} First, $${config.postingPrice} After`);
         expect(ladder.description).toBe(`Every ${brand.niche.short} job post includes all features. ${LADDER_PRICES} No bidding, no contracts.`);
         expect(ladder.openGraph?.description).toBe(`Post ${brand.niche.short} jobs from $${config.introPrice}. ${LADDER_PRICES} Every post gets the full package.`);
         expect(ogCardTitle(ladder)).toBe(`Pricing: posts from $${config.introPrice}`);
@@ -448,6 +448,7 @@ describe('/for-employers: the copy builder', () => {
             );
             expect(copy.pricingFaqs[1].a.startsWith('Every post (free during the promo, intro, or featured) includes the full package')).toBe(true);
             expect(copy.meta).toEqual({
+                title: `Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs Free`,
                 description: `Hire ${brand.niche.long}s. Every post is free through ${config.promoEndsLabel} with all features included. Reach candidates actively searching for ${brand.niche.short} roles.`,
                 ogImageTitle: `Hire ${brand.niche.short}s: free through ${config.promoEndsLabel}`,
             });
@@ -474,6 +475,7 @@ describe('/for-employers: the copy builder', () => {
             );
             expect(copy.pricingFaqs[1].a.startsWith('Every post (intro or featured) includes the full package')).toBe(true);
             expect(copy.meta).toEqual({
+                title: `Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs From $${config.introPrice}`,
                 description: `Hire ${brand.niche.long}s. ${LADDER_FROM_LINE} Reach candidates actively searching for ${brand.niche.short} roles.`,
                 ogImageTitle: `Hire ${brand.niche.short}s: posts from $${config.introPrice}`,
             });
@@ -532,9 +534,13 @@ describe('/for-employers: the rendered page and its metadata follow the clock', 
         const promo = await atClock(DURING_PROMO, () => employersPage.generateMetadata());
         expect(promo.description).toContain(`free through ${config.promoEndsLabel}`);
         expect(ogCardTitle(promo)).toBe(`Hire ${brand.niche.short}s: free through ${config.promoEndsLabel}`);
+        // The title follows the clock too: no price while posts are free.
+        expect(promo.title).toBe(`Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs Free`);
+        expect(String(promo.title)).not.toContain('$');
 
         const ladder = await atClock(LADDER_START, () => employersPage.generateMetadata());
-        expect(ladder.title).toBe(`For Employers | Hire ${brand.niche.short}s | ${brand.niche.short} Job Board`);
+        expect(ladder.title).toBe(`Hire a ${brand.niche.long}: Post ${brand.niche.short} Jobs From $${config.introPrice}`);
+        expect(String(ladder.title)).not.toMatch(/free/i);
         expect(ladder.description).toBe(`Hire ${brand.niche.long}s. ${LADDER_FROM_LINE} Reach candidates actively searching for ${brand.niche.short} roles.`);
         expect(ogCardTitle(ladder)).toBe(`Hire ${brand.niche.short}s: posts from $${config.introPrice}`);
         expect(offersIn(JSON.stringify(ladder))).toEqual([]);

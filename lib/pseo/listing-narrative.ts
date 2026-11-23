@@ -40,6 +40,8 @@ import {
 } from './listing-facts';
 
 const NP = brand.niche.short;
+/** Title Case full role name ("Nurse Practitioner"), which leads the geo titles. */
+const NP_LONG = brand.niche.long;
 const NP_PROSE = brand.niche.descriptor;
 const NP_PROSE_PLURAL = `${NP_PROSE}s`;
 
@@ -1128,13 +1130,39 @@ function countPrefix(n: number): string {
   return n >= COUNT_DISPLAY_FLOOR ? `${n} ` : '';
 }
 
-/** HUB-meta title: count at the display floor; median or employer count as the hook. */
+/**
+ * The first candidate title whose page part fits the SERP budget, or the last
+ * candidate when none does. Callers order candidates from the fullest to the
+ * shortest, so the fallback is the shortest form.
+ */
+function firstFittingTitle(candidates: ReadonlyArray<string | null | false>): string {
+  const present = candidates.filter((candidate): candidate is string => Boolean(candidate));
+  return present.find((candidate) => candidate.length <= TITLE_PAGE_PART_MAX) ?? present[present.length - 1];
+}
+
+/**
+ * HUB-meta title. The full role name leads ("Nurse Practitioner Jobs in
+ * Ohio"), the phrasing most state searches use; the count at the display floor
+ * and the median or employer hook join while the title fits, and the short
+ * form is the last resort.
+ */
 export function buildHubTitle(input: { stateName: string; stateCode: string; total: number; distinctEmployers: number; benchmark: BenchmarkRow | null }): string {
-  const { stateName, stateCode, total, distinctEmployers, benchmark } = input;
-  const base = `${countPrefix(total)}${NP} Jobs in ${stateName} (${stateCode})`;
-  return benchmark
-    ? `${base}: ${formatK(benchmark.median)} Median Pay`
-    : `${base}: ${formatCount(distinctEmployers, 'Employer')} Hiring`;
+  const { stateName, total, distinctEmployers, benchmark } = input;
+  const count = countPrefix(total);
+  const hook = benchmark
+    ? `: ${formatK(benchmark.median)} Median Pay`
+    : `: ${formatCount(distinctEmployers, 'Employer')} Hiring`;
+  const shortHook = benchmark ? `: ${formatK(benchmark.median)} Median` : null;
+  const long = `${NP_LONG} Jobs in ${stateName}`;
+  return firstFittingTitle([
+    `${count}${long}${hook}`,
+    shortHook && `${count}${long}${shortHook}`,
+    `${long}${hook}`,
+    shortHook && `${long}${shortHook}`,
+    `${count}${long}`,
+    long,
+    `${NP} Jobs in ${stateName}`,
+  ]);
 }
 
 /**
@@ -1171,18 +1199,27 @@ export function buildHubDescription(
   ]);
 }
 
-/** CITY-C9 title: count first at the floor, then the first suffix that fits SERP width. */
+/**
+ * CITY-C9 title: the full role name leads, with the count at the floor, then
+ * the first suffix that fits SERP width. The short form ("NP Jobs in ...")
+ * is kept for city names too long for the full one.
+ */
 export function buildCityTitle(input: { displayName: string; stateCode: string; total: number; distinctEmployers: number; benchmark: BenchmarkRow | null }): string {
   const { displayName, stateCode, total, distinctEmployers, benchmark } = input;
-  const base = `${countPrefix(total)}${NP} Jobs in ${displayName}, ${stateCode}`;
-  const suffixes = [
-    benchmark ? `: ${formatK(benchmark.median)} Median` : null,
-    distinctEmployers >= 2 ? ` from ${distinctEmployers} Employers` : null,
-  ];
-  for (const suffix of suffixes) {
-    if (suffix && `${base}${suffix}`.length <= TITLE_PAGE_PART_MAX) return `${base}${suffix}`;
-  }
-  return base;
+  const count = countPrefix(total);
+  const median = benchmark ? `: ${formatK(benchmark.median)} Median` : null;
+  const employers = distinctEmployers >= 2 ? ` from ${distinctEmployers} Employers` : null;
+  const long = `${NP_LONG} Jobs in ${displayName}, ${stateCode}`;
+  const short = `${count}${NP} Jobs in ${displayName}, ${stateCode}`;
+  return firstFittingTitle([
+    median && `${count}${long}${median}`,
+    employers && `${count}${long}${employers}`,
+    `${count}${long}`,
+    long,
+    median && `${short}${median}`,
+    employers && `${short}${employers}`,
+    short,
+  ]);
 }
 
 /** CITY-C9 description. */
@@ -1279,9 +1316,16 @@ export function buildDirectoryDescription(input: { stateName: string; totalState
   ]);
 }
 
-/** METRO-meta title. */
+/** METRO-meta title: the full role name first, the short form for long city names. */
 export function buildMetroTitle(input: { city: string; stateCode: string; total: number; year: number }): string {
-  return `${countPrefix(input.total)}${NP} Jobs in ${input.city}, ${input.stateCode} (${input.year})`;
+  const { city, stateCode, total, year } = input;
+  const count = countPrefix(total);
+  return firstFittingTitle([
+    `${count}${NP_LONG} Jobs in ${city}, ${stateCode} (${year})`,
+    `${NP_LONG} Jobs in ${city}, ${stateCode} (${year})`,
+    `${NP_LONG} Jobs in ${city}, ${stateCode}`,
+    `${count}${NP} Jobs in ${city}, ${stateCode} (${year})`,
+  ]);
 }
 
 /**
@@ -1305,12 +1349,30 @@ export function buildMetroDescription(input: {
   ]);
 }
 
-/** SAL-meta title per gate. */
+/**
+ * SAL-meta title per gate. The full role name leads ("Nurse Practitioner
+ * Salary in Texas"), the phrasing salary searches use; the median and the
+ * year join while the title fits, and the short form is the last resort.
+ */
 export function buildSalaryStateTitle(input: { stateName: string; stateCode: string; benchmark: BenchmarkRow | null; year: number }): string {
-  const { stateName, stateCode, benchmark, year } = input;
-  return benchmark
-    ? `${NP} Salary in ${stateName} (${stateCode}): ${formatDollars(benchmark.median)} Median, ${year}`
-    : `${NP} Jobs and Pay Data in ${stateName} (${stateCode}), ${year}`;
+  const { stateName, benchmark, year } = input;
+  if (benchmark) {
+    const median = formatK(benchmark.median);
+    return firstFittingTitle([
+      `${NP_LONG} Salary in ${stateName}: ${median} Median, ${year}`,
+      `${NP_LONG} Salary in ${stateName}: ${median} Median`,
+      `${NP_LONG} Salary in ${stateName} (${year})`,
+      `${NP_LONG} Salary in ${stateName}`,
+      `${NP} Salary in ${stateName}: ${median} Median, ${year}`,
+      `${NP} Salary in ${stateName}: ${median} Median`,
+    ]);
+  }
+  return firstFittingTitle([
+    `${NP_LONG} Jobs and Pay Data in ${stateName}, ${year}`,
+    `${NP_LONG} Jobs and Pay Data in ${stateName}`,
+    `${NP} Jobs and Pay Data in ${stateName}, ${year}`,
+    `${NP} Jobs and Pay Data in ${stateName}`,
+  ]);
 }
 
 /**

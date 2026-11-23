@@ -49,12 +49,18 @@ const PAGE_URL = `${brand.baseUrl}/for-employers/resources/job-description-guide
 // "an NP", not "a NP": the article follows the credential brand.niche.short spells.
 const NICHE_ARTICLE = indefiniteArticle(brand.niche.short);
 const PAGE_TITLE = `Writing ${NICHE_ARTICLE} ${brand.niche.short} Job Description That Actually Converts`;
+/**
+ * The <title>: the search's own phrase first ("nurse practitioner job
+ * description"), within the SERP budget. The H1 and the Article headline
+ * keep PAGE_TITLE.
+ */
+const SEARCH_TITLE = `${brand.niche.long} Job Description Guide`;
 const PAGE_DESCRIPTION = `A section-by-section employer guide to writing a ${brand.niche.descriptor} job description: structure, title formula, salary transparency, and the mistakes that make qualified clinicians skip your posting.`;
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Writing ${NICHE_ARTICLE} ${brand.niche.short} Job Description`)}&type=page`;
 
 export const metadata: Metadata = {
   // L-02: brand suffix comes from the root layout title template, once.
-  title: PAGE_TITLE,
+  title: SEARCH_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `${brand.niche.short} job description`,
@@ -195,8 +201,8 @@ export default function JobDescriptionGuidePage() {
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: brand.name },
-            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            author: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name },
+            publisher: { '@type': 'Organization', '@id': `${brand.baseUrl}/#organization`, name: brand.name, url: brand.baseUrl },
             mainEntityOfPage: PAGE_URL,
           }),
         }}

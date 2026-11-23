@@ -39,6 +39,16 @@ export function labelNoun(slug: string, label: string): string {
 }
 
 /**
+ * Title form of the role noun: the full role name ("Remote Nurse
+ * Practitioner"), which is how searches most often phrase these hubs. The
+ * short form stays everywhere else (headings, the analytics list name), and
+ * the brand suffix " | NP Hiring" still carries the abbreviation.
+ */
+export function labelLongNoun(slug: string, label: string): string {
+  return STANDALONE_LABEL_SLUGS.has(slug) ? label : `${label} ${brand.niche.long}`;
+}
+
+/**
  * Mid-sentence form of a label: lowercase unless it carries an acronym, a
  * digit or a plus sign ("LGBTQ+", "VA", "1099" keep their case).
  */
