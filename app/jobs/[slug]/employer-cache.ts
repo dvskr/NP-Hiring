@@ -83,14 +83,27 @@ export function getCachedEmployerJobCount(employerName: string): Promise<number>
   return cachedEmployerJobCount(employerName);
 }
 
+/** Prefix of the stand-in company the job page builds from EmployerJob (see employer-facts.ts). */
+const SYNTHESIZED_COMPANY_PREFIX = 'employer-';
+
 /**
  * The About card's employer facts. Only the company's id and names go into
  * the key, so jobs that share an employer share one entry.
+ *
+ * A synthesized stand-in carries a per-job id ('employer-' + job id), which
+ * would give every job its own entry. getEmployerFacts reads only that
+ * prefix from it (a stand-in has no profile page), so it is keyed as one
+ * employer-scoped stand-in instead.
  */
 export function getCachedEmployerFacts(
   job: { employer: string; companyId: string | null },
   company: CompanyKey | null,
 ): Promise<EmployerFacts> {
-  const key = company ? { id: company.id, name: company.name, normalizedName: company.normalizedName } : null;
+  let key: CompanyKey | null = null;
+  if (company) {
+    key = company.id.startsWith(SYNTHESIZED_COMPANY_PREFIX)
+      ? { id: SYNTHESIZED_COMPANY_PREFIX, name: job.employer, normalizedName: job.employer.toLowerCase().trim() }
+      : { id: company.id, name: company.name, normalizedName: company.normalizedName };
+  }
   return cachedEmployerFacts(job.employer, job.companyId, key);
 }
