@@ -8,9 +8,10 @@
  *   - no Supabase session refresh and no consent cookies (no Set-Cookie on
  *     an MCP call),
  *   - no site CSP and no listing rate limit (the handlers carry their own),
- * and they answer X-Robots-Tag: noindex, nofollow. The consent page
- * /oauth/authorize is NOT one of them: it keeps the session, the site CSP
- * (frame-ancestors 'none') and gets noindex, nofollow too.
+ * and they answer X-Robots-Tag: noindex, nofollow. /oauth/authorize, the
+ * consent page /oauth/consent and the decision endpoint /api/oauth/decision
+ * are NOT among them: a browser opens them, so they keep the session and the
+ * site CSP (frame-ancestors 'none') and get noindex, nofollow too.
  *
  * Driven through the real middleware() with a real NextRequest. The Supabase
  * session refresh and the rate limiter are stubbed; nothing reaches the network.
@@ -45,15 +46,13 @@ const MACHINE_PATHS: ReadonlyArray<[method: string, path: string]> = [
     ['POST', '/mcp'],
     ['GET', '/mcp'],
     ['OPTIONS', '/mcp'],
-    ['POST', '/mcp/chatgpt'],
-    ['DELETE', '/mcp/chatgpt'],
+    ['DELETE', '/mcp'],
     ['POST', '/oauth/token'],
     ['POST', '/oauth/register'],
     ['POST', '/oauth/revoke'],
     ['GET', '/.well-known/oauth-authorization-server'],
     ['GET', '/.well-known/oauth-protected-resource'],
     ['GET', '/.well-known/oauth-protected-resource/mcp'],
-    ['GET', '/.well-known/oauth-protected-resource/mcp/chatgpt'],
     ['GET', '/.well-known/openai-apps-challenge'],
 ];
 
@@ -146,11 +145,12 @@ describe('paths that only look like machine endpoints get the full pipeline', ()
     );
 });
 
-describe('the consent page /oauth/authorize keeps the site pipeline', () => {
-    it('has the session refresh and the site CSP with frame-ancestors none, and noindex, nofollow', async () => {
-        const res = await middleware(
-            request('/oauth/authorize?client_id=https%3A%2F%2Fclaude.ai%2Foauth%2Fmcp-oauth-client-metadata&response_type=code'),
-        );
+describe('the sign-in pages a browser opens keep the site pipeline', () => {
+    it.each([
+        ['/oauth/authorize?client_id=nph_ci_example&response_type=code&code_challenge=x&code_challenge_method=S256'],
+        ['/oauth/consent?req=nph_ar_example'],
+    ])('%s has the session refresh, the site CSP with frame-ancestors none, and noindex, nofollow', async (path) => {
+        const res = await middleware(request(path));
         expect(updateSession).toHaveBeenCalledTimes(1);
         const csp = res.headers.get('Content-Security-Policy') ?? '';
         expect(csp).toContain("frame-ancestors 'none'");
@@ -158,10 +158,17 @@ describe('the consent page /oauth/authorize keeps the site pipeline', () => {
         expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
     });
 
-    it('the decision endpoint the consent page posts to is treated the same way', async () => {
-        const res = await middleware(request('/oauth/authorize/decision', { method: 'POST' }));
+    it('the decision endpoint the consent page posts to keeps the session and the origin check', async () => {
+        const fromTheSite = await middleware(
+            request('/api/oauth/decision', { method: 'POST', headers: { origin: `https://${HOST}`, 'content-type': 'application/json' } }),
+        );
+        expect(fromTheSite.status).not.toBe(403);
         expect(updateSession).toHaveBeenCalledTimes(1);
-        expect(res.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'");
-        expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+        expect(fromTheSite.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+
+        const fromElsewhere = await middleware(
+            request('/api/oauth/decision', { method: 'POST', headers: { origin: 'https://attacker.example', 'content-type': 'application/json' } }),
+        );
+        expect(fromElsewhere.status).toBe(403);
     });
 });

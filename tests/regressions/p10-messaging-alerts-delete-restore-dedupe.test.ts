@@ -165,7 +165,10 @@ describe('POST /api/employer/messages restores a deleted thread (defect 1)', () 
 
 describe('job alerts double-submit (defect 3)', () => {
     it('server: find-or-create runs in a transaction behind a per-email advisory lock', () => {
-        const src = read('app/api/job-alerts/route.ts');
+        // The route hands the find-or-create to the shared creator, which the
+        // AI app's create_job_alert calls too.
+        expect(read('app/api/job-alerts/route.ts')).toContain("from '@/lib/job-alerts/create-alert'");
+        const src = read('lib/job-alerts/create-alert.ts');
         const txStart = src.indexOf('prisma.$transaction(async (tx)');
         expect(txStart).toBeGreaterThan(-1);
         const lock = src.indexOf('pg_advisory_xact_lock', txStart);

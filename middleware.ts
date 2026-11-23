@@ -610,15 +610,17 @@ const CRAWLER_LISTING_EDGE_CACHE = 'public, s-maxage=300, stale-while-revalidate
 // route with its own caching, and /companies/{slug} keeps its 410 gate above.
 const EDGE_CACHED_HUB_PATHS: ReadonlySet<string> = new Set(['/companies', '/blog']);
 
-// ── AI app machine endpoints (lib/mcp, lib/oauth) ────────────────────
-// The MCP endpoints, the OAuth token, registration and revocation endpoints
+// ── AI app machine endpoints (lib/mcp) ───────────────────────────────
+// The MCP endpoint, the OAuth token, registration and revocation endpoints
 // and their metadata documents are called by Claude's and ChatGPT's servers
 // with bearer tokens, never by a browser session. They skip everything below:
 // the host redirect (Claude drops the Authorization header on a redirect),
 // the Supabase session refresh, the consent cookies (a Set-Cookie on every
 // MCP call), the site CSP and the listing rate limits (the handlers carry
-// their own). The consent page /oauth/authorize is NOT here: it needs the
-// session and the site CSP with frame-ancestors 'none'.
+// their own). /oauth/authorize, the consent page /oauth/consent and the
+// decision it posts to (/api/oauth/decision) are NOT here: a person's browser
+// opens them, and they need the session and the site CSP with
+// frame-ancestors 'none'.
 const AI_APP_MACHINE_PATHS: readonly string[] = [
     '/mcp',
     '/oauth/token',
@@ -1491,7 +1493,7 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
         '/post-job/checkout', '/post-job/preview',
         '/job-alerts/manage', '/job-alerts/unsubscribe',
         '/unauthorized', '/unsubscribe', '/messages', '/my-applications',
-        // The AI app consent page (app/oauth/authorize).
+        // The AI app sign-in: app/oauth/authorize and the consent page app/oauth/consent.
         '/oauth',
     ];
     // SEO Fix: include the BARE prefix as well as `prefix/`. Previously

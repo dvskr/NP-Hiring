@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { brand } from '@/config/brand';
 import { trackEmailSubscribe } from '@/lib/analytics';
+import { alertResultCopy, type AlertResultCopy } from '@/lib/job-alerts/alert-result-copy';
 
 // subscribe_source for this surface. A job board has several places to hand
 // over an email, and they convert at very different rates, so the parameter
@@ -64,6 +65,7 @@ function buildCriteriaSummary(filters: InitialFilters): string {
 export default function CreateAlertForm({ initialFilters = {}, onSuccess }: CreateAlertFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [resultCopy, setResultCopy] = useState<AlertResultCopy | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -101,6 +103,8 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
         throw new Error(result.error || 'Failed to create the alert.');
       }
 
+      // What happened, to the address's owner; anyone else is told to check the inbox.
+      setResultCopy(alertResultCopy(result));
       setIsSuccess(true);
       // Fired after the route answered, not on submit: the throw above
       // catches validation rejections and route failures, so counting
@@ -139,8 +143,8 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-emerald-900">Alert created!</h3>
-        <p className="mt-1 text-sm text-emerald-700">Check your email for confirmation.</p>
+        <h3 className="text-lg font-semibold text-emerald-900">{resultCopy?.title ?? 'Check your inbox'}</h3>
+        <p className="mt-1 text-sm text-emerald-700">{resultCopy?.body}</p>
       </div>
     );
   }

@@ -243,6 +243,8 @@ export const CRON_BATCHES: readonly CronBatch[] = [
             { path: '/api/cron/purge-soft-deleted' },      // was 30 8
             { path: '/api/cron/purge-inactive-users' },    // was 45 8
             { path: '/api/cron/dsar-overdue' },            // was 0 9
+            // The AI app connector's spent and expired OAuth rows (lib/mcp/oauth/grants.ts).
+            { path: '/api/cron/oauth-cleanup' },
             { path: '/api/cron/gsc-health-check' },        // was 30 9
         ],
     },

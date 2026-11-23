@@ -1,13 +1,13 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
     "np-hiring": {
       "type": "streamable-http",
-      "url": "https://nphiring.com/mcp/chatgpt",
+      "url": "https://nphiring.com/mcp",
       "extensions": {
         "com.openai": {
           "auth": {
-            "type": "mixed",
-            "client": { "mode": "cimd" }
+            "type": "mixed"
           }
         }
       }

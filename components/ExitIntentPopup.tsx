@@ -5,6 +5,7 @@ import { X, Bell, ArrowRight } from 'lucide-react';
 import { useOverlaySlot } from '@/components/OverlayCoordinator';
 import { brand } from '@/config/brand';
 import { trackEmailSubscribe } from '@/lib/analytics';
+import { alertResultCopy, type AlertResultCopy } from '@/lib/job-alerts/alert-result-copy';
 
 const STORAGE_KEY = 'pmhnp_exit_popup_dismissed';
 const SUPPRESS_DAYS = 14;
@@ -91,6 +92,7 @@ export default function ExitIntentPopup() {
     const [email, setEmail] = useState('');
     const [newsletterOptIn, setNewsletterOptIn] = useState(true);
     const [status, setStatus] = useState<SubmitStatus>('idle');
+    const [resultCopy, setResultCopy] = useState<AlertResultCopy | null>(null);
     const [failure, setFailure] = useState<SubscribeFailure | null>(null);
 
     const dismiss = useCallback(() => {
@@ -196,21 +198,15 @@ export default function ExitIntentPopup() {
         // the flag still reports its real signups.
         const isRepeat = body?.isNew === false;
         if (!isRepeat) trackEmailSubscribe(SUBSCRIBE_SOURCE);
-        // A repeat gets its own confirmation, which promises no email: the
-        // route sends the welcome email only for an alert it newly
-        // confirmed, so "check your inbox" would send the visitor looking
-        // for an email that is usually not coming.
-        //
-        // Nor may it claim the address was subscribed before this click.
-        // isNew is false for any matched row, including one paused through
-        // PATCH /api/job-alerts/[token], one whose address clicked
-        // Unsubscribe (unsubscribeLead suppresses the EmailLead and leaves
-        // the JobAlert row), and a legacy pending alert with no confirmedAt.
-        // None of those people were receiving alerts before this click, and
-        // one who unsubscribed would read "already" as proof the unsubscribe
-        // never worked. What holds in every repeat case after a 2xx is that
-        // alerts are on now: the route has just set isActive, confirmedAt
-        // and frequency on the row and lifted any unsubscribe suppression.
+        // What the confirmation says is the route's answer read through
+        // lib/job-alerts/alert-result-copy.ts: what happened, to the address's
+        // owner (signed in as it), and to anyone else one neutral "check your
+        // inbox" whatever happened. A visitor who is not signed in is most
+        // of them, and the route no longer turns a matched alert back on or
+        // lifts an unsubscribe for them, so a repeat may not claim alerts are
+        // on, and a different answer per case would tell a stranger whether
+        // the address has alerts here.
+        setResultCopy(alertResultCopy(body ?? {}, 'daily'));
         setStatus(isRepeat ? 'repeat-confirmed' : 'subscribed');
         setTimeout(dismiss, CONFIRMATION_VISIBLE_MS);
     };
@@ -266,25 +262,12 @@ export default function ExitIntentPopup() {
 
                 {isConfirmed ? (
                     <div className="text-center py-4" role="status">
-                        {status === 'repeat-confirmed' ? (
-                            <>
-                                <p className="text-base font-semibold" style={{ color: '#22c55e' }}>
-                                    ✓ You&apos;re subscribed
-                                </p>
-                                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                                    Daily job alerts for this address are on.
-                                </p>
-                            </>
-                        ) : (
-                            <>
-                                <p className="text-base font-semibold" style={{ color: '#22c55e' }}>
-                                    ✓ You&apos;re subscribed!
-                                </p>
-                                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                                    Check your inbox for a welcome email.
-                                </p>
-                            </>
-                        )}
+                        <p className="text-base font-semibold" style={{ color: '#22c55e' }}>
+                            ✓ {resultCopy?.title ?? 'Check your inbox'}
+                        </p>
+                        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                            {resultCopy?.body}
+                        </p>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-3" noValidate>

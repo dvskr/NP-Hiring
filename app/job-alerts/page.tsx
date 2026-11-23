@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Bell, MapPin, Briefcase, Zap, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import CategoryHero from '@/components/CategoryHero';
 import { brand } from '@/config/brand';
+import { alertResultCopy } from '@/lib/job-alerts/alert-result-copy';
 import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
 import { EXPERIENCE_FILTER_BUCKETS } from '@/lib/filters';
 import { ALERT_KEYWORD_SUGGESTIONS, ALERT_KEYWORD_PLACEHOLDER } from '@/config/niche/alert-keywords';
@@ -198,7 +199,9 @@ function JobAlertsContent() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setMessage({ type: 'success', text: 'Job alert created! Your alert is active, and matching jobs will arrive in your inbox.' });
+        // What happened, to the address's owner; anyone else is told to check the inbox.
+        const copy = alertResultCopy(data, frequency);
+        setMessage({ type: 'success', text: `${copy.title} ${copy.body}` });
         // Reset form
         setEmail('');
         setKeyword('');

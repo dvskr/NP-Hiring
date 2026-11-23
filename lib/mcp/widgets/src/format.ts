@@ -1,90 +1,82 @@
 /**
- * Pure formatting helpers for the widget: numbers, calendar days, initials and
- * description paragraphs. No DOM and no host calls, so the vitest suite
- * (node environment) covers them directly (tests/mcp/widgets/format.test.ts).
+ * Display formatting for the widget views. Pure, so it is unit tested
+ * against fixed clocks. Copy follows the site style: no dashes, ranges read
+ * "X to Y".
  */
 
-const DAY_MS = 86_400_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-const formatterCache = new Map<string, Intl.DateTimeFormat>();
-
-function formatter(options: Intl.DateTimeFormatOptions, timeZone: string | undefined): Intl.DateTimeFormat {
-    const key = `${JSON.stringify(options)}|${timeZone ?? ''}`;
-    const cached = formatterCache.get(key);
-    if (cached) return cached;
-    const created = new Intl.DateTimeFormat('en-US', { ...options, timeZone });
-    formatterCache.set(key, created);
-    return created;
+/** "Posted today", "Posted yesterday", "Posted 5 days ago", "Posted 3 weeks ago". */
+export function postedLabel(iso: string | null, now: number = Date.now()): string | null {
+  if (!iso) return null;
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at)) return null;
+  const days = Math.floor((now - at) / DAY_MS);
+  if (days <= 0) return 'Posted today';
+  if (days === 1) return 'Posted yesterday';
+  if (days < 14) return `Posted ${days} days ago`;
+  if (days < 60) return `Posted ${Math.floor(days / 7)} weeks ago`;
+  return `Posted ${Math.floor(days / 30)} months ago`;
 }
 
-/** "1,234" style counts; negative or fractional input is clamped to a whole number. */
-export function formatCount(value: number): string {
-    const safe = Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
-    return safe.toLocaleString('en-US');
+/** "Oct 3", or "Oct 3, 2025" outside the current year. */
+export function shortDate(iso: string | null, now: number = Date.now()): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const sameYear = date.getUTCFullYear() === new Date(now).getUTCFullYear();
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    timeZone: 'UTC',
+  });
 }
 
-/** The host's IANA time zone when the runtime knows it; undefined falls back to the browser's own. */
-export function safeTimeZone(timeZone: string | undefined): string | undefined {
-    if (!timeZone) return undefined;
-    try {
-        formatter({ year: 'numeric' }, timeZone);
-        return timeZone;
-    } catch {
-        return undefined;
-    }
+/** 145000 to "$145k". Whole thousands; the figures are advertised pay, not precise. */
+export function moneyK(dollars: number): string {
+  return `$${Math.round(dollars / 1000)}k`;
 }
 
-export function parseDate(iso: string): Date | null {
-    const date = new Date(iso);
-    return Number.isNaN(date.getTime()) ? null : date;
+export function plural(count: number, one: string, many: string): string {
+  return `${count.toLocaleString('en-US')} ${count === 1 ? one : many}`;
 }
 
-/** Whole calendar days since the epoch for the date as seen in `timeZone`. */
-function calendarDay(date: Date, timeZone: string | undefined): number {
-    const parts = formatter({ year: 'numeric', month: 'numeric', day: 'numeric' }, timeZone).formatToParts(date);
-    const read = (type: Intl.DateTimeFormatPartTypes): number => Number(parts.find((p) => p.type === type)?.value);
-    return Date.UTC(read('year'), read('month') - 1, read('day')) / DAY_MS;
-}
-
-/**
- * Calendar days between `iso` and `now` in the viewer's time zone: 0 for the
- * same day, 1 for yesterday. A future date (clock skew) counts as today.
- */
-export function daysAgo(iso: string, now: Date, timeZone?: string): number | null {
-    const date = parseDate(iso);
-    if (!date) return null;
-    return Math.max(0, Math.round(calendarDay(now, timeZone) - calendarDay(date, timeZone)));
-}
-
-/** "Oct 5" */
-export function formatMonthDay(iso: string, timeZone?: string): string | null {
-    const date = parseDate(iso);
-    return date ? formatter({ month: 'short', day: 'numeric' }, timeZone).format(date) : null;
-}
-
-/** "Oct 5, 2026" */
-export function formatFullDate(iso: string, timeZone?: string): string | null {
-    const date = parseDate(iso);
-    return date ? formatter({ month: 'short', day: 'numeric', year: 'numeric' }, timeZone).format(date) : null;
-}
-
-const INITIALS_SKIP = new Set(['the', 'of', 'and', 'for', 'at', 'a', 'an', 'inc', 'llc', 'pc', 'pllc']);
-
-/** Two initials for the employer tile: "Acme Behavioral Health" gives "AB", "Talkiatry" gives "TA". */
+/** First letters of the first two words, for the employer avatar. */
 export function initials(name: string): string {
-    const words = name.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-    const significant = words.filter((word) => !INITIALS_SKIP.has(word.toLowerCase()));
-    const pool = significant.length > 0 ? significant : words;
-    if (pool.length === 0) return '';
-    if (pool.length === 1) return Array.from(pool[0]).slice(0, 2).join('').toUpperCase();
-    return (Array.from(pool[0])[0] + Array.from(pool[1])[0]).toUpperCase();
+  // An explicit Latin range rather than \p{L}: tsconfig targets ES2017,
+  // which predates Unicode property escapes.
+  const words = name.replace(/[^A-Za-z0-9À-ɏ\s]/g, ' ').split(/\s+/).filter(Boolean);
+  const letters = words.slice(0, 2).map((w) => w[0]!.toUpperCase());
+  return letters.join('') || '?';
 }
 
-/** Plain-text description to paragraphs: every non-empty line is one paragraph. */
-export function toParagraphs(text: string): string[] {
-    return text
-        .replace(/\r\n?/g, '\n')
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
+/** Stable hue from a string, so each employer keeps its avatar colour. */
+export function hueFor(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) hash = (hash * 31 + value.charCodeAt(i)) % 360;
+  return hash;
 }
+
+export const STATUS_LABELS: Readonly<Record<string, string>> = {
+  applied: 'Applied',
+  screening: 'Screening',
+  interview: 'Interview',
+  offered: 'Offer',
+  hired: 'Hired',
+  rejected: 'Not selected',
+  withdrawn: 'Withdrawn',
+};
+
+export function statusLabel(status: string): string {
+  return STATUS_LABELS[status] ?? status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+export const POSTING_STATUS_LABELS: Readonly<Record<string, string>> = {
+  draft: 'Draft',
+  pending_payment: 'Awaiting payment',
+  live: 'Live',
+  paused: 'Paused',
+  expired: 'Expired',
+  closed: 'Closed',
+};

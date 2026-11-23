@@ -220,7 +220,16 @@ const DEFINITION_GUIDES_PAGES: readonly string[] = [
 ];
 
 const GUIDES_FOLLOW_UPS_DAY = '2026-11-07';
-const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]', '/privacy'];
+const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]'];
+
+/**
+ * The UTC day the AI app connector was rebuilt on PMHNP Hiring's design, and
+ * the page whose copy it changed: the privacy policy's sections 11 and 17
+ * and its "Last updated" line. /privacy left the guides follow-ups group.
+ * Same rule: move the constant and these entries together if it ships later.
+ */
+const CONNECTOR_REBUILD_DAY = '2026-11-23';
+const CONNECTOR_REBUILD_PAGES: readonly string[] = ['/privacy'];
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */
 const PROMO_SWITCH_PAGES = [
@@ -413,7 +422,7 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -427,12 +436,15 @@ describe('lastmod helpers', () => {
             ...GUIDES_RELEASE_PAGES,
             ...GUIDES_FOLLOW_UPS_PAGES,
             ...DEFINITION_GUIDES_PAGES,
+            ...CONNECTOR_REBUILD_PAGES,
             ...Object.keys(UNTOUCHED_PAGE_DATES),
         ];
         expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
             const expected = DEFINITION_GUIDES_PAGES.includes(pagePath)
                 ? DEFINITION_GUIDES_DAY
+                : CONNECTOR_REBUILD_PAGES.includes(pagePath)
+                ? CONNECTOR_REBUILD_DAY
                 : GUIDES_FOLLOW_UPS_PAGES.includes(pagePath)
                 ? GUIDES_FOLLOW_UPS_DAY
                 : GUIDES_RELEASE_PAGES.includes(pagePath)
@@ -461,6 +473,14 @@ describe('lastmod helpers', () => {
         for (const at of [PROMO_RUNNING, AFTER_SWITCH]) {
             expect(pageContentDate('/terms', at)).toEqual(new Date(`${PRICING_RELEASE_DAY}T00:00:00.000Z`));
         }
+    });
+
+    it('connector rebuild: /privacy carries the ship day, and its "Last updated" line says the same day', () => {
+        expect(PAGE_CONTENT_DATES['/privacy']).toBe(CONNECTOR_REBUILD_DAY);
+        const longDay = new Date(`${CONNECTOR_REBUILD_DAY}T00:00:00.000Z`).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+        });
+        expect(fs.readFileSync(path.join(ROOT, 'app/privacy/page.tsx'), 'utf8')).toContain(`Last updated: ${longDay}</p>`);
     });
 
     it('content release: /for-programs carries its ship day, and /resources the definition guides release, on both sides of the promo end', () => {

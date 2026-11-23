@@ -1636,7 +1636,8 @@ function SettingsPageInner() {
             {profile.role !== 'employer' && <AIRecommendationsToggle />}
           </div>
 
-          {profile.role === 'job_seeker' && <ConnectedAppsSection />}
+          {/* Any account can connect an assistant (applying is open to every role, on the website too), so any account can see and remove its connections. */}
+          <ConnectedAppsSection />
 
           {/* ── Danger Zone ── */}
           <div style={{ ...cardStyle, borderColor: 'rgba(239,68,68,0.3)' }}>

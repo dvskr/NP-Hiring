@@ -1,19 +1,14 @@
+import { DISCOVERY_HEADERS, protectedResourceMetadata } from '@/lib/mcp/oauth/metadata';
+
 /**
- * GET /.well-known/oauth-protected-resource: the root protected resource
- * metadata (RFC 9728) answers the Claude endpoint's document (design 1), for
- * clients that look here before the path-suffixed URL.
+ * RFC 9728 metadata at the bare well-known path. The path-inserted forms
+ * (/mcp, /mcp/employer) are the canonical ones; this answers clients that
+ * look at the root first, for the endpoint most of them connect to.
  */
-import type { NextResponse } from 'next/server';
-import { mcpHostProfile } from '@/lib/mcp/config';
-import { corsPreflight, publicJson } from '@/lib/oauth/http';
-import { protectedResourceMetadata } from '@/lib/oauth/metadata';
-
-export const dynamic = 'force-dynamic';
-
-export function GET(): NextResponse {
-    return publicJson(protectedResourceMetadata(mcpHostProfile('claude')));
+export function GET(): Response {
+  return Response.json(protectedResourceMetadata('candidate'), { headers: DISCOVERY_HEADERS });
 }
 
-export function OPTIONS(): NextResponse {
-    return corsPreflight('GET, OPTIONS');
+export function OPTIONS(): Response {
+  return new Response(null, { status: 204, headers: DISCOVERY_HEADERS });
 }

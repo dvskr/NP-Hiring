@@ -909,7 +909,8 @@ model UserProfile {
   savedByEmployers    SavedCandidate[]         @relation("SavedAsCandidate")
   savedCandidates     SavedCandidate[]         @relation("SavedByEmployer")
   candidateAlerts     EmployerCandidateAlert[]
-  oauthGrants         OauthGrant[]
+  oauthGrants         OAuthGrant[]
+  mcpPendingActions   McpPendingAction[]
 
   @@index([supabaseId])
   @@index([email])
@@ -2040,84 +2041,161 @@ model ShortLinkClick {
   @@map("shortlink_clicks")
 }
 
-// ═══════════════════════════════════════════════════════════════
-// OAuth for the NP Hiring app in Claude and ChatGPT (lib/oauth)
-// ═══════════════════════════════════════════════════════════════
+// ─── Assistant connectors (MCP + OAuth 2.1) ─────────────────────────────────
+// The NP Hiring app for Claude and ChatGPT: app/mcp, app/oauth, lib/mcp.
+// Migration 20261123000000_replace_ai_app_oauth creates these tables (and
+// drops the first version's four, 20261028000000_add_oauth_for_ai_apps).
 
-/// A client registered through Dynamic Client Registration
-/// (POST /oauth/register). A client whose client_id is an https URL (a
-/// Client ID Metadata Document) is never stored: lib/oauth/clients.ts
-/// fetches and caches its document instead.
-model OauthClient {
-  id           String    @id
-  clientName   String    @map("client_name")
-  redirectUris String[]  @map("redirect_uris")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  lastUsedAt   DateTime? @map("last_used_at")
+/// An app that registered itself through Dynamic Client Registration
+/// (RFC 7591). Claude and ChatGPT both register this way the first time
+/// someone connects, so rows are created by unauthenticated requests:
+/// clientName is self-asserted, which is why the consent screen names the
+/// host the person will be sent back to instead of trusting the name.
+model OAuthClient {
+  id                      String   @id @default(cuid())
+  clientId                String   @unique @map("client_id")
+  /// Null for public clients, which is what MCP hosts register as. They
+  /// prove possession with PKCE instead of a secret.
+  clientSecretHash        String?  @map("client_secret_hash")
+  clientName              String   @map("client_name") @db.VarChar(120)
+  clientUri               String?  @map("client_uri") @db.VarChar(500)
+  redirectUris            String[] @map("redirect_uris")
+  /// 'none' | 'client_secret_post' | 'client_secret_basic'
+  tokenEndpointAuthMethod String   @default("none") @map("token_endpoint_auth_method")
+  grantTypes              String[] @map("grant_types")
+  softwareId              String?  @map("software_id") @db.VarChar(200)
+  softwareVersion         String?  @map("software_version") @db.VarChar(100)
+  createdAt               DateTime @default(now()) @map("created_at")
 
+  authorizationRequests OAuthAuthorizationRequest[]
+  grants                OAuthGrant[]
+
+  @@index([createdAt])
   @@map("oauth_clients")
 }
 
-/// One candidate's approval of one AI app, written when they press Allow on
-/// /oauth/authorize. Every token issued under it dies with it: access tokens
-/// are checked against revokedAt on each MCP request, and a refresh is
-/// refused once it is set. Revoked by the candidate (Settings, Connected
-/// apps), by the app (POST /oauth/revoke) or on a replayed code or refresh
-/// token. Deleting the profile deletes it.
-model OauthGrant {
-  id            String    @id @default(cuid())
-  /// The candidate's Supabase auth id (user_profiles.supabase_id).
-  userId        String    @map("user_id")
-  /// A DCR id (oauth_clients.id) or a client metadata document URL.
-  clientId      String    @map("client_id")
-  clientName    String    @map("client_name")
-  redirectUri   String    @map("redirect_uri")
-  scopes        String[]
-  /// The MCP endpoint URL the tokens are issued for (their audience).
-  resource      String
-  createdAt     DateTime  @default(now()) @map("created_at")
-  lastUsedAt    DateTime? @map("last_used_at")
-  revokedAt     DateTime? @map("revoked_at")
-  /// user_revoke | client_revoke | code_reuse | refresh_reuse
-  revokedReason String?   @map("revoked_reason")
+/// One /oauth/authorize call, parked while the person signs in and decides.
+/// The id is the only thing carried through the login redirect, because the
+/// Google sign-in button appends its return path to the callback URL
+/// unencoded and a raw OAuth query string would lose everything after its
+/// first ampersand. Single use: the consent decision deletes the row.
+model OAuthAuthorizationRequest {
+  /// Random, unguessable handle (lib/mcp/oauth/crypto.ts).
+  id                  String   @id
+  clientId            String   @map("client_id")
+  redirectUri         String   @map("redirect_uri")
+  /// The MCP endpoint URL the token will be bound to (RFC 8707).
+  resource            String
+  scope               String
+  state               String?  @db.Text
+  codeChallenge       String   @map("code_challenge")
+  codeChallengeMethod String   @map("code_challenge_method")
+  createdAt           DateTime @default(now()) @map("created_at")
+  expiresAt           DateTime @map("expires_at")
 
-  user          UserProfile              @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
-  codes         OauthAuthorizationCode[]
-  refreshTokens OauthRefreshToken[]
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
 
-  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("oauth_authorization_requests")
+}
+
+/// A person's standing permission for one app to reach one MCP endpoint.
+/// This is the row "Connected apps" in settings lists and revokes. Revoking
+/// stamps revokedAt here AND on every token, so approving the same app again
+/// later issues fresh tokens rather than reviving old ones.
+model OAuthGrant {
+  id         String    @id @default(cuid())
+  clientId   String    @map("client_id")
+  /// Supabase user id, like every other user foreign key in this schema.
+  userId     String    @map("user_id")
+  resource   String
+  scope      String
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  /// Throttled write from token verification, for the settings list.
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  client OAuthClient              @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   UserProfile              @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+  codes  OAuthAuthorizationCode[]
+  tokens OAuthToken[]
+
+  @@unique([clientId, userId, resource])
+  @@index([userId])
   @@map("oauth_grants")
 }
 
-/// A single-use authorization code. Only its SHA-256 is stored.
-model OauthAuthorizationCode {
-  codeHash      String    @id @map("code_hash")
-  grantId       String    @map("grant_id")
-  /// PKCE S256 challenge sent with the authorization request.
-  codeChallenge String    @map("code_challenge")
-  expiresAt     DateTime  @map("expires_at")
-  consumedAt    DateTime? @map("consumed_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
+/// Authorization codes: five-minute, single-use, PKCE-bound. consumedAt is
+/// the single-use lock; a second presentation of a consumed code is treated
+/// as a stolen code and revokes the grant (OAuth 2.1 section 4.1.3).
+model OAuthAuthorizationCode {
+  id                  String    @id @default(cuid())
+  codeHash            String    @unique @map("code_hash")
+  grantId             String    @map("grant_id")
+  redirectUri         String    @map("redirect_uri")
+  codeChallenge       String    @map("code_challenge")
+  codeChallengeMethod String    @map("code_challenge_method")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  expiresAt           DateTime  @map("expires_at")
+  consumedAt          DateTime? @map("consumed_at")
 
-  grant OauthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  grant OAuthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
 
-  @@index([grantId])
+  @@index([expiresAt])
   @@map("oauth_authorization_codes")
 }
 
-/// A rotating refresh token. Only its SHA-256 is stored; consumedAt marks
-/// it used, and a second use revokes the whole grant.
-model OauthRefreshToken {
-  tokenHash  String    @id @map("token_hash")
-  grantId    String    @map("grant_id")
-  expiresAt  DateTime  @map("expires_at")
-  consumedAt DateTime? @map("consumed_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
+/// Access and refresh tokens. Refresh tokens rotate: rotatedAt marks one as
+/// spent. A spent one presented again gets one more pair inside a short
+/// grace window (revokedAt then marks that use as taken); any other replay
+/// revokes the whole grant, because only a copy of the token can be using it.
+model OAuthToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique @map("token_hash")
+  grantId   String    @map("grant_id")
+  /// 'access' | 'refresh'
+  kind      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  rotatedAt DateTime? @map("rotated_at")
 
-  grant OauthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  grant OAuthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
 
   @@index([grantId])
-  @@map("oauth_refresh_tokens")
+  @@index([expiresAt])
+  @@map("oauth_tokens")
+}
+
+/// What an assistant showed the person before a write: an application
+/// review (prepare_application) or a posting preview (preview_job_posting).
+/// The write must present this row's id, so it can only send what was
+/// reviewed, for the account that reviewed it, once. A posting preview keeps
+/// the exact posting in `payload`, so the published text is the previewed
+/// text, and keeps the write's outcome in `result`, so a retry after a lost
+/// response returns the same posting instead of publishing a second one.
+model McpPendingAction {
+  /// Random, unguessable handle, returned to the assistant.
+  id         String    @id
+  /// Supabase user id of the account that reviewed it.
+  userId     String    @map("user_id")
+  /// 'submit_application' | 'publish_posting'
+  kind       String    @db.VarChar(40)
+  /// The job an application review is for.
+  subjectId  String?   @map("subject_id") @db.VarChar(100)
+  payload    Json?
+  result     Json?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime  @map("expires_at")
+  /// Set when a write claims it; with no result yet, the write is in flight.
+  consumedAt DateTime? @map("consumed_at")
+
+  user UserProfile @relation(fields: [userId], references: [supabaseId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("mcp_pending_actions")
 }
 
 /// One delivery from the NP guides store (/guides): a single guide or a

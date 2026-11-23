@@ -156,7 +156,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // assistant receives, what it never receives and how to remove its access.
   // 2026-11-07 (store follow-ups): career guide emails in sections 1, 3 and
   // 11, and how to remove one claimed with another address.
-  '/privacy': '2026-11-07',
+  // 2026-11-23 (AI app connector rebuild): section 17 lists what an assistant
+  // may do and receive, and section 11 how long each connection record is kept.
+  '/privacy': '2026-11-23',
   // 2026-10-25 (2027 re-price): two ladder cards, the ladder and renewal lines, and no plan card, CTA or FAQ;
   // 2026-10-26 (Phase 3): the 5-post pack card and answer, and the all sales final refund answer.
   '/pricing': '2026-10-26',

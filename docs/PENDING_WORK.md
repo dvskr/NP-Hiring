@@ -136,15 +136,14 @@ dry run first and then with `--apply` in one transaction:
 - Why: the code fixes stop new bad rows; these repair the rows already stored.
 - Where: a terminal on a trusted machine. The repo `.env` is the production database.
 
-**1.15 The NP Hiring app in Claude and ChatGPT.** Built 2026-10-28 (`docs/ai-apps/README.md`). To switch it on
-and list it, in this order (steps and copy in `docs/ai-apps/submission.md`):
-1. Vercel: `MCP_OAUTH_SIGNING_SECRET` (48+ random characters), then redeploy. Until then only job search works.
-2. Sign up the reviewer account (email and password, no magic link), fill its profile, add a sample resume.
-3. Approve the production write of the three review sandbox jobs (`scripts/mcp-review-sandbox.ts --apply`) and
-   put the reviewer's user id in `MCP_REVIEWER_USER_IDS`.
-4. Try both apps yourself (submission.md 1.4).
-5. Claude: submit at claude.ai/directory/manage (Pro, Max, Team or Enterprise account).
-6. ChatGPT: business verification for Akari Labs LLC on platform.openai.com, the domain token in
+**1.15 The NP Hiring app in Claude and ChatGPT.** Rebuilt 2026-11-23 on PMHNP Hiring's design (`docs/mcp/README.md`):
+one endpoint, `https://nphiring.com/mcp`, for every host, and sign-in that needs no secret, so it works on deploy.
+To list it, in this order (steps and copy in `docs/ai-apps/submission.md`):
+1. Sign up the reviewer account (email and password, no magic link), fill its profile, add a sample resume, and
+   put its email in `MCP_TEST_ACCOUNTS` (its applications from an assistant are checked and never sent).
+2. Try it yourself in Claude and ChatGPT (submission.md 1.3).
+3. Claude: submit at claude.ai/directory/manage (Pro, Max, Team or Enterprise account).
+4. ChatGPT: business verification for Akari Labs LLC on platform.openai.com, the domain token in
    `OPENAI_APPS_CHALLENGE_TOKEN`, the package, the five plus three test cases and a 1 to 2 minute demo video.
 - Why: the directories are where candidates find the app; a custom connector works for anyone today.
 - Where: Vercel, nphiring.com, claude.ai, platform.openai.com.
@@ -306,8 +305,8 @@ review of the plan deletion. None is reachable while paid posting is off, and no
 - Listing screenshots from the live app in both hosts (Claude: 3 to 5 PNGs at least 1000px wide with their
   prompts), and the ChatGPT package: add the manifest `$schema` from OpenAI's packaging page, zip
   `docs/ai-apps/openai-plugin/`, and fix whatever the upload dashboard reports.
-- Expired authorization codes and refresh tokens, and registered clients never used, are kept. A daily delete
-  of codes and tokens past `expires_at` (and of `oauth_clients` unused for 30 days) would keep the tables small.
+- (Closed 2026-11-23 by the rebuild: the daily `oauth-cleanup` in the morning cron batch deletes spent codes,
+  tokens, ended connections and unused registrations, as privacy sections 11 and 17 say.)
 - ChatGPT can hand a widget a file (`openai/fileParams`); a resume picked in the chat could be uploaded for a
   candidate without one. Claude has no such API yet, so the profile resume is the only source today.
 - Put the listing links in `config/ai-apps.ts` once each directory publishes them.
@@ -710,5 +709,5 @@ tests fail until every side agrees:
 - `8ac1d66` (2026-10-25) The 2027 re-price: $249 first post, $349 after, renewals $199 or $249 by post, the Employer plan retired from every page.
 - `00282e6`, `1d3e18b`, `e0e9d4e`, `08f2e33` (2026-10-26) The one-time 5-post pack for $1,245 (backend, pages, emails, admin), all sales final, and the code and security review fixes; migration `20261025000000_add_employer_post_packs` applied by the build.
 - `4210512`, `b014700` and the review fixes on top (2026-10-27) The retired Employer plan's code deleted (2.27 phase 4), the 2.29 security follow-ups (edit token window on every route that edits, paid checkout validators, the logo rule, drafts cleared by account, the typed body guard) and the 2.30 monitoring fixes (no zero Search Console snapshots, Bing skips counted as skipped).
-- `ba12bc5` (2026-11-03) The NP Hiring app for Claude and ChatGPT: job search and Easy Apply from the chat, its own sign-in (off until 1.15), migration `20261028000000_add_oauth_for_ai_apps`.
+- `ba12bc5` (2026-11-03) The NP Hiring app for Claude and ChatGPT: job search and Easy Apply from the chat, its own sign-in (off until 1.15), migration `20261028000000_add_oauth_for_ai_apps`. Replaced on 2026-11-23 (1.15).
 - `831000c` (2026-11-07) The career guides store at /guides, ported from pmhnphiring.com: six cleaned NP guides (no dashes, no edition labels, the Compensation Report sold whole, covers), three bundles, free to claim with an email until the paid ladder starts, then sold through Stripe at the same prices as the PMHNP store; private downloads from the `guides` bucket; migration `20261107000000_add_guide_purchases`.

@@ -155,7 +155,18 @@ describe('POST /api/job-alerts newsletter consent (defect 1)', () => {
 });
 
 describe('POST /api/job-alerts lifts unsubscribe suppression only (defect 3)', () => {
-  it('an unsubscribe-suppressed lead is un-suppressed on the lead and the profile', async () => {
+  it('a stranger\'s signup leaves an unsubscribe in place', async () => {
+    h.getUser.mockResolvedValue({ data: { user: null } });
+    h.emailLead.upsert.mockResolvedValue({ isSuppressed: true, suppressionReason: 'unsubscribe' });
+    const res = await POST(postReq(JSON.stringify({ email: EMAIL, keyword: 'Suppressed probe' })));
+    expect(res.status).toBe(200);
+    expect(h.emailLead.update).not.toHaveBeenCalled();
+    expect(h.userProfile.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('the owner\'s signup un-suppresses an unsubscribed lead on the lead and the profile', async () => {
+    // Signed in as the address, with the address confirmed (lib/job-alerts/alert-access.ts).
+    h.getUser.mockResolvedValue({ data: { user: { id: 'user-1', email: EMAIL, email_confirmed_at: '2026-01-01T00:00:00Z' } } });
     h.emailLead.upsert.mockResolvedValue({ isSuppressed: true, suppressionReason: 'unsubscribe' });
     const res = await POST(postReq(JSON.stringify({ email: EMAIL, keyword: 'Suppressed probe' })));
     expect(res.status).toBe(200);
@@ -165,7 +176,7 @@ describe('POST /api/job-alerts lifts unsubscribe suppression only (defect 3)', (
     });
     // A deleted account stays suppressed (security review of register 2.26).
     expect(h.userProfile.updateMany).toHaveBeenCalledWith({
-      where: { email: { equals: EMAIL, mode: 'insensitive' }, deletedAt: null },
+      where: { email: { in: [EMAIL], mode: 'insensitive' }, deletedAt: null },
       data: { emailSuppressed: false, emailSuppressedAt: null },
     });
     const batchCalls = h.$transaction.mock.calls
@@ -224,11 +235,13 @@ describe('GET /api/job-alerts/by-email returns experience criteria (defect 5)', 
 });
 
 describe('/job-alerts success copy (defect 6)', () => {
-  const src = fs.readFileSync(path.join(process.cwd(), 'app/job-alerts/page.tsx'), 'utf8');
+  // The forms read POST /api/job-alerts through lib/job-alerts/alert-result-copy.ts.
+  const src = fs.readFileSync(path.join(process.cwd(), 'lib/job-alerts/alert-result-copy.ts'), 'utf8');
   it('does not ask a single-opt-in subscriber to confirm', () => {
+    expect(fs.readFileSync(path.join(process.cwd(), 'app/job-alerts/page.tsx'), 'utf8')).toContain('alertResultCopy(data, frequency)');
     const line = src.split('\n').find((l) => l.includes("'Job alert created!"));
     expect(line).toBeDefined();
     expect(line).not.toMatch(/confirm/i);
-    expect(line).not.toMatch(/[–—]/);
+    expect(src).not.toMatch(/[–—]/);
   });
 });

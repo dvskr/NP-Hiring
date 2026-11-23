@@ -57,9 +57,11 @@ describe('P10 defect 2: apply-direct status on re-apply', () => {
 
     it('the submit routine spreads the status fields into both upsert branches', () => {
         // The upsert moved from the apply-direct route to the routine it shares
-        // with the AI app's submit_application.
+        // with the AI app's submit_application. decideSubmission builds the
+        // fields with buildApplicationStatusFields unless an earlier knockout
+        // decides them (tests/lib/applications/status-fields-decide.test.ts).
         const src = read('lib/applications/submit-direct-application.ts');
-        expect(src).toContain("import { buildApplicationStatusFields } from './status-fields'");
+        expect(src).toContain("import { decideSubmission } from './status-fields'");
         expect(src.split('...statusFields,').length - 1).toBe(2);
         expect(src).toContain('withdrawnAt: null');
     });

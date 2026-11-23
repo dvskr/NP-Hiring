@@ -53,6 +53,9 @@ vi.mock('@/lib/rate-limit', () => ({ rateLimit: h.rateLimit, RATE_LIMITS }));
 vi.mock('@/lib/beehiiv', () => ({ syncToBeehiiv: vi.fn() }));
 vi.mock('@/lib/email-service', () => ({ sendWelcomeEmail: vi.fn().mockResolvedValue({ success: true }), isEmailSuppressed: vi.fn().mockResolvedValue(false) }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
+// Whether the caller is signed in as the address (lib/job-alerts/alert-access.ts).
+const access = vi.hoisted(() => ({ provesControlOf: vi.fn() }));
+vi.mock('@/lib/job-alerts/alert-access', () => ({ provesControlOf: access.provesControlOf }));
 
 import { DELETE, GET, POST } from '@/app/api/job-alerts/route';
 import { PATCH } from '@/app/api/job-alerts/[token]/route';
@@ -72,6 +75,7 @@ const getReq = (token: string) => new NextRequest(`http://localhost/api/job-aler
 
 beforeEach(() => {
   vi.clearAllMocks();
+  access.provesControlOf.mockResolvedValue(false);
   h.rateLimit.mockResolvedValue(null);
   h.emailLead.upsert.mockResolvedValue({ isSuppressed: false, suppressionReason: null });
   h.$executeRaw.mockResolvedValue(1);
@@ -102,8 +106,16 @@ describe('POST /api/job-alerts: the token a new alert is stored under', () => {
     expect(tokens[0]).not.toBe(tokens[1]);
   });
 
-  it('a repeat of existing criteria leaves the stored token alone', async () => {
+  it('a stranger\'s repeat of existing criteria changes nothing at all', async () => {
+    h.txJobAlert.findFirst.mockResolvedValue({ id: 'alert-1', token: 'existing-token', name: null, confirmedAt: new Date('2026-09-01'), isActive: false, frequency: 'daily' });
+    await POST(postReq({ email: EMAIL, frequency: 'weekly' }));
+    expect(h.txJobAlert.create).not.toHaveBeenCalled();
+    expect(h.txJobAlert.update).not.toHaveBeenCalled();
+  });
+
+  it('the owner\'s repeat of existing criteria leaves the stored token alone', async () => {
     // Rotating it here would break the links already in that inbox.
+    access.provesControlOf.mockResolvedValue(true);
     h.txJobAlert.findFirst.mockResolvedValue({ id: 'alert-1', token: 'existing-token', name: null, confirmedAt: new Date('2026-09-01') });
     await POST(postReq({ email: EMAIL, frequency: 'weekly' }));
     expect(h.txJobAlert.create).not.toHaveBeenCalled();

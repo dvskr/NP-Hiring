@@ -1,17 +1,10 @@
-/**
- * GET /.well-known/oauth-authorization-server: RFC 8414 metadata of the
- * OAuth server behind the NP Hiring app in Claude and ChatGPT (design 2.2).
- */
-import type { NextResponse } from 'next/server';
-import { corsPreflight, publicJson } from '@/lib/oauth/http';
-import { authorizationServerMetadata } from '@/lib/oauth/metadata';
+import { authorizationServerMetadata, DISCOVERY_HEADERS } from '@/lib/mcp/oauth/metadata';
 
-export const dynamic = 'force-dynamic';
-
-export function GET(): NextResponse {
-    return publicJson(authorizationServerMetadata());
+/** RFC 8414 metadata for the AI assistant connectors' authorization server. */
+export function GET(): Response {
+  return Response.json(authorizationServerMetadata(), { headers: DISCOVERY_HEADERS });
 }
 
-export function OPTIONS(): NextResponse {
-    return corsPreflight('GET, OPTIONS');
+export function OPTIONS(): Response {
+  return new Response(null, { status: 204, headers: DISCOVERY_HEADERS });
 }

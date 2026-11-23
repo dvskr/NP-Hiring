@@ -4,8 +4,8 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { Bot, Link2, KeyRound, Send, MessageSquareText, ShieldCheck, LifeBuoy, ListChecks } from 'lucide-react';
 import { brand } from '@/config/brand';
 import { aiAppListings } from '@/config/ai-apps';
-import { MCP_SCOPES, MCP_SCOPE_DESCRIPTIONS, mcpHostProfile } from '@/lib/mcp/config';
-import { TOOL } from '@/lib/mcp/tool-names';
+import { SCOPE_PERMISSIONS, resourceUrl } from '@/lib/mcp/oauth/config';
+import { CANDIDATE_ENDPOINT } from '@/lib/mcp/endpoints/candidate';
 
 /**
  * Public documentation for the NP Hiring app in Claude and ChatGPT: how to
@@ -15,7 +15,7 @@ import { TOOL } from '@/lib/mcp/tool-names';
  */
 export const metadata: Metadata = {
     title: `${brand.name} in Claude and ChatGPT`,
-    description: `Search ${brand.niche.short} jobs, apply with Easy Apply and follow your applications from Claude or ChatGPT.`,
+    description: `Search ${brand.niche.short} and APRN jobs, check pay and practice authority, apply with Easy Apply and follow your applications from Claude or ChatGPT.`,
     alternates: { canonical: `${brand.baseUrl}/ai-apps` },
     robots: { index: true, follow: true },
 };
@@ -76,31 +76,19 @@ function Section({ id, icon, title, children }: SectionProps) {
     );
 }
 
-const TOOLS: ReadonlyArray<{ name: string; does: string; signIn: boolean }> = [
-    { name: TOOL.searchJobs, does: `Searches ${brand.name} jobs by specialty, place, work mode, schedule, pay and keywords`, signIn: false },
-    { name: TOOL.getJob, does: 'Shows one job in full, with how to apply', signIn: false },
-    { name: TOOL.practiceAuthority, does: "Gives a state's practice authority tier and what the state requires", signIn: false },
-    { name: TOOL.profileStatus, does: 'Checks your profile and resume before you apply', signIn: true },
-    { name: TOOL.startApplication, does: 'Opens the application review for a job without sending anything', signIn: true },
-    { name: TOOL.submitApplication, does: 'Sends an Easy Apply application after you review it and agree to share it', signIn: true },
-    { name: TOOL.trackEmployerSiteApplication, does: "Adds a job you applied to on the employer's site to My applications", signIn: true },
-    { name: TOOL.listApplications, does: 'Lists your applications and where each one stands', signIn: true },
-    { name: TOOL.withdrawApplication, does: 'Withdraws an application you choose', signIn: true },
-    { name: TOOL.saveJob, does: 'Saves a job', signIn: true },
-    { name: TOOL.unsaveJob, does: 'Removes a saved job', signIn: true },
-    { name: TOOL.listSavedJobs, does: 'Lists your saved jobs', signIn: true },
-];
+/** The connector's own tools, as it lists them to Claude and ChatGPT. */
+const TOOLS = CANDIDATE_ENDPOINT.tools.map((tool) => ({ name: tool.name, does: tool.title, signIn: tool.auth === 'required' }));
 
 const EXAMPLE_PROMPTS: readonly string[] = [
     `Find remote ${brand.niche.short} jobs in Texas that pay over $150k.`,
     'Show me Easy Apply family practice jobs in Florida and help me apply to one.',
     `Which of my ${brand.name} applications are still active?`,
     `Does Arizona give ${brand.niche.short}s full practice authority?`,
+    'Compare a $140k W-2 offer with a $95 an hour 1099 contract.',
 ];
 
 export default function AiAppsPage() {
-    const claude = mcpHostProfile('claude');
-    const chatgpt = mcpHostProfile('chatgpt');
+    const endpoint = resourceUrl('candidate');
     return (
         <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '48px 16px 80px' }}>
             <BreadcrumbSchema
@@ -140,18 +128,18 @@ export default function AiAppsPage() {
                         {brand.name} in <span style={{ color: '#BE185D' }}>Claude and ChatGPT</span>
                     </h1>
                     <p style={{ fontSize: '15px', color: '#4A5568', margin: 0, lineHeight: 1.7 }}>
-                        Search {brand.niche.short} jobs, apply with Easy Apply and follow your applications without
+                        Search {brand.niche.short} and APRN jobs, apply with Easy Apply and follow your applications without
                         leaving the conversation.
                     </p>
                 </header>
 
                 <Section id="what-it-does" icon={<ListChecks size={20} />} title="What it does">
                     <ul style={ulStyle}>
-                        <li>Searches every {brand.niche.short} job listed on {brand.name}, with pay, location and schedule.</li>
-                        <li>Shows a job in full and checks a state&apos;s practice authority.</li>
+                        <li>Searches every job listed on {brand.name} by specialty, APRN role, place, work mode, schedule and pay.</li>
+                        <li>Shows a job in full, compares two or three side by side, and gives advertised pay and practice authority by state.</li>
                         <li>Sends Easy Apply applications with the resume on your profile, after you review and agree.</li>
-                        <li>Gives the employer&apos;s link for other jobs and adds them to My applications.</li>
-                        <li>Lists your applications and saved jobs, and withdraws an application when you ask.</li>
+                        <li>Lists your applications and saved jobs, withdraws an application when you ask, and sets up job alerts.</li>
+                        <li>Finds {brand.name} articles and runs the pay calculators, including W-2 against 1099.</li>
                     </ul>
                 </Section>
 
@@ -167,7 +155,7 @@ export default function AiAppsPage() {
                     ) : null}
                     <p style={pStyle}>{aiAppListings.claude ? 'Or add' : 'Add'} a custom connector in Claude with this URL:</p>
                     <p style={pStyle}>
-                        <code style={codeStyle}>{claude.resourceUrl}</code>
+                        <code style={codeStyle}>{endpoint}</code>
                     </p>
                 </Section>
 
@@ -183,10 +171,10 @@ export default function AiAppsPage() {
                     ) : null}
                     <p style={pStyle}>
                         {aiAppListings.chatgpt ? 'ChatGPT plans that allow custom MCP servers can also add' : 'ChatGPT plans that allow custom MCP servers can add'}{' '}
-                        this URL:
+                        the same URL:
                     </p>
                     <p style={pStyle}>
-                        <code style={codeStyle}>{chatgpt.resourceUrl}</code>
+                        <code style={codeStyle}>{endpoint}</code>
                     </p>
                 </Section>
 
@@ -196,8 +184,8 @@ export default function AiAppsPage() {
                         sign in on a {brand.name} page and approve what it may do:
                     </p>
                     <ul style={ulStyle}>
-                        {MCP_SCOPES.map((scope) => (
-                            <li key={scope}>{MCP_SCOPE_DESCRIPTIONS[scope]}.</li>
+                        {SCOPE_PERMISSIONS.candidate.map((line) => (
+                            <li key={line}>{line}.</li>
                         ))}
                     </ul>
                     <p style={pStyle}>
@@ -210,7 +198,7 @@ export default function AiAppsPage() {
                     <p style={pStyle}>
                         For an Easy Apply job, the assistant opens a review with the resume on your profile, a cover letter
                         you can edit, the employer&apos;s screening questions and the consent line. Nothing is sent until you
-                        submit it. Other jobs continue on the employer&apos;s site, and the app can add them to My applications.
+                        submit it. Other jobs continue on the employer&apos;s site, through the job page.
                     </p>
                 </Section>
 

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { readJsonObject } from '@/lib/request-body';
+import { withdrawApplication } from '@/lib/applications/withdraw';
 
 /**
  * DELETE /api/applications/withdraw
  * Withdraw an application and scrub applicant data (GDPR right to erasure).
  * Body: { applicationId: string }
+ *
+ * The scrub itself lives in lib/applications/withdraw.ts, shared with the
+ * AI app's withdraw_application tool.
  */
 export async function DELETE(request: NextRequest) {
     try {
@@ -17,44 +21,11 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await request.json();
-        const { applicationId } = body;
-
-        if (!applicationId || typeof applicationId !== 'string') {
-            return NextResponse.json({ error: 'applicationId is required' }, { status: 400 });
+        const body = await readJsonObject(request);
+        const outcome = await withdrawApplication(user.id, body?.applicationId);
+        if (!outcome.ok) {
+            return NextResponse.json({ error: outcome.error }, { status: outcome.status });
         }
-
-        // Verify the application belongs to this user
-        const application = await prisma.jobApplication.findUnique({
-            where: { id: applicationId },
-            select: { userId: true, jobId: true },
-        });
-
-        if (!application) {
-            return NextResponse.json({ error: 'Application not found' }, { status: 404 });
-        }
-
-        if (application.userId !== user.id) {
-            return NextResponse.json({ error: 'You can only withdraw your own applications' }, { status: 403 });
-        }
-
-        // Scrub personal data but keep the record for analytics (GDPR-compliant)
-        await prisma.jobApplication.update({
-            where: { id: applicationId },
-            data: {
-                coverLetter: null,
-                resumeUrl: null,
-                status: 'withdrawn',
-                withdrawnAt: new Date(),
-                notes: null,
-            },
-        });
-
-        logger.info('Application withdrawn (GDPR)', {
-            applicationId,
-            userId: user.id,
-            jobId: application.jobId,
-        });
 
         return NextResponse.json({ success: true });
     } catch (error) {

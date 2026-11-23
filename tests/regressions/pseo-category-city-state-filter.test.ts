@@ -16,6 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { insensitiveIn } from '@/lib/insensitive-in';
 
 const ROOT = process.cwd();
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf-8').replace(/\r\n/g, '\n');
@@ -49,11 +50,24 @@ describe('aggregate-pseo category x city grouping', () => {
     });
 });
 
+/**
+ * lib/insensitive-in.ts is the one place the pair may appear: it lowercases
+ * the list itself, so both sides of the comparison are lower case (the bug
+ * this ban exists for is the unlowered list). It is how the job alert code
+ * matches an address without an insensitive `equals`, which compiles to
+ * ILIKE, where an underscore in an address matches any character.
+ */
+const LOWERS_ITS_LIST = new Set(['lib/insensitive-in.ts']);
+
 describe('no query combines `in` with mode: insensitive', () => {
     it('across app/ and lib/', () => {
-        const offenders = [...sourceFiles('app'), ...sourceFiles('lib')].filter((rel) =>
-            IN_WITH_INSENSITIVE.test(read(rel).replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')),
-        );
+        const offenders = [...sourceFiles('app'), ...sourceFiles('lib')]
+            .filter((rel) => !LOWERS_ITS_LIST.has(rel.split(path.sep).join('/')))
+            .filter((rel) => IN_WITH_INSENSITIVE.test(read(rel).replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')));
         expect(offenders, 'Prisma lowercases the column but not the list, so this filter matches nothing').toEqual([]);
+    });
+
+    it('the one helper that may use it lowercases its list', () => {
+        expect(insensitiveIn(['A_B@Example.COM', 'x@y.org'])).toEqual({ in: ['a_b@example.com', 'x@y.org'], mode: 'insensitive' });
     });
 });

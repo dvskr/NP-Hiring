@@ -1,25 +1,18 @@
-import { handleMcpRequest } from '@/lib/mcp/handler';
+import { handleMcpRequest } from '@/lib/mcp/server/http-handler';
+import { CANDIDATE_ENDPOINT } from '@/lib/mcp/endpoints/candidate';
 
 /**
- * The NP Hiring MCP endpoint for Claude (and any standard MCP client):
- * https://nphiring.com/mcp. ChatGPT connects to /mcp/chatgpt instead; see
- * lib/mcp/config.ts for why there are two.
+ * The job seeker MCP endpoint, one address for ChatGPT, Claude and other MCP
+ * clients. Streamable HTTP, stateless, JSON responses. See
+ * lib/mcp/server/http-handler.ts.
  */
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// Well under Claude's 240 second tool-call ceiling; every tool here is a few queries.
 export const maxDuration = 60;
 
-export async function GET(request: Request): Promise<Response> {
-    return handleMcpRequest(request, 'claude');
+function handle(request: Request): Promise<Response> {
+  return handleMcpRequest(request, CANDIDATE_ENDPOINT);
 }
 
-export async function POST(request: Request): Promise<Response> {
-    return handleMcpRequest(request, 'claude');
-}
-
-export async function DELETE(request: Request): Promise<Response> {
-    return handleMcpRequest(request, 'claude');
-}
-
-export async function OPTIONS(request: Request): Promise<Response> {
-    return handleMcpRequest(request, 'claude');
-}
+export { handle as GET, handle as POST, handle as DELETE, handle as OPTIONS };

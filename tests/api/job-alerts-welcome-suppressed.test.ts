@@ -31,6 +31,9 @@ vi.mock('@/lib/rate-limit', () => ({
 vi.mock('@/lib/beehiiv', () => ({ syncToBeehiiv: vi.fn() }));
 vi.mock('@/lib/email-service', () => ({ sendWelcomeEmail: h.sendWelcomeEmail, isEmailSuppressed: h.isEmailSuppressed }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
+// Whether the caller is signed in as the address (lib/job-alerts/alert-access.ts).
+const access = vi.hoisted(() => ({ provesControlOf: vi.fn() }));
+vi.mock('@/lib/job-alerts/alert-access', () => ({ provesControlOf: access.provesControlOf }));
 
 import { POST } from '@/app/api/job-alerts/route';
 
@@ -46,6 +49,7 @@ function signup(): NextRequest {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    access.provesControlOf.mockResolvedValue(false);
     h.emailLead.upsert.mockResolvedValue({ isSuppressed: false, suppressionReason: null });
     h.$executeRaw.mockResolvedValue(1);
     h.$transaction.mockImplementation((arg: unknown) =>
@@ -65,7 +69,7 @@ describe('POST /api/job-alerts: the welcome email and suppression', () => {
         h.isEmailSuppressed.mockResolvedValue(true);
         const res = await POST(signup());
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ success: true, isNew: true });
+        expect(await res.json()).toEqual({ success: true, isNew: true, checkInbox: true });
         expect(h.txJobAlert.create).toHaveBeenCalledTimes(1);
         expect(h.isEmailSuppressed).toHaveBeenCalledWith(EMAIL);
         expect(h.sendWelcomeEmail).not.toHaveBeenCalled();
@@ -76,7 +80,18 @@ describe('POST /api/job-alerts: the welcome email and suppression', () => {
         expect(h.sendWelcomeEmail).toHaveBeenCalledWith(EMAIL);
     });
 
-    it('asks only after the unsubscribe lift, so a lifted address is welcomed', async () => {
+    it('a stranger\'s signup lifts no unsubscribe and sends that address nothing', async () => {
+        h.emailLead.upsert.mockResolvedValue({ isSuppressed: true, suppressionReason: 'unsubscribe' });
+        h.isEmailSuppressed.mockResolvedValue(true);
+        const res = await POST(signup());
+        expect(await res.json()).toEqual({ success: true, isNew: true, checkInbox: true });
+        expect(h.$transaction.mock.calls.filter((c) => Array.isArray(c[0]))).toHaveLength(0);
+        expect(h.userProfile.updateMany).not.toHaveBeenCalled();
+        expect(h.sendWelcomeEmail).not.toHaveBeenCalled();
+    });
+
+    it('asks only after the owner\'s unsubscribe lift, so a lifted address is welcomed', async () => {
+        access.provesControlOf.mockResolvedValue(true);
         h.emailLead.upsert.mockResolvedValue({ isSuppressed: true, suppressionReason: 'unsubscribe' });
         await POST(signup());
         expect(h.$transaction.mock.invocationCallOrder[0]).toBeLessThan(h.isEmailSuppressed.mock.invocationCallOrder[0]);
@@ -91,18 +106,19 @@ describe('POST /api/job-alerts: the welcome email and suppression', () => {
         h.isEmailSuppressed.mockRejectedValue(new Error('db down'));
         const res = await POST(signup());
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ success: true, isNew: true });
+        expect(await res.json()).toEqual({ success: true, isNew: true, checkInbox: true });
         expect(h.sendWelcomeEmail).not.toHaveBeenCalled();
     });
 
     // Security review of 2.26: the lift cleared the profile flag of a deleted
     // account too (the deletion sets it), so an anonymous signup reopened
     // mail to it. The subscription routes already leave deleted profiles alone.
-    it('the unsubscribe lift leaves a deleted account suppressed', async () => {
+    it('the owner\'s unsubscribe lift leaves a deleted account suppressed', async () => {
+        access.provesControlOf.mockResolvedValue(true);
         h.emailLead.upsert.mockResolvedValue({ isSuppressed: true, suppressionReason: 'unsubscribe' });
         await POST(signup());
         expect(h.userProfile.updateMany).toHaveBeenCalledWith({
-            where: { email: { equals: EMAIL, mode: 'insensitive' }, deletedAt: null },
+            where: { email: { in: [EMAIL], mode: 'insensitive' }, deletedAt: null },
             data: { emailSuppressed: false, emailSuppressedAt: null },
         });
     });

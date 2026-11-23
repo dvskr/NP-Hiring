@@ -3,23 +3,25 @@
 /**
  * Settings, Account: the AI apps (Claude, ChatGPT and other MCP clients) the
  * candidate connected to their account, with a way to remove each one
- * (design 2.10). Reads and revokes through /api/oauth/grants, which only
- * ever touches the caller's own grants.
+ * (design 2.10). Reads and revokes through /api/oauth/connected-apps, which
+ * only ever touches the caller's own grants.
  */
 import React, { useEffect, useState } from 'react';
-import { Plug } from 'lucide-react';
+import { Plug, ShieldCheck } from 'lucide-react';
 
+/** The shape GET /api/oauth/connected-apps answers (lib/mcp/oauth/grants.ts ConnectedApp). */
 interface ConnectedApp {
-    id: string;
+    grantId: string;
     clientName: string;
-    host: string;
-    createdAt: string;
+    verifiedAs: string | null;
+    connector: string;
+    connectedAt: string;
     lastUsedAt: string | null;
 }
 
 type ListState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; apps: ConnectedApp[] };
 
-const GRANTS_URL = '/api/oauth/grants';
+const CONNECTED_APPS_URL = '/api/oauth/connected-apps';
 
 // Same card as the other Settings sections (app/settings/page.tsx cardStyle, cardTitle).
 const cardStyle: React.CSSProperties = {
@@ -58,19 +60,20 @@ function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-/** The grants the route answered, or null when the answer is not the expected shape. */
+/** The apps the route answered, or null when the answer is not the expected shape. */
 function readApps(body: unknown): ConnectedApp[] | null {
     if (body === null || typeof body !== 'object') return null;
-    const grants = (body as { grants?: unknown }).grants;
-    if (!Array.isArray(grants)) return null;
-    return grants.filter((grant): grant is ConnectedApp => {
-        if (grant === null || typeof grant !== 'object') return false;
-        const row = grant as Record<string, unknown>;
+    const apps = (body as { apps?: unknown }).apps;
+    if (!Array.isArray(apps)) return null;
+    return apps.filter((app): app is ConnectedApp => {
+        if (app === null || typeof app !== 'object') return false;
+        const row = app as Record<string, unknown>;
         return (
-            typeof row.id === 'string' &&
+            typeof row.grantId === 'string' &&
             typeof row.clientName === 'string' &&
-            typeof row.host === 'string' &&
-            typeof row.createdAt === 'string' &&
+            (row.verifiedAs === null || typeof row.verifiedAs === 'string') &&
+            typeof row.connector === 'string' &&
+            typeof row.connectedAt === 'string' &&
             (row.lastUsedAt === null || typeof row.lastUsedAt === 'string')
         );
     });
@@ -85,7 +88,7 @@ export default function ConnectedAppsSection(): React.JSX.Element {
         let cancelled = false;
         (async () => {
             try {
-                const response = await fetch(GRANTS_URL, { cache: 'no-store' });
+                const response = await fetch(CONNECTED_APPS_URL, { cache: 'no-store' });
                 const apps = response.ok ? readApps(await response.json()) : null;
                 if (!cancelled) setList(apps ? { kind: 'ready', apps } : { kind: 'error' });
             } catch {
@@ -97,19 +100,19 @@ export default function ConnectedAppsSection(): React.JSX.Element {
         };
     }, []);
 
-    const removeAccess = async (id: string): Promise<void> => {
+    const removeAccess = async (grantId: string): Promise<void> => {
         if (removing) return;
-        setRemoving(id);
+        setRemoving(grantId);
         setRemoveFailed(false);
         try {
-            const response = await fetch(GRANTS_URL, {
+            const response = await fetch(CONNECTED_APPS_URL, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ grantId: id }),
+                body: JSON.stringify({ grantId }),
             });
             // 404: already removed (another tab, or the app disconnected itself).
             if (!response.ok && response.status !== 404) throw new Error(`remove answered ${response.status}`);
-            setList((current) => (current.kind === 'ready' ? { kind: 'ready', apps: current.apps.filter((app) => app.id !== id) } : current));
+            setList((current) => (current.kind === 'ready' ? { kind: 'ready', apps: current.apps.filter((app) => app.grantId !== grantId) } : current));
         } catch {
             setRemoveFailed(true);
         } finally {
@@ -138,16 +141,21 @@ export default function ConnectedAppsSection(): React.JSX.Element {
             {list.kind === 'ready' && list.apps.length > 0 && (
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                     {list.apps.map((app) => (
-                        <li key={app.id} style={rowStyle}>
+                        <li key={app.grantId} style={rowStyle}>
                             <div style={{ minWidth: 0, flex: '1 1 220px' }}>
                                 <p style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 2px', overflowWrap: 'anywhere' }}>{app.clientName}</p>
-                                <p style={{ ...mutedText, overflowWrap: 'anywhere' }}>{app.host}</p>
-                                <p style={mutedText}>Connected {formatDate(app.createdAt)}</p>
+                                {app.verifiedAs && (
+                                    <p style={{ ...mutedText, display: 'flex', alignItems: 'center', gap: '4px', color: '#065F46' }}>
+                                        <ShieldCheck size={13} aria-hidden="true" /> Verified: {app.verifiedAs}
+                                    </p>
+                                )}
+                                <p style={mutedText}>{app.connector}</p>
+                                <p style={mutedText}>Connected {formatDate(app.connectedAt)}</p>
                                 <p style={mutedText}>{app.lastUsedAt ? `Last used ${formatDate(app.lastUsedAt)}` : 'Not used yet'}</p>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => removeAccess(app.id)}
+                                onClick={() => removeAccess(app.grantId)}
                                 disabled={removing !== null}
                                 style={{
                                     minHeight: '44px',
@@ -159,10 +167,10 @@ export default function ConnectedAppsSection(): React.JSX.Element {
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     cursor: removing !== null ? 'not-allowed' : 'pointer',
-                                    opacity: removing !== null && removing !== app.id ? 0.6 : 1,
+                                    opacity: removing !== null && removing !== app.grantId ? 0.6 : 1,
                                 }}
                             >
-                                {removing === app.id ? 'Removing…' : 'Remove access'}
+                                {removing === app.grantId ? 'Removing…' : 'Remove access'}
                             </button>
                         </li>
                     ))}

@@ -1,18 +1,10 @@
-/**
- * GET /.well-known/oauth-protected-resource/mcp: RFC 9728 metadata of the
- * Claude endpoint, https://nphiring.com/mcp (design 2.3).
- */
-import type { NextResponse } from 'next/server';
-import { mcpHostProfile } from '@/lib/mcp/config';
-import { corsPreflight, publicJson } from '@/lib/oauth/http';
-import { protectedResourceMetadata } from '@/lib/oauth/metadata';
+import { DISCOVERY_HEADERS, protectedResourceMetadata } from '@/lib/mcp/oauth/metadata';
 
-export const dynamic = 'force-dynamic';
-
-export function GET(): NextResponse {
-    return publicJson(protectedResourceMetadata(mcpHostProfile('claude')));
+/** RFC 9728 metadata for the candidate MCP endpoint, /mcp. */
+export function GET(): Response {
+  return Response.json(protectedResourceMetadata('candidate'), { headers: DISCOVERY_HEADERS });
 }
 
-export function OPTIONS(): NextResponse {
-    return corsPreflight('GET, OPTIONS');
+export function OPTIONS(): Response {
+  return new Response(null, { status: 204, headers: DISCOVERY_HEADERS });
 }

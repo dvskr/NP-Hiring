@@ -4,6 +4,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Image from 'next/image';
 import { Shield } from 'lucide-react';
 import { brand } from '@/config/brand';
+import { SCOPE_PERMISSIONS } from '@/lib/mcp/oauth/config';
 
 
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
@@ -90,7 +91,7 @@ export default function PrivacyPage() {
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px 0', lineHeight: 1.15 }}>
                 Privacy <span style={{ color: '#059669' }}>Policy</span>
               </h1>
-              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: November 7, 2026</p>
+              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: November 23, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Image src="/images/pages/privacy-hero.webp" alt="Privacy Policy" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority quality={90} />
@@ -229,6 +230,7 @@ export default function PrivacyPage() {
             <li style={liStyle}><strong>Email logs (deliverability):</strong> 90 days.</li>
             <li style={liStyle}><strong>Analytics events (Google Analytics):</strong> 14 months (the shortest retention setting GA4 allows).</li>
             <li style={liStyle}><strong>Account deletion:</strong> on request, we soft-delete immediately and hard-purge after a 30-day grace period during which the deletion can be reversed.</li>
+            <li style={liStyle}><strong>AI assistant connections:</strong> the record of a connection is kept until you or the assistant remove it, and deleted 30 days later. Deleting your account stops every connection at once, and their records are deleted with the account at the end of its 30-day grace period. A sign-in left unfinished expires after 30 minutes and is then deleted, sign-in codes and tokens are deleted 7 days after they expire or are revoked, an assistant registration no one connected 30 days after it was made, and an application review a day after it expires. See section 17.</li>
             <li style={liStyle}><strong>Career guides:</strong> kept while your library link works. Deleting your account removes the email address from guides claimed or bought while signed in or with your account&apos;s email address. For guides claimed or bought with another address, write to {brand.email.privacy} from that address and we will remove it.</li>
           </ul>
 
@@ -274,23 +276,23 @@ export default function PrivacyPage() {
           <p style={pStyle}>Most of our sub-processors are based in the United States. Where personal data of EEA, UK, or Swiss residents is transferred outside its country of origin, the transfer relies on Standard Contractual Clauses (SCCs) included in each sub-processor&apos;s DPA, supplemented by encryption in transit and at rest.</p>
 
           <h2 id="ai-apps" style={h2Style}>17. AI Assistants</h2>
-          <p style={pStyle}>You can connect {brand.name} to an AI assistant, such as Claude (by Anthropic) or ChatGPT (by OpenAI), to search jobs, apply and follow your applications from a conversation. Searching jobs needs no account. Everything else needs you to sign in on a {brand.name} page and approve the assistant&apos;s access.</p>
+          <p style={pStyle}>You can connect {brand.name} to an AI assistant, such as Claude (by Anthropic) or ChatGPT (by OpenAI), to search jobs, apply and follow your applications from a conversation. Searching jobs, pay figures, practice authority, articles and the calculators need no account. Everything else needs you to sign in on a {brand.name} page and approve the assistant&apos;s access.</p>
           <h3 style={h3Style}>What You Can Allow</h3>
           <ul style={ulStyle}>
-            <li style={liStyle}>See your name, headline and whether a resume is on your profile.</li>
-            <li style={liStyle}>See your applications and saved jobs.</li>
-            <li style={liStyle}>Submit, track and withdraw applications and save jobs when you ask.</li>
+            {SCOPE_PERMISSIONS.candidate.map((line) => (
+              <li key={line} style={liStyle}>{line}.</li>
+            ))}
           </ul>
           <h3 style={h3Style}>What the Assistant Receives</h3>
-          <p style={pStyle}>The job listings you search for and, when you ask for them, the profile, application and saved job details listed above. The assistant never receives your password, your resume file, your NPI or DEA numbers, your license numbers or your EEO information, and the app never asks you for them.</p>
+          <p style={pStyle}>The job listings you search for and, when you ask for them: the profile details an employer receives when you apply (your name, email address, headline, years of experience, licensed states, certifications and whether a resume is on file), your applications and where each one stands, your saved jobs, and your job alerts. The assistant never receives your password, your resume file, your NPI or DEA numbers, your license numbers or your EEO information, and the app never asks you for them.</p>
           <h3 style={h3Style}>Applications Sent From an Assistant</h3>
-          <p style={pStyle}>An application sent from an assistant is the same as one sent on our website: it goes to the employer only after you review it and agree to share your profile, resume and cover letter, and this policy applies to it in the same way. The assistant may draft a cover letter for you, and you can edit it before you send.</p>
+          <p style={pStyle}>An application sent from an assistant is the same as one sent on our website: it goes to the employer only after you review it and agree to share your profile, resume and cover letter, and this policy applies to it in the same way. An application sent from an assistant always includes the resume on your profile. The assistant may draft a cover letter for you, and you can edit it before you send. When an employer&apos;s screening questions ask about health, background or other sensitive information, the assistant sends you to our website to answer them there.</p>
           <h3 style={h3Style}>What We Receive and Keep</h3>
-          <p style={pStyle}>We receive only what each request needs, such as your search terms, a cover letter you approve or your answers to an employer&apos;s screening questions. We do not receive or keep your conversation with the assistant. We keep a record of each connection (the assistant&apos;s name and when it was connected and last used) for as long as your account exists. Access tokens expire after one hour, and a connection left unused for 30 days has to be approved again.</p>
+          <p style={pStyle}>We receive only what each request needs, such as your search terms, a cover letter you approve or your answers to an employer&apos;s screening questions. We do not receive or keep your conversation with the assistant. We keep a record of each connection (the assistant&apos;s name and when it was connected and last used), and for each application sent from an assistant, which assistant sent it. Access tokens expire after one hour, and a connection left unused for 60 days has to be approved again. Section 11 says how long each record is kept.</p>
           <h3 style={h3Style}>The Assistant&apos;s Provider</h3>
           <p style={pStyle}>What you type into the assistant, and what it shows you, is handled by its provider under its own privacy policy: <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>Anthropic</a> for Claude and <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>OpenAI</a> for ChatGPT.</p>
           <h3 style={h3Style}>Removing Access</h3>
-          <p style={pStyle}>You can remove an assistant&apos;s access at any time in Settings, under Account, in Connected apps. It stops working at once. Deleting your account removes every connection.</p>
+          <p style={pStyle}>You can remove an assistant&apos;s access at any time in Settings, under Account, in Connected apps. It stops working at once. Deleting your account stops every connection at once.</p>
         </div>
 
         {/* Footer Nav */}

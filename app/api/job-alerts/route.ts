@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeJobAlert } from '@/lib/sanitize';
-import { syncToBeehiiv } from '@/lib/beehiiv';
 import { logger } from '@/lib/logger';
-import { sendWelcomeEmail, isEmailSuppressed } from '@/lib/email-service';
+import { createJobAlert } from '@/lib/job-alerts/create-alert';
+import { provesControlOf } from '@/lib/job-alerts/alert-access';
 
 interface CreateAlertBody {
   email: string;
@@ -48,41 +48,6 @@ const experienceCriteriaSchema = z.object({
   // buckets).
   minYearsExperience: z.number().int().min(0).max(60).optional(),
 });
-
-/** Newsletter consent counts only when the body says exactly true. */
-function isExplicitNewsletterOptIn(value: unknown): boolean {
-  return value === true;
-}
-
-/**
- * Suppression an explicit signup may lift. Only a user-initiated unsubscribe
- * qualifies (mirrors the resubscribe path in app/api/email/unsubscribe);
- * 'bounce' and 'complaint' stay suppressed.
- */
-function shouldLiftSuppressionOnSignup(
-  lead: { isSuppressed: boolean; suppressionReason: string | null } | null
-): boolean {
-  return !!lead && lead.isSuppressed && lead.suppressionReason === 'unsubscribe';
-}
-
-/**
- * Advisory-lock key that serializes alert creation per address, so the
- * dedupe below cannot race. A namespaced string keeps it from colliding with
- * any other advisory lock taken on the same database.
- */
-function jobAlertLockKey(normalizedEmail: string): string {
-  return `job_alert:create:${normalizedEmail}`;
-}
-
-/** isEmailSuppressed, failing closed: an address whose state cannot be read is treated as suppressed. */
-async function isSuppressedOrUnknown(normalizedEmail: string): Promise<boolean> {
-  try {
-    return await isEmailSuppressed(normalizedEmail);
-  } catch (error) {
-    logger.error('Job alert signup: could not read suppression, welcome email skipped', error);
-    return true;
-  }
-}
 
 // POST - Create new job alert
 export async function POST(request: NextRequest) {
@@ -177,168 +142,50 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase();
 
-    // Newsletter consent is opt-in ONLY. A job alert signup is consent to job
-    // alerts, not to the newsletter: the /job-alerts form has no newsletter
-    // checkbox, so an absent flag must never be read as "yes". Only an
-    // explicit boolean true (the exit-intent popup's checkbox) opts in, and a
-    // stored false is never flipped by a submit that did not say true.
-    const newsletterOptIn = isExplicitNewsletterOptIn(body.newsletterOptIn);
-    const lead = await prisma.emailLead.upsert({
-      where: { email: normalizedEmail },
-      update: newsletterOptIn ? { newsletterOptIn: true } : {},
-      create: {
-        email: normalizedEmail,
-        source: 'job_alert',
-        newsletterOptIn,
-      },
-      select: { isSuppressed: true, suppressionReason: true },
+    // The form takes any address, so typing one proves nothing: only a
+    // signed-in session on the address may switch email back on for it or
+    // change an alert it already has (lib/job-alerts/alert-access.ts).
+    const callerOwnsEmail = await provesControlOf(normalizedEmail);
+    const result = await createJobAlert({
+      email: normalizedEmail,
+      name,
+      keyword,
+      location,
+      mode,
+      jobType,
+      minSalary,
+      maxSalary,
+      newGradFriendly,
+      minYearsExperience,
+      frequency,
+      // Newsletter consent counts only when the body says exactly true.
+      newsletterOptIn: body.newsletterOptIn === true,
+      callerOwnsEmail,
     });
-
-    // An explicit alert signup from an address that previously clicked
-    // Unsubscribe is a fresh request for email. Every digest send gates on
-    // isEmailSuppressed() (lead OR profile), so without lifting the
-    // unsubscribe suppression the alert would be created but never send.
-    // Bounce and complaint suppression protects deliverability and is never
-    // lifted here (fail closed).
-    if (shouldLiftSuppressionOnSignup(lead)) {
-      await prisma.$transaction([
-        prisma.emailLead.update({
-          where: { email: normalizedEmail },
-          data: {
-            isSubscribed: true,
-            isSuppressed: false,
-            suppressedAt: null,
-            suppressionReason: null,
-          },
-        }),
-        // A deleted account stays suppressed (its deletion set the flag), as
-        // in app/api/email/_lib/subscription.ts.
-        prisma.userProfile.updateMany({
-          where: { email: { equals: normalizedEmail, mode: 'insensitive' }, deletedAt: null },
-          data: { emailSuppressed: false, emailSuppressedAt: null },
-        }),
-      ]);
-    }
-
-    // Sync to the Beehiiv newsletter only with explicit consent (fire-and-forget)
-    if (newsletterOptIn) {
-      syncToBeehiiv(normalizedEmail, { utmSource: 'job_alert' });
-    }
-
-    // Dedup: match BOTH confirmed (is_active = true) and unconfirmed
-    // alerts. Without checking the unconfirmed bucket too, a user who
-    // resubmits the same form before clicking the confirmation link
-    // would receive a fresh email per submission. We dedupe instead and
-    // re-send the existing confirmation if the original is still pending.
-    //
-    // The find-then-create runs inside one transaction that first takes a
-    // Postgres advisory lock keyed on the email. Without it, two concurrent
-    // submits (a double click) both miss in findFirst and both create,
-    // storing duplicate alerts. The nullable criteria columns cannot be
-    // covered by a plain unique index (NULLs are distinct), so the lock is
-    // what makes the dedupe atomic: the second request waits, then finds the
-    // first request's row and lands as an update.
-    const { existing } = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${jobAlertLockKey(normalizedEmail)}))`;
-
-      const existing = await tx.jobAlert.findFirst({
-        where: {
-          email: normalizedEmail,
-          keyword: keyword || null,
-          location: location || null,
-          mode: mode || null,
-          jobType: jobType || null,
-          minSalary: minSalary || null,
-          maxSalary: maxSalary || null,
-          // Experience criteria are part of the alert's identity: the same
-          // search with a different experience constraint is a different alert.
-          newGradFriendly,
-          minYearsExperience,
-        },
-      });
-
-      // Single opt-in: alerts are created already confirmed. Skipping the double-
-      // opt-in confirmation email increases conversion through the funnel. Tradeoff:
-      // weaker signal to ISPs (Gmail/Yahoo) about consent, slightly higher abuse risk
-      // (someone signing up another person's email). The /api/job-alerts/confirm
-      // endpoint stays in place for grandfathering any in-flight pending alerts from
-      // the old flow.
-      const now = new Date();
-
-      if (existing) {
-        const updated = await tx.jobAlert.update({
-          where: { id: existing.id },
-          data: {
-            frequency,
-            name: name || existing.name,
-            isActive: true,
-            confirmedAt: existing.confirmedAt ?? now,
-          },
-        });
-        return { jobAlert: updated, existing };
-      }
-
-      const created = await tx.jobAlert.create({
-        data: {
-          email: normalizedEmail,
-          name,
-          keyword,
-          location,
-          mode,
-          jobType,
-          minSalary,
-          maxSalary,
-          newGradFriendly,
-          minYearsExperience,
-          frequency,
-          isActive: true,
-          confirmedAt: now,
-          // SECURITY: this token is the only key to the address's alerts (GET
-          // below lists them all, each with its token; PATCH and DELETE take
-          // those). It was left to the Prisma cuid() default, which is partly
-          // a timestamp and a counter; the other alert creators (the auth
-          // callback, POST /api/auth/profile, completeSignupOptIns) already
-          // write a random UUID. Nothing parses the format: every reader looks
-          // it up as an opaque string. tests/api/job-alerts-token-hygiene.test.ts
-          token: crypto.randomUUID(),
-        },
-      });
-      return { jobAlert: created, existing: null };
-    });
-
-    // Send the welcome / "alerts are active" email immediately. This is what users
-    // would have received after clicking Confirm under the old double-opt-in flow.
-    // Only send for newly confirmed alerts to avoid spamming on every form submit.
-    // The address alone: the email looks up the address's EmailLead
-    // unsubscribe token itself, the only token its opt-out links resolve
-    // (this call used to pass the alert token, so they all answered
-    // "Invalid token").
-    // Never to a suppressed address: asked after the unsubscribe lift above,
-    // so only a bounce, a complaint or a suppressed profile skips the welcome
-    // email, as it skips every digest. The alert is stored by now, so a
-    // failed check skips the email instead of failing the request.
-    // tests/api/job-alerts-welcome-suppressed.test.ts
-    const isNewlyConfirmed = !existing || !existing.confirmedAt;
-    if (isNewlyConfirmed && !(await isSuppressedOrUnknown(normalizedEmail))) {
-      await sendWelcomeEmail(normalizedEmail);
-    }
 
     return NextResponse.json({
       success: true,
       // Whether this request stored a new alert (true) or matched an existing
-      // alert and updated it in place (false). The status is 200 either way,
-      // so the signup surfaces read this field to decide whether to count a
-      // GA4 subscribe; without it, a repeat submission of the same criteria
-      // (or a second exit-popup signup from one address) books a second
-      // conversion against one alert row. Decided inside the locked
-      // transaction above, so two concurrent submits cannot both say true.
-      isNew: existing === null,
-      // SECURITY: no alert id or token here. This route takes no session and
-      // no proof that the caller controls the address, so its answer goes to
-      // whoever typed it, and the token is the key to that address's alerts
-      // (GET ?token= lists them all with their tokens; PATCH and DELETE
-      // accept those). It reaches the inbox only, in each digest's manage
-      // and unsubscribe links. A signed-in owner uses /api/job-alerts/by-email.
+      // alert (false). The status is 200 either way, so the signup surfaces
+      // read this field to decide whether to count a GA4 subscribe; without
+      // it, a repeat submission of the same criteria (or a second exit-popup
+      // signup from one address) books a second conversion against one alert
+      // row. Decided inside the creator's locked transaction, so two
+      // concurrent submits cannot both say true.
+      isNew: result.created,
+      // What happened is told to the address's owner only. Anyone else is
+      // told to check the inbox, whatever happened: an alert stored for an
+      // address that turned our email off, or an existing alert left as it
+      // was, would otherwise read as active, and a different answer for each
+      // would tell a stranger which it was (lib/job-alerts/alert-result-copy.ts).
+      ...(callerOwnsEmail ? { created: result.created, reactivated: result.reactivated } : { checkInbox: true }),
+      // SECURITY: no alert id or token here. This route takes no proof that
+      // the caller controls the address unless a session shows it, so its
+      // answer goes to whoever typed it, and the token is the key to that
+      // address's alerts (GET ?token= lists them all with their tokens;
+      // PATCH and DELETE accept those). It reaches the inbox only, in each
+      // digest's manage and unsubscribe links. A signed-in owner uses
+      // /api/job-alerts/by-email.
     });
   } catch (error) {
     logger.error('Error creating job alert', error);

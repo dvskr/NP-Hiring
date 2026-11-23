@@ -66,12 +66,17 @@ describe('POST /api/job-alerts accepts + validates the experience criteria', () 
   it('both fields join the dedup identity and the create payload', () => {
     // Dedup: same criteria minus experience must NOT collide with an alert
     // that has an experience constraint.
-    const dedupBlock = src.slice(src.indexOf('jobAlert.findFirst'), src.indexOf('Single opt-in'));
-    expect(dedupBlock).toContain('newGradFriendly');
-    expect(dedupBlock).toContain('minYearsExperience');
-    const createBlock = src.slice(src.indexOf('jobAlert.create'), src.indexOf('isNewlyConfirmed'));
-    expect(createBlock).toContain('newGradFriendly');
-    expect(createBlock).toContain('minYearsExperience');
+    // The route passes both to the shared creator, whose one `match` is both
+    // the lookup and the stored row (lib/job-alerts/create-alert.ts).
+    const route = src.slice(src.indexOf('createJobAlert({'), src.indexOf('callerOwnsEmail,'));
+    expect(route).toContain('newGradFriendly');
+    expect(route).toContain('minYearsExperience');
+    const creator = fs.readFileSync(path.join(process.cwd(), 'lib/job-alerts/create-alert.ts'), 'utf8');
+    const match = creator.slice(creator.indexOf('const match = {'), creator.indexOf('};', creator.indexOf('const match = {')));
+    expect(match).toContain('newGradFriendly');
+    expect(match).toContain('minYearsExperience');
+    expect(creator).toMatch(/jobAlert\.findFirst\(\{\s*where: \{ email: normalizedEmail, \.\.\.match \}/);
+    expect(creator.slice(creator.indexOf('tx.jobAlert.create('))).toMatch(/^[\s\S]*?\.\.\.match,/);
   });
 
   it('GET returns both fields so the manage page can display stored criteria', () => {

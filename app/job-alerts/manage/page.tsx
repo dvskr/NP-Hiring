@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { brand } from '@/config/brand';
+import { alertResultCopy } from '@/lib/job-alerts/alert-result-copy';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, Plus, Trash2, Pause, Play, Clock, Calendar, MapPin, Briefcase, DollarSign, Search, ChevronUp, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
@@ -283,7 +284,8 @@ function ManageAlertsContent() {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        setCreateMsg({ type: 'success', text: 'Alert created!' });
+        // The manage page is signed in, so this is the owner's answer: created, turned back on or already there.
+        setCreateMsg({ type: 'success', text: alertResultCopy(data, newFrequency).title });
         // Re-read the list from the API: the create response carries only
         // { success, isNew }, never the alert or its token.
         await loadAlerts({ silent: true });

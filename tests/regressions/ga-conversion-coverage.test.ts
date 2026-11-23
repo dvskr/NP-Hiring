@@ -102,6 +102,7 @@ import { sendWelcomeEmail } from '@/lib/email-service';
 import { POST as postApplyDirect } from '@/app/api/applications/apply-direct/route';
 import { readApplyOutcome } from '@/components/InPlatformApplyForm';
 import { describeSubscribeFailure } from '@/components/ExitIntentPopup';
+import { alertResultCopy } from '@/lib/job-alerts/alert-result-copy';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -357,7 +358,7 @@ describe('gap 1: the apply route says whether this submit created the applicatio
     // The locked transaction lives in the shared routine the route and the
     // AI app's submit_application both call; the route only relays it.
     const submit = read(SUBMIT_ROUTINE);
-    expect(submit).toContain('return { application: saved, isNew: existingApplication === null };');
+    expect(submit).toContain('return { application: saved, isNew: existingApplication === null, decision: decided };');
     expect(submit).toMatch(/applicationId: application\.id,\s*isNew,/);
     const route = read(APPLY_ROUTE);
     expect(route).toMatch(/return NextResponse\.json\(\{\s*success: true,\s*applicationId: outcome\.applicationId,[\s\S]*?\bisNew: outcome\.isNew,/);
@@ -418,7 +419,7 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
   it('a first signup answers isNew: true', async () => {
     const res = await postJobAlert(alertRequest({ email: EMAIL, frequency: 'daily' }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, isNew: true });
+    expect(await res.json()).toEqual({ success: true, isNew: true, checkInbox: true });
     expect(h.txJobAlert.create).toHaveBeenCalledTimes(1);
   });
 
@@ -433,7 +434,7 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
     });
     const res = await postJobAlert(alertRequest({ email: EMAIL, frequency: 'daily' }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, isNew: false });
+    expect(await res.json()).toEqual({ success: true, isNew: false, checkInbox: true });
     expect(h.txJobAlert.create).not.toHaveBeenCalled();
   });
 
@@ -442,7 +443,10 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
     expect(h.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
       h.txJobAlert.findFirst.mock.invocationCallOrder[0],
     );
-    expect(read(ALERT_ROUTE)).toMatch(/success: true,[\s\S]*?isNew: existing === null,/);
+    // The route relays the shared creator's answer, and the creator decides
+    // it from the read it takes under the lock (lib/job-alerts/create-alert.ts).
+    expect(read(ALERT_ROUTE)).toMatch(/success: true,[\s\S]*?isNew: result\.created,/);
+    expect(read('lib/job-alerts/create-alert.ts')).toMatch(/created: !existing,/);
   });
 
   it('never answers with the alert token: the token is the key to the address\'s alerts', async () => {
@@ -470,7 +474,8 @@ describe('gap 2: the alert route says whether it stored a new alert', () => {
     for (const body of [freshBody, repeatBody]) {
       expect(body).not.toContain('token-1');
       expect(body).not.toContain('alert-1');
-      expect(Object.keys(JSON.parse(body)).sort()).toEqual(['isNew', 'success']);
+      // A caller not signed in as the address is answered checkInbox, never an id or a token.
+      expect(Object.keys(JSON.parse(body)).sort()).toEqual(['checkInbox', 'isNew', 'success']);
     }
     // A new alert still sends its welcome email, and the route hands it the
     // address alone. The email's unsubscribe links resolve only the
@@ -539,32 +544,29 @@ describe('gap 7: the exit popup tells the visitor what the server answered', () 
     }
   });
 
-  it('a repeat signup is confirmed without promising a welcome email', () => {
-    // The route sends the welcome email only for an alert it newly
-    // confirmed, so the repeat branch must not send the visitor to look for
-    // one. The first-signup branch keeps the promise.
-    const start = src.indexOf("{status === 'repeat-confirmed' ? (");
-    expect(start).toBeGreaterThan(-1);
-    const end = src.indexOf(') : (', start);
-    const repeatBranch = src.slice(start, end);
-    expect(repeatBranch).toContain('Daily job alerts for this address are on.');
-    expect(repeatBranch).not.toMatch(/welcome email|check your inbox/i);
-    expect(src.slice(end)).toContain('Check your inbox for a welcome email.');
+  it('confirms with the shared copy, read from what the server answered', () => {
+    // lib/job-alerts/alert-result-copy.ts: what happened, to the address's
+    // owner, and one neutral answer to anyone else.
+    expect(src).toContain('setResultCopy(alertResultCopy(body ?? {}, \'daily\'));');
+    expect(src).toContain("{resultCopy?.title ?? 'Check your inbox'}");
+    expect(src.indexOf('setResultCopy(')).toBeLessThan(src.indexOf("setStatus(isRepeat ? 'repeat-confirmed' : 'subscribed');"));
   });
 
-  it('a repeat signup never claims the visitor was subscribed before this click', () => {
-    // The route answers isNew false for any matched row, including one the
-    // visitor paused, one whose address clicked Unsubscribe (the JobAlert
-    // row survives unsubscribeLead), and a legacy pending alert. None of
-    // them were receiving alerts, so "already subscribed" was false for
-    // them, and it told someone who unsubscribed that the unsubscribe had
-    // not worked. The status name is sliced in too, so it cannot carry the
-    // word back in by accident.
-    const start = src.indexOf("{status === 'repeat-confirmed' ? (");
-    expect(start).toBeGreaterThan(-1);
-    const repeatBranch = src.slice(start, src.indexOf(') : (', start));
-    expect(repeatBranch).toContain('✓ You&apos;re subscribed');
-    expect(repeatBranch).not.toContain('already');
+  it('a signup that is not the owner\'s promises nothing and says nothing about the address', () => {
+    // A visitor who is not signed in as the address is answered checkInbox
+    // whatever happened (app/api/job-alerts/route.ts): the copy may not say an
+    // alert is active, was there already or was turned back on.
+    const stranger = alertResultCopy({ checkInbox: true });
+    expect(stranger.kind).toBe('check_inbox');
+    expect(`${stranger.title} ${stranger.body}`).not.toMatch(/active|already|turned back on|subscribed/i);
+  });
+
+  it('an owner\'s repeat never claims the visitor was subscribed before this click', () => {
+    const repeat = alertResultCopy({ created: false, reactivated: false }, 'daily');
+    expect(repeat.kind).toBe('already_active');
+    expect(`${repeat.title} ${repeat.body}`).not.toMatch(/subscribed/i);
+    expect(alertResultCopy({ reactivated: true }).kind).toBe('reactivated');
+    expect(alertResultCopy({ created: true }).title).toBe('Job alert created!');
     expect(src).not.toMatch(/already subscribed/i);
   });
 });

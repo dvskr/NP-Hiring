@@ -428,8 +428,11 @@ describe('P2 #23 — destructive seeker mutations use the shared confirm dialog'
 
   it('pins the withdraw endpoint fields the dialog copy describes', () => {
     // If coverLetterUrl is ever added to the scrub, the "stays attached"
-    // clause becomes wrong and this test is the signal to update it.
-    const endpoint = read('app/api/applications/withdraw/route.ts');
+    // clause becomes wrong and this test is the signal to update it. The
+    // scrub moved from the route into lib/applications/withdraw.ts, which the
+    // route and the AI app's withdraw_application both call.
+    expect(read('app/api/applications/withdraw/route.ts')).toContain("from '@/lib/applications/withdraw'");
+    const endpoint = read('lib/applications/withdraw.ts');
     expect(endpoint).toMatch(/coverLetter:\s*null/);
     expect(endpoint).toMatch(/resumeUrl:\s*null/);
     expect(endpoint).toMatch(/status:\s*'withdrawn'/);

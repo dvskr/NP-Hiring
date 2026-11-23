@@ -1,53 +1,68 @@
-/**
- * POST /oauth/register: Dynamic Client Registration (RFC 7591, design 2.4)
- * for MCP clients that do not publish a Client ID Metadata Document.
- *
- * SECURITY: a registered client can only ever redirect to claude.ai,
- * claude.com, chatgpt.com (plus MCP_OAUTH_REDIRECT_HOSTS) or to the user's
- * own machine, so registering one cannot route a candidate's code to a site
- * of the registrant's choosing. 20 registrations a minute per IP.
- * tests/oauth/register.test.ts
- */
-import type { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { isRegistrationError, registerClient, validateRegistration } from '@/lib/mcp/oauth/clients';
+import { clientIp, corsPreflight, oauthJson } from '@/lib/mcp/oauth/http';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-import { asJsonObject } from '@/lib/request-body';
-import { checkRegistration, registerClient } from '@/lib/oauth/clients';
-import { OAUTH_RATE_LIMITS, oauthSigningSecret } from '@/lib/oauth/config';
-import { corsPreflight, oauthError, oauthJson, readBodyText, slowDown, temporarilyUnavailable } from '@/lib/oauth/http';
-import { clientIp, rateLimitWait } from '@/lib/oauth/limits';
 
-export const dynamic = 'force-dynamic';
+/**
+ * POST /oauth/register: Dynamic Client Registration (RFC 7591).
+ *
+ * Open by design (see lib/mcp/oauth/clients.ts), so it is bounded twice: per
+ * IP, which is still far above what a host needs (each connection registers
+ * once), and across every caller per day, which caps how many rows open
+ * registration can add before the cleanup cron removes the unused ones.
+ */
+const PER_IP = { limit: 10, windowSeconds: 60 };
+const ALL_CALLERS_PER_DAY = { limit: 5000, windowSeconds: 24 * 60 * 60 };
 
-export function OPTIONS(): NextResponse {
-    return corsPreflight('POST, OPTIONS');
+export async function POST(request: NextRequest): Promise<Response> {
+  const [perIp, allCallers] = await Promise.all([
+    checkRateLimit(`ratelimit:oauth-register:${clientIp(request)}`, PER_IP),
+    checkRateLimit('ratelimit:oauth-register:all', ALL_CALLERS_PER_DAY),
+  ]);
+  if (!perIp.success || !allCallers.success) {
+    return oauthJson({ error: 'slow_down', error_description: 'Too many registrations. Retry shortly.' }, 429, {
+      'Retry-After': '60',
+    });
+  }
+
+  let body: unknown;
+  try {
+    const text = await request.text();
+    if (text.length > 32 * 1024) {
+      return oauthJson({ error: 'invalid_client_metadata', error_description: 'Registration body is too large.' }, 400);
+    }
+    body = JSON.parse(text);
+  } catch {
+    return oauthJson({ error: 'invalid_client_metadata', error_description: 'Registration body must be JSON.' }, 400);
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return oauthJson({ error: 'invalid_client_metadata', error_description: 'Registration body must be a JSON object.' }, 400);
+  }
+
+  const validated = validateRegistration(body as Record<string, unknown>);
+  if (isRegistrationError(validated)) return oauthJson(validated, 400);
+
+  try {
+    const registered = await registerClient(validated);
+    logger.info('MCP OAuth client registered', {
+      clientId: registered.client_id,
+      authMethod: registered.token_endpoint_auth_method,
+      redirectHosts: validated.redirectUris.map((u) => {
+        try {
+          return new URL(u).host || new URL(u).protocol;
+        } catch {
+          return 'unparseable';
+        }
+      }),
+    });
+    return oauthJson(registered, 201);
+  } catch (error) {
+    logger.error('MCP OAuth client registration failed', error);
+    return oauthJson({ error: 'server_error', error_description: 'Registration failed. Retry shortly.' }, 500);
+  }
 }
 
-async function handleRegistration(request: NextRequest): Promise<NextResponse> {
-    if (!oauthSigningSecret()) return temporarilyUnavailable();
-    const wait = await rateLimitWait(`oauth:register:ip:${clientIp(request.headers)}`, OAUTH_RATE_LIMITS.registerPerIp);
-    if (wait !== null) return slowDown(wait);
-
-    const body = await readBodyText(request);
-    if (!body.ok) return oauthError('invalid_client_metadata', 'The request body is too large or not readable.');
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(body.text);
-    } catch {
-        return oauthError('invalid_client_metadata', 'The request body must be a JSON object.');
-    }
-    const metadata = asJsonObject(parsed);
-    if (!metadata) return oauthError('invalid_client_metadata', 'The request body must be a JSON object.');
-
-    const check = checkRegistration(metadata);
-    if (!check.ok) return oauthError(check.error, check.description);
-    return oauthJson(await registerClient(check.value), 201);
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse> {
-    try {
-        return await handleRegistration(request);
-    } catch (error) {
-        logger.error('[oauth] registration failed', error);
-        return oauthError('server_error', 'The registration could not be completed.', 500);
-    }
+export function OPTIONS(): Response {
+  return corsPreflight('POST');
 }
