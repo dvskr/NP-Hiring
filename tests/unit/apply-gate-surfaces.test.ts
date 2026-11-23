@@ -66,6 +66,7 @@ import JobCard from '@/components/JobCard';
 import type { Job } from '@/lib/types';
 import { confirmLoginHref } from '@/app/auth/confirm/confirm-state';
 import { renderJobCardHtml, type JobCardData } from '@/lib/utils/render-job-card';
+import { buildRecommendationDigestHtml } from '@/lib/email/recommendation-digest-template';
 import HowItWorksSidebar from '@/components/dashboard/HowItWorksSidebar';
 
 const ROOT = process.cwd();
@@ -156,9 +157,18 @@ describe('no surface labels an external job "Direct Apply"', () => {
   });
 
   it('the digest badge for the direct_apply tier reads "Apply on employer site"', () => {
-    const src = read('lib/inngest/functions/recommendation-digest.ts');
-    expect(src).toContain("if (tier === 'direct_apply')");
-    expect(src).toContain('↗ Apply on employer site</span>');
+    // The digest renders the shared email job card now (4482433), so read the mail.
+    const html = buildRecommendationDigestHtml({
+      firstName: null,
+      jobs: [{
+        id: 'job-1', title: 'Nurse Practitioner', slug: 'np-austin-tx-1', employer: 'Acme Health',
+        location: 'Austin', state: 'TX', isRemote: false, displaySalary: null, tier: 'direct_apply',
+      }],
+      unsubscribeToken: null,
+      baseUrl: 'https://fixture.invalid',
+    });
+    expect(html).toContain('Apply on employer site');
+    expect(html).not.toContain('Direct Apply');
   });
 
   it('the preview catalog labels the employer sample the same way', () => {

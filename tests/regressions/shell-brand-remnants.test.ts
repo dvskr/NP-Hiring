@@ -17,6 +17,8 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { brand } from '@/config/brand';
+import { buildRecommendationDigestHtml } from '@/lib/email/recommendation-digest-template';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -26,6 +28,8 @@ const SURFACES = [
   'public/push-sw.js',
   'app/api/cron/push-notifications/route.ts',
   'lib/inngest/functions/recommendation-digest.ts',
+  // The digest's HTML moved here when it went onto the shared shell (4482433).
+  'lib/email/recommendation-digest-template.ts',
   'app/api/og/route.tsx',
 ];
 
@@ -50,8 +54,10 @@ describe('F2 — no donor-brand copy on shell surfaces', () => {
   });
 
   it('weekly digest header uses brand.name', () => {
-    const src = read('lib/inngest/functions/recommendation-digest.ts');
-    expect(src).toContain('${escapeHtml(brand.name)} · Weekly Digest');
+    // Read the mail itself: the header comes from the shared shell now.
+    const html = buildRecommendationDigestHtml({ firstName: null, jobs: [], unsubscribeToken: null, baseUrl: 'https://fixture.invalid' });
+    expect(html).toContain(brand.name);
+    expect(html).not.toMatch(/PMHNP/);
   });
 
   it('OG route falls back to brand.name (default company + logo fallback)', () => {
