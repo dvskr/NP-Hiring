@@ -22,7 +22,7 @@ The canonical figures every page on the site cites. Each comes from one source f
 - Live inventory changes daily; no fixed headline count is published here. For a
   current machine-readable snapshot, fetch https://nphiring.com/feed.xml (RSS 2.0,
   newest active listings) or the sitemap index at https://nphiring.com/api/sitemaps/index
-- Sources: 8 employer applicant-tracking systems (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable)
+- Sources: 10 job sources, refreshed daily: 8 employer applicant tracking systems (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable), USAJOBS for federal postings, and Adzuna
 - Updated: daily
 - Expired, filled, and dead-link postings are removed from feeds and sitemaps rather than left in place
 - Salary is shown whenever the employer's posting provides it. We do not fabricate or estimate pay for individual listings

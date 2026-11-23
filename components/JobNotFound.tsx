@@ -76,22 +76,24 @@ export default function JobNotFound() {
       {/* Quick Links */}
       <div className="mt-8 pt-8 border-t border-gray-200 text-center">
         <div className="flex flex-wrap justify-center gap-3">
+          {/* The category hubs, not /jobs?type= or ?mode=: lib/filters.ts reads
+              only jobType and workMode, so those filter links did nothing. */}
           <Link
-            href="/jobs?type=Full-time"
+            href="/jobs/full-time"
             className="text-sm text-primary-600 hover:text-primary-700 underline"
           >
             Full-time Jobs
           </Link>
           <span className="text-gray-400">·</span>
           <Link
-            href="/jobs?mode=Remote"
+            href="/jobs/remote"
             className="text-sm text-primary-600 hover:text-primary-700 underline"
           >
             Remote Jobs
           </Link>
           <span className="text-gray-400">·</span>
           <Link
-            href="/jobs?type=Part-time"
+            href="/jobs/part-time"
             className="text-sm text-primary-600 hover:text-primary-700 underline"
           >
             Part-time Jobs

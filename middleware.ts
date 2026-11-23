@@ -1157,9 +1157,12 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "style-src-attr 'unsafe-inline'",
-        "img-src 'self' data: blob: https://*.supabase.co https://lh3.googleusercontent.com https://www.google-analytics.com https://www.googletagmanager.com",
+        // GA4: Google's Tag Manager CSP guide lists the wildcard hosts, which
+        // cover the regional collection endpoints (region1.google-analytics.com,
+        // region1.analytics.google.com) a hit can be sent to.
+        "img-src 'self' data: blob: https://*.supabase.co https://lh3.googleusercontent.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://*.googletagmanager.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://api.resend.com https://*.upstash.io https://api.stripe.com",
+        "connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://api.resend.com https://*.upstash.io https://api.stripe.com",
         "frame-src 'self' https://js.stripe.com https://www.youtube.com",
         "media-src 'self' https://*.supabase.co",
         "worker-src 'self' blob:",

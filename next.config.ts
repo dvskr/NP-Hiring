@@ -45,6 +45,12 @@ const nextConfig: NextConfig = {
       './scripts/extract-pdf-text.js',
       './node_modules/pdf-parse/**/*',
     ],
+    // lib/blog-mdx-posts.ts reads content/blog with fs at runtime, and a
+    // failed read returns no posts: the authored guides would drop out of
+    // the blog, every list that links them and the sitemap at once. The
+    // folder is small, so every route carries it rather than relying on the
+    // tracer to follow a path built from process.cwd().
+    '/**': ['./content/blog/**/*'],
   },
 
   // Image optimization
@@ -74,10 +80,25 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Compiler optimizations
+  // Compiler optimizations. removeConsole applies to server code too, not
+  // only the browser bundle, so stripping every call left production with no
+  // error or warning lines at all: lib/logger.ts and every catch block wrote
+  // nothing to the Vercel logs. error and warn stay; log, info and debug go.
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
+
+  // Blocking metadata for every user agent, so <title>, the canonical and the
+  // robots tag are always in <head>. By default Next streams metadata to every
+  // agent outside its short HTML-limited list, which leaves out plain
+  // Googlebot. Every listing hub reads ?page, so it renders per request, and
+  // when generateMetadata lost the race with the shell the tags could land in
+  // a hidden <div> in <body>, where Google ignores a canonical. ISR pages are
+  // unaffected: their metadata resolves before the HTML is cached. A regex
+  // that matches everything, rather than a list of crawlers, because a list
+  // would replace Next's own one (Bingbot, Twitterbot and the rest) instead of
+  // adding to it.
+  htmlLimitedBots: /.*/,
 
   // Experimental features for better performance
   experimental: {
