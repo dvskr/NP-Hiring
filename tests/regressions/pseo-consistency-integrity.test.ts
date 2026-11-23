@@ -111,9 +111,11 @@ describe('B42: P9 runbook matches the real cron contract', () => {
   it('does not POST to the GET-only aggregate-pseo route', () => {
     expect(src()).not.toContain('curl -X POST');
   });
-  it('documents the real 6h cadence, not 12h', () => {
-    expect(src()).toContain('6h cadence');
-    expect(src()).not.toMatch(/12h \(the normal cron cadence\)/);
+  it('documents the cadence config/cron-schedule.ts schedules', () => {
+    // 6h until 2026-11-23, 12h since.
+    expect(read('config/cron-schedule.ts')).toContain("path: '/api/cron/aggregate-pseo', schedule: '15 6,18 * * *'");
+    expect(src()).toContain('12h cadence');
+    expect(src()).toContain('`15 6,18 * * *`');
   });
 });
 

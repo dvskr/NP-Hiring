@@ -76,9 +76,9 @@ curl -s "https://pmhnphiring.com/api/cron/aggregate-pseo" \
 
 Notes:
 
-- The cron runs on a **6h cadence** (`15 0,6,12,18 * * *` — see
+- The cron runs on a **12h cadence** (`15 6,18 * * *` — see
   `config/cron-schedule.ts` / `vercel.json`), so even without a manual
-  trigger, pseoStats catches up within ~6h.
+  trigger, pseoStats catches up within ~12h.
 - One invocation refreshes all setting×state rows immediately, but
   category×city rows refresh via a **rotating 200-city cursor with
   self-chaining** (see `app/api/cron/aggregate-pseo/route.ts`). A single
