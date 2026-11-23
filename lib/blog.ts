@@ -104,6 +104,21 @@ interface BlogRead<T> {
 }
 
 /**
+ * Which blog_posts rows a read may see, and so which client runs it.
+ *
+ * 'published': every read that returns a post. The anon client, which the
+ * blog_posts_public_read policy (status = 'published') holds to published
+ * rows.
+ *
+ * 'unpublished': the editorial takedown lookups only. That policy hides an
+ * unpublished row from the anon key, so through it the takedown never worked
+ * in production (found 2026-11-23); these read with the service-role client,
+ * server side. They select a slug (slugQuery) and always filter
+ * status <> 'published', so no post is read this way.
+ */
+type RowScope = 'published' | 'unpublished';
+
+/**
  * Run one blog_posts read and never throw. `T` names the row shape the
  * caller's select produces (supabase-js types this untyped table as any).
  *
@@ -117,15 +132,53 @@ interface BlogRead<T> {
 async function readBlogPosts<T>(
     label: string,
     run: (supabase: SupabaseClient) => PromiseLike<{ data: unknown; error: unknown; count?: number | null }>,
+    scope: RowScope = 'published',
 ): Promise<BlogRead<T>> {
     try {
-        const result = await run(getSupabaseClient());
+        const supabase = scope === 'unpublished' ? getSupabaseServiceClient() : getSupabaseClient();
+        const result = await run(supabase);
         if (result.error) console.error(`Error ${label}:`, result.error);
         return { data: result.data as T | null, error: result.error, count: result.count ?? null };
     } catch (error) {
         console.error(`Error ${label}:`, error);
         return { data: null, error, count: null };
     }
+}
+
+/** The slug of every blog_posts row in `scope`, for the caller to narrow. */
+function slugQuery(supabase: SupabaseClient, scope: RowScope) {
+    const query = supabase.from('blog_posts').select('slug');
+    return scope === 'published' ? query.eq('status', 'published') : query.neq('status', 'published');
+}
+
+type SlugQuery = ReturnType<typeof slugQuery>;
+
+/** Slugs of the rows in `scope` that `narrow` keeps. Fails OPEN (no rows). */
+async function readSlugs(label: string, scope: RowScope, narrow: (query: SlugQuery) => SlugQuery): Promise<string[]> {
+    const read = await readBlogPosts<{ slug: string }[]>(
+        `${label} (${scope})`,
+        (supabase) => narrow(slugQuery(supabase, scope)),
+        scope,
+    );
+    return (read.data ?? []).map((row) => row.slug);
+}
+
+/**
+ * Slugs `narrow` keeps that have a blog_posts row of either status: a
+ * published row (listed from the database, so a code-served copy would be a
+ * duplicate) or an unpublished one (an editorial takedown).
+ *
+ * The halves are read apart and each fails OPEN on its own. A published row
+ * is looked up with the anon client, the one getPostBySlug reads it with, so
+ * a published row the site cannot read (the anon grant was missing from
+ * September to 2026-11-23) never hides the code copy the page then serves.
+ */
+async function readRowSlugs(label: string, narrow: (query: SlugQuery) => SlugQuery): Promise<string[]> {
+    const [published, unpublished] = await Promise.all([
+        readSlugs(label, 'published', narrow),
+        readSlugs(label, 'unpublished', narrow),
+    ]);
+    return [...published, ...unpublished];
 }
 
 /**
@@ -232,16 +285,14 @@ function mdxCandidateSlugs(category?: string): string[] {
 }
 
 /**
- * Slugs from `slugs` that have a blog_posts row of any status. On a failed
- * read this fails OPEN (no rows), matching hasSuppressedRow: the fallback
- * posts still render, so they should still be listed.
+ * Slugs from `slugs` that have a blog_posts row of any status (readRowSlugs).
+ * On a failed read this fails OPEN (no rows), matching hasSuppressedRow: the
+ * fallback posts still render, so they should still be listed.
  */
 async function fetchDbSlugsIn(slugs: readonly string[]): Promise<string[]> {
     if (slugs.length === 0) return [];
-    const read = await readBlogPosts<{ slug: string }[]>('fetching blog rows for code-served posts', (supabase) =>
-        supabase.from('blog_posts').select('slug').in('slug', [...slugs]),
-    );
-    return (read.data ?? []).map((row) => row.slug);
+    const candidates = [...slugs];
+    return readRowSlugs('fetching blog rows for code-served posts', (query) => query.in('slug', candidates));
 }
 
 /**
@@ -251,11 +302,10 @@ async function fetchDbSlugsIn(slugs: readonly string[]): Promise<string[]> {
  * they should still be listed.
  */
 async function fetchLicenseGuideDbSlugs(onlyUnpublished = false): Promise<string[]> {
-    const read = await readBlogPosts<{ slug: string }[]>('fetching license guide rows', (supabase) => {
-        const query = supabase.from('blog_posts').select('slug').like('slug', `${LICENSE_GUIDE_SLUG_PREFIX}%`);
-        return onlyUnpublished ? query.neq('status', 'published') : query;
-    });
-    return (read.data ?? []).map((row) => row.slug);
+    const series = (query: SlugQuery) => query.like('slug', `${LICENSE_GUIDE_SLUG_PREFIX}%`);
+    return onlyUnpublished
+        ? readSlugs('fetching license guide rows', 'unpublished', series)
+        : readRowSlugs('fetching license guide rows', series);
 }
 
 export async function getPublishedPosts(
@@ -388,10 +438,18 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
  *
  * Only runs on the miss path for license and .mdx slugs, so the extra
  * round-trip never touches the normal published-post render.
+ *
+ * Reads with the service-role client (RowScope 'unpublished'): the anon key
+ * never sees an unpublished row, so through it this was a silent no-op until
+ * 2026-11-23. It filters status <> 'published' itself, so a published row
+ * that the anon read above could not see (an outage) is never taken for a
+ * takedown: the code copy is served, as it was before.
  */
 async function hasSuppressedRow(slug: string): Promise<boolean> {
-    const read = await readBlogPosts<{ id: string } | null>('checking for an unpublished blog row', (supabase) =>
-        supabase.from('blog_posts').select('id').eq('slug', slug).maybeSingle(),
+    const read = await readBlogPosts<{ slug: string } | null>(
+        'checking for an unpublished blog row',
+        (supabase) => slugQuery(supabase, 'unpublished').eq('slug', slug).maybeSingle(),
+        'unpublished',
     );
     // On a failed read, fail OPEN (serve the generated guide): an outage in
     // this secondary lookup should not 404 a page that would otherwise render.
