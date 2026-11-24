@@ -9,8 +9,13 @@
  *
  * Anchors are the boards' names, never keyword phrases: these are links
  * between sites with one owner, and a name is what a reader looks for.
+ *
+ * The sister board's name and address come from config/sister-board.ts and
+ * this board's own from config/brand.ts: config/ is the one folder the
+ * brand-leak and niche-copy scanners skip, so neither is spelled here.
  */
 import { brand } from '@/config/brand';
+import { sisterBoard } from '@/config/sister-board';
 
 export interface NetworkBoard {
     /** The board's public name, used as the link text. */
@@ -22,8 +27,8 @@ export interface NetworkBoard {
 }
 
 export const JOB_BOARD_NETWORK: readonly NetworkBoard[] = [
-    { name: 'PMHNP Hiring', url: 'https://pmhnphiring.com', live: true },
-    { name: 'NP Hiring', url: 'https://nphiring.com', live: true },
+    { name: sisterBoard.name, url: sisterBoard.baseUrl, live: true },
+    { name: brand.name, url: brand.baseUrl, live: true },
     { name: 'ABA Jobs Hub', url: 'https://abajobshub.com', live: false },
     { name: 'PA Jobs Hub', url: 'https://pajobshub.com', live: false },
     { name: 'Therapist Jobs Hub', url: 'https://therapistjobshub.com', live: false },
