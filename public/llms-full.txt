@@ -57,7 +57,7 @@ Location pages are generated from live listings, so how many exist changes with 
 - State job pages under /jobs/state/<state-slug>, indexable where the hub passes its listing and data gates
 - Per-category state pages under /jobs/<slug>/<state-slug> for the state-eligible categories, indexable where the combination passes its gate
 - Per-category city pages under /jobs/<slug>/city/<city-slug>, which are not published at all below a minimum number of listings
-- State salary pages under /salary-guide/<state>, which show a state median only where enough postings with disclosed pay, from enough employers, support one
+- State salary pages under /salary-guide/<state>, each with that state's BLS May 2025 median annual wage for NPs, its 10th to 90th percentile range and employment, plus a median of posted pay only where enough employers disclose pay
 - Browse index at /jobs/locations
 The sitemap index lists only pages that pass their gates, so it is the authoritative list of indexable location pages.
 
@@ -135,7 +135,7 @@ All tools are free and live under https://nphiring.com/tools.
 
 ## Career Resources
 
-- /salary-guide: NP salary guide: the national median, plus state medians where enough disclosed pay supports one
+- /salary-guide: NP salary by state: the BLS May 2025 median wage for all 50 states and DC, the highest and lowest paying states, plus live posted medians where enough employers disclose pay
 - /salary-guide/specialty: NP salary by specialty
 - /for-job-seekers: Job search hub linking the resume, cover letter, interview, negotiation, credentialing, new grad and fellowship guides
 - /resources: Licensure and career tools, including a state licensure checker

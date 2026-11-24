@@ -256,6 +256,13 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // 2026-10-25 (2027 re-price): our price cell and pricing paragraph state the new ladder and no plan;
   // 2026-10-26 (Phase 3): they add the 5-post pack.
   '/compare/np-hiring-vs-enp-network': '2026-10-26',
+  // 2026-11-25 (salary SEO build): the hub gained the BLS May 2025 wage
+  // table for all 50 states and DC with the highest and lowest paying
+  // states, and every state page its BLS wage card and FAQ. Both also list
+  // live postings, so the sitemap dates them by the later of this and their
+  // newest job.
+  '/salary-guide': '2026-11-25',
+  '/salary-guide/[state]': '2026-11-25',
   // Every specialty salary page renders from one template: the specialty
   // config and content were rewritten on 2026-09-29 (specialty-config.ts,
   // specialty-content.ts), and the plain copy pass removed the related

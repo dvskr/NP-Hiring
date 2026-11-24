@@ -18,6 +18,7 @@ import {
   shouldIndexCompanyProfile,
   shouldIndexLocalListingPage,
   shouldIndexMetro,
+  shouldIndexSalaryGuideState,
   shouldIndexStateCityDirectory,
   type LocalListingIndexInput,
   type MetroIndexInput,
@@ -31,6 +32,7 @@ import { landingBucketWhere } from '@/lib/pseo/landing-where'
 import { loadStateHubVerdicts, type StateHubVerdict } from '@/lib/pseo/state-hub-index'
 import { cityIndexKey, loadCityIndexInputs, loadMetroIndexInput } from '@/lib/pseo/sitemap-index-inputs'
 import { getPublishableSalaryGuideStates } from '@/lib/salary-analytics'
+import { blsStateWageBySlug } from '@/lib/salary-guide-bls-states'
 import { getAllLicenseGuideSlugs, getIndexableLicenseGuideSlugs, getLicenseGuideReviewedAt } from '@/lib/blog-license-guides'
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry'
 // Drift-proof registries (P1 #7, P1 #18, P2 #4/#5/#6/#17, P5 A2/A7/A8):
@@ -203,10 +205,11 @@ async function fetchFreshLandingRows(): Promise<Map<string, LandingStatsRow>> {
 }
 
 /**
- * States whose /salary-guide/[state] publishes a gated median, as sitemap
- * slugs. getPublishableSalaryGuideStates() returns Job.state names and is
- * the same gate over the same pool as the page's shouldIndexSalaryGuideState
- * (lib/salary-analytics.ts), so the guide and the sitemap cannot disagree.
+ * States whose /salary-guide/[state] publishes a gated posted median, as
+ * sitemap slugs. getPublishableSalaryGuideStates() returns Job.state names
+ * over the same gate and pool the page reads (lib/salary-analytics.ts); it
+ * is the `salaryGatePassed` input of shouldIndexSalaryGuideState, which the
+ * sitemap calls exactly as the page does, so the two cannot disagree.
  */
 async function fetchPublishableSalaryStateSlugs(): Promise<Set<string>> {
   const names = await getPublishableSalaryGuideStates()
@@ -335,7 +338,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Other landing pages. The salary guide hub prints medians computed from
   // live postings, so it is dated like the listings; the rest are copy.
   const landingPages: MetadataRoute.Sitemap = [
-    { url: `${baseUrl}/salary-guide`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${baseUrl}/salary-guide`, lastModified: latestOf(latestJobDate, pageContentDate('/salary-guide')) ?? undefined, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${baseUrl}/resources`, lastModified: pageContentDate('/resources'), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/jobs/locations`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/resources/fpa-guide`, lastModified: pageContentDate('/resources/fpa-guide'), changeFrequency: 'monthly', priority: 0.8 },
@@ -554,12 +557,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
     // /salary-guide/[state] renders at 1 or more active jobs (its own 404
-    // gate, getStateActiveJobCount) and indexes only when it publishes a
-    // gated median (shouldIndexSalaryGuideState). The active-job set keeps
-    // 404s out; the publishable set keeps noindex pages out.
-    salaryGuideStatePages = US_STATES.filter(s => statesWithJobs.has(s) && publishableSalaryStates.has(s)).map(state => ({
+    // gate, getStateActiveJobCount) and indexes through the page's own
+    // predicate, shouldIndexSalaryGuideState: a cited BLS state median or a
+    // gated posted median. The active-job count keeps 404s out; the
+    // predicate keeps noindex pages out. Each page renders its state's jobs
+    // and the shared template, so it is dated by the later of the two.
+    const salaryStateTemplateDate = pageContentDate('/salary-guide/[state]')
+    salaryGuideStatePages = US_STATES.filter((s) => statesWithJobs.has(s) && shouldIndexSalaryGuideState({
+      activeJobs: stateActiveJobs.get(s) ?? 0,
+      salaryGatePassed: publishableSalaryStates.has(s),
+      blsMedianAvailable: blsStateWageBySlug(s)?.annualMedian.value != null,
+    })).map(state => ({
       url: `${baseUrl}/salary-guide/${state}`,
-      lastModified: stateLastmod.get(state) ?? latestJobDate,
+      lastModified: latestOf(stateLastmod.get(state), salaryStateTemplateDate) ?? latestJobDate,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
       images: stateDioramaSitemapImages(state, baseUrl),

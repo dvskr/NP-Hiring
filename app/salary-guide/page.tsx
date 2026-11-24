@@ -39,6 +39,22 @@ import {
   NP_SALARY_ANALYTICS_SELECT,
   filterNpEligibleRows,
 } from '@/lib/salary-utils';
+import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+// The BLS OEWS May 2025 state wages: the all-state table, the highest and
+// lowest paying states and the state FAQ answer all read this one module.
+import {
+  BLS_OEWS_REFERENCE_PERIOD,
+  BLS_STATE_SOURCE_LABEL,
+  BLS_STATE_SOURCE_URL,
+  BLS_STATE_WAGES,
+  blsRankSentence,
+  blsStatesByMedianDesc,
+  bottomStatesByMedian,
+  formatBlsCount,
+  formatBlsDollars,
+  formatBlsHourly,
+  topStatesByMedian,
+} from '@/lib/salary-guide-bls-states';
 
 // ── Editorial review date (audit P0 #23, B54 principle) ─────────────────
 // The Article schema's dateModified must reflect a REAL content review,
@@ -84,6 +100,24 @@ const REVIEWED_LABEL = formatStatVintage(LAST_REVIEWED_DATE);
 // and the copy-citation title. No year in it: the figures carry their own
 // vintage (NATIONAL_SALARY_VINTAGE), and a year in the name went stale.
 const GUIDE_NAME = `${brand.niche.long} Salary Guide`;
+
+// ── BLS state wages (May 2025 OEWS) ─────────────────────────────────────
+// Ranked once from the generated module (lib/salary-guide-bls-states.ts):
+// the all-state table, the highest and lowest paying state lists and the
+// state FAQ answer all read these, so none of them is typed by hand.
+const BLS_STATES_BY_MEDIAN = blsStatesByMedianDesc();
+const TOP_PAYING_STATES = topStatesByMedian(5);
+const LOWEST_PAYING_STATES = bottomStatesByMedian(5);
+
+/** The highest paying state answer, from the three highest BLS state medians. */
+function highestPayingStateAnswer(): string {
+  const [first, second, third] = TOP_PAYING_STATES;
+  if (!first || !second || !third) {
+    return `The BLS ${BLS_OEWS_REFERENCE_PERIOD} survey publishes a median annual wage for ${brand.niche.descriptor}s in each state, and the national median was ${NATIONAL_SALARY.formatted}.`;
+  }
+  return `In the BLS ${BLS_OEWS_REFERENCE_PERIOD} survey, ${first.state} had the highest median annual wage for ${brand.niche.descriptor}s at ${formatBlsDollars(first.annualMedian)}, followed by ${second.state} (${formatBlsDollars(second.annualMedian)}) and ${third.state} (${formatBlsDollars(third.annualMedian)}). The national median was ${NATIONAL_SALARY.formatted}.`;
+}
+const HIGHEST_PAYING_STATE_ANSWER = highestPayingStateAnswer();
 
 // Enable ISR with daily revalidation
 export const revalidate = 86400;
@@ -236,6 +270,35 @@ async function getSalaryAnalytics() {
   };
 }
 
+/**
+ * Active jobs per state on the predicate /salary-guide/[state] uses for its
+ * own 404 gate (activeIndexableJobWhere plus the state name), so the BLS
+ * table links a state page, and its jobs, only where that page renders.
+ */
+async function getActiveJobsByState(): Promise<Map<string, number>> {
+  const rows = await prisma.job.groupBy({
+    by: ['state'],
+    where: { ...activeIndexableJobWhere(), state: { not: null } },
+    _count: { id: true },
+  });
+  return new Map(rows.flatMap((row) => (row.state ? [[row.state, row._count.id] as const] : [])));
+}
+
+/** All 51 BLS rows for the table: highest median first, any footnoted median last. */
+const BLS_TABLE_ROWS = [
+  ...BLS_STATES_BY_MEDIAN,
+  ...Object.values(BLS_STATE_WAGES).filter((row) => row.annualMedian.value === null),
+];
+
+const blsHeadCell: React.CSSProperties = {
+  padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: '#64748B',
+  borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase',
+  letterSpacing: '0.04em', whiteSpace: 'nowrap',
+};
+const blsCell: React.CSSProperties = {
+  padding: '10px 14px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', whiteSpace: 'nowrap',
+};
+
 export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so the brand suffix
   // doesn't get appended a second time (was rendering "... | PMHNP Hiring
@@ -373,7 +436,10 @@ const faqData = [
   // its hand-typed year (the data's own vintage is in the answer), and the
   // estimate ranges read "to" (house style) and stay attributed.
   { q: `How much do ${brand.niche.descriptor}s make?`, a: `${brand.niche.long}s earned a median of ${NATIONAL_SALARY.formatted} a year in ${NATIONAL_SALARY_VINTAGE}, according to federal wage data (${NATIONAL_SALARY.source}). The lowest paid 10% earned less than ${NATIONAL_P10.formatted} and the highest paid 10% earned more than ${NATIONAL_P90.formatted}. The experience ranges on this page, about $95,000 to $115,000 for new graduates and $150,000 to $180,000 or more for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
-  { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets; California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
+  // 2026-11 (salary build): written from the BLS state rows, so the states
+  // and figures follow the generated module. The hand-typed list of five
+  // states and the uncited cost-of-living claim it carried are gone.
+  { q: `Which state pays ${brand.niche.short}s the most?`, a: HIGHEST_PAYING_STATE_ANSWER },
   // SECOND PASS: attributed for the same reason as the two answers above.
   // It is the fourth uncited range in this array; leaving it bare while
   // labelling its neighbours would repeat the exact defect this pass exists
@@ -402,7 +468,10 @@ const faqData = [
 ];
 
 export default async function SalaryGuidePage() {
-  const { stateSalaries, smallSampleStates, employerHeldStates, national, overallStats } = await getSalaryAnalytics();
+  const [
+    { stateSalaries, smallSampleStates, employerHeldStates, national, overallStats },
+    activeJobsByState,
+  ] = await Promise.all([getSalaryAnalytics(), getActiveJobsByState()]);
 
   // Calculator base: the gated national median of NP-eligible postings
   // when it exists; otherwise fall back to the cited BLS OEWS national
@@ -656,6 +725,102 @@ export default async function SalaryGuidePage() {
           />
         </section>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECTION 2: BLS WAGES BY STATE (white bg)
+          All 50 states and DC from the BLS OEWS May 2025 state file
+          (lib/salary-guide-bls-states.ts). Every cell is a BLS figure or
+          the BLS footnote label, never a number BLS did not publish, and
+          the caption names the source and vintage. A state links its own
+          salary page and its jobs only where it has active jobs, because
+          /salary-guide/[state] 404s at zero.
+          ═══════════════════════════════════════════════════════════════ */}
+      <section id="salary-by-state" style={{ background: '#FFFFFF', padding: '80px 20px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+            BLS Wage Data by State
+          </p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
+            {brand.niche.long} Salary by State (BLS, {BLS_OEWS_REFERENCE_PERIOD})
+          </h2>
+          <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.65, textAlign: 'center', maxWidth: '720px', margin: '0 auto 28px' }}>
+            Median annual wage for {brand.niche.descriptor}s in each state and DC, from the BLS Occupational Employment and Wage Statistics survey ({BLS_OEWS_REFERENCE_PERIOD}). These are survey estimates of wages paid, sorted from the highest state median to the lowest.
+          </p>
+
+          <div className="emp-compare-table" style={{ ...clayCard, padding: 0, overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <caption style={{ captionSide: 'bottom', textAlign: 'left', padding: '12px 16px', fontSize: '11.5px', color: '#64748B', lineHeight: 1.5 }}>
+                Source: {BLS_STATE_SOURCE_LABEL}, state estimates (
+                <a href={BLS_STATE_SOURCE_URL} rel="noopener noreferrer" style={{ color: '#BE185D', fontWeight: 600 }}>BLS state file</a>
+                ). The national median in the same survey is {NATIONAL_SALARY.formatted}.
+              </caption>
+              <thead>
+                <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
+                  <th scope="col" style={{ ...blsHeadCell, textAlign: 'left', paddingLeft: '20px' }}>State</th>
+                  <th scope="col" style={blsHeadCell}>Median annual wage</th>
+                  <th scope="col" className="sal-bls-optional" style={blsHeadCell}>Median hourly wage</th>
+                  <th scope="col" className="sal-bls-optional" style={blsHeadCell}>10th to 90th percentile</th>
+                  <th scope="col" className="sal-bls-optional" style={blsHeadCell}>{brand.niche.short} employment</th>
+                  <th scope="col" style={blsHeadCell}>Open jobs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {BLS_TABLE_ROWS.map((row, i) => {
+                  const jobs = activeJobsByState.get(row.state) ?? 0;
+                  return (
+                    <tr key={row.state} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
+                      <th scope="row" style={{ ...blsCell, textAlign: 'left', paddingLeft: '20px', fontWeight: 600, color: '#1A2E35' }}>
+                        {jobs > 0 ? (
+                          <Link href={`/salary-guide/${row.slug}`} className="sal-state-link" style={{ color: '#1A2E35', textDecoration: 'none' }}>
+                            {row.state}
+                          </Link>
+                        ) : row.state}
+                      </th>
+                      <td style={{ ...blsCell, fontWeight: 700, color: '#1A2E35' }}>{formatBlsDollars(row.annualMedian)}</td>
+                      <td className="sal-bls-optional" style={{ ...blsCell, color: '#5A4A42' }}>{formatBlsHourly(row.hourlyMedian)}</td>
+                      <td className="sal-bls-optional" style={{ ...blsCell, color: '#5A4A42', fontSize: '12px' }}>
+                        {row.annualP10.value !== null && row.annualP90.value !== null
+                          ? `${formatBlsDollars(row.annualP10)} to ${formatBlsDollars(row.annualP90)}`
+                          : `${formatBlsDollars(row.annualP10)}; ${formatBlsDollars(row.annualP90)}`}
+                      </td>
+                      <td className="sal-bls-optional" style={{ ...blsCell, color: '#5A4A42' }}>{formatBlsCount(row.employment)}</td>
+                      <td style={blsCell}>
+                        {jobs > 0 ? (
+                          <Link href={`/jobs/state/${row.slug}`} style={{ fontSize: '12px', color: '#BE185D', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                            {jobs.toLocaleString('en-US')} <ArrowUpRight size={12} />
+                          </Link>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>None open</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* The highest and lowest paying states, five each, from the same
+              rows: one generated sentence per state, figures and comparison
+              read from the module. */}
+          <div className="sal-rank-grid" style={{ display: 'grid', gap: '16px', marginTop: '28px' }}>
+            {[
+              { id: 'highest-paying-states', title: `Highest Paying States for ${brand.niche.long}s`, rows: TOP_PAYING_STATES },
+              { id: 'lowest-paying-states', title: `Lowest Paying States for ${brand.niche.long}s`, rows: LOWEST_PAYING_STATES },
+            ].map((group) => (
+              <div key={group.id} id={group.id} style={{ ...clayCard, padding: '22px 24px' }}>
+                <h2 className="font-lora" style={{ fontSize: '19px', fontWeight: 700, color: '#1A2E35', margin: '0 0 12px' }}>{group.title}</h2>
+                <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13.5px', color: '#5A4A42', lineHeight: 1.65 }}>
+                  {group.rows.map((row) => (
+                    <li key={row.state} style={{ marginBottom: '6px' }}>{blsRankSentence(row)}</li>
+                  ))}
+                </ol>
+                <p style={{ fontSize: '11.5px', color: '#64748B', margin: '10px 0 0' }}>{BLS_STATE_SOURCE_LABEL}, median annual wage.</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 3: STATE SALARY TABLE (slate bg)
@@ -1156,6 +1321,10 @@ export default async function SalaryGuidePage() {
           .sal-hero-bento { grid-template-columns: repeat(12, 1fr); }
           .sal-hero-calc { grid-column: span 8; }
           .sal-hero-sidebar { grid-column: span 4; }
+          .sal-rank-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+          .sal-bls-optional { display: none; }
         }
         .emp-cta-primary {
           transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;

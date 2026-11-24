@@ -258,10 +258,12 @@ describe('app/sitemap.ts reads the render gates', () => {
         expect(code).not.toContain('shouldIndexMetro({ activeJobs: inventory.activeJobs })');
     });
 
-    it('salary-guide states intersect the active-job set with the publishable set', () => {
+    it('salary-guide states call the page robots predicate with the posted gate and the BLS median', () => {
         expect(src).toContain("import { getPublishableSalaryGuideStates } from '@/lib/salary-analytics'");
         const block = code.slice(code.indexOf('salaryGuideStatePages = US_STATES.filter'));
-        expect(block).toContain('statesWithJobs.has(s) && publishableSalaryStates.has(s)');
+        expect(block).toContain('shouldIndexSalaryGuideState({');
+        expect(block).toContain('salaryGatePassed: publishableSalaryStates.has(s)');
+        expect(block).toContain('blsMedianAvailable:');
     });
 
     it('city pages gate on the page input: distinct postings and employers per (city, jurisdiction) (fixSoon 8)', () => {
@@ -557,10 +559,18 @@ describe('primary sitemap emits exactly the URLs the page gates index', () => {
         expect(urls).toContain(`${BASE}/jobs/metro/dallas-tx`);
     });
 
-    it('salary-guide states: only a state with jobs AND a published median', async () => {
+    it('salary-guide states: every state with jobs and a BLS or posted median, none without jobs', async () => {
         const urls = (await sitemap()).map((e) => e.url);
+        // Texas has jobs and a posted median; California has jobs and only
+        // the BLS state median, which now indexes the page on its own.
         expect(urls).toContain(`${BASE}/salary-guide/texas`);
-        expect(urls).not.toContain(`${BASE}/salary-guide/california`);
+        expect(urls).toContain(`${BASE}/salary-guide/california`);
+        // No active jobs: the page 404s, so it is never listed.
+        expect(urls).not.toContain(`${BASE}/salary-guide/wyoming`);
+        expect(urls.filter((u) => /\/salary-guide\/(?!specialty)[a-z-]+$/.test(u)).sort()).toEqual([
+            `${BASE}/salary-guide/california`,
+            `${BASE}/salary-guide/texas`,
+        ]);
     });
 
     it('metros: shouldIndexMetro over the page input (CQ-08: 3 or more distinct postings, 1 or more posted in the last 30 days)', async () => {

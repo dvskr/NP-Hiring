@@ -15,7 +15,7 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 - 10 job sources, refreshed daily: 8 employer applicant tracking systems (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable), USAJOBS for federal postings, and Adzuna
 - 45 category hubs across seven taxonomy axes: setting, job type, specialty, APRN role, experience level, employer type, and population served
 - State, city and category pages are generated from live listings and published where their data passes the site's quality gates. A page below its gate answers noindex or is not published, so the sitemap index is the authoritative list of indexable pages
-- State salary pages show a state median only where enough postings with disclosed pay, from enough employers, support one
+- Every state salary page shows that state's BLS May 2025 median annual wage for NPs; a median of posted pay joins it only where enough employers disclose pay
 - Salary is shown whenever the employer's posting provides it; we do not estimate or fabricate pay for an individual listing
 - Cited statistics on our pages carry a named source and an as-of date
 - Searching, job alerts and applying are free for job seekers; the PDF career guides at /guides are optional
@@ -52,7 +52,7 @@ Canonical figures, as cited across the site (last verified 2026-10-06):
 ### Core
 - /jobs: Main NP job board (supports ?q= keyword search)
 - /jobs/locations: Browse jobs by state
-- /salary-guide: NP salary guide: the national median, plus state medians where enough disclosed pay supports one
+- /salary-guide: NP salary by state: the BLS May 2025 median wage for all 50 states and DC, the highest and lowest paying states, plus live posted medians where enough employers disclose pay
 - /salary-guide/specialty: NP salary by specialty
 - /for-job-seekers: Job search hub with the application guides
 - /blog: Career guides, licensure guides, and industry insights

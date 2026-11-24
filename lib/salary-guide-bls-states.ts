@@ -256,6 +256,13 @@ export function hasBlsStateMedian(stateName: string): boolean {
     return blsStateWage(stateName)?.annualMedian.value != null;
 }
 
+const BY_SLUG: ReadonlyMap<string, BlsStateWage> = new Map(Object.values(BLS_STATE_WAGES).map((row) => [row.slug, row]));
+
+/** The state's 29-1171 row by its /salary-guide/{slug} segment. */
+export function blsStateWageBySlug(slug: string): BlsStateWage | null {
+    return BY_SLUG.get(slug) ?? null;
+}
+
 /** States with a published median, highest median first (ties by name). */
 export function blsStatesByMedianDesc(): BlsStateWage[] {
     return Object.values(BLS_STATE_WAGES)
@@ -271,6 +278,18 @@ export function topStatesByMedian(n: number): BlsStateWage[] {
 /** The n states with the lowest BLS median annual wage, lowest first. */
 export function bottomStatesByMedian(n: number): BlsStateWage[] {
     return blsStatesByMedianDesc().reverse().slice(0, Math.max(0, n));
+}
+
+/**
+ * One sentence for a highest or lowest paying states list: "California: a
+ * median annual wage of $168,520 ($81.02 an hour), 27% above the national
+ * median of $132,300." Null when BLS published no median for the state.
+ */
+export function blsRankSentence(row: BlsStateWage): string | null {
+    if (row.annualMedian.value === null) return null;
+    const hourly = row.hourlyMedian.value !== null ? ` (${formatBlsHourly(row.hourlyMedian)} an hour)` : '';
+    const comparison = compareWithNationalMedian(row);
+    return `${row.state}: a median annual wage of ${formatBlsDollars(row.annualMedian)}${hourly}${comparison ? `, ${comparison}` : ''}.`;
 }
 
 /**

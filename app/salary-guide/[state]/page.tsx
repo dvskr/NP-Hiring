@@ -15,8 +15,10 @@
  *      lib/salary-analytics.ts (the npSalaryAnalyticsWhere pool scoped to
  *      NP-eligible titles, published only at n of BENCHMARK_MIN_POSTINGS
  *      or more from BENCHMARK_MIN_EMPLOYERS or more employers). Below the
- *      gate there is no figure, only the cited BLS median from
- *      lib/stats-sources.ts.
+ *      gate there is no posted figure. Every page also carries the state's
+ *      cited BLS OEWS wages (lib/salary-guide-bls-states.ts): its title
+ *      figure, the BLS wage band and the lead FAQ, labelled as BLS survey
+ *      estimates with their vintage, never as posted pay.
  *   2. The board-wide median is labelled BOARD_MEDIAN_LABEL, never
  *      "national" (thin-spec-4 B8). "National median" is reserved for the
  *      cited BLS wage, and the comparison clause names its base.
@@ -90,6 +92,7 @@ import { canonicalActiveJobWhere } from '@/lib/canonical-counts';
 import { categoryLabelOf, getListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import {
     BOARD_MEDIAN_LABEL,
+    buildBlsStateWageSentence,
     buildHiringForSentence,
     buildHubPayParagraph,
     buildSalaryStateDescription,
@@ -126,6 +129,20 @@ import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
 import { formatCount, truncateOnWord } from '@/lib/display-text';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+// The cited BLS OEWS state wages: every state and DC carries its own median,
+// band and employment, which is also what lets the page index on its own.
+import {
+    BLS_NATIONAL,
+    BLS_OEWS_REFERENCE_PERIOD,
+    BLS_STATE_SOURCE_LABEL,
+    BLS_STATE_SOURCE_URL,
+    blsStateWage,
+    compareWithNationalMedian,
+    formatBlsCount,
+    formatBlsDollars,
+    formatBlsHourly,
+    hasBlsStateMedian,
+} from '@/lib/salary-guide-bls-states';
 // P3 #9: /jobs/city/[slug] resolves by re-parsing the slug into a city NAME, so a
 // link built from a lossy slug can be a guaranteed 404. Guard before emitting.
 import { buildCitySlug, cityLinkResolves, MIN_CITY_JOBS_FOR_LINK } from '@/app/jobs/locations/[state]/directory';
@@ -344,29 +361,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const code = STATE_CODES[stateName];
     const env = getPracticeEnvironment(stateName);
+    const bls = blsStateWage(stateName);
     const [facts, salary] = await Promise.all([loadFacts(stateName, slug), loadSalary(stateName)]);
     const benchmark = toBenchmarkRow(stateName, salary);
 
-    // SAL-meta: the title carries the median only when one is published,
-    // and the year derives from the snapshot date so it cannot go stale in
-    // January. No count in the title, because counts churn on the ISR cycle.
+    // SAL-meta: the title carries the cited BLS state median (stable for a
+    // year, comparable across states), else the posted median when one is
+    // published, with the year from the snapshot date so it cannot go stale
+    // in January. No count in the title, because counts churn on the ISR
+    // cycle. The description leads with the live posted median when it
+    // exists, else the BLS figures.
     const title = buildSalaryStateTitle({
         stateName,
         stateCode: code,
         benchmark,
         year: facts.computedAt.getUTCFullYear(),
+        blsMedian: bls?.annualMedian.value ?? null,
     });
     const description = env
-        ? buildSalaryStateDescription({ env, facts: { ...facts, benchmark } })
-        : truncateOnWord(buildSalaryStateSummary({ stateName, benchmark }), DESCRIPTION_MAX);
+        ? buildSalaryStateDescription({ env, facts: { ...facts, benchmark }, bls })
+        : truncateOnWord(buildSalaryStateSummary({ stateName, benchmark, bls }), DESCRIPTION_MAX);
     const ogImage = salaryGuideOgImage(stateName, code);
     const canonical = `${brand.baseUrl}/salary-guide/${slug}`;
-    // S-IDX: index only when the state publishes a median. A below-gate page
-    // still renders, keeps a self canonical and stays followable. The same
-    // predicate gates the URL in app/sitemap.ts, over the same pool.
+    // S-IDX: index when the page carries a figure of its own, the cited BLS
+    // state median or a gated posted median. A page with neither still
+    // renders, keeps a self canonical and stays followable. app/sitemap.ts
+    // calls the same predicate with the same inputs.
     const indexable = shouldIndexSalaryGuideState({
         activeJobs: facts.total,
         salaryGatePassed: salary.gatePassed,
+        blsMedianAvailable: hasBlsStateMedian(stateName),
     });
 
     return {
@@ -456,6 +480,11 @@ export default async function StateSalaryPage({ params }: PageProps) {
     const stateSlug = slug;
     const env = getPracticeEnvironment(stateName);
     const nearbyEnvs = getNearbyStates(stateName);
+    // The cited BLS row; its median is null only for a footnoted cell, and
+    // every block below that prints a BLS figure renders only with one.
+    const bls = blsStateWage(stateName);
+    const blsMedian = bls && bls.annualMedian.value !== null ? bls : null;
+    const blsComparison = blsMedian ? compareWithNationalMedian(blsMedian) : null;
 
     const [
         facts,
@@ -565,6 +594,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 renders: shouldIndexSalaryGuideState({
                     activeJobs: jobs,
                     salaryGatePassed: neighborBenchmark !== null,
+                    blsMedianAvailable: hasBlsStateMedian(neighbor.stateName),
                 }),
             },
             guide: {
@@ -592,7 +622,24 @@ export default async function StateSalaryPage({ params }: PageProps) {
             },
         })
         : null;
+    // The BLS answer leads: every state has one, it is cited and dated, and
+    // it is the question state salary searches ask. The live posted median
+    // joins it only when that median is published.
+    const blsFaq = blsMedian
+        ? {
+            question: `How much do ${brand.niche.descriptor}s make in ${stateName}?`,
+            answer: [
+                buildBlsStateWageSentence(blsMedian),
+                blsMedian.hourlyMedian.value !== null ? `The median hourly wage was ${formatBlsHourly(blsMedian.hourlyMedian)}.` : null,
+                blsComparison ? `That is ${blsComparison}, from the same survey.` : null,
+                benchmark
+                    ? `On ${brand.name}, the median posted pay across ${formatCount(benchmark.employers, 'employer')} that disclose pay in live ${stateName} postings is ${formatDollars(benchmark.median)}.`
+                    : null,
+            ].filter(Boolean).join(' '),
+        }
+        : null;
     const stateFaqs = [
+        ...(blsFaq ? [blsFaq] : []),
         {
             question: `What is the median ${brand.niche.short} salary in ${stateName}?`,
             answer: employerShareHold
@@ -613,17 +660,31 @@ export default async function StateSalaryPage({ params }: PageProps) {
     ];
 
     const showHeroDiorama = hasStateDiorama(stateSlug);
-    const heroSummary = buildSalaryStateSummary({ stateName, benchmark });
+    const heroSummary = buildSalaryStateSummary({ stateName, benchmark, bls });
 
     const statTiles: StatTile[] = [
+        // The cited BLS state median leads on every state page.
+        ...(blsMedian
+            ? [{
+                key: 'bls-state',
+                label: `BLS median annual wage, ${stateName}`,
+                value: formatBlsDollars(blsMedian.annualMedian),
+                sub: blsComparison
+                    ? `${blsComparison.charAt(0).toUpperCase()}${blsComparison.slice(1)} (BLS OEWS, ${BLS_OEWS_REFERENCE_PERIOD})`
+                    : `BLS OEWS, ${BLS_OEWS_REFERENCE_PERIOD}`,
+            }]
+            : []),
         benchmark
             ? {
                 key: 'median',
                 label: 'Median posted pay',
                 value: formatDollars(benchmark.median),
-                sub: comparison
-                    ? `${formatCount(benchmark.postings, 'posting')}, ${comparison}`
-                    : `${formatCount(benchmark.postings, 'posting')} with disclosed pay`,
+                sub: [
+                    comparison
+                        ? `${formatCount(benchmark.postings, 'posting')}, ${comparison}`
+                        : `${formatCount(benchmark.postings, 'posting')} with disclosed pay`,
+                    `middle half ${formatK(benchmark.p25)} to ${formatK(benchmark.p75)}`,
+                ].join('; '),
             }
             : salaryData.heldByEmployerShare
                 ? {
@@ -638,14 +699,6 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     value: 'Sample too small',
                     sub: `Published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, none above ${MAX_EMPLOYER_SHARE_PERCENT}%`,
                 },
-        ...(benchmark
-            ? [{
-                key: 'spread',
-                label: 'Middle half',
-                value: `${formatK(benchmark.p25)} to ${formatK(benchmark.p75)}`,
-                sub: '25th to 75th percentile of the same postings',
-            }]
-            : []),
         {
             key: 'roles',
             label: `Open ${brand.niche.short} roles`,
@@ -837,6 +890,41 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 />
             </section>
 
+            {/* BLS state wages: this state's own survey figures beside the
+                national ones from the same release, so the page answers the
+                state question with cited, state-specific numbers. Rendered
+                only with a published median; a footnoted cell prints its
+                BLS label, never a number. */}
+            {blsMedian && (
+                <Band
+                    eyebrow="Wage estimates"
+                    title={`BLS wages for ${brand.niche.descriptor}s in ${stateName}`}
+                    lede={`Survey estimates of wages paid to ${brand.niche.descriptor}s in ${stateName}, from the BLS Occupational Employment and Wage Statistics program (${BLS_OEWS_REFERENCE_PERIOD}). They measure pay in jobs people hold, which is not the same as the pay employers post for open roles.`}
+                >
+                    <ClayTable
+                        caption={`${BLS_STATE_SOURCE_LABEL}, ${stateName} and national estimates.`}
+                        columns={['Measure', { label: stateName, numeric: true }, { label: 'United States', numeric: true }]}
+                        rows={[
+                            ['Median annual wage', formatBlsDollars(blsMedian.annualMedian), formatBlsDollars(BLS_NATIONAL.np.annualMedian)],
+                            ['Median hourly wage', formatBlsHourly(blsMedian.hourlyMedian), formatBlsHourly(BLS_NATIONAL.np.hourlyMedian)],
+                            ['10th percentile wage', formatBlsDollars(blsMedian.annualP10), formatBlsDollars(BLS_NATIONAL.np.annualP10)],
+                            ['25th percentile wage', formatBlsDollars(blsMedian.annualP25), formatBlsDollars(BLS_NATIONAL.np.annualP25)],
+                            ['75th percentile wage', formatBlsDollars(blsMedian.annualP75), formatBlsDollars(BLS_NATIONAL.np.annualP75)],
+                            ['90th percentile wage', formatBlsDollars(blsMedian.annualP90), formatBlsDollars(BLS_NATIONAL.np.annualP90)],
+                            [`${brand.niche.long}s employed`, formatBlsCount(blsMedian.employment), formatBlsCount(BLS_NATIONAL.np.employment)],
+                        ]}
+                    />
+                    <p style={{ ...clayDesc, margin: '14px 0 0', fontSize: '13px' }}>
+                        {blsComparison ? `${stateName}'s median is ${blsComparison}. ` : null}
+                        Source:{' '}
+                        <a href={BLS_STATE_SOURCE_URL} style={clayLink} rel="noopener noreferrer">
+                            BLS OEWS {BLS_OEWS_REFERENCE_PERIOD} state estimates
+                        </a>
+                        . <Link href="/salary-guide#salary-by-state" style={clayLink}>Compare every state</Link>.
+                    </p>
+                </Band>
+            )}
+
             {/* SAL-S1 practice environment */}
             {env && (
                 <Band eyebrow="Licensure" title={`Practicing in ${stateName}`}>
@@ -1003,7 +1091,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         index={2}
                         icon={BarChart3}
                         title="Pay across every state"
-                        desc="The board-wide medians, every state with a median of its own, and the sample each one needs."
+                        desc="The BLS median annual wage for all 50 states and DC, the highest and lowest paying states, and live posted medians."
                         action="Open the salary guide"
                         headingLevel={3}
                     />

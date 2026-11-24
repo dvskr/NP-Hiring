@@ -21,6 +21,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS, type BenchmarkRow } from '@/components/tools/benchmark-model';
 import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BLS_OEWS_REFERENCE_PERIOD, formatBlsDollars, type BlsStateWage } from '@/lib/salary-guide-bls-states';
 import { formatCount, indefiniteArticle, isAre, joinWithAnd, pluralize, wasWere } from '@/lib/display-text';
 import {
   getAuthorityLabel, getStatePracticeAuthority, STATE_PRACTICE_AUTHORITY, type PracticeAuthority,
@@ -835,13 +836,30 @@ export function buildLiveRolesBadge(total: number): string {
   return formatCount(total, 'live role');
 }
 
-/** SAL hero summary, two branches. */
-export function buildSalaryStateSummary(input: { stateName: string; benchmark: BenchmarkRow | null }): string {
-  const { stateName, benchmark } = input;
+/** SAL hero summary: the posted median, else the cited BLS state median, else the page's contents. */
+export function buildSalaryStateSummary(input: { stateName: string; benchmark: BenchmarkRow | null; bls?: BlsStateWage | null }): string {
+  const { stateName, benchmark, bls = null } = input;
   if (benchmark) {
     return `Median posted pay for ${NP_PROSE_PLURAL} in ${stateName}, from ${benchmark.postings} postings with disclosed pay across ${benchmark.employers} employers.`;
   }
+  if (bls && bls.annualMedian.value !== null) {
+    return `The BLS median annual wage for ${NP_PROSE_PLURAL} in ${stateName} was ${formatBlsDollars(bls.annualMedian)} in ${BLS_OEWS_REFERENCE_PERIOD}. This page adds the open roles, the state's practice rules and the pay employers post here.`;
+  }
   return `Open ${NP_PROSE} roles in ${stateName}, the state's practice rules, and how pay data is published here.`;
+}
+
+/**
+ * One sentence of BLS figures for a state: the median annual wage and the
+ * 10th to 90th percentile band, attributed and dated. Null when BLS
+ * published no median; a footnoted percentile drops the band clause rather
+ * than printing a number BLS did not publish.
+ */
+export function buildBlsStateWageSentence(bls: BlsStateWage): string | null {
+  if (bls.annualMedian.value === null) return null;
+  const band = bls.annualP10.value !== null && bls.annualP90.value !== null
+    ? `, with a 10th to 90th percentile range of ${formatBlsDollars(bls.annualP10)} to ${formatBlsDollars(bls.annualP90)}`
+    : '';
+  return `The BLS ${BLS_OEWS_REFERENCE_PERIOD} median annual wage for ${NP_PROSE_PLURAL} in ${bls.state} is ${formatBlsDollars(bls.annualMedian)}${band}.`;
 }
 
 /** SAL-S4 "What employers are hiring for", zero clauses omitted. */
@@ -1365,12 +1383,25 @@ export function buildMetroDescription(input: {
  * SAL-meta title per gate. The full role name leads ("Nurse Practitioner
  * Salary in Texas"), the phrasing salary searches use; the median and the
  * year join while the title fits, and the short form is the last resort.
+ *
+ * When BLS publishes the state's median annual wage (`blsMedian`, every
+ * state and DC in the May 2025 release) the title carries that figure: it
+ * holds for a year, compares across states and is cited, while the live
+ * posted median moves daily and stays in the body and the description. The
+ * figure carries its own vintage on the page, so no year joins it.
  */
-export function buildSalaryStateTitle(input: { stateName: string; stateCode: string; benchmark: BenchmarkRow | null; year: number }): string {
-  const { stateName, stateCode, benchmark, year } = input;
+export function buildSalaryStateTitle(input: { stateName: string; stateCode: string; benchmark: BenchmarkRow | null; year: number; blsMedian?: number | null }): string {
+  const { stateName, stateCode, benchmark, year, blsMedian = null } = input;
   // "District of Columbia" never fits beside the full role name; "DC" is how
   // the place is searched and written.
   const place = stateCode === 'DC' ? 'DC' : stateName;
+  if (blsMedian !== null && blsMedian > 0) {
+    const median = formatK(blsMedian);
+    return firstFittingTitle([
+      `${NP_LONG} Salary in ${place}: ${median} Median`,
+      `${NP} Salary in ${place}: ${median} Median`,
+    ]);
+  }
   if (benchmark) {
     const median = formatK(benchmark.median);
     return firstFittingTitle([
@@ -1398,13 +1429,25 @@ export function buildSalaryStateTitle(input: { stateName: string; stateCode: str
  * page's practice section rather than printed unattributed ("9 open roles,
  * full practice." read as a fact about practicing in the state).
  */
-export function buildSalaryStateDescription(input: { env: PracticeEnvironment; facts: ListingFacts }): string {
-  const { env, facts } = input;
+export function buildSalaryStateDescription(input: { env: PracticeEnvironment; facts: ListingFacts; bls?: BlsStateWage | null }): string {
+  const { env, facts, bls = null } = input;
   const row = facts.benchmark;
   if (row) {
     return assembleDescription([
       `Median posted ${NP} pay in ${env.stateName} is ${formatDollars(row.median)} across ${row.postings} postings from ${row.employers} employers, middle half ${formatDollars(row.p25)} to ${formatDollars(row.p75)}.`,
       `${formatCount(facts.total, 'open role')}.`,
+    ]);
+  }
+  // The compact BLS form: the page's full sentence runs about 140 characters
+  // and would leave no room for the open-role count.
+  if (bls && bls.annualMedian.value !== null) {
+    const band = bls.annualP10.value !== null && bls.annualP90.value !== null
+      ? ` (10th to 90th percentile ${formatBlsDollars(bls.annualP10)} to ${formatBlsDollars(bls.annualP90)})`
+      : '';
+    return assembleDescription([
+      `BLS ${BLS_OEWS_REFERENCE_PERIOD} median annual wage for ${NP}s in ${env.stateName}: ${formatBlsDollars(bls.annualMedian)}${band}.`,
+      `${formatCount(facts.total, `open ${NP} role`)}.`,
+      aanpClassificationClause(env.authority),
     ]);
   }
   return assembleDescription([

@@ -451,17 +451,26 @@ export interface SalaryGuideStateIndexInput {
   activeJobs: number;
   /** The posted-pay median cleared the publishing gate (GatedSalary.gatePassed). */
   salaryGatePassed: boolean;
+  /**
+   * BLS published a median annual wage for NPs in the state
+   * (hasBlsStateMedian, lib/salary-guide-bls-states.ts). Required, so no
+   * caller can forget the cited figure and noindex a page that carries one.
+   */
+  blsMedianAvailable: boolean;
 }
 
 /**
  * Salary guide state (`/salary-guide/{state}`, renders at 1 or more jobs):
- * index only when the page publishes a median. Below the gate the page
- * cannot answer "NP salary in {State}" from repo data, so it renders
- * `noindex, follow`. The sitemap uses getPublishableSalaryGuideStates()
- * (lib/salary-analytics.ts), which is the same gate over the same pool.
+ * index when the page answers "NP salary in {State}" with a figure of its
+ * own: the cited BLS state median (every state and DC in the May 2025
+ * release), or a posted-pay median that cleared the publishing gate. The
+ * posted gate decides only whether the live median shows, never whether the
+ * page indexes while BLS covers the state. A page with neither renders
+ * `noindex, follow`. app/sitemap.ts calls this same predicate per state.
  */
 export function shouldIndexSalaryGuideState(input: SalaryGuideStateIndexInput): boolean {
-  return input.activeJobs >= MIN_ACTIVE_JOBS_FOR_SALARY_GUIDE_INDEX && input.salaryGatePassed === true;
+  return input.activeJobs >= MIN_ACTIVE_JOBS_FOR_SALARY_GUIDE_INDEX
+    && (input.salaryGatePassed === true || input.blsMedianAvailable === true);
 }
 
 /**

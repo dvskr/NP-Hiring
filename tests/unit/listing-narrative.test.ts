@@ -27,6 +27,7 @@ import {
 } from '@/lib/pseo/listing-facts';
 import { getPracticeEnvironment, NLC_VERIFIED_LABEL } from '@/lib/pseo/practice-environment';
 import { DESCRIPTION_MAX, TITLE_PAGE_PART_MAX } from '@/lib/pseo/category-metadata';
+import { BLS_STATE_WAGES, parseBlsCell } from '@/lib/salary-guide-bls-states';
 import {
   BOARD_MEDIAN_LABEL,
   CATEGORY_OVERLAP_NOTE,
@@ -103,6 +104,7 @@ import {
   buildRoleSetup,
   buildSalaryNearbyCaption,
   buildSalaryPracticeEnvironmentParagraph,
+  buildBlsStateWageSentence,
   buildSalaryStateDescription,
   buildSalaryStateFaqAdditions,
   buildSalaryStateSummary,
@@ -824,6 +826,55 @@ describe('titles print counts only at the display floor and stay inside the SERP
     const crowdedMetro = keep(buildMetroDescription({ ...metroInput, benchmark: BENCH }));
     expect(crowdedMetro).toBe(`Open ${NP} roles in Austin, TX and nearby Round Rock and Cedar Park. AANP classification: Restricted Practice. Median posted pay $132K.`);
     expect(crowdedMetro.length).toBeLessThanOrEqual(DESCRIPTION_MAX);
+  });
+
+  it('SAL-meta with the BLS state median: the cited figure titles every state, fits the budget and carries no year', () => {
+    for (const row of Object.values(BLS_STATE_WAGES)) {
+      const k = Math.round((row.annualMedian.value as number) / 1000);
+      const title = keep(buildSalaryStateTitle({ stateName: row.state, stateCode: row.stateCode, benchmark: null, year: 2026, blsMedian: row.annualMedian.value }));
+      expect(title.length, row.state).toBeLessThanOrEqual(TITLE_PAGE_PART_MAX);
+      expect(title, row.state).toMatch(new RegExp(`^(${NP_LONG}|${NP}) Salary in (${row.state}|DC): \\$${k}K Median$`));
+      expect(title).not.toMatch(/20\d\d/);
+      // The BLS figure wins over a posted median: it is the stable, cited one.
+      const withPosted = keep(buildSalaryStateTitle({ stateName: row.state, stateCode: row.stateCode, benchmark: BENCH, year: 2026, blsMedian: row.annualMedian.value }));
+      expect(withPosted).toBe(title);
+    }
+    // The full role name leads while it fits; Florida falls back to the short form.
+    expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: null, year: 2026, blsMedian: 131670 }))).toBe(`${NP_LONG} Salary in Texas: $132K Median`);
+    expect(keep(buildSalaryStateTitle({ stateName: 'Florida', stateCode: 'FL', benchmark: null, year: 2026, blsMedian: 129510 }))).toBe(`${NP} Salary in Florida: $130K Median`);
+    // No BLS figure: the earlier forms, unchanged.
+    expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: null, year: 2026, blsMedian: null }))).toBe(`${NP_LONG} Jobs and Pay Data in Texas`);
+  });
+
+  it('SAL BLS copy: every state sentence names the source, the vintage and the figure, and never says earn or average', () => {
+    for (const row of Object.values(BLS_STATE_WAGES)) {
+      const sentence = keep(buildBlsStateWageSentence(row)) as string;
+      expect(sentence).toContain(`The BLS May 2025 median annual wage for ${NP_PROSE}s in ${row.state} is $${(row.annualMedian.value as number).toLocaleString('en-US')}`);
+      expect(sentence).toMatch(/10th to 90th percentile range of \$[\d,]+ to \$[\d,]+\.$/);
+      expect(sentence).not.toMatch(/\bearn|average/i);
+      expect(sentence).not.toMatch(/[–—]/);
+    }
+    // A footnoted percentile drops the band; a footnoted median drops the sentence.
+    const texas = BLS_STATE_WAGES.Texas;
+    expect(buildBlsStateWageSentence({ ...texas, annualP90: parseBlsCell('#') })).not.toContain('percentile');
+    expect(buildBlsStateWageSentence({ ...texas, annualMedian: parseBlsCell('*') })).toBeNull();
+
+    const summary = keep(buildSalaryStateSummary({ stateName: 'Texas', benchmark: null, bls: texas }));
+    expect(summary).toBe(`The BLS median annual wage for ${NP_PROSE}s in Texas was $131,670 in May 2025. This page adds the open roles, the state's practice rules and the pay employers post here.`);
+    // The posted median still leads the hero when it is published.
+    expect(keep(buildSalaryStateSummary({ stateName: 'Texas', benchmark: BENCH, bls: texas }))).toContain('Median posted pay');
+
+    const described = keep(buildSalaryStateDescription({ env: TEXAS, facts: facts({ total: 2, distinctEmployers: 1 }), bls: texas }));
+    expect(described).toBe(`BLS May 2025 median annual wage for ${NP}s in Texas: $131,670 (10th to 90th percentile $96,880 to $161,980). 2 open ${NP} roles.`);
+    // Every state's description keeps the figure and the open-role count inside the budget.
+    for (const row of Object.values(BLS_STATE_WAGES)) {
+      const env = getPracticeEnvironment(row.state);
+      if (!env) continue;
+      const text = keep(buildSalaryStateDescription({ env, facts: facts({ total: 12, distinctEmployers: 4 }), bls: row }));
+      expect(text.length, row.state).toBeLessThanOrEqual(DESCRIPTION_MAX);
+      expect(text, row.state).toContain(`12 open ${NP} roles.`);
+      expect(text, row.state).toContain(`$${(row.annualMedian.value as number).toLocaleString('en-US')}`);
+    }
   });
 
   it('SAL-meta, CO-meta and SPEC-meta', () => {

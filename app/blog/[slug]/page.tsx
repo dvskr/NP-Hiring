@@ -30,6 +30,7 @@ import {
 } from '@/lib/pseo/practice-environment';
 import { getListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import { getGatedLocationSalary, summarizeGatedSalary, type GatedSalary } from '@/lib/salary-analytics';
+import { hasBlsStateMedian } from '@/lib/salary-guide-bls-states';
 import {
     MIN_ACTIVE_JOBS_FOR_MARKET_SNAPSHOT,
     MIN_JOBS_FOR_LINK_LIST_ROW,
@@ -164,6 +165,7 @@ const loadLicenseGuideContext = cache(async (stateSlug: string): Promise<License
     const salaryGuideIndexable = shouldIndexSalaryGuideState({
         activeJobs: facts.total,
         salaryGatePassed: salary.gatePassed,
+        blsMedianAvailable: hasBlsStateMedian(state.name),
     });
     return { env, facts, salary, salaryGuideIndexable, nearby, settingSlugs };
 });

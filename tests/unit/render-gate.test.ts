@@ -313,14 +313,17 @@ describe('shouldIndexMetro (CQ-08 recency)', () => {
 
 describe('shouldIndexSalaryGuideState', () => {
   it.each([
-    [0, true, false],
-    [0, false, false],
-    [1, false, false],
-    [1, true, true],
-    [40, false, false],
-    [40, true, true],
-  ])('activeJobs=%i gatePassed=%s -> %s', (activeJobs, salaryGatePassed, expected) => {
-    expect(shouldIndexSalaryGuideState({ activeJobs, salaryGatePassed })).toBe(expected);
+    [0, true, true, false],
+    [0, false, true, false],
+    [0, true, false, false],
+    [1, false, false, false],
+    [1, true, false, true],
+    [1, false, true, true],
+    [40, false, false, false],
+    [40, true, true, true],
+    [40, false, true, true],
+  ])('activeJobs=%i gatePassed=%s blsMedian=%s -> %s', (activeJobs, salaryGatePassed, blsMedianAvailable, expected) => {
+    expect(shouldIndexSalaryGuideState({ activeJobs, salaryGatePassed, blsMedianAvailable })).toBe(expected);
   });
 });
 

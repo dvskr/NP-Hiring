@@ -231,6 +231,15 @@ const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]']
 const CONNECTOR_REBUILD_DAY = '2026-11-23';
 const CONNECTOR_REBUILD_PAGES: readonly string[] = ['/privacy'];
 
+/**
+ * The UTC day the NP salary build ships, and the pages whose copy it
+ * changed: the salary guide hub (the BLS wage table for every state) and the
+ * state salary template (its BLS wage card and FAQ). Same rule: move the
+ * constant and these entries together if it ships later.
+ */
+const SALARY_BUILD_DAY = '2026-11-25';
+const SALARY_BUILD_PAGES: readonly string[] = ['/salary-guide', '/salary-guide/[state]'];
+
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */
 const PROMO_SWITCH_PAGES = [
     '/pricing',
@@ -422,7 +431,7 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES, SALARY_BUILD_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -437,11 +446,14 @@ describe('lastmod helpers', () => {
             ...GUIDES_FOLLOW_UPS_PAGES,
             ...DEFINITION_GUIDES_PAGES,
             ...CONNECTOR_REBUILD_PAGES,
+            ...SALARY_BUILD_PAGES,
             ...Object.keys(UNTOUCHED_PAGE_DATES),
         ];
         expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = DEFINITION_GUIDES_PAGES.includes(pagePath)
+            const expected = SALARY_BUILD_PAGES.includes(pagePath)
+                ? SALARY_BUILD_DAY
+                : DEFINITION_GUIDES_PAGES.includes(pagePath)
                 ? DEFINITION_GUIDES_DAY
                 : CONNECTOR_REBUILD_PAGES.includes(pagePath)
                 ? CONNECTOR_REBUILD_DAY
@@ -949,11 +961,26 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
     it('fixSoon 15: the diorama rides only on the gated state hub and salary guide entries', async () => {
         const entries = await sitemap();
         const withImages = entries.filter((entry) => (entry.images ?? []).length > 0);
+        // Texas's hub stays noindex, but its salary guide now indexes on the
+        // BLS state median, so that entry carries Texas's diorama.
         expect(withImages.map((entry) => entry.url).sort()).toEqual([
             `${BASE}/jobs/state/rhode-island`,
             `${BASE}/salary-guide/rhode-island`,
+            `${BASE}/salary-guide/texas`,
         ]);
-        for (const entry of withImages) expect(entry.images).toEqual([`${BASE}${stateDioramaSrc('rhode-island')}`]);
+        for (const entry of withImages) {
+            const slug = entry.url.split('/').pop() as string;
+            expect(entry.images).toEqual([`${BASE}${stateDioramaSrc(slug)}`]);
+        }
+    });
+
+    it('a salary guide state page is dated by the later of its newest job and the state template copy date', async () => {
+        const entries = new Map((await sitemap()).map((entry) => [entry.url, entry]));
+        const templateDate = pageContentDate('/salary-guide/[state]') as Date;
+        const texas = entries.get(`${BASE}/salary-guide/texas`)?.lastModified as Date;
+        expect(texas.getTime()).toBeGreaterThanOrEqual(templateDate.getTime());
+        const hub = entries.get(`${BASE}/salary-guide`)?.lastModified as Date;
+        expect(hub.getTime()).toBeGreaterThanOrEqual((pageContentDate('/salary-guide') as Date).getTime());
     });
 
     it('FB-2: salary specialty pages are exactly the indexable verdicts; the license guides listed are exactly the indexable ones', async () => {
