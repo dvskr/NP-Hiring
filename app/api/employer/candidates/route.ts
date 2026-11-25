@@ -11,6 +11,7 @@ import {
     seesPostingTierFields,
     talentPoolWhere,
 } from '@/lib/candidate-pool'
+import { disclosedPhoto, loadPhotoCheck } from '@/app/api/conversations/_lib/surname-disclosure'
 
 /**
  * Bounds on the search inputs. Each specialty or state term becomes its own
@@ -198,6 +199,10 @@ export async function GET(req: NextRequest) {
     ])
 
     const viewedCandidateIds = viewedProfiles.map(v => v.candidateId)
+    // SECURITY: a photo shows once the employer unlocked the candidate or the
+    // candidate applied to one of its jobs (conversations/_lib/surname-disclosure.ts).
+    // tests/api/candidate-photo-disclosure.test.ts
+    const photoShown = await loadPhotoCheck({ user, role: profile.role }, candidates.map(c => c.supabaseId))
 
     // Privacy transform: full last name only for admins; everyone else first-initial
     const results = candidates.map(c => {
@@ -210,7 +215,7 @@ export async function GET(req: NextRequest) {
             yearsExperience: c.yearsExperience,
             specialties: c.specialties ? c.specialties.split(',').map(s => s.trim()) : [],
             preferredWorkMode: c.preferredWorkMode,
-            avatarUrl: c.avatarUrl,
+            avatarUrl: disclosedPhoto(c.avatarUrl, photoShown(c.supabaseId)),
             initials: `${(c.firstName || 'P').charAt(0)}${(c.lastName || 'C').charAt(0)}`.toUpperCase(),
             joinedAt: c.createdAt.toISOString(),
         }

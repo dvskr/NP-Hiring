@@ -11,6 +11,10 @@
  * names an applicant in full). The candidate's own view and an admin's are
  * unchanged, and the address is never read.
  *
+ * The owner's rules of 2026-11-25 ride on the same evidence: the inbox and a
+ * thread send the candidate's photo only once it holds, and license states
+ * once it holds or the employer has an active posting.
+ *
  * All fixtures are fictional.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,6 +32,8 @@ const db = vi.hoisted(() => ({
     employerMessage: { groupBy: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
     profileView: { findMany: vi.fn() },
     jobApplication: { findMany: vi.fn() },
+    // The employer's active postings (getEmployerActivePostings), for license states.
+    employerJob: { findMany: vi.fn() },
 }));
 vi.mock('@/lib/prisma', () => ({ prisma: db }));
 vi.mock('@/lib/supabase/server', () => ({
@@ -57,13 +63,18 @@ import { GET as listConversations } from '@/app/api/conversations/route';
 import { GET as openConversation } from '@/app/api/conversations/[id]/route';
 import { GET as sentMessages } from '@/app/api/employer/messages/route';
 import { participantDisplay, personName } from '@/app/api/conversations/_lib/participant-name';
-import { showsSurname } from '@/app/api/conversations/_lib/surname-disclosure';
+import { showsConversationLicenseStates, showsPhoto, showsSurname } from '@/app/api/conversations/_lib/surname-disclosure';
 
 const extras = { avatarUrl: null, headline: null, specialties: null, licenseStates: null };
+const RILEY_PHOTO = 'https://cdn.example/avatars/riley-fic.jpg';
+const ANNA_PHOTO = 'https://cdn.example/avatars/anna-fic.jpg';
+const ANNA_STATES = 'TX,OK';
 const conversation = {
     id: 'conv-1', participantA: EMPLOYER.id, participantB: CANDIDATE.id, subject: 'Family NP role', jobId: 'job-1',
     lastMessageAt: new Date('2026-11-20T10:00:00Z'), createdAt: new Date('2026-11-19T10:00:00Z'),
-    userA: { ...EMPLOYER, ...extras }, userB: { ...CANDIDATE, ...extras }, job: null,
+    userA: { ...EMPLOYER, ...extras, avatarUrl: RILEY_PHOTO },
+    userB: { ...CANDIDATE, ...extras, avatarUrl: ANNA_PHOTO, licenseStates: ANNA_STATES },
+    job: null,
     messages: [{ body: 'Hello Anna.', sentAt: new Date('2026-11-20T10:00:00Z'), senderId: EMPLOYER.id }],
 };
 
@@ -75,6 +86,7 @@ const FOREIGN_POSTING: Row = { userId: 'supabase-other-employer', contactEmail: 
 let candidateWrote = false;
 let unlocked = false;
 let applications: Array<{ userId: string; posting: Row }> = [];
+let activePosting = false;
 
 function asViewer(person: { id: string; supabaseId: string; role: string }) {
     viewer.supabaseId = person.supabaseId;
@@ -86,7 +98,9 @@ beforeEach(() => {
     candidateWrote = false;
     unlocked = false;
     applications = [];
+    activePosting = false;
     asViewer(EMPLOYER);
+    db.employerJob.findMany.mockImplementation(async () => (activePosting ? [{ id: 'ej-live' }] : []));
     db.conversation.findMany.mockResolvedValue([conversation]);
     db.conversation.findUnique.mockResolvedValue(conversation);
     db.employerMessage.findMany.mockResolvedValue([]);
@@ -122,6 +136,26 @@ describe('showsSurname', () => {
         expect(showsSurname('job_seeker', 'employer', none)).toBe(true);
         expect(showsSurname('admin', 'job_seeker', none)).toBe(true);
         expect(showsSurname('employer', 'employer', none)).toBe(true);
+    });
+});
+
+describe('showsPhoto and showsConversationLicenseStates', () => {
+    const none = { counterpartHasWritten: false, viewerUnlocked: false, counterpartApplied: false };
+
+    it('lock a job seeker photo until the evidence that discloses the surname holds', () => {
+        expect(showsPhoto('employer', 'job_seeker', none)).toBe(false);
+        expect(showsPhoto('employer', 'job_seeker', { ...none, counterpartHasWritten: true })).toBe(true);
+        expect(showsPhoto('employer', 'job_seeker', { ...none, viewerUnlocked: true })).toBe(true);
+        expect(showsPhoto('employer', 'job_seeker', { ...none, counterpartApplied: true })).toBe(true);
+        expect(showsPhoto('admin', 'job_seeker', none)).toBe(true);
+        expect(showsPhoto('job_seeker', 'employer', none)).toBe(true);
+    });
+
+    it('give license states to an employer with an active posting, or on the same evidence', () => {
+        expect(showsConversationLicenseStates('employer', 'job_seeker', none, false)).toBe(false);
+        expect(showsConversationLicenseStates('employer', 'job_seeker', none, true)).toBe(true);
+        expect(showsConversationLicenseStates('employer', 'job_seeker', { ...none, viewerUnlocked: true }, false)).toBe(true);
+        expect(showsConversationLicenseStates('admin', 'job_seeker', none, false)).toBe(true);
     });
 });
 
@@ -192,7 +226,29 @@ describe.each([
 
     it('an application to another employer\'s posting discloses nothing', async () => {
         applications = [{ userId: CANDIDATE.supabaseId, posting: FOREIGN_POSTING }];
-        expect((await load()).other).toMatchObject({ name: 'Anna N.', company: null });
+        expect((await load()).other).toMatchObject({ name: 'Anna N.', company: null, avatarUrl: null, licenseStates: null });
+    });
+
+    it('sends no photo and no license states before disclosure to an employer without a posting', async () => {
+        const { raw, other } = await load();
+        expect(other).toMatchObject({ avatarUrl: null, licenseStates: null, initials: 'AN' });
+        expect(raw).not.toContain(ANNA_PHOTO);
+        expect(raw).not.toContain(ANNA_STATES);
+    });
+
+    it('sends license states, and still no photo, to an employer with an active posting', async () => {
+        activePosting = true;
+        expect((await load()).other).toMatchObject({ avatarUrl: null, licenseStates: ANNA_STATES });
+        expect(db.employerJob.findMany.mock.calls[0][0].where).toMatchObject({ userId: EMPLOYER.supabaseId });
+    });
+
+    it.each([
+        ['the candidate has written in the conversation', () => { candidateWrote = true; }],
+        ['the employer has unlocked the candidate', () => { unlocked = true; }],
+        ['the candidate applied to one of its postings', () => { applications = [{ userId: CANDIDATE.supabaseId, posting: OWN_POSTING }]; }],
+    ])('sends the photo and license states once %s', async (_label, disclose) => {
+        disclose();
+        expect((await load()).other).toMatchObject({ avatarUrl: ANNA_PHOTO, licenseStates: ANNA_STATES });
     });
 });
 
@@ -200,18 +256,22 @@ describe.each([
     ['the inbox', inboxOther],
     ['the thread', threadOther],
 ])('%s, seen by anyone else', (_label, load) => {
-    it('the candidate sees the employer by full name, with no extra lookups', async () => {
+    it('the candidate sees the employer by full name and photo, with no extra lookups', async () => {
         asViewer(CANDIDATE);
-        expect((await load()).other.name).toBe('Riley Hiringfic');
+        expect((await load()).other).toMatchObject({ name: 'Riley Hiringfic', avatarUrl: RILEY_PHOTO });
         expect(db.profileView.findMany).not.toHaveBeenCalled();
         expect(db.jobApplication.findMany).not.toHaveBeenCalled();
+        expect(db.employerJob.findMany).not.toHaveBeenCalled();
     });
 
-    it('an admin sees the candidate by full name', async () => {
+    it('an admin sees the candidate by full name, with the photo and license states', async () => {
         asViewer({ id: EMPLOYER.id, supabaseId: EMPLOYER.supabaseId, role: 'admin' });
-        expect((await load()).other).toMatchObject({ name: 'Anna Nguyenfic', company: 'Current Clinicfic' });
+        expect((await load()).other).toMatchObject({
+            name: 'Anna Nguyenfic', company: 'Current Clinicfic', avatarUrl: ANNA_PHOTO, licenseStates: ANNA_STATES,
+        });
         expect(db.profileView.findMany).not.toHaveBeenCalled();
         expect(db.jobApplication.findMany).not.toHaveBeenCalled();
+        expect(db.employerJob.findMany).not.toHaveBeenCalled();
     });
 });
 

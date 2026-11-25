@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { participantDisplay } from './_lib/participant-name';
-import { loadSurnameCheck } from './_lib/surname-disclosure';
+import { disclosedPhoto, loadConversationDisclosure } from './_lib/surname-disclosure';
 
 /**
  * GET /api/conversations
@@ -61,9 +61,10 @@ export async function GET() {
         const unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count.id]));
 
         const otherOf = (conv: (typeof conversations)[number]) => (conv.participantA === profile.id ? conv.userB : conv.userA);
-        // SECURITY: an employer sees a job seeker's surname only once it is
-        // disclosed (_lib/surname-disclosure.ts). No query for anyone else.
-        const showsSurname = await loadSurnameCheck(
+        // SECURITY: an employer sees a job seeker's surname, company, photo
+        // and license states only once they are disclosed
+        // (_lib/surname-disclosure.ts). No query for anyone else.
+        const disclosure = await loadConversationDisclosure(
             { user, role: profile.role },
             conversations.map(conv => ({ conversationId: conv.id, counterpart: otherOf(conv) })),
         );
@@ -71,9 +72,9 @@ export async function GET() {
         const formatted = conversations.map(conv => {
             const otherUser = otherOf(conv);
             const lastMsg = conv.messages[0] || null;
+            const shown = disclosure(conv.id, otherUser);
             // Named without the email address (_lib/participant-name.ts).
-            const surnameShown = showsSurname(conv.id, otherUser);
-            const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: surnameShown });
+            const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: shown.surname });
 
             return {
                 id: conv.id,
@@ -82,12 +83,12 @@ export async function GET() {
                     supabaseId: otherUser.supabaseId,
                     name: otherName,
                     // A job seeker's company names them as surely as a surname.
-                    company: surnameShown ? otherUser.company : null,
+                    company: shown.surname ? otherUser.company : null,
                     role: otherUser.role,
-                    avatarUrl: otherUser.avatarUrl,
+                    avatarUrl: disclosedPhoto(otherUser.avatarUrl, shown.photo),
                     headline: otherUser.headline || null,
                     specialties: otherUser.specialties || null,
-                    licenseStates: otherUser.licenseStates || null,
+                    licenseStates: shown.licenseStates ? otherUser.licenseStates || null : null,
                     initials,
                 },
                 subject: conv.subject,

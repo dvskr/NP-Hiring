@@ -79,11 +79,11 @@ import { POST as testimonial } from '@/app/api/employer/testimonials/route';
 import EmployerDashboardPage from '@/app/employer/dashboard/page';
 
 // The global prisma fake has no testimonial, application or saved-candidate
-// model; the testimonial route writes the first, the employer send reads the
-// second, and the saved list reads the third.
+// model; the testimonial route writes the first, the employer send and the
+// photo rule read the second, and the saved list reads the third.
 Object.assign(prisma, {
     employerTestimonial: { create: vi.fn(async () => ({ id: 'testimonial-1' })) },
-    jobApplication: { findFirst: vi.fn(async () => null) },
+    jobApplication: { findFirst: vi.fn(async () => null), findMany: vi.fn(async () => []) },
     savedCandidate: { findMany: vi.fn(async () => []) },
 });
 

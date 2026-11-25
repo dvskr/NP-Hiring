@@ -37,10 +37,11 @@ const h = vi.hoisted(() => ({
         userProfile: { findUnique: vi.fn() },
         conversation: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
         employerMessage: { groupBy: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), count: vi.fn(), create: vi.fn() },
-        // Read by the surname rule (app/api/conversations/_lib/surname-disclosure.ts).
-        // This file has no unlocks and no applications.
+        // Read by the disclosure rules (app/api/conversations/_lib/surname-disclosure.ts).
+        // This file has no unlocks, no applications and no active posting.
         profileView: { findMany: vi.fn() },
         jobApplication: { findMany: vi.fn() },
+        employerJob: { findMany: vi.fn() },
     },
 }));
 
@@ -332,6 +333,7 @@ function installFakeDatabase(): void {
     });
     p.profileView.findMany.mockResolvedValue([]);
     p.jobApplication.findMany.mockResolvedValue([]);
+    p.employerJob.findMany.mockResolvedValue([]);
     p.employerMessage.findMany.mockImplementation(async (args: { where: Where }) =>
         db.messages
             .filter((row) => matches(row, args.where))

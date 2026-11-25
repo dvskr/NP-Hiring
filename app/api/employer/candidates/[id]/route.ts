@@ -8,6 +8,7 @@ import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage'
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership'
 import { talentPoolWhere } from '@/lib/candidate-pool'
 import { recordCandidateUnlock } from '@/lib/candidate-unlock'
+import { disclosedPhoto, showsPhoto } from '@/app/api/conversations/_lib/surname-disclosure'
 
 /**
  * GET /api/employer/candidates/[id]: a candidate's page. An employer's first
@@ -159,6 +160,16 @@ export async function GET(
     // Full access: an admin by role, an employer by the unlock row, which
     // every employer request that reaches this point holds.
     const hasFullAccess = isAdmin || hasUnlockRow
+    // SECURITY: the photo rule of every employer surface
+    // (conversations/_lib/surname-disclosure.ts). An application would also
+    // disclose it, but an employer reaches this response only with the unlock
+    // row, so that lookup could not change the answer.
+    // tests/api/candidate-photo-disclosure.test.ts
+    const photoShown = showsPhoto(viewerProfile.role, candidate.role, {
+        counterpartHasWritten: false,
+        viewerUnlocked: hasUnlockRow,
+        counterpartApplied: false,
+    })
 
     // Tier is informational only (always 'pro' in single-tier model). Real gates
     // are isAdmin (admin-only fields) and hasFullAccess (unlock-gated fields).
@@ -175,7 +186,7 @@ export async function GET(
         id: candidate.supabaseId,
         displayName,
         initials: `${(candidate.firstName || 'P').charAt(0)}${(candidate.lastName || 'C').charAt(0)}`.toUpperCase(),
-        avatarUrl: candidate.avatarUrl,
+        avatarUrl: disclosedPhoto(candidate.avatarUrl, photoShown),
         headline: candidate.headline,
         yearsExperience: candidate.yearsExperience,
         specialties: candidate.specialties ? candidate.specialties.split(',').map(s => s.trim()) : [],

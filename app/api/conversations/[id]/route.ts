@@ -11,7 +11,7 @@ import { isOwnMessageAttachmentKey } from '@/lib/message-attachment-key';
 import { MESSAGE_BODY_MAX, readJsonObject, validateReplyPayload } from '@/app/api/conversations/_lib/message-payload';
 import { isDeletedForViewer, visibleToViewerWhere } from '@/app/api/conversations/_lib/message-visibility';
 import { participantDisplay } from '@/app/api/conversations/_lib/participant-name';
-import { loadSurnameCheck } from '@/app/api/conversations/_lib/surname-disclosure';
+import { disclosedPhoto, loadConversationDisclosure } from '@/app/api/conversations/_lib/surname-disclosure';
 
 /**
  * GET /api/conversations/[id]
@@ -95,13 +95,14 @@ export async function GET(
 
         const otherUser = conversation.participantA === profile.id ? conversation.userB : conversation.userA;
         // SECURITY: named without the email address (_lib/participant-name.ts),
-        // and the surname rule of the inbox (_lib/surname-disclosure.ts).
-        const showsSurname = await loadSurnameCheck(
+        // and the inbox's rules for the surname, company, photo and license
+        // states (_lib/surname-disclosure.ts).
+        const disclosure = await loadConversationDisclosure(
             { user, role: profile.role },
             [{ conversationId: conversation.id, counterpart: otherUser }],
         );
-        const surnameShown = showsSurname(conversation.id, otherUser);
-        const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: surnameShown });
+        const shown = disclosure(conversation.id, otherUser);
+        const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: shown.surname });
 
         return NextResponse.json({
             conversation: {
@@ -113,12 +114,12 @@ export async function GET(
                     id: otherUser.id,
                     supabaseId: otherUser.supabaseId,
                     name: otherName,
-                    company: surnameShown ? otherUser.company : null,
+                    company: shown.surname ? otherUser.company : null,
                     role: otherUser.role,
-                    avatarUrl: otherUser.avatarUrl,
+                    avatarUrl: disclosedPhoto(otherUser.avatarUrl, shown.photo),
                     headline: otherUser.headline || null,
                     specialties: otherUser.specialties || null,
-                    licenseStates: otherUser.licenseStates || null,
+                    licenseStates: shown.licenseStates ? otherUser.licenseStates || null : null,
                     initials,
                 },
             },

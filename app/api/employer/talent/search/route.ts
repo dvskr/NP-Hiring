@@ -41,6 +41,7 @@ import { logger } from '@/lib/logger';
 import { AI_DAILY_CAPS } from '@/lib/ai-usage';
 import { midnightCentralTimeAsUtc } from '@/lib/time';
 import { candidateAccessTier, seesPostingTierFields, talentPoolWhere } from '@/lib/candidate-pool';
+import { disclosedPhoto, loadPhotoCheck } from '@/app/api/conversations/_lib/surname-disclosure';
 
 const RERANK_DAILY_CAP = AI_DAILY_CAPS.talent_search_rerank;
 
@@ -342,6 +343,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // ── 5. Build response with the SAME privacy transform as /api/employer/candidates ──
+    // SECURITY: the photo follows the talent pool's rule, unlocked or applied
+    // (conversations/_lib/surname-disclosure.ts). tests/api/candidate-photo-disclosure.test.ts
+    const photoShown = await loadPhotoCheck(
+        { user, role: profile.role },
+        ranked.slice(0, k).flatMap((r) => {
+            const hit = ordered[r.candidateIndex - 1];
+            return hit ? [hit.profile.supabaseId] : [];
+        }),
+    );
     const candidates = ranked.slice(0, k).map((r) => {
         const original = ordered[r.candidateIndex - 1];
         if (!original) return null;
@@ -375,7 +385,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             yearsExperience: c.yearsExperience,
             specialties: c.specialties ? c.specialties.split(',').map((s) => s.trim()) : [],
             preferredWorkMode: c.preferredWorkMode,
-            avatarUrl: c.avatarUrl,
+            avatarUrl: disclosedPhoto(c.avatarUrl, photoShown(c.supabaseId)),
             initials: `${(c.firstName || 'P').charAt(0)}${(c.lastName || 'C').charAt(0)}`.toUpperCase(),
             joinedAt: c.createdAt.toISOString(),
             similarity: original.similarity,

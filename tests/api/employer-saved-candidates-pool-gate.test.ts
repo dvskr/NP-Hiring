@@ -44,6 +44,8 @@ const mocks = vi.hoisted(() => ({
         update: vi.fn(),
         deleteMany: vi.fn(),
     },
+    // The photo rule's application lookup (conversations/_lib/surname-disclosure.ts).
+    jobApplication: { findMany: vi.fn() },
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -64,8 +66,8 @@ vi.mock('@/lib/logger', () => ({
 import { GET as listSaved, POST as save, DELETE as unsave } from '@/app/api/employer/saved-candidates/route';
 import { PATCH as saveNote } from '@/app/api/employer/saved-candidates/note/route';
 
-// The global prisma fake has no savedCandidate model; these routes read and write it.
-Object.assign(prisma, { savedCandidate: mocks.savedCandidate });
+// The global prisma fake has no savedCandidate or jobApplication model; these routes read them.
+Object.assign(prisma, { savedCandidate: mocks.savedCandidate, jobApplication: mocks.jobApplication });
 
 type Row = Record<string, unknown>;
 
@@ -196,6 +198,7 @@ function wireStore(): void {
     vi.mocked(prisma.employerJob.findMany).mockImplementation((async (args: { where: Row }) =>
         ALL_POSTINGS.filter((j) => matches(j, args.where))) as never);
     vi.mocked(prisma.profileView.findMany).mockResolvedValue([] as never);
+    mocks.jobApplication.findMany.mockResolvedValue([]);
     vi.mocked(getEmployerTier).mockResolvedValue('pro' as never);
     vi.mocked(getEmployerActivePostings).mockResolvedValue([{ id: POSTINGS.own.id }] as never);
 

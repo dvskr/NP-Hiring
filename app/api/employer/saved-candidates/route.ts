@@ -7,6 +7,7 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 import { talentPoolWhere } from '@/lib/candidate-pool';
+import { disclosedPhoto, loadPhotoCheck } from '@/app/api/conversations/_lib/surname-disclosure';
 
 /** A saved row's note keeps at most this many characters, here and on PATCH /note. */
 const MAX_NOTE_LENGTH = 2000;
@@ -122,6 +123,11 @@ export async function GET(req: NextRequest) {
         select: { candidateId: true },
     });
     const viewedCandidateIds = viewedProfiles.map(v => v.candidateId);
+    // SECURITY: saving a candidate discloses nothing; the photo follows the
+    // talent pool's rule (conversations/_lib/surname-disclosure.ts).
+    // tests/api/candidate-photo-disclosure.test.ts
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const photoShown = await loadPhotoCheck({ user, role: profile.role }, saved.map(s => (s.candidate as any).supabaseId));
 
     const formatted = saved.map((s) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,7 +139,7 @@ export async function GET(req: NextRequest) {
                 ? `${c.firstName} ${isAdmin && c.lastName ? c.lastName : (c.lastName ? c.lastName.charAt(0) + '.' : '')}`.trim()
                 : 'PMHNP Candidate',
             initials: `${(c.firstName || 'P').charAt(0)}${(c.lastName || 'C').charAt(0)}`.toUpperCase(),
-            avatarUrl: c.avatarUrl,
+            avatarUrl: disclosedPhoto(c.avatarUrl, photoShown(c.supabaseId)),
             headline: c.headline,
             yearsExperience: c.yearsExperience,
             specialties: c.specialties ? c.specialties.split(',').map((s: string) => s.trim()) : [],

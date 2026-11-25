@@ -1,19 +1,33 @@
 /**
- * Whether a conversation shows a job seeker's surname to an employer.
+ * What an employer sees of a job seeker before the job seeker is disclosed to
+ * them, decided here for every employer surface.
  *
- * The talent pool shows an employer first name and last initial. The full
- * name comes with an unlock (a ProfileView row, which spends a credit) or an
- * application to one of the employer's own jobs, which the applicants view
- * names in full. A thread shows no more: until one of those holds, or the
- * candidate writes in that conversation, the employer sees "Anna N." and no
- * company. A new thread already needs an unlock or an application
- * (mayOpenThreadWith in app/api/employer/messages/route.ts); a thread opened
- * before that check may have neither. The candidate's own view, an admin's,
- * and every other pairing are unchanged.
- * tests/api/conversation-surname-disclosure.test.ts
+ * Disclosure is an unlock (a ProfileView row, which spends a credit), an
+ * application to one of the employer's own jobs (the applicants view names
+ * an applicant in full), or, in a conversation, a message the candidate
+ * wrote in it. Until one holds:
+ *   - showsSurname: a conversation names the candidate by first name and last
+ *     initial, as the talent pool does, with no company. A new thread already
+ *     needs an unlock or an application (mayOpenThreadWith in
+ *     app/api/employer/messages/route.ts); a thread opened before that check
+ *     may have neither.
+ *   - showsPhoto (owner, 2026-11-25): no surface shows the photo. The talent
+ *     pool, the AI talent search, saved candidates, a candidate's page, the
+ *     inbox and a thread send avatarUrl null, and the employer UI draws
+ *     initials. The applicants view is unchanged: everyone in it applied. Any
+ *     new employer surface that shows a candidate, an employer email or
+ *     connector included, takes the photo through this rule.
+ *   - showsConversationLicenseStates (owner, 2026-11-25): a conversation
+ *     carries license states, posting-tier data in the talent pool
+ *     (lib/candidate-pool.ts), only to an employer with an active posting.
+ * The candidate's own view, an admin's, and every other pairing are
+ * unchanged.
+ * tests/api/conversation-surname-disclosure.test.ts,
+ * tests/api/candidate-photo-disclosure.test.ts
  */
 import { prisma } from '@/lib/prisma';
 import { employerJobOwnershipBranches, type EmployerJobOwner } from '@/lib/employer-ownership';
+import { getEmployerActivePostings } from '@/lib/tier-limits';
 
 export interface Counterpart {
     /** user_profiles.id, the sender id on messages. */
@@ -23,7 +37,7 @@ export interface Counterpart {
     readonly role: string;
 }
 
-export interface SurnameEvidence {
+export interface DisclosureEvidence {
     /** The counterpart has sent a message in this conversation. */
     readonly counterpartHasWritten: boolean;
     /** The viewer has unlocked the counterpart's profile. */
@@ -32,14 +46,50 @@ export interface SurnameEvidence {
     readonly counterpartApplied: boolean;
 }
 
-const NO_EVIDENCE: SurnameEvidence = { counterpartHasWritten: false, viewerUnlocked: false, counterpartApplied: false };
+const NO_EVIDENCE: DisclosureEvidence = { counterpartHasWritten: false, viewerUnlocked: false, counterpartApplied: false };
 
-export function showsSurname(viewerRole: string, counterpartRole: string, evidence: SurnameEvidence): boolean {
-    if (viewerRole !== 'employer' || counterpartRole !== 'job_seeker') return true;
+/** Every talent pool read is of job seekers (talentPoolWhere in lib/candidate-pool.ts). */
+const POOL_MEMBER_ROLE = 'job_seeker';
+
+/** The one pairing these rules limit: an employer looking at a job seeker. */
+function isLimitedPairing(viewerRole: string, counterpartRole: string): boolean {
+    return viewerRole === 'employer' && counterpartRole === POOL_MEMBER_ROLE;
+}
+
+function isDisclosed(evidence: DisclosureEvidence): boolean {
     return evidence.counterpartHasWritten || evidence.viewerUnlocked || evidence.counterpartApplied;
 }
 
-export type SurnameCheck = (conversationId: string | null, counterpart: Counterpart) => boolean;
+export function showsSurname(viewerRole: string, counterpartRole: string, evidence: DisclosureEvidence): boolean {
+    return !isLimitedPairing(viewerRole, counterpartRole) || isDisclosed(evidence);
+}
+
+/** PHOTOS ARE LOCKED UNTIL UNLOCK: the photo needs the evidence the surname needs. */
+export function showsPhoto(viewerRole: string, counterpartRole: string, evidence: DisclosureEvidence): boolean {
+    return !isLimitedPairing(viewerRole, counterpartRole) || isDisclosed(evidence);
+}
+
+/** The avatarUrl a response carries: the photo once shown, else null, which the employer UI draws as initials. */
+export function disclosedPhoto(avatarUrl: string | null | undefined, shown: boolean): string | null {
+    return shown && avatarUrl ? avatarUrl : null;
+}
+
+/**
+ * License states in a conversation. Threads opened before the reach check of
+ * 2026-10-20 carried them to any employer, whatever the employer's access.
+ */
+export function showsConversationLicenseStates(
+    viewerRole: string,
+    counterpartRole: string,
+    evidence: DisclosureEvidence,
+    viewerHasActivePosting: boolean,
+): boolean {
+    return !isLimitedPairing(viewerRole, counterpartRole) || viewerHasActivePosting || isDisclosed(evidence);
+}
+
+type Viewer = { readonly user: EmployerJobOwner; readonly role: string };
+type Thread = { readonly conversationId: string | null; readonly counterpart: Counterpart };
+type EvidenceLookup = (conversationId: string | null, counterpart: Counterpart) => DisclosureEvidence;
 
 const writerKey = (conversationId: string, senderId: string): string => `${conversationId}:${senderId}`;
 const unique = (values: readonly string[]): string[] => [...new Set(values)];
@@ -71,16 +121,13 @@ async function writersByConversation(conversationIds: string[], senderIds: strin
 }
 
 /**
- * Everything showsSurname needs for a page of conversations, in three
- * queries, run only when an employer has a job seeker on the page. A message
- * with no conversation (legacy rows) counts no candidate message as written.
+ * The evidence for a page of conversations, in three queries, run only when
+ * an employer has a job seeker on the page. A message with no conversation
+ * (legacy rows) counts no candidate message as written.
  */
-export async function loadSurnameCheck(
-    viewer: { readonly user: EmployerJobOwner; readonly role: string },
-    threads: ReadonlyArray<{ readonly conversationId: string | null; readonly counterpart: Counterpart }>,
-): Promise<SurnameCheck> {
-    const limited = threads.filter((t) => !showsSurname(viewer.role, t.counterpart.role, NO_EVIDENCE));
-    if (limited.length === 0) return () => true;
+async function loadConversationEvidence(viewer: Viewer, threads: ReadonlyArray<Thread>): Promise<EvidenceLookup> {
+    const limited = threads.filter((t) => isLimitedPairing(viewer.role, t.counterpart.role));
+    if (limited.length === 0) return () => NO_EVIDENCE;
 
     const candidateIds = unique(limited.map((t) => t.counterpart.supabaseId));
     const [unlocked, applied, writers] = await Promise.all([
@@ -92,9 +139,73 @@ export async function loadSurnameCheck(
         ),
     ]);
 
-    return (conversationId, counterpart) => showsSurname(viewer.role, counterpart.role, {
+    return (conversationId, counterpart) => ({
         counterpartHasWritten: conversationId !== null && writers.has(writerKey(conversationId, counterpart.id)),
         viewerUnlocked: unlocked.has(counterpart.supabaseId),
         counterpartApplied: applied.has(counterpart.supabaseId),
+    });
+}
+
+export type SurnameCheck = (conversationId: string | null, counterpart: Counterpart) => boolean;
+
+/** The surname alone, for the employer's sent list, which shows no photo or license states. */
+export async function loadSurnameCheck(viewer: Viewer, threads: ReadonlyArray<Thread>): Promise<SurnameCheck> {
+    const evidenceFor = await loadConversationEvidence(viewer, threads);
+    return (conversationId, counterpart) => showsSurname(viewer.role, counterpart.role, evidenceFor(conversationId, counterpart));
+}
+
+export interface ConversationDisclosure {
+    /** Full name and company, else first name and last initial (participant-name.ts). */
+    readonly surname: boolean;
+    readonly photo: boolean;
+    readonly licenseStates: boolean;
+}
+
+export type ConversationDisclosureCheck = (conversationId: string, counterpart: Counterpart) => ConversationDisclosure;
+
+/**
+ * What the inbox and a thread show of the other participant: the evidence
+ * above and, when an employer has a job seeker on the page, whether the
+ * employer has an active posting (the talent pool's posting tier).
+ */
+export async function loadConversationDisclosure(
+    viewer: Viewer,
+    threads: ReadonlyArray<Thread>,
+): Promise<ConversationDisclosureCheck> {
+    const limited = threads.some((t) => isLimitedPairing(viewer.role, t.counterpart.role));
+    const [evidenceFor, hasActivePosting] = await Promise.all([
+        loadConversationEvidence(viewer, threads),
+        limited ? getEmployerActivePostings(viewer.user.id).then((postings) => postings.length > 0) : false,
+    ]);
+    return (conversationId, counterpart) => {
+        const evidence = evidenceFor(conversationId, counterpart);
+        return {
+            surname: showsSurname(viewer.role, counterpart.role, evidence),
+            photo: showsPhoto(viewer.role, counterpart.role, evidence),
+            licenseStates: showsConversationLicenseStates(viewer.role, counterpart.role, evidence, hasActivePosting),
+        };
+    };
+}
+
+export type PhotoCheck = (candidateSupabaseId: string) => boolean;
+
+/**
+ * The photo rule where there is no conversation: the talent pool, the AI
+ * talent search, saved candidates and a candidate's page. Two queries for an
+ * employer's page of pool members, none for an admin.
+ */
+export async function loadPhotoCheck(viewer: Viewer, candidateSupabaseIds: readonly string[]): Promise<PhotoCheck> {
+    if (!isLimitedPairing(viewer.role, POOL_MEMBER_ROLE)) return () => true;
+    const candidateIds = unique(candidateSupabaseIds);
+    if (candidateIds.length === 0) return () => false;
+
+    const [unlocked, applied] = await Promise.all([
+        unlockedCandidates(viewer.user.id, candidateIds),
+        applicantsOf(viewer.user, candidateIds),
+    ]);
+    return (candidateSupabaseId) => showsPhoto(viewer.role, POOL_MEMBER_ROLE, {
+        counterpartHasWritten: false,
+        viewerUnlocked: unlocked.has(candidateSupabaseId),
+        counterpartApplied: applied.has(candidateSupabaseId),
     });
 }

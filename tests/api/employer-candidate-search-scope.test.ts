@@ -21,6 +21,8 @@ const { db, activePostings, semanticCandidateSearch, complete } = vi.hoisted(() 
     db: {
         userProfile: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
         profileView: { findMany: vi.fn() },
+        // The photo rule's application lookup (conversations/_lib/surname-disclosure.ts).
+        jobApplication: { findMany: vi.fn() },
         aiCallLog: { count: vi.fn() },
     },
     activePostings: { current: [] as Array<{ id: string }> },
@@ -87,6 +89,7 @@ beforeEach(() => {
     db.userProfile.findMany.mockImplementation(async ({ where }: { where: unknown }) => candidates.filter((c) => rowMatches(c, where)));
     db.userProfile.count.mockImplementation(async ({ where }: { where: unknown }) => candidates.filter((c) => rowMatches(c, where)).length);
     db.profileView.findMany.mockResolvedValue([]);
+    db.jobApplication.findMany.mockResolvedValue([]);
     db.aiCallLog.count.mockResolvedValue(0);
     semanticCandidateSearch.mockResolvedValue([
         { supabaseId: 'cand-anna', similarity: 0.9 },
