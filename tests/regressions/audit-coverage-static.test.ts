@@ -39,11 +39,15 @@ describe('payments wiring', () => {
 });
 
 describe('dashboard stats', () => {
-  it('counts unread/profileViews by profile.id and profileViews is not hardcoded 0', () => {
+  it('counts unread by profile.id, profile views by the Supabase id, and profileViews is not hardcoded 0', () => {
     const src = read('app/api/dashboard/route.ts');
     expect(src).not.toMatch(/profileViews:\s*0/);
+    // EmployerMessage.recipientId is the profile cuid.
     expect(src).toMatch(/recipientId:\s*profile\.id/);
-    expect(src).toMatch(/candidateId:\s*profile\.id/);
+    // ProfileView.candidateId is the Supabase id the unlock routes write;
+    // counting it by profile.id matched nothing.
+    expect(src).toMatch(/candidateId:\s*user\.id/);
+    expect(src).not.toMatch(/candidateId:\s*profile\.id/);
   });
 });
 

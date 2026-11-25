@@ -199,11 +199,18 @@ describe('GET /api/employer/candidates: the list filters are bounded', () => {
     });
 });
 
+/**
+ * The columns q matches for this file's viewer, an employer with a posting:
+ * name, headline, specialties, work mode and certifications. Which tier
+ * searches which column is pinned by tests/api/employer-candidate-search-scope.test.ts.
+ */
+const POSTING_TIER_TEXT_COLUMNS = 5;
+
 describe('GET /api/employer/candidates: the text inputs are bounded', () => {
-    it('matches the first 200 characters of an overlong q across all nine columns', async () => {
+    it('matches the first 200 characters of an overlong q across every column the viewer can search', async () => {
         const { args } = await search(`q=${'b'.repeat(10_000)}`);
 
-        expect(args.where.OR).toHaveLength(9);
+        expect(args.where.OR).toHaveLength(POSTING_TIER_TEXT_COLUMNS);
         for (const branch of args.where.OR ?? []) {
             expect(Object.values(branch)[0].contains).toBe('b'.repeat(200));
         }
@@ -212,7 +219,8 @@ describe('GET /api/employer/candidates: the text inputs are bounded', () => {
     it('matches a typed query unchanged', async () => {
         const { args } = await search(`q=${encodeURIComponent('  telehealth FNP  ')}`);
 
-        expect((args.where.OR ?? []).map((branch) => Object.values(branch)[0].contains)).toEqual(Array(9).fill('telehealth FNP'));
+        expect((args.where.OR ?? []).map((branch) => Object.values(branch)[0].contains))
+            .toEqual(Array(POSTING_TIER_TEXT_COLUMNS).fill('telehealth FNP'));
     });
 
     it('keeps 100 characters of an overlong workMode, and a real one unchanged', async () => {

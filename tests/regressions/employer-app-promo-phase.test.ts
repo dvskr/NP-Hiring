@@ -61,7 +61,7 @@ vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
     useSearchParams: () => new URLSearchParams(),
 }));
-vi.mock('@/lib/analytics', () => ({ trackFreePostLimitHit: vi.fn() }));
+vi.mock('@/lib/analytics', () => ({ trackFreePostLimitHit: vi.fn(), trackPostJobAccountClick: vi.fn() }));
 vi.mock('@/components/JobCard', () => ({ default: () => null }));
 vi.mock('@/components/employer/ComposeMessageModal', () => ({ default: () => null }));
 

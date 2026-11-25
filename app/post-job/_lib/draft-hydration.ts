@@ -9,12 +9,20 @@
 
 export type DraftValues = Readonly<Record<string, unknown>>;
 
+// "Write from scratch" seeds the editor with `<p>&nbsp;</p>`, a space rather
+// than text, so the entity reads as whitespace here.
 const visibleText = (html: unknown): string =>
-  typeof html === 'string' ? html.replace(/<[^>]*>/g, '').trim() : '';
+  typeof html === 'string' ? html.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim() : '';
 
 const trimmed = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-/** True when a restored draft holds content the employer typed, not just form defaults. */
+/**
+ * True when a draft holds content the employer typed, not just form
+ * defaults: a title, a company or a description with visible text. The
+ * space "Write from scratch" puts in the editor is not content: counting it
+ * would let an untouched browser copy outrank, and then overwrite, a real
+ * server draft (./local-job-draft.ts).
+ */
 export function hasMeaningfulDraftContent(values: DraftValues | null | undefined): boolean {
   if (!values) return false;
   return (

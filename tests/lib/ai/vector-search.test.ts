@@ -1,16 +1,32 @@
 /**
- * Vector search helper tests — pure functions only. The DB-touching paths
+ * Vector search helper tests — pure functions, and the candidate row removal
+ * against the global prisma fake. The other DB-touching paths
  * (semanticJobSearch, upsertJobEmbedding) are integration-tested in the
  * Phase 1 sprint where they get wired to a real flow.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { prisma } from '@/lib/prisma';
 import {
     buildJobEmbeddingText,
     buildCandidateEmbeddingText,
+    CANDIDATE_EMBED_MIN_CHARS,
     reciprocalRankFusion,
+    removeCandidateEmbedding,
     __testing,
 } from '@/lib/ai/vector-search';
+import { isProfileSearchable } from '@/lib/profile-searchable';
+
+/** A profile as both the embedder and the dashboard's mirror read it, plus the bio neither may use. */
+type ProfileFields = {
+    headline?: string;
+    yearsExperience?: number;
+    certifications?: string;
+    licenseStates?: string;
+    specialties?: string;
+    skills?: string[];
+    bio?: string;
+};
 
 describe('lib/ai/vector-search', () => {
     describe('buildJobEmbeddingText', () => {
@@ -49,6 +65,54 @@ describe('lib/ai/vector-search', () => {
             expect(lines[0]).toContain('Headline');
             expect(lines[1]).toContain('Years of Experience');
             expect(lines[2]).toContain('Skills');
+        });
+
+        it('leaves out the bio, which only admins read in the talent pool (owner, 2026-11-25)', () => {
+            const profile: ProfileFields = {
+                headline: 'Family nurse practitioner',
+                specialties: 'Family Practice (FNP)',
+                bio: 'Led the Okafic Clinic telehealth program for six years.',
+            };
+            const text = buildCandidateEmbeddingText(profile);
+            expect(text).toBe('Headline: Family nurse practitioner\nSpecialties: Family Practice (FNP)');
+            expect(text).not.toContain('Okafic');
+        });
+    });
+
+    describe('the candidate dashboard mirror (lib/profile-searchable.ts)', () => {
+        const profiles: ProfileFields[] = [
+            {},
+            { headline: 'NP' },
+            { headline: 'Family nurse practitioner', yearsExperience: 4 },
+            { specialties: 'Family Practice (FNP)', skills: ['Telehealth'] },
+            { certifications: 'FNP-BC', licenseStates: 'TX,OK' },
+            // Long enough on its own once, and no longer searchable now the bio is out.
+            { headline: 'NP', bio: 'A long summary that clears the twenty character gate on its own.' },
+        ];
+
+        it('measures the text the embedder builds, against the same gate', () => {
+            for (const profile of profiles) {
+                const embedded = buildCandidateEmbeddingText(profile).trim();
+                const mirror = isProfileSearchable(profile);
+                expect(mirror.embedTextLength, JSON.stringify(profile)).toBe(embedded.length);
+                expect(mirror.searchable, JSON.stringify(profile)).toBe(embedded.length >= CANDIDATE_EMBED_MIN_CHARS);
+            }
+        });
+
+        it('never asks a candidate for a bio to be found', () => {
+            expect(isProfileSearchable(null).missingHighValueFields).toEqual(['headline', 'specialties', 'yearsExperience']);
+            expect(isProfileSearchable(profiles[5]).searchable).toBe(false);
+        });
+    });
+
+    describe('removeCandidateEmbedding', () => {
+        it('deletes the row by Supabase id and says whether one was there', async () => {
+            const deleteMany = vi.mocked(prisma.candidateEmbedding.deleteMany);
+            deleteMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
+
+            expect(await removeCandidateEmbedding('supabase-candidate-fic')).toEqual({ removed: true });
+            expect(await removeCandidateEmbedding('supabase-candidate-fic')).toEqual({ removed: false });
+            expect(deleteMany).toHaveBeenCalledWith({ where: { supabaseId: 'supabase-candidate-fic' } });
         });
     });
 

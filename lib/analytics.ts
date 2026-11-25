@@ -867,6 +867,19 @@ export function trackViewPostJobPage() {
 }
 
 /**
+ * The post-job form is on screen, once the auth check has settled.
+ * signed_in false is a visitor filling the form before creating an account.
+ */
+export function trackPostJobFormOpen(signedIn: boolean) {
+  gtag('event', 'post_job_form_open', { signed_in: signedIn });
+}
+
+/** A signed-out visitor on the post-job preview chose to sign up or log in. */
+export function trackPostJobAccountClick(action: 'signup' | 'login') {
+  gtag('event', 'post_job_account_click', { action });
+}
+
+/**
  * A click through to Stripe checkout: an employer's new post, renewal or
  * 5-post pack (valued at its price, config.stripePackPriceInCents), or a
  * reader's guides store purchase (valued at the product plus any add-on).

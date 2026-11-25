@@ -142,6 +142,9 @@ const ALLOWED: ReadonlyArray<Pick<Finding, 'file' | 'rule' | 'text'> & { guard: 
 
 /** Every employer-job ownership site, with how many ownership clauses it builds. */
 const OWNERSHIP_SITES: ReadonlyArray<[string, number]> = [
+    // An application to one of the employer's own jobs discloses the
+    // applicant's surname in a conversation.
+    ['app/api/conversations/_lib/surname-disclosure.ts', 1],
     ['app/api/employer/analytics/benchmarks/route.ts', 1],
     ['app/api/employer/analytics/csv/route.ts', 1],
     ['app/api/employer/analytics/route.ts', 1],

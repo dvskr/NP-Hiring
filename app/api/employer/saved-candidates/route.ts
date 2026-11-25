@@ -7,6 +7,8 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 import { talentPoolWhere } from '@/lib/candidate-pool';
+import { disclosedPhoto, loadPhotoCheck } from '@/app/api/conversations/_lib/surname-disclosure';
+import { signAvatarUrls } from '@/lib/avatar-url';
 
 /** A saved row's note keeps at most this many characters, here and on PATCH /note. */
 const MAX_NOTE_LENGTH = 2000;
@@ -122,10 +124,20 @@ export async function GET(req: NextRequest) {
         select: { candidateId: true },
     });
     const viewedCandidateIds = viewedProfiles.map(v => v.candidateId);
+    // SECURITY: saving a candidate discloses nothing; the photo follows the
+    // talent pool's rule (conversations/_lib/surname-disclosure.ts).
+    // tests/api/candidate-photo-disclosure.test.ts
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const savedCandidates = saved.map(s => s.candidate as any);
+    const photoShown = await loadPhotoCheck({ user, role: profile.role }, savedCandidates.map(c => c.supabaseId));
+    // Only a photo the rule shows is signed, as a link that expires (lib/avatar-url.ts).
+    const photos = await signAvatarUrls(savedCandidates.map(c => ({
+        stored: disclosedPhoto(c.avatarUrl, photoShown(c.supabaseId)),
+        ownerId: c.supabaseId,
+    })));
 
-    const formatted = saved.map((s) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const c = s.candidate as any;
+    const formatted = saved.map((s, i) => {
+        const c = savedCandidates[i];
 
         const base: Record<string, unknown> = {
             id: c.supabaseId,
@@ -133,7 +145,7 @@ export async function GET(req: NextRequest) {
                 ? `${c.firstName} ${isAdmin && c.lastName ? c.lastName : (c.lastName ? c.lastName.charAt(0) + '.' : '')}`.trim()
                 : 'PMHNP Candidate',
             initials: `${(c.firstName || 'P').charAt(0)}${(c.lastName || 'C').charAt(0)}`.toUpperCase(),
-            avatarUrl: c.avatarUrl,
+            avatarUrl: photos[i],
             headline: c.headline,
             yearsExperience: c.yearsExperience,
             specialties: c.specialties ? c.specialties.split(',').map((s: string) => s.trim()) : [],

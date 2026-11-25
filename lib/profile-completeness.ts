@@ -20,12 +20,13 @@ export interface ProfileDataV2 {
     deaNumber?: string | null
     // Resume
     resumeUrl?: string | null
-    // Profile Detail — the fields that drive the candidate-embedding text
-    // and therefore whether the profile is reachable by employer AI search.
-    // See lib/ai/vector-search.ts:buildCandidateEmbeddingText. Without these
-    // the embedder skips the profile entirely (text < 20 chars), so it is
-    // invisible to /api/employer/talent/search regardless of how complete
-    // the rest of the profile is.
+    // Profile Detail — specialties, years and skills drive the
+    // candidate-embedding text and therefore whether the profile is reachable
+    // by employer AI search. See lib/ai/vector-search.ts:buildCandidateEmbeddingText.
+    // Without them the embedder skips the profile entirely (text < 20 chars),
+    // so it is invisible to /api/employer/talent/search regardless of how
+    // complete the rest of the profile is. The bio is not in that text (it
+    // is admin-only in the talent pool since 2026-11-25).
     bio?: string | null
     specialties?: string | null
     yearsExperience?: number | null
@@ -96,16 +97,17 @@ export function calculateCompleteness(profile: ProfileDataV2 | null | undefined)
         sections.push({ label: 'Personal Info', earned, total: 20, missing })
     }
 
-    // ── Profile Detail (16%) — the fields that make this profile reachable
-    // by employer AI search. Without bio + specialties + a meaningful
-    // yearsExperience the embedder skips the row (text < 20 chars), so
-    // pressure to fill these is what unblocks the AI-Match feature for the
-    // candidate. See lib/ai/vector-search.ts:buildCandidateEmbeddingText.
+    // ── Profile Detail (16%) — specialties, a meaningful yearsExperience and
+    // skills make this profile reachable by employer AI search. Without them
+    // the embedder skips the row (text < 20 chars), so pressure to fill these
+    // is what unblocks the AI-Match feature for the candidate. See
+    // lib/ai/vector-search.ts:buildCandidateEmbeddingText, which leaves out
+    // the bio since 2026-11-25.
     {
         let earned = 0
         const missing: string[] = []
-        // Bio is the heaviest signal in the embedding text (up to 1500 chars
-        // passed verbatim) — credit a meaningful bio more than a 1-word one.
+        // The summary admins and the employers a candidate applies to read:
+        // credit a meaningful bio more than a 1-word one.
         const bioLen = (profile.bio ?? '').trim().length
         if (bioLen >= 50) earned += 5
         else if (bioLen > 0) {

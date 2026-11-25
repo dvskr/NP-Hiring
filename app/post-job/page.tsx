@@ -8,12 +8,12 @@ import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { config } from '@/lib/config';
-import { trackViewPostJobPage } from '@/lib/analytics';
+import { trackPostJobFormOpen, trackViewPostJobPage } from '@/lib/analytics';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import ScreeningQuestionsBuilder from '@/components/ScreeningQuestionsBuilder';
 import SisterBoardPostJobHint from '@/components/sister-board/SisterBoardPostJobHint';
 import { Building2, MapPin, FileText, DollarSign, Rocket, ChevronRight, ChevronLeft, Check, Loader2, Trash2, Upload } from 'lucide-react';
-import { EXPERIENCE_BUCKETS, deriveExperienceLabel } from '@/lib/experience-label';
+import { EXPERIENCE_BUCKETS } from '@/lib/experience-label';
 import {
   EMPLOYER_SPECIALTY_SLUGS,
   EMPLOYER_SETTING_TAGS,
@@ -34,6 +34,7 @@ import {
   shouldDismissResumeBanner,
   type DraftValues,
 } from './_lib/draft-hydration';
+import { LOCAL_DRAFT_SAVED_AT_KEY, deviceDraftIsNewer, localDraftSavedAt } from './_lib/local-job-draft';
 import { postJobPricingCopy } from './_lib/post-job-pricing-copy';
 
 const workModes = ['Remote', 'Hybrid', 'In-Person'] as const;
@@ -138,7 +139,8 @@ function LoadingFallback() {
 /* ═══ Saved Indicator ═══
    Quiet, always-visible autosave status pill — mirrors LinkedIn / Indeed.
    States:
-     idle    → nothing yet ("All changes auto-save")
+     idle    → nothing yet ("All changes auto-save"; "Saved on this device"
+               for a signed-out visitor, whose draft stays in this browser)
      saving  → request in flight ("Saving…" + spinner)
      saved   → most recent save succeeded ("Saved Xs ago")
      error   → most recent save failed ("Couldn't save — will retry")
@@ -146,9 +148,12 @@ function LoadingFallback() {
 function SavedIndicator({
   status,
   lastSavedAt,
+  deviceOnly = false,
 }: {
   status: 'idle' | 'saving' | 'saved' | 'error';
   lastSavedAt: Date | null;
+  /** Signed out: the draft is kept in this browser only, never on the server. */
+  deviceOnly?: boolean;
 }) {
   // Clock lives in state so render stays pure (no Date.now() during render).
   // Seeded one macrotask after commit (established deferred set-state-in-
@@ -181,7 +186,7 @@ function SavedIndicator({
       if (hours < 24) return `Saved ${hours}h ago`;
       return 'Saved earlier today';
     }
-    return 'All changes auto-save';
+    return deviceOnly ? 'Saved on this device' : 'All changes auto-save';
   })();
 
   const color =
@@ -362,8 +367,6 @@ function PostJobContent() {
     },
   });
 
-  const selectedPricingTier = watch('pricingTier');
-  const contactEmail = watch('contactEmail');
   const salaryPeriod = watch('salaryPeriod');
   const selectedSpecialty = watch('specialty');
 
@@ -373,8 +376,10 @@ function PostJobContent() {
   }, []);
 
   // Auth + role gate. Allowlist approach: only 'employer' and 'admin' may
-  // post jobs. Everyone else (job_seeker, missing role, future roles) is
-  // blocked by the in-page "Wrong Account Type" screen rendered below.
+  // post jobs. Any other signed-in account (job_seeker, missing role, future
+  // roles) is blocked by the in-page "Wrong Account Type" screen rendered
+  // below. A signed-out visitor fills the form and creates the employer
+  // account on the preview, before publishing.
   // No silent router.push — the in-page block tells the user what's wrong
   // and gives them a sign-out path.
   useEffect(() => {
@@ -402,20 +407,10 @@ function PostJobContent() {
             // Network failure → treated as unknown; render path below handles it.
           }
           setUserRole(role);
-          // Only employers and admins proceed to the form (auto-fill, etc.).
-          if (role === 'employer' || role === 'admin') {
-            // Suggest the sign-in email only while the field is empty, so a
-            // restored draft's contact email is never overwritten when this
-            // check resolves after hydration.
-            if (user.email && !getValues('contactEmail')) {
-              setValue('contactEmail', user.email);
-              if (restoredSnapshotRef.current) {
-                restoredSnapshotRef.current = { ...restoredSnapshotRef.current, contactEmail: user.email };
-              }
-            }
-          }
-          // For all other roles (job_seeker / null / unknown) the render
-          // path below catches it and shows the wrong-account-type screen.
+          // Employers and admins proceed to the form; their sign-in email is
+          // suggested once the draft is restored (below). For all other
+          // roles (job_seeker / null / unknown) the render path below shows
+          // the wrong-account-type screen.
         }
       } catch (e) {
         console.error('Auth check failed', e);
@@ -424,7 +419,7 @@ function PostJobContent() {
       }
     }
     checkUser();
-  }, [setValue, getValues, router]);
+  }, []);
 
   // F3: resolve the paid-posting gate once auth/role are known. Fails OPEN on
   // any fetch error — the checkout APIs still return a stable 503 code, and
@@ -467,10 +462,15 @@ function PostJobContent() {
 
   // Hydration priority:
   //   1. ?resume=<token> — legacy email-link path (kept for back-compat)
-  //   2. Server-side auth-anchored draft (the new primary path)
+  //   2. Server-side auth-anchored draft (the new primary path), unless the
+  //      copy on this device changed more recently: a visitor who filled the
+  //      form signed out and then logged in keeps that newer work.
   //   3. localStorage cache (offline / fast-path before /api/job-draft round-trip)
   // Whichever wins, fields get prefilled and `draftLoaded` flips true.
+  // Waits for the auth check, because the server draft belongs to an account:
+  // a signed-out visitor goes straight to the copy on this device.
   useEffect(() => {
+    if (isAuthLoading) return;
     // Every restore path runs through here so the resume banner and its
     // dismissal snapshot can never drift apart between paths.
     const markRestored = (restored: DraftValues) => {
@@ -506,27 +506,30 @@ function PostJobContent() {
       }
 
       // Path 2 — server-side auth-anchored draft. Silently returns
-      // null when no draft exists or when the call isn't authenticated.
-      try {
-        const res = await fetch('/api/job-draft', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.draft?.formData) {
-            const formData = data.draft.formData as JobPostingFormData;
-            Object.keys(formData).forEach((key: string) => {
-              setValue(key as keyof JobPostingFormData, formData[key as keyof JobPostingFormData]);
-            });
-            if (formData.salaryCompetitive) setSalaryCompetitive(true);
-            if (formData.companyLogoUrl) setLogoPreview(formData.companyLogoUrl);
-            setLastSavedAt(new Date(data.draft.savedAt));
-            setSaveStatus('saved');
-            markRestored(formData);
-            setDraftLoaded(true);
-            return;
+      // null when no draft exists. Skipped for a signed-out visitor.
+      if (user) {
+        try {
+          const res = await fetch('/api/job-draft', { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            const deviceCopyIsNewer = deviceDraftIsNewer(localDraftSavedAt(localStorage), data?.draft?.savedAt);
+            if (data?.draft?.formData && !deviceCopyIsNewer) {
+              const formData = data.draft.formData as JobPostingFormData;
+              Object.keys(formData).forEach((key: string) => {
+                setValue(key as keyof JobPostingFormData, formData[key as keyof JobPostingFormData]);
+              });
+              if (formData.salaryCompetitive) setSalaryCompetitive(true);
+              if (formData.companyLogoUrl) setLogoPreview(formData.companyLogoUrl);
+              setLastSavedAt(new Date(data.draft.savedAt));
+              setSaveStatus('saved');
+              markRestored(formData);
+              setDraftLoaded(true);
+              return;
+            }
           }
+        } catch (err) {
+          console.error('Error loading server-side draft:', err);
         }
-      } catch (err) {
-        console.error('Error loading server-side draft:', err);
       }
 
       // Path 3 — localStorage fallback (anonymous-friendly + survives
@@ -550,7 +553,34 @@ function PostJobContent() {
       setDraftLoaded(true);
     };
     loadFormData();
-  }, [setValue, getValues, searchParams]);
+  }, [setValue, getValues, searchParams, isAuthLoading, user]);
+
+  // Suggest the sign-in email once the draft is restored, and only while the
+  // field is empty, so a restored draft's contact email is never overwritten.
+  useEffect(() => {
+    if (!draftLoaded || !user) return;
+    if (userRole !== 'employer' && userRole !== 'admin') return;
+    if (user.email && !getValues('contactEmail')) {
+      setValue('contactEmail', user.email);
+      // A suggestion is not an employer edit: fold it into the restored
+      // snapshot so it does not dismiss the resume banner.
+      if (restoredSnapshotRef.current) {
+        restoredSnapshotRef.current = { ...restoredSnapshotRef.current, contactEmail: user.email };
+      }
+    }
+  }, [draftLoaded, user, userRole, getValues, setValue]);
+
+  // Funnel step: the form is on screen, for a signed-out visitor or an
+  // employer. Fired once, after the auth check and the paid-posting gate
+  // settle; the wrong-account and paid-posting-coming-soon screens are not
+  // the form.
+  const formOpenTrackedRef = useRef(false);
+  useEffect(() => {
+    if (isAuthLoading || paidGateLoading || showPaidComingSoon || formOpenTrackedRef.current) return;
+    if (user && userRole !== 'employer' && userRole !== 'admin') return;
+    formOpenTrackedRef.current = true;
+    trackPostJobFormOpen(!!user);
+  }, [isAuthLoading, paidGateLoading, showPaidComingSoon, user, userRole]);
 
   // Auto-save loop. Watches the live form state and POSTs the entire
   // form data to /api/job-draft a few seconds after typing stops.
@@ -574,20 +604,23 @@ function PostJobContent() {
     // the eventual POST body so they can't drift.
     const serializedFormData = JSON.stringify(watchedFormData);
 
+    // Don't fire the server save for trivial empty state — the
+    // post-mount initial render before any user input.
+    const hasMeaningful = hasMeaningfulDraftContent(watchedFormData as DraftValues);
+
     // Mirror to localStorage every change — costs nothing, gives the
-    // user an instant reload-recover experience.
+    // user an instant reload-recover experience. The time is stamped only
+    // when the content really changed, so it says when the work was done
+    // (hydration path 2 compares it with the server draft).
     try {
-      localStorage.setItem('jobFormData', serializedFormData);
+      if (localStorage.getItem('jobFormData') !== serializedFormData) {
+        localStorage.setItem('jobFormData', serializedFormData);
+        if (hasMeaningful) localStorage.setItem(LOCAL_DRAFT_SAVED_AT_KEY, new Date().toISOString());
+      }
     } catch {
       // localStorage might be full or disabled in private mode. Non-fatal.
     }
 
-    // Don't fire the server save for trivial empty state — the
-    // post-mount initial render before any user input.
-    const hasMeaningful =
-      (watchedFormData.title || '').trim().length > 0 ||
-      (watchedFormData.companyName || '').trim().length > 0 ||
-      ((watchedFormData.description || '').replace(/<[^>]*>/g, '').trim().length > 0);
     if (!hasMeaningful) return;
 
     // Don't fire when not authenticated.
@@ -735,13 +768,21 @@ function PostJobContent() {
   const performClearDraft = async () => {
     setConfirm(null);
     localStorage.removeItem('jobFormData');
+    localStorage.removeItem(LOCAL_DRAFT_SAVED_AT_KEY);
+    // Screening questions live in their own key, so clearing the draft used to
+    // leave the previous role's questions (and their knockout rules, which
+    // reject applicants) attached to whatever was posted next.
+    localStorage.removeItem('jobScreeningQuestions');
     // Also wipe the server-side draft so it doesn't re-hydrate on next
     // visit. Best-effort — local clear is the user-facing source of
     // truth and a failed DELETE still leaves the page in a sane state.
-    try {
-      await fetch('/api/job-draft', { method: 'DELETE' });
-    } catch {
-      // Non-fatal.
+    // A signed-out visitor has no server draft.
+    if (user) {
+      try {
+        await fetch('/api/job-draft', { method: 'DELETE' });
+      } catch {
+        // Non-fatal.
+      }
     }
     // AI generation quota is server-side now (per-day, not per-draft),
     // so clearing the draft no longer resets it. The cap rolls over
@@ -814,52 +855,22 @@ function PostJobContent() {
 
   if (isAuthLoading) return <LoadingFallback />;
 
-  // Not Logged In
-  if (!user) {
-    return (
-      <div style={{ maxWidth: '560px', margin: '0 auto', padding: '48px 16px' }}>
-        <div style={{ ...cardBase, padding: '40px 32px', textAlign: 'center' }}>
-          <div style={{
-            width: '56px', height: '56px', borderRadius: '18px', margin: '0 auto 16px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(145deg, #BE185D, #9D174D)',
-            boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.2)',
-          }}>
-            <Building2 size={24} color="#fff" />
-          </div>
-          {/* h1, not h2 — this gate card is what a logged-out visitor (and
-              any crawler that renders the client bundle) sees, and the page
-              previously had no h1 in any state (live-review item 7-vii). */}
-          <h1 style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 8px' }}>
-            Post a {brand.niche.long} Job
-          </h1>
-          <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 28px', lineHeight: 1.5 }}>
-            You must be logged in as an employer to post jobs. Create an account to manage listings and track applicants.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <Link href="/signup?role=employer" style={{
-              ...clayBtn, justifyContent: 'center',
-              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
-              boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
-            }}>
-              Sign Up as Employer
-            </Link>
-            <Link href="/login?next=/post-job" style={{
-              ...clayBtn, justifyContent: 'center', background: '#F5F6F8', color: '#6B7F8A',
-            }}>
-              Log In
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // A signed-out visitor gets the whole form (owner decision 2026-11-25,
+  // replacing the sign-up wall, so a visitor sees the form and a preview
+  // before creating an account). The draft stays on this device, nothing
+  // account-bound is called, and the account is created on the preview,
+  // before the post is published. Every API behind the form, the preview
+  // and the checkout still requires an employer account. The wizard's h1
+  // below is what a signed-out visitor (and a crawler that renders the
+  // client bundle) sees (live-review item 7-vii).
+  const signedOut = !user;
 
-  // Allowlist gate: only employers and admins reach the form. Everyone else
-  // (job seekers, accounts with missing/unknown role) gets the wrong-account
-  // screen — the API also enforces this, but blocking at the page level
-  // prevents wasted form-fill effort and confusing 403s on submit.
-  if (userRole !== 'employer' && userRole !== 'admin') {
+  // Allowlist gate: only employers and admins reach the form. Every other
+  // signed-in account (job seekers, accounts with missing/unknown role) gets
+  // the wrong-account screen — the API also enforces this, but blocking at
+  // the page level prevents wasted form-fill effort and confusing 403s on
+  // submit.
+  if (user && userRole !== 'employer' && userRole !== 'admin') {
     const roleLabel = userRole === 'job_seeker'
       ? 'Job Seeker'
       : userRole
@@ -993,11 +1004,30 @@ function PostJobContent() {
           </div>
         )}
 
+        {/* Signed out: say plainly that no account is needed yet, where the
+            draft is kept, and when the account comes in. */}
+        {signedOut && (
+          <div style={{
+            ...cardBase, padding: '14px 18px', marginBottom: '16px',
+            background: '#FDF2F8', border: '1px solid #FBCFE8',
+          }}>
+            <p style={{ fontSize: '14px', fontWeight: 700, color: '#BE185D', margin: '0 0 4px' }}>
+              No account needed to start
+            </p>
+            <p style={{ fontSize: '13px', color: '#9D174D', margin: 0, lineHeight: 1.5 }}>
+              Fill in your post and preview it. It is saved on this device as you type, and you create your employer account before you publish.{' '}
+              <Link href="/login?next=/post-job" style={{ color: '#BE185D', fontWeight: 600, textDecoration: 'underline' }}>
+                Already have an account? Log in
+              </Link>
+            </p>
+          </div>
+        )}
+
         {/* Saved indicator — always visible above the step bar. Never
             unmounts between saves; only the inner content (Saving… /
             Saved Xs ago) changes. */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-          <SavedIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+          <SavedIndicator status={saveStatus} lastSavedAt={lastSavedAt} deviceOnly={signedOut} />
         </div>
 
         {/* Progress Bar */}
@@ -1071,12 +1101,22 @@ function PostJobContent() {
                         boxShadow: '2px 2px 6px rgba(0,0,0,0.06)',
                       }} />
                     )}
-                    <label style={{ ...clayBtn, background: '#F5F6F8', color: '#6B7F8A', padding: '10px 16px', fontSize: '13px' }}>
-                      <Upload size={14} />
-                      {uploadingLogo ? 'Uploading...' : logoPreview ? 'Change Logo' : 'Upload Logo'}
-                      <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} disabled={uploadingLogo} />
-                    </label>
-                    <span style={{ fontSize: '11px', color: '#B0BEC5' }}>PNG or JPG, max 2MB</span>
+                    {/* Uploads are stored against an employer account, so a
+                        signed-out visitor adds the logo after signing up. */}
+                    {signedOut ? (
+                      <span style={{ fontSize: '12px', color: '#4B5E68', lineHeight: 1.5 }}>
+                        You can add a logo after you create your account.
+                      </span>
+                    ) : (
+                      <>
+                        <label style={{ ...clayBtn, background: '#F5F6F8', color: '#6B7F8A', padding: '10px 16px', fontSize: '13px' }}>
+                          <Upload size={14} />
+                          {uploadingLogo ? 'Uploading...' : logoPreview ? 'Change Logo' : 'Upload Logo'}
+                          <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} disabled={uploadingLogo} />
+                        </label>
+                        <span style={{ fontSize: '11px', color: '#B0BEC5' }}>PNG or JPG, max 2MB</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1287,6 +1327,7 @@ function PostJobContent() {
                     location: watch('location') || '',
                     benefits: watch('benefits') || [],
                   }}
+                  signedIn={!signedOut}
                 />
 
                 <div style={{

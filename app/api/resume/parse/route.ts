@@ -291,8 +291,9 @@ export async function POST(request: NextRequest) {
 
     // Refresh the candidate embedding so the now-populated profile becomes
     // searchable in employer AI Match. autoFillProfile may have updated
-    // headline/bio/specialties/yearsExperience/certifications/licenseStates/
-    // skills — all embedder inputs. Fire-and-forget; the manual backfill
+    // headline/specialties/yearsExperience/certifications/licenseStates/
+    // skills — all embedder inputs (the bio it may write is not one since
+    // 2026-11-25). Fire-and-forget; the manual backfill
     // covers us if the queue is down. Inngest's per-supabaseId 30s throttle
     // coalesces with any concurrent dispatches from /api/auth/profile.
     inngest.send({

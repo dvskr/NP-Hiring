@@ -8,9 +8,11 @@
  *
  * Hard rules — match what /api/employer/candidates already enforces:
  *   - Auth: employer or admin role required.
- *   - Active-posting gate: non-admin without an active posting only sees
- *     `baseSelect` fields (same as filter-only browse). The query still runs;
- *     unlock-eligible metadata is just hidden.
+ *   - Active-posting gate (owner, 2026-11-25): an employer without an active
+ *     posting is refused, 403 `needs_active_posting`, before any search or
+ *     model call; the talent pool page falls back to keyword search. Admins
+ *     pass. An employer reaches the posting tier's fields, never the browse
+ *     tier's, so the tier branches below are belt and braces.
  *   - Privacy transform: last name → first initial unless admin.
  *   - Per-employer cost cap: 10 reranks/day (counted from `ai_call_log`).
  *
@@ -40,7 +42,9 @@ import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { logger } from '@/lib/logger';
 import { AI_DAILY_CAPS } from '@/lib/ai-usage';
 import { midnightCentralTimeAsUtc } from '@/lib/time';
-import { talentPoolWhere } from '@/lib/candidate-pool';
+import { candidateAccessTier, seesPostingTierFields, talentPoolWhere } from '@/lib/candidate-pool';
+import { disclosedPhoto, loadPhotoCheck } from '@/app/api/conversations/_lib/surname-disclosure';
+import { signAvatarUrls } from '@/lib/avatar-url';
 
 const RERANK_DAILY_CAP = AI_DAILY_CAPS.talent_search_rerank;
 
@@ -103,6 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const hasActivePosting = isAdmin
         ? true
         : (await getEmployerActivePostings(user.id)).length > 0;
+    const access = candidateAccessTier({ isAdmin, hasActivePosting });
 
     const tenant = { type: 'employer' as const, id: user.id };
 
@@ -110,6 +115,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const enabled = await isAiFeatureEnabled('ai.employer.talent_search', tenant);
     if (!enabled) {
         return NextResponse.json({ error: 'Not enabled' }, { status: 404 });
+    }
+
+    // SECURITY (owner, 2026-11-25): AI talent search needs an active posting;
+    // an admin passes. Refused here, before the daily cap counts the request
+    // or any embedding, search or model call runs.
+    // tests/api/employer-talent-search.test.ts
+    if (!hasActivePosting) {
+        return NextResponse.json({
+            error: 'AI search needs an active job posting.',
+            reason: 'needs_active_posting',
+        }, { status: 403 });
     }
 
     let body: unknown;
@@ -201,7 +217,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // ── 2. Vector search → top 50 ───────────────────────────────────────
     const vectorHits = await semanticCandidateSearch(queryEmbedding, {
         k: 50,
-        licenseStates: states,
+        // SECURITY: license states are posting-tier data. Without a posting
+        // the filter is ignored, as in /api/employer/candidates: applied, it
+        // would confirm them. tests/api/employer-candidate-search-scope.test.ts
+        licenseStates: seesPostingTierFields(access) ? states : undefined,
     });
     if (vectorHits.length === 0) {
         return NextResponse.json({ candidates: [], reason: 'no_matches', tier, hasActivePosting });
@@ -306,7 +325,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             messages: prompt.render({ jobSummary, candidateList, topK: String(k) }),
             promptId: prompt.id,
             promptVersion: prompt.version,
-            cacheKey: ['rerank', prompt.version, query, k, ordered.map((c) => c.profile.supabaseId).join(',')],
+            // SECURITY: the candidate list holds only the fields this tier can
+            // read and the reasons can quote them, so a cached ranking is shared
+            // within the tier only. Keyed without it, a browse-tier employer
+            // could be served reasons written from another tier's
+            // certifications, license states or bios. Same test file.
+            cacheKey: ['rerank', prompt.version, access, query, k, ordered.map((c) => c.profile.supabaseId).join(',')],
             outputSchema: rerankResultSchema,
         });
         // Normalize: trim long reasons (LLM sometimes ignores the
@@ -333,6 +357,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // ── 5. Build response with the SAME privacy transform as /api/employer/candidates ──
+    // SECURITY: the photo follows the talent pool's rule, unlocked or applied
+    // (conversations/_lib/surname-disclosure.ts). tests/api/candidate-photo-disclosure.test.ts
+    const rankedProfiles = ranked.slice(0, k).flatMap((r) => {
+        const hit = ordered[r.candidateIndex - 1];
+        return hit ? [hit.profile as typeof hit.profile & { avatarUrl?: string | null }] : [];
+    });
+    const photoShown = await loadPhotoCheck(
+        { user, role: profile.role },
+        rankedProfiles.map((p) => p.supabaseId),
+    );
+    // Only a photo the rule shows is signed, as a link that expires (lib/avatar-url.ts).
+    const signedPhotos = await signAvatarUrls(rankedProfiles.map((p) => ({
+        stored: disclosedPhoto(p.avatarUrl, photoShown(p.supabaseId)),
+        ownerId: p.supabaseId,
+    })));
+    const photoOf = new Map(rankedProfiles.map((p, i) => [p.supabaseId, signedPhotos[i]]));
     const candidates = ranked.slice(0, k).map((r) => {
         const original = ordered[r.candidateIndex - 1];
         if (!original) return null;
@@ -366,7 +406,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             yearsExperience: c.yearsExperience,
             specialties: c.specialties ? c.specialties.split(',').map((s) => s.trim()) : [],
             preferredWorkMode: c.preferredWorkMode,
-            avatarUrl: c.avatarUrl,
+            avatarUrl: photoOf.get(c.supabaseId) ?? null,
             initials: `${(c.firstName || 'P').charAt(0)}${(c.lastName || 'C').charAt(0)}`.toUpperCase(),
             joinedAt: c.createdAt.toISOString(),
             similarity: original.similarity,

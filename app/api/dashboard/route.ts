@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags'
+import { signAvatarUrl } from '@/lib/avatar-url'
 
 /**
  * GET /api/dashboard — Return all data needed for the candidate dashboard
@@ -165,26 +166,31 @@ export async function GET(request: Request) {
                     : Promise.resolve(null),
             ])
 
-        // EmployerMessage.recipientId and ProfileView.candidateId both reference
-        // UserProfile.id (a cuid), NOT the Supabase auth UUID (user.id). These two
-        // counts therefore have to run AFTER the profile resolves — querying them
-        // with user.id silently returned 0 for every candidate.
+        // EmployerMessage.recipientId references UserProfile.id (a cuid), so the
+        // unread count runs after the profile resolves. ProfileView.candidateId
+        // is different: the unlock routes write the candidate's Supabase id (the
+        // id employers see in search), so profile views count by user.id.
+        // Counting them by profile.id matched nothing and showed 0 to everyone.
         const [unreadMessages, profileViews] = profile
             ? await Promise.all([
                 prisma.employerMessage.count({
                     where: { recipientId: profile.id, readAt: null },
                 }),
                 prisma.profileView.count({
-                    where: { candidateId: profile.id },
+                    where: { candidateId: user.id },
                 }),
             ])
             : [0, 0]
 
         // Note: dashboard is primarily for job seekers but accessible to all authenticated users
 
+        // The person's own photo goes out as a link that expires (lib/avatar-url.ts).
+        const ownPhoto = profile ? { avatarUrl: await signAvatarUrl(profile.avatarUrl, user.id) } : {}
+
         return NextResponse.json({
             profile: {
                 ...profile,
+                ...ownPhoto,
                 newsletterOptIn: emailLead?.newsletterOptIn ?? false,
             },
             stats: {

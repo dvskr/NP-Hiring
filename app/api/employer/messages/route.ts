@@ -8,7 +8,10 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { employerJobOwnershipBranches, type EmployerJobOwner } from '@/lib/employer-ownership';
 import { readJsonObject, validateEmployerSendPayload } from '@/app/api/conversations/_lib/message-payload';
+import { personName } from '@/app/api/conversations/_lib/participant-name';
+import { loadSurnameCheck } from '@/app/api/conversations/_lib/surname-disclosure';
 import { isInTalentPool, type TalentPoolFlags } from '@/lib/candidate-pool';
+import { activePostingJobWhere } from '@/lib/active-posting';
 
 /**
  * Whether this employer may open a NEW thread with the recipient, through one
@@ -74,14 +77,22 @@ export async function GET(req: NextRequest) {
             orderBy: { sentAt: 'desc' },
             take: 50,
             include: {
+                // id, supabaseId and role feed the surname rule; no email.
                 recipient: {
-                    select: { firstName: true, lastName: true },
+                    select: { id: true, supabaseId: true, firstName: true, lastName: true, role: true },
                 },
                 job: {
                     select: { id: true, title: true },
                 },
             },
         });
+
+        // SECURITY: the inbox's surname rule (conversations/_lib/surname-disclosure.ts).
+        // tests/api/conversation-surname-disclosure.test.ts
+        const showsSurname = await loadSurnameCheck(
+            { user, role: profile.role },
+            messages.map(m => ({ conversationId: m.conversationId, counterpart: m.recipient })),
+        );
 
         const formatted = messages.map(m => ({
             id: m.id,
@@ -94,7 +105,7 @@ export async function GET(req: NextRequest) {
             // view never shows an applicant's email, and the pool shows one
             // only with full profile access.
             // tests/api/employer-messages-recipient.test.ts
-            recipientName: [m.recipient.firstName, m.recipient.lastName].filter(Boolean).join(' ') || 'Candidate',
+            recipientName: personName(m.recipient, showsSurname(m.conversationId, m.recipient)) || 'Candidate',
             jobTitle: m.job?.title || null,
         }));
 
@@ -166,7 +177,7 @@ export async function POST(req: NextRequest) {
         // below uses. Opening a NEW thread (e.g. a new job-scoped thread to a
         // previously-contacted candidate) is new outreach: an InMail is a
         // unique conversation (see getInMailsForPosting), so it must pass the
-        // featured-job gate + credit check. Previously ANY prior conversation
+        // active-posting gate + credit check. Previously ANY prior conversation
         // with the candidate skipped the gate, letting an employer open
         // unlimited new job-scoped threads for free.
         const existingConversation = await prisma.conversation.findFirst({
@@ -180,13 +191,16 @@ export async function POST(req: NextRequest) {
             select: { id: true },
         });
 
+        // The job of the posting whose InMail credit a new thread spends.
+        let chargedJobId: string | null = null;
+
         if (!existingConversation) {
             // SECURITY: new outreach reaches only someone this employer may
             // contact (mayOpenThreadWith above). The recipient was never
-            // checked, so an employer past the featured gate could open a
+            // checked, so an employer past the posting gate could open a
             // thread with, and email, any profile id: a seeker who hid their
             // profile or switched off "Open to offers", another employer, an
-            // admin. This runs before the featured gate, so anyone out of
+            // admin. This runs before the posting gate, so anyone out of
             // reach answers exactly as an unknown id does and the answer
             // cannot be used to probe which ids exist.
             // tests/api/employer-messages-recipient.test.ts
@@ -194,39 +208,51 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
             }
 
-            // NEW outreach — requires a featured job posting + InMail credit
-            // Gate: messaging requires a featured job posting
-            if (jobId) {
-                const job = await prisma.job.findFirst({
+            // NEW outreach needs an active posting (lib/active-posting.ts, the
+            // rule getEmployerActivePostings reads) and an InMail credit.
+            // SECURITY (owner, 2026-11-25): it needed a featured posting,
+            // which a new post here never is, so most employers could not
+            // message at all, though every post's copy promises InMails. A
+            // named job must be one of the sender's own active postings: the
+            // InMail count reads threads by their posting's job.
+            // tests/api/employer-messages-recipient.test.ts
+            const postingRule = activePostingJobWhere();
+            const hasPosting = jobId
+                ? await prisma.job.findFirst({
                     where: {
                         id: jobId,
-                        isFeatured: true,
+                        ...postingRule,
                         employerJobs: {
                             OR: employerJobOwnershipBranches(user),
                         },
                     },
                     select: { id: true },
-                });
-                if (!job) {
-                    return NextResponse.json({ error: 'Messaging is available for featured job postings only' }, { status: 403 });
-                }
-            } else {
-                const featuredJob = await prisma.employerJob.findFirst({
+                })
+                : await prisma.employerJob.findFirst({
                     where: {
                         OR: employerJobOwnershipBranches(user),
-                        job: { isFeatured: true },
+                        job: postingRule,
                     },
                     select: { id: true },
                 });
-                if (!featuredJob) {
-                    return NextResponse.json({ error: 'Messaging is available for featured job postings only' }, { status: 403 });
-                }
+            if (!hasPosting) {
+                return NextResponse.json({
+                    error: 'A new message needs an active job posting.',
+                    reason: 'needs_active_posting',
+                }, { status: 403 });
             }
 
-            // Check InMail credits for new outreach
+            // Every new thread spends one InMail credit of one active
+            // posting (owner, 2026-11-25). A named job spends its own
+            // posting's credit; with no job named, canSendInMail picks the
+            // active posting with credit left that ends soonest. A thread
+            // with no job used to count against no posting, so leaving out
+            // the job id sent InMails without limit. With no credit to
+            // spend, or no posting to charge, nothing is written.
+            // tests/lib/inmail-attribution.test.ts
             const tier = await getEmployerTier(user.id);
-            const inmailCheck = await canSendInMail(senderProfile.id, user.id, tier);
-            if (!inmailCheck.allowed) {
+            const inmailCheck = await canSendInMail(senderProfile.id, user.id, tier, jobId ?? undefined);
+            if (!inmailCheck.allowed || !inmailCheck.jobId) {
                 return NextResponse.json({
                     error: 'InMail limit reached for this posting',
                     used: inmailCheck.used,
@@ -235,6 +261,7 @@ export async function POST(req: NextRequest) {
                     upgradeRequired: true,
                 }, { status: 403 });
             }
+            chargedJobId = inmailCheck.jobId;
         }
 
         // Look up job title if jobId provided
@@ -263,6 +290,7 @@ export async function POST(req: NextRequest) {
                 },
             });
 
+            const opensThread = !conversation;
             if (!conversation) {
                 const [participantA, participantB] = [senderProfile.id, recipient.id].sort();
                 conversation = await tx.conversation.create({
@@ -283,7 +311,12 @@ export async function POST(req: NextRequest) {
                     subject,
                     // Same sanitizer as the reply path (POST /api/conversations/[id])
                     body: sanitizeText(messageBody.trim(), 2000),
-                    ...(jobId && { jobId }),
+                    // The thread's job. A thread that names no job keeps none,
+                    // so the candidate sees no posting the employer never
+                    // named; the message that opens it records the posting
+                    // whose credit it spent, which getInMailsForPosting counts.
+                    // A later message in it carries none, as a reply does.
+                    jobId: conversation.jobId ?? (opensThread ? chargedJobId : null),
                 },
             });
 

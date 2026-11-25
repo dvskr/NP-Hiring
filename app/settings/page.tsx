@@ -296,17 +296,13 @@ function SettingsPageInner() {
   }, [profile?.resumeParseStatus])
 
   // ── Handlers ──
-  const handleAvatarUpload = async (url: string) => {
+  // /api/upload has already stored the new photo. `url` is a link to show it
+  // that expires (lib/avatar-url.ts), or null when it could not be signed, so
+  // it is shown, never written back: a null sent back would clear the photo.
+  const handleAvatarUpload = (url: string | null) => {
     if (!profile) return
     setProfile({ ...profile, avatarUrl: url })
-    try {
-      await fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatarUrl: url }),
-      })
-      showMsg('success', 'Avatar updated.')
-    } catch { showMsg('error', 'Failed to update avatar.') }
+    showMsg('success', 'Avatar updated.')
   }
 
   const handleAvatarRemove = async () => {
@@ -422,7 +418,9 @@ function SettingsPageInner() {
           lastName: profile.lastName,
           phone: profile.phone,
           company: profile.company,
-          avatarUrl: profile.avatarUrl,
+          // No avatarUrl: the photo changes only through its upload and its
+          // Remove button, and what this page holds is a link that expires,
+          // or null when it could not be signed, which would clear the photo.
           resumeUrl: profile.resumeUrl,
           headline: profile.headline,
           bio: profile.bio,

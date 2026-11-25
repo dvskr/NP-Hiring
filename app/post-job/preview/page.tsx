@@ -9,10 +9,18 @@ import { sanitizeHtmlContent } from '@/lib/sanitize';
 import { config } from '@/lib/config';
 import { currentQuote } from '@/lib/next-post-quote';
 import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
-import { trackFreePostLimitHit } from '@/lib/analytics';
+import { trackFreePostLimitHit, trackPostJobAccountClick } from '@/lib/analytics';
 import JobCard from '@/components/JobCard';
 import type { Job } from '@/lib/types';
 import { deriveExperienceLabel } from '@/lib/experience-label';
+
+/**
+ * Where a signed-out visitor goes to publish: a new employer account, or a
+ * login for an existing one. Both come back here, where the draft on this
+ * device is waiting.
+ */
+const SIGNUP_TO_PUBLISH_HREF = '/signup?role=employer&redirectTo=/post-job/preview';
+const LOGIN_TO_PUBLISH_HREF = '/login?next=/post-job/preview';
 
 interface JobFormData {
   title: string;
@@ -141,7 +149,11 @@ export default function PreviewPage() {
     (async () => {
       try {
         const res = await fetch('/api/employer/free-quota-status');
-        if (!res.ok) return;
+        // A signed-out visitor is answered 401 { eligible: false, reason:
+        // 'unauthenticated' }. That answer is kept: it is how this page knows
+        // to offer an account instead of a post-free call that could only
+        // fail. Every other non-OK answer leaves the quote null.
+        if (!res.ok && res.status !== 401) return;
         const data = (await res.json()) as QuotaStatus;
         if (!cancelled) setFetchedQuotaStatus(data);
       } catch {
@@ -338,6 +350,10 @@ export default function PreviewPage() {
     companyLogoUrl: formData.companyLogoUrl || null,
   };
 
+  // Signed out: the draft is on this device, but publishing needs an employer
+  // account, so the page offers one before the post-free call that would
+  // only answer 401.
+  const needsLogin = quotaStatus?.eligible === false && quotaStatus.reason === 'unauthenticated';
   const willBeFree = quotaStatus?.eligible === true && quotaStatus.willBeFree === true;
   // Mode is only trusted from an eligible answer that still holds (a promo
   // answer only while the promo runs, see currentQuote above); anything else
@@ -402,6 +418,34 @@ export default function PreviewPage() {
             Preview Your Job Post
           </h1>
         </div>
+
+        {/* Up-front account prompt for a signed-out visitor, surfaced BEFORE
+            the publish button so a doomed post-free call never happens. */}
+        {needsLogin && (
+          <div style={{ ...cardBase, padding: '16px 20px', marginBottom: '16px', background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+            <p style={{ fontSize: '14px', fontWeight: 700, color: '#92400E', margin: '0 0 4px' }}>
+              Create your employer account to publish this post.
+            </p>
+            <p style={{ fontSize: '13px', color: '#92400E', margin: '0 0 12px', lineHeight: 1.5 }}>
+              Your draft is saved on this device. Once your account is ready you come straight back here to publish it.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              <Link href={SIGNUP_TO_PUBLISH_HREF} onClick={() => trackPostJobAccountClick('signup')} style={{
+                ...clayBtn, padding: '10px 20px', fontSize: '13px', textDecoration: 'none',
+                background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+                boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+              }}>
+                Create employer account
+              </Link>
+              <Link href={LOGIN_TO_PUBLISH_HREF} onClick={() => trackPostJobAccountClick('login')} style={{
+                ...clayBtn, padding: '10px 20px', fontSize: '13px', textDecoration: 'none',
+                background: '#FFFFFF', color: '#92400E', border: '1px solid #FDE68A',
+              }}>
+                I have an account: log in
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Section 1: Card Preview — uses the REAL <JobCard> component so this
             is pixel-identical to what candidates see in jobs listings.
@@ -688,18 +732,32 @@ export default function PreviewPage() {
           }}>
             <ChevronLeft size={16} /> Back to Edit
           </button>
-          <button onClick={handleContinue} disabled={isLoading} className="preview-btn-primary" style={{
-            ...clayBtn, flex: 1, justifyContent: 'center',
-            background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
-            boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
-            opacity: isLoading ? 0.6 : 1,
-          }}>
-            {isLoading ? (
-              <><Loader2 size={16} className="animate-spin" /> Processing...</>
-            ) : (
-              <>{primaryCtaLabel} <ChevronRight size={16} /></>
-            )}
-          </button>
+          {/* A signed-out visitor cannot publish yet: post-free needs an
+              employer account. Send them to create one instead (most are new
+              employers; the prompt above also offers login), and say so on
+              the button rather than offering a publish that would fail. */}
+          {needsLogin ? (
+            <Link href={SIGNUP_TO_PUBLISH_HREF} onClick={() => trackPostJobAccountClick('signup')} className="preview-btn-primary" style={{
+              ...clayBtn, flex: 1, justifyContent: 'center', textDecoration: 'none',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+              boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+            }}>
+              Create account to publish <ChevronRight size={16} />
+            </Link>
+          ) : (
+            <button onClick={handleContinue} disabled={isLoading} className="preview-btn-primary" style={{
+              ...clayBtn, flex: 1, justifyContent: 'center',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+              boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+              opacity: isLoading ? 0.6 : 1,
+            }}>
+              {isLoading ? (
+                <><Loader2 size={16} className="animate-spin" /> Processing...</>
+              ) : (
+                <>{primaryCtaLabel} <ChevronRight size={16} /></>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

@@ -118,7 +118,19 @@ export interface JdStarterPanelProps {
     location: string;
     benefits: string[];
   };
+  /**
+   * False for a visitor who has not signed in. The AI writer, its usage badge
+   * and the saved-template library all belong to an employer account, so they
+   * are shown as needing one instead of firing requests that would 401. The
+   * built-in skeletons and writing by hand work for everyone.
+   */
+  signedIn?: boolean;
 }
+
+/** Shown wherever an account-only action is unavailable to a signed-out visitor. */
+const ACCOUNT_NEEDED_AI =
+  'Create a free employer account to use the AI writer. You can write it yourself or start from a skeleton now.';
+const ACCOUNT_NEEDED_TEMPLATES = 'Create an employer account to save your own templates.';
 
 // ─── Constants & styles ───────────────────────────────────────────
 
@@ -304,7 +316,7 @@ const sx = {
 
 // ─── Component ────────────────────────────────────────────────────
 
-export default function JdStarterPanel({ description, onChange, formContext }: JdStarterPanelProps) {
+export default function JdStarterPanel({ description, onChange, formContext, signedIn = true }: JdStarterPanelProps) {
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiDialogMode, setAiDialogMode] = useState<Mode>('generate');
@@ -320,6 +332,7 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
   // copy instead of an incorrect "5 of 5 available".
   const [usage, setUsage] = useState<AiUsage | null>(null);
   useEffect(() => {
+    if (!signedIn) return;
     let cancelled = false;
     fetch('/api/employer/ai-jd/usage', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
@@ -334,7 +347,7 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [signedIn]);
   const aiLimitReached = usage !== null && usage.remaining === 0;
 
   // Per-employer saved templates. Hydrated on mount; refreshed after
@@ -353,8 +366,9 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
     }
   }, []);
   useEffect(() => {
+    if (!signedIn) return;
     refreshCustomTemplates();
-  }, [refreshCustomTemplates]);
+  }, [refreshCustomTemplates, signedIn]);
 
   // Save-template dialog state. Two modes: 'create' (save current draft
   // as a new template) and 'rename' (edit label/summary of an existing
@@ -397,6 +411,10 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
     mustHaves: string[];
     factsSummary?: string;
   }) {
+    if (!signedIn) {
+      setError({ message: ACCOUNT_NEEDED_AI });
+      return;
+    }
     setError(null);
     setBusy(payload.mode);
 
@@ -550,6 +568,10 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
   }
 
   function openSaveAsTemplate() {
+    if (!signedIn) {
+      setError({ message: ACCOUNT_NEEDED_TEMPLATES });
+      return;
+    }
     if (visibleLen(description) < 50) {
       setError({ message: 'Add more content before saving as a template (at least 50 visible characters are required).' });
       return;
@@ -644,9 +666,10 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
         <EmptyStateHero
           usage={usage}
           aiLimitReached={aiLimitReached}
+          aiLocked={!signedIn}
           onTemplate={() => setTemplatePickerOpen(true)}
           onAi={() => {
-            if (aiLimitReached) return;
+            if (aiLimitReached || !signedIn) return;
             setAiDialogMode('generate');
             setAiDialogOpen(true);
           }}
@@ -664,11 +687,12 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
           chars={visibleLen(description)}
           tone={lastAiMeta?.tone ?? null}
           usage={usage}
-          aiLimitReached={aiLimitReached}
+          aiLimitReached={aiLimitReached || !signedIn}
           canUndo={prevDraft !== null}
           customTemplatesAtCap={customTemplates.length >= customCap}
+          canSaveTemplates={signedIn}
           onRegenerate={() => {
-            if (aiLimitReached) return;
+            if (aiLimitReached || !signedIn) return;
             setAiDialogMode('generate');
             setAiDialogOpen(true);
           }}
@@ -689,6 +713,9 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
         <TemplatePicker
           customTemplates={customTemplates}
           customCap={customCap}
+          // A signed-out visitor has no library: the picker shows the
+          // built-in skeletons only.
+          allowCustom={signedIn}
           // Disable the "Save current draft" CTA when there's nothing
           // worth saving. Picker remains usable for browsing built-ins.
           canSaveCurrent={visibleLen(description) >= 50}
@@ -750,21 +777,28 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
 function EmptyStateHero({
   usage,
   aiLimitReached,
+  aiLocked,
   onTemplate,
   onAi,
   onBlank,
 }: {
   usage: AiUsage | null;
   aiLimitReached: boolean;
+  /** True for a signed-out visitor: the AI writer needs an employer account. */
+  aiLocked: boolean;
   onTemplate: () => void;
   onAi: () => void;
   onBlank: () => void;
 }) {
-  // Path cards carry no description line (owner call, 2026-10-12); only the
-  // limit-reached status shows under the AI card.
-  const aiDesc = aiLimitReached
-    ? 'Daily AI limit reached. Browse a skeleton or write manually. Resets at midnight CT.'
-    : undefined;
+  // Path cards carry no description line (owner call, 2026-10-12); only a
+  // status shows under the AI card: that it needs an account, or that the
+  // daily limit is reached.
+  const aiUnavailable = aiLimitReached || aiLocked;
+  const aiDesc = aiLocked
+    ? ACCOUNT_NEEDED_AI
+    : aiLimitReached
+      ? 'Daily AI limit reached. Browse a skeleton or write manually. Resets at midnight CT.'
+      : undefined;
 
   return (
     <div style={sx.hero}>
@@ -784,13 +818,14 @@ function EmptyStateHero({
           label="Generate with AI"
           desc={aiDesc}
           onClick={onAi}
-          disabled={aiLimitReached}
-          highlight={!aiLimitReached}
+          disabled={aiUnavailable}
+          highlight={!aiUnavailable}
         />
         <PathCard
           icon={<PenSquare size={20} />}
           label="Write from scratch"
           onClick={onBlank}
+          highlight={aiLocked}
         />
       </div>
       <div style={{ marginTop: 14, textAlign: 'center' }}>
@@ -855,7 +890,7 @@ function PathCard({
 }
 
 function PostGenToolbar({
-  chars, tone, usage, aiLimitReached, canUndo, customTemplatesAtCap,
+  chars, tone, usage, aiLimitReached, canUndo, customTemplatesAtCap, canSaveTemplates,
   onRegenerate, onUndo, onSaveAsTemplate, onBrowseTemplates,
 }: {
   chars: number;
@@ -865,6 +900,8 @@ function PostGenToolbar({
   aiLimitReached: boolean;
   canUndo: boolean;
   customTemplatesAtCap: boolean;
+  /** False for a signed-out visitor, who has no template library. */
+  canSaveTemplates: boolean;
   onRegenerate: () => void;
   onUndo: () => void;
   onSaveAsTemplate: () => void;
@@ -906,10 +943,16 @@ function PostGenToolbar({
       {/* Always-available actions */}
       <button
         type="button"
-        style={{ ...sx.pill, ...(customTemplatesAtCap ? sx.pillDisabled : {}) }}
-        disabled={customTemplatesAtCap}
+        style={{ ...sx.pill, ...(customTemplatesAtCap || !canSaveTemplates ? sx.pillDisabled : {}) }}
+        disabled={customTemplatesAtCap || !canSaveTemplates}
         onClick={onSaveAsTemplate}
-        title={customTemplatesAtCap ? 'Template library is full. Delete one to save another.' : 'Save this draft to your reusable template library.'}
+        title={
+          !canSaveTemplates
+            ? ACCOUNT_NEEDED_TEMPLATES
+            : customTemplatesAtCap
+              ? 'Template library is full. Delete one to save another.'
+              : 'Save this draft to your reusable template library.'
+        }
       >
         <Bookmark size={12} />
         Save to my templates
@@ -946,6 +989,7 @@ type PickerFilter = JdTemplateCategory | 'all' | 'mine';
 function TemplatePicker({
   customTemplates,
   customCap,
+  allowCustom,
   canSaveCurrent,
   onClose,
   onPick,
@@ -955,6 +999,8 @@ function TemplatePicker({
 }: {
   customTemplates: CustomTemplate[];
   customCap: number;
+  /** False for a signed-out visitor: no "My Templates" tab or section. */
+  allowCustom: boolean;
   canSaveCurrent: boolean;
   onClose: () => void;
   onPick: (id: string) => void;
@@ -978,7 +1024,7 @@ function TemplatePicker({
       ? []
       : JD_TEMPLATES.filter((t) => t.category === activeFilter);
 
-  const showCustomSection = activeFilter === 'all' || activeFilter === 'mine';
+  const showCustomSection = allowCustom && (activeFilter === 'all' || activeFilter === 'mine');
 
   // Group built-ins by category for the "All" view; collapse to a flat
   // list when filtered to a single category.

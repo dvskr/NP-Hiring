@@ -246,7 +246,7 @@ async function sendInMailViaDialog(employer: RoleSession, candidateName: string,
   const { page } = employer;
   await page.goto('/employer/dashboard?tab=applicants');
   const messageBtn = page.getByRole('button', { name: `Message ${candidateName}` }).first();
-  await expect(messageBtn, 'Message button on the applicant card (featured posting)').toBeVisible();
+  await expect(messageBtn, 'Message button on the applicant card (active posting)').toBeVisible();
   await messageBtn.click();
   const dialog = page.getByRole('dialog', { name: 'New Message' });
   await expect(dialog).toBeVisible();

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { config } from '@/lib/config';
+import { inMailUsageFor, type InMailUsage } from './inmail-posting';
 
 /** Mirrors the server cap in POST /api/employer/messages. */
 const SUBJECT_MAX_LENGTH = 200;
@@ -36,7 +38,7 @@ export default function ComposeMessageModal({
     const inFlightRef = useRef(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
-    const [inmailUsage, setInmailUsage] = useState<{ used: number; limit: number | null; unlimited: boolean } | null>(null);
+    const [inmailUsage, setInmailUsage] = useState<InMailUsage | null>(null);
     // Focus trap, ESC, focus restore. Block ESC during a send so users can't
     // accidentally cancel a partially submitted message.
     const trapRef = useFocusTrap<HTMLDivElement>({
@@ -44,18 +46,23 @@ export default function ComposeMessageModal({
         onEscape: () => { if (!sending) onClose(); },
     });
 
-    // Fetch InMail usage on mount
+    // Fetch InMail usage on mount: the named job's posting's, since a new
+    // message spends that posting's credit (inmail-posting.ts).
     useEffect(() => {
         fetch('/api/employer/usage')
             .then(r => r.ok ? r.json() : null)
             .then(d => {
-                if (d?.usage?.inmails) setInmailUsage(d.usage.inmails);
+                const usage = inMailUsageFor(d, initialJobId);
+                if (usage) setInmailUsage(usage);
             })
             .catch(() => {});
-    }, []);
+    }, [initialJobId]);
 
     const inmailLimitReached = inmailUsage && !inmailUsage.unlimited && inmailUsage.limit !== null && inmailUsage.used >= inmailUsage.limit;
     const inmailRemaining = inmailUsage && !inmailUsage.unlimited && inmailUsage.limit !== null ? inmailUsage.limit - inmailUsage.used : null;
+    // A limit of 0 means no active posting (GET /api/employer/usage): a new
+    // message needs one, as POST /api/employer/messages requires.
+    const noActivePosting = inmailUsage && !inmailUsage.unlimited && inmailUsage.limit === 0;
 
     const handleSend = async () => {
         if (!subject.trim() || !body.trim() || inFlightRef.current) return;
@@ -101,7 +108,11 @@ export default function ComposeMessageModal({
         }
     };
 
-    const canSend = subject.trim().length > 0 && body.trim().length > 0 && !sending && status !== 'success' && !inmailLimitReached;
+    // Only the employer's total stops a send here. At the named job's posting's
+    // limit, a message to someone it already has that thread with still lands
+    // as a free reply, and the server refuses a new thread on its own.
+    const blocksSend = inmailLimitReached && !inmailUsage?.forPosting;
+    const canSend = subject.trim().length > 0 && body.trim().length > 0 && !sending && status !== 'success' && !blocksSend;
 
     return (
         <div
@@ -175,10 +186,14 @@ export default function ComposeMessageModal({
                         }}>
                             <Mail size={14} style={{ color: inmailLimitReached ? '#EF4444' : '#60A5FA' }} />
                             <span className="text-xs font-medium" style={{ color: inmailLimitReached ? '#EF4444' : '#60A5FA' }}>
-                                {inmailLimitReached
-                                    ? 'InMail limit reached. Upgrade for unlimited.'
+                                {noActivePosting
+                                    ? 'A new message needs an active job posting.'
+                                    : inmailLimitReached && inmailUsage.forPosting
+                                    ? 'InMail limit reached for this job post. A reply in an existing conversation is still free.'
+                                    : inmailLimitReached
+                                    ? `InMail limit reached. Each new job post adds ${config.limits.inmailsPerPosting} more.`
                                     : inmailUsage.unlimited
-                                        ? 'Unlimited InMails (Premium)'
+                                        ? 'Unlimited InMails'
                                         : `${inmailRemaining} InMail${inmailRemaining !== 1 ? 's' : ''} remaining`
                                 }
                             </span>

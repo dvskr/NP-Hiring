@@ -10,6 +10,9 @@ import { mintDocReadUrl, extractRequestContext, toBareDocPath } from '@/lib/docu
 import { isOwnMessageAttachmentKey } from '@/lib/message-attachment-key';
 import { MESSAGE_BODY_MAX, readJsonObject, validateReplyPayload } from '@/app/api/conversations/_lib/message-payload';
 import { isDeletedForViewer, visibleToViewerWhere } from '@/app/api/conversations/_lib/message-visibility';
+import { participantDisplay } from '@/app/api/conversations/_lib/participant-name';
+import { disclosedPhoto, loadConversationDisclosure } from '@/app/api/conversations/_lib/surname-disclosure';
+import { signAvatarUrl } from '@/lib/avatar-url';
 
 /**
  * GET /api/conversations/[id]
@@ -31,7 +34,7 @@ export async function GET(
 
         const profile = await prisma.userProfile.findUnique({
             where: { supabaseId: user.id },
-            select: { id: true },
+            select: { id: true, role: true },
         });
         if (!profile) {
             return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
@@ -92,16 +95,15 @@ export async function GET(
         });
 
         const otherUser = conversation.participantA === profile.id ? conversation.userB : conversation.userA;
-        // SECURITY: an unnamed person with no company is "User", never the
-        // start of their email address, which this thread header showed to
-        // the other participant. The email is not read here.
-        // tests/api/conversations-deleted-and-unnamed.test.ts
-        const otherName = [otherUser.firstName, otherUser.lastName].filter(Boolean).join(' ')
-            || otherUser.company
-            || 'User';
-        const initials = otherUser.firstName
-            ? `${otherUser.firstName.charAt(0)}${(otherUser.lastName || '').charAt(0)}`.toUpperCase()
-            : otherName.charAt(0).toUpperCase();
+        // SECURITY: named without the email address (_lib/participant-name.ts),
+        // and the inbox's rules for the surname, company, photo and license
+        // states (_lib/surname-disclosure.ts).
+        const disclosure = await loadConversationDisclosure(
+            { user, role: profile.role },
+            [{ conversationId: conversation.id, counterpart: otherUser }],
+        );
+        const shown = disclosure(conversation.id, otherUser);
+        const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: shown.surname });
 
         return NextResponse.json({
             conversation: {
@@ -113,12 +115,13 @@ export async function GET(
                     id: otherUser.id,
                     supabaseId: otherUser.supabaseId,
                     name: otherName,
-                    company: otherUser.company,
+                    company: shown.surname ? otherUser.company : null,
                     role: otherUser.role,
-                    avatarUrl: otherUser.avatarUrl,
+                    // A shown photo goes out as a link that expires (lib/avatar-url.ts).
+                    avatarUrl: await signAvatarUrl(disclosedPhoto(otherUser.avatarUrl, shown.photo), otherUser.supabaseId),
                     headline: otherUser.headline || null,
                     specialties: otherUser.specialties || null,
-                    licenseStates: otherUser.licenseStates || null,
+                    licenseStates: shown.licenseStates ? otherUser.licenseStates || null : null,
                     initials,
                 },
             },

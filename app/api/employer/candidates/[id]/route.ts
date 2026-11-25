@@ -7,27 +7,23 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage'
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership'
 import { talentPoolWhere } from '@/lib/candidate-pool'
+import { recordCandidateUnlock } from '@/lib/candidate-unlock'
+import { disclosedPhoto, showsPhoto } from '@/app/api/conversations/_lib/surname-disclosure'
+import { signAvatarUrl } from '@/lib/avatar-url'
 
 /**
- * Check whether an employer has at least one active FEATURED job posting.
- * Featured posts unlock full candidate profile access (contact, resume, LinkedIn).
- * Works for both paid and free-mode featured posts.
- * "active" means the related Job.expiresAt > now.
+ * GET /api/employer/candidates/[id]: a candidate's page. An employer's first
+ * open is the unlock: it spends one of an active posting's unlocks
+ * (canUnlockCandidate) and returns the full profile in the same response. A
+ * later open, or an admin's, spends nothing.
+ *
+ * SECURITY (owner, 2026-11-25): full access used to want an active featured
+ * posting, which a new post here never is, so the first open spent the
+ * unlock and returned the locked view; the profile came on the next load.
+ * Full access is now the unlock row itself: never charged without being
+ * delivered, never delivered without the row (lib/candidate-unlock.ts).
+ * tests/api/employer-candidate-unlock.test.ts
  */
-async function hasActiveFeaturedPost(supabaseId: string): Promise<boolean> {
-    const count = await prisma.employerJob.count({
-        where: {
-            userId: supabaseId,
-            job: {
-                isFeatured: true,
-                isPublished: true,
-                expiresAt: { gt: new Date() },
-            },
-        },
-    })
-    return count > 0
-}
-
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -56,8 +52,7 @@ export async function GET(
         return NextResponse.json({ error: 'Forbidden. This page is available to employers and administrators only.' }, { status: 403 })
     }
 
-    // Determine access level: admin always gets full access,
-    // employers need an active paid job post for full candidate info
+    // Determine access level: an admin by role, an employer by the unlock
     const isAdmin = viewerProfile.role === 'admin'
 
     // Check if this candidate was already unlocked (ProfileView exists)
@@ -70,9 +65,6 @@ export async function GET(
         },
     })
 
-    // Full access if: admin, OR has active posting, OR already unlocked this candidate
-    const hasFullAccess = isAdmin || !!existingView || await hasActiveFeaturedPost(user.id)
-
     // Fetch candidate (privacy check: must be in the talent pool)
     const candidate = await prisma.userProfile.findFirst({
         where: { supabaseId: id, ...talentPoolWhere() },
@@ -83,6 +75,7 @@ export async function GET(
     }
 
     let chargePostingId: string | undefined
+    let hasUnlockRow = !!existingView
 
     if (!existingView && !isAdmin) {
         // This is a new unlock — check per-posting credit pool + daily cap
@@ -132,26 +125,58 @@ export async function GET(
         } else {
             chargePostingId = unlockCheck.postingId;
         }
-    }
 
-    try {
-        await prisma.profileView.upsert({
-            where: {
-                viewerId_candidateId: {
+        // The unlock this request records delivers the profile below, in this
+        // same response. Without the row nothing is delivered.
+        hasUnlockRow = await recordCandidateUnlock(user.id, id, chargePostingId || null)
+        if (!hasUnlockRow) {
+            return NextResponse.json({
+                error: 'We could not unlock this profile just now. Please try again.',
+                reason: 'unlock_failed',
+            }, { status: 503 })
+        }
+    } else if (!existingView) {
+        // An admin's first open: a view, not a charge. The row is what lets
+        // the admin message a pool candidate they opened
+        // (POST /api/employer/messages), so a failed write loses only that.
+        try {
+            await prisma.profileView.upsert({
+                where: {
+                    viewerId_candidateId: {
+                        viewerId: user.id,
+                        candidateId: id,
+                    },
+                },
+                update: {},
+                create: {
                     viewerId: user.id,
                     candidateId: id,
+                    employerJobId: null,
                 },
-            },
-            update: { viewedAt: new Date() },
-            create: {
-                viewerId: user.id,
-                candidateId: id,
-                employerJobId: chargePostingId || null,
-            },
-        })
-    } catch {
-        // Don't fail the request if view tracking fails
+            })
+        } catch {
+            // Don't fail the request if view tracking fails
+        }
     }
+    // A later open writes nothing. ProfileView.viewedAt is the time of the
+    // first unlock and the daily unlock cap counts by it
+    // (canUnlockCandidate), so a re-open that refreshed it counted against
+    // the cap as a new unlock. Every reader of viewedAt wants the first
+    // unlock. tests/api/employer-unlock-daily-cap.test.ts
+
+    // Full access: an admin by role, an employer by the unlock row, which
+    // every employer request that reaches this point holds.
+    const hasFullAccess = isAdmin || hasUnlockRow
+    // SECURITY: the photo rule of every employer surface
+    // (conversations/_lib/surname-disclosure.ts). An application would also
+    // disclose it, but an employer reaches this response only with the unlock
+    // row, so that lookup could not change the answer.
+    // tests/api/candidate-photo-disclosure.test.ts
+    const photoShown = showsPhoto(viewerProfile.role, candidate.role, {
+        counterpartHasWritten: false,
+        viewerUnlocked: hasUnlockRow,
+        counterpartApplied: false,
+    })
 
     // Tier is informational only (always 'pro' in single-tier model). Real gates
     // are isAdmin (admin-only fields) and hasFullAccess (unlock-gated fields).
@@ -168,7 +193,8 @@ export async function GET(
         id: candidate.supabaseId,
         displayName,
         initials: `${(candidate.firstName || 'P').charAt(0)}${(candidate.lastName || 'C').charAt(0)}`.toUpperCase(),
-        avatarUrl: candidate.avatarUrl,
+        // A shown photo goes out as a link that expires (lib/avatar-url.ts).
+        avatarUrl: await signAvatarUrl(disclosedPhoto(candidate.avatarUrl, photoShown), candidate.supabaseId),
         headline: candidate.headline,
         yearsExperience: candidate.yearsExperience,
         specialties: candidate.specialties ? candidate.specialties.split(',').map(s => s.trim()) : [],

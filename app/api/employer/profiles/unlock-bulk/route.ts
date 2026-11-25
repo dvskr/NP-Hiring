@@ -14,6 +14,10 @@
  *     makes the upsert idempotent: re-running with the same IDs after
  *     a partial failure is safe — already-unlocked IDs come back in
  *     `unlocked` without re-charging.
+ *   - The single unlock's rule end to end: canUnlockCandidate (an active
+ *     posting with unlocks left, no featured posting needed), and the same
+ *     write (lib/candidate-unlock.ts), so an ID is `unlocked` exactly when
+ *     its row is in place, and that row opens the full profile.
  *
  * Response shape:
  *   {
@@ -31,6 +35,7 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { employerJobOwnershipBranches } from '@/lib/employer-ownership';
 import { talentPoolWhere } from '@/lib/candidate-pool';
+import { recordCandidateUnlock } from '@/lib/candidate-unlock';
 
 const requestSchema = z.object({
   candidateIds: z.array(z.string().min(1)).min(1).max(100),
@@ -142,15 +147,10 @@ export async function POST(req: NextRequest) {
         chargePostingId = verifiedPostingId ?? unlockCheck.postingId;
       }
 
-      await prisma.profileView.upsert({
-        where: { viewerId_candidateId: { viewerId: user.id, candidateId } },
-        update: { viewedAt: new Date() },
-        create: {
-          viewerId: user.id,
-          candidateId,
-          employerJobId: chargePostingId || null,
-        },
-      });
+      if (!(await recordCandidateUnlock(user.id, candidateId, chargePostingId || null))) {
+        failed.push({ candidateId, reason: 'error', message: 'Something went wrong. Please try again.' });
+        continue;
+      }
       unlocked.push({ candidateId });
     } catch (err) {
       logger.warn('Bulk-unlock per-candidate error', { candidateId, error: err });

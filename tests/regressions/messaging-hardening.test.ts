@@ -78,7 +78,7 @@ describe('B99 — attachment path must belong to the sender', () => {
   });
 });
 
-describe('B1 — InMail/featured-job gate cannot be skipped via a new job-scoped thread', () => {
+describe('B1 — InMail/active-posting gate cannot be skipped via a new job-scoped thread', () => {
   const rel = 'app/api/employer/messages/route.ts';
   it('the free-reply shortcut is scoped to the exact (pair, job) thread key', () => {
     const src = read(rel);
@@ -87,10 +87,15 @@ describe('B1 — InMail/featured-job gate cannot be skipped via a new job-scoped
     // an unscoped pair-wide check made every later thread free.
     expect(gateCheck).toMatch(/existingConversation = await prisma\.conversation\.findFirst\(\{\s*where:\s*\{\s*jobId:\s*jobId \|\| null/);
   });
-  it('gate still enforces featured job + InMail credits for new threads', () => {
+  // Owner, 2026-11-25: an active posting, not a featured one, which a new post
+  // never is, and a credit of the named job's posting or, with no job named,
+  // of the posting canSendInMail picks. The behavior is pinned in
+  // tests/api/employer-messages-recipient.test.ts and tests/lib/inmail-attribution.test.ts.
+  it('gate still enforces an active posting + InMail credits for new threads', () => {
     const src = read(rel);
-    expect(src).toContain('canSendInMail(senderProfile.id, user.id, tier)');
-    expect(src).toContain('Messaging is available for featured job postings only');
+    expect(src).toContain('canSendInMail(senderProfile.id, user.id, tier, jobId ?? undefined)');
+    expect(src).toContain('activePostingJobWhere()');
+    expect(src).not.toMatch(/isFeatured/);
   });
 });
 

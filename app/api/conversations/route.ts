@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { participantDisplay } from './_lib/participant-name';
+import { disclosedPhoto, loadConversationDisclosure } from './_lib/surname-disclosure';
+import { signAvatarUrls } from '@/lib/avatar-url';
 
 /**
  * GET /api/conversations
@@ -58,19 +61,30 @@ export async function GET() {
 
         const unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count.id]));
 
-        const formatted = conversations.map(conv => {
-            const otherUser = conv.participantA === profile.id ? conv.userB : conv.userA;
+        const otherOf = (conv: (typeof conversations)[number]) => (conv.participantA === profile.id ? conv.userB : conv.userA);
+        // SECURITY: an employer sees a job seeker's surname, company, photo
+        // and license states only once they are disclosed
+        // (_lib/surname-disclosure.ts). No query for anyone else.
+        const disclosure = await loadConversationDisclosure(
+            { user, role: profile.role },
+            conversations.map(conv => ({ conversationId: conv.id, counterpart: otherOf(conv) })),
+        );
+        // Both sides: only a photo the rule shows is signed, as a link that
+        // expires (lib/avatar-url.ts).
+        const photos = await signAvatarUrls(conversations.map(conv => {
+            const otherUser = otherOf(conv);
+            return {
+                stored: disclosedPhoto(otherUser.avatarUrl, disclosure(conv.id, otherUser).photo),
+                ownerId: otherUser.supabaseId,
+            };
+        }));
+
+        const formatted = conversations.map((conv, i) => {
+            const otherUser = otherOf(conv);
             const lastMsg = conv.messages[0] || null;
-            // SECURITY: an unnamed person with no company is "User", never
-            // the start of their email address, which this list showed to
-            // the other side of every thread. The email is not read here.
-            // tests/api/conversations-deleted-and-unnamed.test.ts
-            const otherName = [otherUser.firstName, otherUser.lastName].filter(Boolean).join(' ')
-                || otherUser.company
-                || 'User';
-            const initials = otherUser.firstName
-                ? `${otherUser.firstName.charAt(0)}${(otherUser.lastName || '').charAt(0)}`.toUpperCase()
-                : otherName.charAt(0).toUpperCase();
+            const shown = disclosure(conv.id, otherUser);
+            // Named without the email address (_lib/participant-name.ts).
+            const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: shown.surname });
 
             return {
                 id: conv.id,
@@ -78,12 +92,13 @@ export async function GET() {
                     id: otherUser.id,
                     supabaseId: otherUser.supabaseId,
                     name: otherName,
-                    company: otherUser.company,
+                    // A job seeker's company names them as surely as a surname.
+                    company: shown.surname ? otherUser.company : null,
                     role: otherUser.role,
-                    avatarUrl: otherUser.avatarUrl,
+                    avatarUrl: photos[i],
                     headline: otherUser.headline || null,
                     specialties: otherUser.specialties || null,
-                    licenseStates: otherUser.licenseStates || null,
+                    licenseStates: shown.licenseStates ? otherUser.licenseStates || null : null,
                     initials,
                 },
                 subject: conv.subject,

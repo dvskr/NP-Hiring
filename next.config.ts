@@ -72,10 +72,14 @@ const nextConfig: NextConfig = {
         hostname: 'lh3.googleusercontent.com',
         pathname: '/**',
       },
+      // Public storage objects only. A signed link (/object/sign/...) expires
+      // on purpose, profile photos above all (lib/avatar-url.ts); let through
+      // here, anyone holding one could have its image cached at a
+      // /_next/image address for minimumCacheTTL, a year.
       {
         protocol: 'https',
         hostname: '*.supabase.co',
-        pathname: '/storage/**',
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },

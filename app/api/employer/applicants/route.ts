@@ -7,6 +7,8 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { stringField } from '@/lib/request-body';
 import { employerJobOwnershipBranches, isEmployerJobOwner } from '@/lib/employer-ownership';
 import { scopeJobIdsToOwned } from './scope';
+import { isActivePostingJob } from '@/lib/active-posting';
+import { signAvatarUrls } from '@/lib/avatar-url';
 
 /**
  * GET /api/employer/applicants
@@ -101,7 +103,8 @@ export async function GET(req: NextRequest) {
                 select: {
                     id: true,
                     title: true,
-                    isFeatured: true,
+                    isPublished: true,
+                    expiresAt: true,
                 },
             },
         },
@@ -114,7 +117,13 @@ export async function GET(req: NextRequest) {
     // endpoint is employer-scoped — the upstream auth gate filters out
     // non-employer roles before this point.
     const reqCtx = extractRequestContext(req);
-    const formatted = await Promise.all(applicants.map(async (app) => {
+    // Everyone here applied, so the photo shows (surname-disclosure.ts), as a
+    // link that expires (lib/avatar-url.ts).
+    const photos = await signAvatarUrls(applicants.map((app) => ({
+        stored: app.user?.avatarUrl,
+        ownerId: app.user?.supabaseId ?? '',
+    })));
+    const formatted = await Promise.all(applicants.map(async (app, i) => {
         const signedResumeUrl = app.resumeUrl
             ? await mintResumeReadUrl(app.resumeUrl, {
                   actorId: user.id,
@@ -165,7 +174,7 @@ export async function GET(req: NextRequest) {
                 id: app.user.supabaseId,
                 name: [app.user.firstName, app.user.lastName].filter(Boolean).join(' ') || 'PMHNP Candidate',
                 initials: `${(app.user.firstName || 'P').charAt(0)}${(app.user.lastName || 'C').charAt(0)}`.toUpperCase(),
-                avatarUrl: app.user.avatarUrl,
+                avatarUrl: photos[i],
                 headline: app.user.headline,
                 yearsExperience: app.user.yearsExperience,
                 certifications: app.user.certifications,
@@ -201,7 +210,11 @@ export async function GET(req: NextRequest) {
             job: {
                 id: app.job.id,
                 title: app.job.title,
-                isFeatured: app.job.isFeatured,
+                // Whether a new message can name this job: it is one of the
+                // employer's active postings (lib/active-posting.ts), the rule
+                // POST /api/employer/messages applies. It was isFeatured,
+                // which a new post here never is.
+                isActive: isActivePostingJob(app.job),
             },
         };
     }));

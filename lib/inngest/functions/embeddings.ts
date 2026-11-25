@@ -20,6 +20,8 @@ import { logger } from '@/lib/logger';
 import {
     buildJobEmbeddingText,
     buildCandidateEmbeddingText,
+    CANDIDATE_EMBED_MIN_CHARS,
+    removeCandidateEmbedding,
     upsertJobEmbedding,
     upsertCandidateEmbedding,
 } from '@/lib/ai/vector-search';
@@ -98,7 +100,6 @@ export const refreshCandidateEmbedding = inngest.createFunction(
                     licenseStates: true,
                     specialties: true,
                     skills: true,
-                    bio: true,
                     profileVisible: true,
                     deletedAt: true,
                 },
@@ -115,10 +116,14 @@ export const refreshCandidateEmbedding = inngest.createFunction(
             ...profile,
             yearsExperience: profile.yearsExperience ?? null,
         });
-        if (!text || text.trim().length < 20) {
+        if (!text || text.trim().length < CANDIDATE_EMBED_MIN_CHARS) {
             // Profile is too sparse to embed meaningfully — skip rather than spend
-            // budget on noise.
-            return { skipped: 'profile_too_sparse' };
+            // budget on noise. An older row goes: it holds text the profile no
+            // longer gives, the bio included before it left the text.
+            const { removed } = await step.run('remove-embedding', async () =>
+                removeCandidateEmbedding(supabaseId),
+            );
+            return { skipped: 'profile_too_sparse', removed };
         }
 
         const result = await step.run('upsert-embedding', async () =>

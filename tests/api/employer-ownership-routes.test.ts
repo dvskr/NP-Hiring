@@ -79,11 +79,11 @@ import { POST as testimonial } from '@/app/api/employer/testimonials/route';
 import EmployerDashboardPage from '@/app/employer/dashboard/page';
 
 // The global prisma fake has no testimonial, application or saved-candidate
-// model; the testimonial route writes the first, the employer send reads the
-// second, and the saved list reads the third.
+// model; the testimonial route writes the first, the employer send and the
+// photo rule read the second, and the saved list reads the third.
 Object.assign(prisma, {
     employerTestimonial: { create: vi.fn(async () => ({ id: 'testimonial-1' })) },
-    jobApplication: { findFirst: vi.fn(async () => null) },
+    jobApplication: { findFirst: vi.fn(async () => null), findMany: vi.fn(async () => []) },
     savedCandidate: { findMany: vi.fn(async () => []) },
 });
 
@@ -411,7 +411,7 @@ const POOL_RECIPIENT = { role: 'job_seeker', profileVisible: true, openToOffers:
 /**
  * Sender and recipient profiles, and no existing thread, so the send is new
  * outreach. The employer opened the recipient's profile, so a pool candidate
- * is in reach and the send goes on to the featured gate; one out of the pool
+ * is in reach and the send goes on to the active-posting gate; one out of the pool
  * goes to the applicant check instead (who is in reach:
  * tests/api/employer-messages-recipient.test.ts).
  */

@@ -8,6 +8,7 @@ import {
     FileText, Mail, ExternalLink, Loader2, Shield, Clock, Linkedin, Lock, Plus,
 } from 'lucide-react';
 import ComposeMessageModal from './ComposeMessageModal';
+import { postingForMessage, type PostingUsage } from './inmail-posting';
 import { config } from '@/lib/config';
 import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 
@@ -182,10 +183,11 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                 const res = await fetch('/api/employer/usage');
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.postings && data.postings.length > 0) {
-                        const savedPostingId = typeof window !== 'undefined' ? sessionStorage.getItem('talentPool_posting') : null;
-                        const match = savedPostingId ? data.postings.find((p: { id: string }) => p.id === savedPostingId) : null;
-                        const posting = match || data.postings[0];
+                    const savedPostingId = typeof window !== 'undefined' ? sessionStorage.getItem('talentPool_posting') : null;
+                    // The talent pool's posting while it has InMail credit
+                    // left: a new message spends the named job's own credit.
+                    const posting = postingForMessage<PostingUsage>(data.postings ?? [], savedPostingId);
+                    if (posting) {
                         setPostingJobId(posting.jobId);
                         setPostingJobTitle(posting.jobTitle);
                     }
@@ -549,7 +551,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                             padding: '12px 24px', fontSize: '14px',
                             boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                         }}>
-                            Post a Featured Job to Unlock →
+                            Post a Job to Unlock →
                         </Link>
                     </div>
                 )}

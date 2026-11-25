@@ -9,7 +9,9 @@ const supabase = createClient(
 );
 
 const RESUME_BUCKET = 'resumes'; // Private bucket for resumes
-const AVATAR_BUCKET = 'avatars'; // Public bucket for avatars
+// Profile photos only. Served only through short-lived signed URLs
+// (lib/avatar-url.ts), public or private.
+const AVATAR_BUCKET = 'avatars';
 const UPLOAD_PREFIX = process.env.STORAGE_UPLOAD_PREFIX || 'local'; // local, dev, or prod
 
 // Allowed file types
@@ -25,6 +27,19 @@ const ALLOWED_IMAGE_TYPES = [
   'image/png',
   'image/webp',
 ];
+
+/**
+ * The extension an avatar key ends in, from its validated type. It came from
+ * the client's file name, so a name like `a.png/../../<other uid>/x` put a
+ * key outside the uploader's own folder, and a name with no dot gave a key
+ * ending in the whole name.
+ */
+const IMAGE_EXTENSION_BY_TYPE: Readonly<Record<string, string>> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
 
 // Max file sizes (in bytes)
 const MAX_RESUME_SIZE = 5 * 1024 * 1024; // 5MB
@@ -116,12 +131,16 @@ export async function uploadAvatar(
     throw new Error(`File size exceeds maximum of ${MAX_IMAGE_SIZE / 1024 / 1024}MB`);
   }
 
-  // Generate unique path
+  // Generate unique path. The extension comes from the validated type, never
+  // from the client's file name (IMAGE_EXTENSION_BY_TYPE).
   const timestamp = Date.now();
-  const extension = fileName.split('.').pop();
+  const extension = IMAGE_EXTENSION_BY_TYPE[fileType];
+  if (!extension) {
+    // Unreachable while ALLOWED_IMAGE_TYPES and IMAGE_EXTENSION_BY_TYPE agree.
+    throw new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.');
+  }
   const path = `${UPLOAD_PREFIX}/${userId}/${timestamp}.${extension}`;
 
-  // Upload to Supabase Storage (public bucket)
   const { data, error } = await supabase.storage
     .from(AVATAR_BUCKET)
     .upload(path, file, {
@@ -134,7 +153,8 @@ export async function uploadAvatar(
     throw new Error(`Failed to upload avatar: ${error.message}`);
   }
 
-  // Get public URL (avatars are public)
+  // The public URL is what the avatarUrl column stores: it names the object.
+  // It is never served; lib/avatar-url.ts signs a link from it.
   const { data: urlData } = supabase.storage
     .from(AVATAR_BUCKET)
     .getPublicUrl(data.path);
@@ -334,11 +354,12 @@ export async function removeUnreferencedResumeUploads(
 /**
  * One segment of an upload key. uploadResume and uploadAvatar build every key
  * as `<upload prefix>/<uploader's supabase uid>/<timestamped name>`. The prefix
- * ('local', 'dev' or 'prod') and the uid always fit this set, and a resume
- * name is sanitized to it. An avatar name ends in the uploaded file's own
- * extension, unsanitized: an avatar key holding another character fails the
- * ownership rule below, so PATCH /api/auth/profile ignores it and the purge
- * cron leaves that object in storage (the URL /api/upload stored still shows).
+ * ('local', 'dev' or 'prod') and the uid always fit this set, a resume name is
+ * sanitized to it, and an avatar name ends in an extension taken from its type.
+ * An avatar uploaded before 2026-11-25 ended in the file's own extension,
+ * unsanitized: such a key holding another character fails the ownership rule
+ * below, so PATCH /api/auth/profile ignores it, the purge cron leaves that
+ * object in storage, and lib/avatar-url.ts shows initials instead of it.
  */
 const UPLOAD_KEY_SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
 
@@ -384,7 +405,8 @@ export function toOwnAvatarPath(stored: unknown, ownerId: string): string | null
 }
 
 /**
- * Get a public URL for an avatar file
+ * The public URL of an avatar file: what the avatarUrl column stores to name
+ * the object. Never served; lib/avatar-url.ts signs a link from it.
  */
 export function getAvatarUrl(path: string): string {
   const { data } = supabase.storage
@@ -403,7 +425,7 @@ export function getPathFromUrl(url: string): string | null {
     const signMatch = url.match(/\/storage\/v1\/object\/sign\/[^/]+\/(.+?)(?:\?|$)/);
     if (signMatch) return signMatch[1];
 
-    // For public URLs (avatars): https://xxx.supabase.co/storage/v1/object/public/avatars/path
+    // For public URLs (stored avatars): https://xxx.supabase.co/storage/v1/object/public/avatars/path
     const publicMatch = url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
     return publicMatch ? publicMatch[1] : null;
   } catch {
