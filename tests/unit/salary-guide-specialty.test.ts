@@ -1,8 +1,8 @@
 /**
  * Salary specialty index rule (indexing audit CQ-09, plan FB-2):
  * /salary-guide/specialty/<slug> indexes only when it publishes pay it can
- * back, a gated posted median (5+ postings from 3+ employers, no employer
- * above the CQ-15 share cap) or the role's own cited BLS OEWS median (29-1151
+ * back, a gated posted median (the engine's median tier: 5 or more
+ * employers, each counted once) or the role's own cited BLS OEWS median (29-1151
  * nurse anesthetists, 29-1161 nurse midwives). The page's robots meta and
  * the sitemap read the same verdict (lib/salary-guide-specialty.ts), and the
  * title claims only the sections that render.
@@ -53,12 +53,15 @@ function row(employer: string, min: number, state: string | null = 'Texas'): Fix
     return { state, employer, title: 'Nurse Practitioner', normalizedMinSalary: min, normalizedMaxSalary: min };
 }
 
-/** 5 postings from 3 employers, 2 + 2 + 1: clears the gate and the cap. */
+/** 5 postings from 5 employers: the engine's median tier. */
 const MIXED: FixtureRow[] = [
-    row('Alpha Health', 100_000), row('Alpha Health', 110_000),
-    row('Beta Clinic', 120_000), row('Gamma Care', 130_000), row('Gamma Care', 140_000),
+    row('Alpha Health', 100_000), row('Beta Clinic', 110_000),
+    row('Gamma Care', 120_000), row('Delta Medical', 130_000), row('Epsilon Partners', 140_000),
 ];
-/** 5 postings from 3 employers, 3 + 1 + 1: clears the old gate, not the cap. */
+/**
+ * 5 postings from 3 employers, 3 + 1 + 1: it passed the old posting gate,
+ * but each employer counts once, so it is 3 employers, below the median tier.
+ */
 const DOMINATED: FixtureRow[] = [
     row('Alpha Health', 100_000), row('Alpha Health', 110_000), row('Alpha Health', 120_000),
     row('Beta Clinic', 130_000), row('Gamma Care', 140_000),
@@ -225,7 +228,7 @@ describe('the shared verdict over the gated pool (page robots and sitemap)', () 
         expect(await shouldIndexSalarySpecialty('dermatology')).toBe(true);
     });
 
-    it('CQ-15: a niche page whose sample one employer dominates does not index', async () => {
+    it('a niche page whose postings come from fewer than 5 employers does not index', async () => {
         findMany.mockResolvedValueOnce(DOMINATED as never);
         expect(await getSalarySpecialtyIndexBasis('dermatology')).toBeNull();
     });
@@ -265,14 +268,14 @@ describe('the shared verdict over the gated pool (page robots and sitemap)', () 
         );
     });
 
-    it('the live loaders run the capped gate over the specialty tag pool', async () => {
+    it('the live loaders run the engine over the specialty tag pool', async () => {
         findMany.mockResolvedValueOnce(DOMINATED as never);
         const live = await getSpecialtyLiveStats('dermatology');
         expect(live.gatePassed).toBe(false);
         expect(live.medianSalary).toBe(0);
 
         findMany.mockResolvedValueOnce(MIXED as never);
-        expect(await getSpecialtyLiveStats('dermatology')).toMatchObject({ gatePassed: true, medianSalary: 120_000, jobCount: 5 });
+        expect(await getSpecialtyLiveStats('dermatology')).toMatchObject({ gatePassed: true, medianSalary: 120_000, jobCount: 5, employers: 5 });
         const { where } = findMany.mock.calls[1][0] as unknown as { where: { AND: unknown[] } };
         expect(where.AND).toHaveLength(2);
         expect(JSON.stringify(where.AND[1])).toContain('dermatology');

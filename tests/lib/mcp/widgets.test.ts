@@ -348,10 +348,30 @@ describe('pay view', () => {
     };
     const out = renderPay(data).__safe;
     expect(out).toContain('aria-label="Texas: median $158k, middle half $140k to $175k"');
-    // The sample is postings, each counted once.
-    expect(out).toContain('42 postings');
+    // The sample is employers, each counted once, never postings.
+    expect(out).toContain('42 employers');
+    expect(out).not.toMatch(/\d+ postings/);
     expect(out).toContain(`<p class="pm-kicker">${brand.niche.short} pay</p>`);
     expect(out).not.toMatch(DASH);
+  });
+
+  it('draws a median-only row (fewer than 10 employers) without a band, and never prints null', () => {
+    const data: PayViewData = {
+      view: 'pay',
+      title: 'PMHNP pay in Kansas',
+      focus: { label: 'Kansas', n: 7, median: 131000, p25: null, p75: null },
+      national: { label: 'All US postings', n: 900, median: 155000, p25: 135000, p75: 178000 },
+      remote: null,
+      topStates: [],
+      practiceAuthority: null,
+      methodology: 'Advertised pay.',
+      guideUrl: `${BASE}/salary-guide/kansas`,
+      note: null,
+    };
+    const out = renderPay(data).__safe;
+    expect(out).toContain('aria-label="Kansas: median $131k"');
+    expect(out).toContain('Median only · 7 employers');
+    expect(out).not.toMatch(/null|NaN|\$0k/);
   });
 });
 

@@ -131,8 +131,8 @@ export const MIN_LINKABLE_CITIES_FOR_DIRECTORY_INDEX = 5;
 
 /**
  * Company profile: active jobs. Five is the floor the repo already uses for
- * "enough postings to say something" (BENCHMARK_MIN_POSTINGS,
- * COUNT_DISPLAY_FLOOR). A 1 to 4 job profile is mostly its job cards, which
+ * "enough postings to say something" (COUNT_DISPLAY_FLOOR, and the company
+ * page's own salary snapshot floor). A 1 to 4 job profile is mostly its job cards, which
  * duplicate the job detail pages. Kept separate from the listing floors so
  * the decisions stay uncoupled.
  */

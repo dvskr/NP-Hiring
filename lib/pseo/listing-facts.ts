@@ -143,7 +143,10 @@ export interface ListingFacts {
   salaryDisclosedCount: number;
   /** Distinct employers behind salaryDisclosedCount. */
   salaryDisclosedEmployers: number;
-  /** Gated median row, or null below 5 postings from 3 employers. */
+  /**
+   * The salary engine's gated row, or null below 5 employers that disclose
+   * pay (each employer counted once). p25 and p75 are null below 10.
+   */
   benchmark: BenchmarkRow | null;
   computedAt: Date;
   /** True when the row cap truncated the tally sample (mixes are then a sample). */

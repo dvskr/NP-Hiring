@@ -32,7 +32,7 @@ vi.mock('@/lib/blog', async (importOriginal) => ({
 }));
 vi.mock('@/lib/salary-analytics', () => ({
   getGatedLocationSalary: vi.fn(async () => ({
-    postings: 840, employers: 310, gatePassed: true, median: 125_000, p25: 112_000, p75: 142_000, medianK: 125, p25K: 112, p75K: 142, topEmployerPostings: 9, heldByEmployerShare: false,
+    postings: 840, employers: 310, tier: 'full', gatePassed: true, median: 125_000, p25: 112_000, p75: 142_000, medianK: 125, p25K: 112, p75K: 142,
   })),
   getGatedStateBenchmarks: vi.fn(async () => []),
 }));

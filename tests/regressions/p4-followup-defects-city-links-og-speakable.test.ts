@@ -242,9 +242,12 @@ describe('P4 (b) — city and metro OG cards route to /api/og/city', () => {
         });
 
         it(`${rel} omits the salary tile rather than inventing a band`, () => {
-            // The salary key is conditional on live disclosed pay, never a
-            // hardcoded fallback figure.
-            expect(ogParamBlock(rel)).toMatch(/\.\.\.\([\s\S]*?&&\s*\{\s*salary:/);
+            // The salary key is conditional on a gated benchmark row, never a
+            // hardcoded fallback figure: an inline conditional spread, or the
+            // shared ogCitySalaryParams helper, which sends nothing without a
+            // row and no quartiles below the engine's full tier
+            // (tests/regressions/og-city-salary-label.test.ts).
+            expect(ogParamBlock(rel)).toMatch(/\.\.\.\([\s\S]*?&&\s*\{\s*salary:|\.\.\.ogCitySalaryParams\(facts\.benchmark, formatK\)/);
         });
 
         it(`${rel} feeds og and twitter from ONE built URL`, () => {

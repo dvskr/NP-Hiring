@@ -7,11 +7,13 @@
  *    are the same word for a fully remote role.
  *  - analyze_offer places an offer against the salary guide's own published
  *    figures (lib/salary-analytics.ts): below, within or above the middle
- *    half, next to the median, with the sample. A state whose figure is not
- *    published is compared with all NP Hiring postings instead, and says why;
- *    with nothing published there is nothing to compare with.
+ *    half, next to the median, with the sample in employers. A state with no
+ *    middle half (no median below 5 employers, a median but no quartiles
+ *    from 5 to 9) is compared with all NP Hiring postings instead, and says
+ *    why; with no middle half anywhere there is nothing to compare with.
  *
- * All fixtures are fictional.
+ * All fixtures are fictional, and shaped as the engine tiers them: quartiles
+ * only at 10 or more employers.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { brand } from '@/config/brand';
@@ -36,10 +38,12 @@ import { resetPayCacheForTests } from '@/lib/mcp/tools/np-pay';
 import type { ToolContext } from '@/lib/mcp/server/types';
 import type { FactsViewData } from '@/lib/mcp/widgets/src/contracts';
 
+/** A full-tier figure (10 or more employers): median and quartiles. */
 function published(median: number, p25: number, p75: number, postings: number, employers: number) {
   return {
     postings,
     employers,
+    tier: 'full',
     gatePassed: true,
     median,
     p25,
@@ -47,8 +51,22 @@ function published(median: number, p25: number, p75: number, postings: number, e
     medianK: Math.round(median / 1000),
     p25K: Math.round(p25 / 1000),
     p75K: Math.round(p75 / 1000),
-    topEmployerPostings: 2,
-    heldByEmployerShare: false,
+  };
+}
+
+/** A median-tier figure (5 to 9 employers): a median, no quartiles. */
+function medianOnly(median: number, postings: number, employers: number) {
+  return {
+    postings,
+    employers,
+    tier: 'median',
+    gatePassed: true,
+    median,
+    p25: null,
+    p75: null,
+    medianK: Math.round(median / 1000),
+    p25K: null,
+    p75K: null,
   };
 }
 
@@ -56,6 +74,7 @@ function belowGate(postings: number, employers: number) {
   return {
     postings,
     employers,
+    tier: employers >= 3 ? 'countOnly' : 'none',
     gatePassed: false,
     median: null,
     p25: null,
@@ -63,8 +82,6 @@ function belowGate(postings: number, employers: number) {
     medianK: null,
     p25K: null,
     p75K: null,
-    topEmployerPostings: 1,
-    heldByEmployerShare: false,
   };
 }
 
@@ -126,7 +143,10 @@ const value = (out: { structured?: unknown }, label: string) => rowsOf(out).find
 beforeEach(() => {
   vi.clearAllMocks();
   resetPayCacheForTests();
-  figures.byState = new Map([['Missouri', published(118_500, 110_000, 155_000, 21, 9)]]);
+  figures.byState = new Map<string, unknown>([
+    ['Missouri', published(118_500, 110_000, 155_000, 21, 12)],
+    ['Kansas', medianOnly(131_000, 14, 7)],
+  ]);
   figures.board = published(125_000, 112_000, 142_000, 840, 310);
   figures.remote = published(121_000, 108_000, 140_000, 96, 40);
 });
@@ -150,7 +170,8 @@ describe('get_job location line', () => {
   it('quotes a published state median as advertised pay on the site, and never a national one', async () => {
     db.job.findFirst.mockResolvedValue(jobRow({ state: 'Missouri', stateCode: 'MO', city: 'Columbia', isRemote: false, mode: 'In-Person' }));
     const out = await getJob.run({ job_id: JOB_ID }, ctx);
-    expect(out.text).toContain(`Median advertised pay on ${brand.name} postings in Missouri: $119k`);
+    // With its n: employers, each counted once, never a posting count.
+    expect(out.text).toContain(`Median advertised pay on ${brand.name} postings in Missouri: $119k, across 12 employers that disclose pay`);
     expect(out.text).not.toMatch(/national|US median/i);
     expect((out.structured as { job: { nationalMedianK: number } }).job.nationalMedianK).toBe(0);
   });
@@ -163,8 +184,27 @@ describe('analyze_offer against the published figures', () => {
     expect(value(out, '25th percentile')).toBe('$110,000');
     expect(value(out, 'Median')).toBe('$118,500');
     expect(value(out, '75th percentile')).toBe('$155,000');
-    expect(value(out, 'Postings compared')).toBe('21');
+    // The sample is employers, each counted once; postings are not the n.
+    expect(value(out, 'Employers compared')).toBe('12');
+    expect(rowsOf(out).map((r) => r.label)).not.toContain('Postings compared');
     expect((out.structured as FactsViewData).subtitle).toBe('Compared with Missouri');
+    expect(out.text).toMatch(/Each employer counts once/);
+    expect(out.text).not.toMatch(/40%|counted per posting/);
+  });
+
+  it('compares a state with a median but no middle half with all postings, quoting its median and the rule', async () => {
+    const out = await analyzeOffer.run({ amount: 130_000, period: 'annual', state: 'Kansas' }, ctx);
+    expect((out.structured as FactsViewData).subtitle).toBe(`Compared with all ${brand.name} postings`);
+    expect(out.text).toContain('For Kansas, the median is $131k across 7 employers that disclose pay, with no 25th to 75th percentile range yet: that appears once at least 10 employers disclose pay.');
+    expect(out.text).not.toMatch(/No median is published for Kansas/);
+    expect(out.text).toContain(`This uses all ${brand.name} postings instead.`);
+  });
+
+  it('refuses with the reason when the only figure left has a median but no middle half', async () => {
+    figures.board = medianOnly(125_000, 30, 8);
+    await expect(analyzeOffer.run({ amount: 130_000, period: 'annual' }, ctx)).rejects.toThrow(
+      `For all ${brand.name} postings, the median is $125k across 8 employers that disclose pay, with no 25th to 75th percentile range yet: that appears once at least 10 employers disclose pay. So there is nothing to compare the offer with right now.`,
+    );
   });
 
   it('says below or above the middle half at its edges', async () => {
@@ -184,13 +224,15 @@ describe('analyze_offer against the published figures', () => {
   it('compares a state with no published figure with all postings, and says why', async () => {
     const out = await analyzeOffer.run({ amount: 130_000, period: 'annual', state: 'Wyoming' }, ctx);
     expect((out.structured as FactsViewData).subtitle).toBe(`Compared with all ${brand.name} postings`);
-    expect(out.text).toMatch(/No median is published for Wyoming/);
+    // Wyoming's fixture is 1 employer: the reason is in employers, never postings.
+    expect(out.text).toContain('No median is published for Wyoming: 1 employer discloses pay, and a median needs at least 5.');
     expect(out.text).toContain(`This uses all ${brand.name} postings instead.`);
   });
 
   it('refuses when nothing is published to compare with', async () => {
     figures.board = belowGate(3, 2);
     await expect(analyzeOffer.run({ amount: 130_000, period: 'annual' }, ctx)).rejects.toThrow(/nothing to compare the offer with/);
+    await expect(analyzeOffer.run({ amount: 130_000, period: 'annual' }, ctx)).rejects.toThrow(/2 employers disclose pay, and a median needs at least 5/);
   });
 
   it('never calls the site-wide figure national', async () => {

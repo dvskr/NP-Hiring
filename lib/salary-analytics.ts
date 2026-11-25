@@ -1,160 +1,133 @@
 /**
- * lib/salary-analytics.ts — the ONE server-side pipeline for posting-derived
- * salary figures on public surfaces (review P9 #2c/#2d).
+ * lib/salary-analytics.ts: the ONE server-side pipeline for posting-derived
+ * salary figures on public surfaces (review P9 #2c/#2d; one engine since the
+ * 2026-11 salary build, the sister board's rules).
  *
- * Every public dollar figure computed from postings must be:
- *   pool   = npSalaryAnalyticsWhere (published, non-expired, non-estimated,
- *            confidence ≥ 0.8, annual-cadence, normalized salary present)
- *            scoped to NP-eligible titles (interim deterministic heuristic
- *            until the professionClass column lands), and
- *   figure = a TRUE MEDIAN under the benchmark widget's publishing gate
- *            (n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS)
- *            AND the employer-share cap (lib/salary-guide-gate.ts: no
- *            single employer above MAX_EMPLOYER_SHARE_PERCENT of the
- *            postings behind the median, indexing audit CQ-15).
+ * Every public dollar figure computed from postings is:
+ *   pool   = activeIndexableJobWhere() (published, not expired, passing the
+ *            dead-link health check, outside GLOBAL_EXCLUSIONS) AND
+ *            npSalaryAnalyticsWhere (both bounds, non-estimated, confidence
+ *            0.8 or more, annual cadence, the scope's profession class),
+ *            then the title screen for unclassified rows. The NP scope
+ *            never includes CRNA, CNM or CNS postings; the two APRN scopes
+ *            exist only for their own specialty pages.
+ *   figure = the engine (lib/salary-report/stats.ts through
+ *            components/tools/benchmark-model.ts): each employer counts
+ *            once, a median at 5 or more employers, the 25th and 75th
+ *            percentiles at 10 or more, nothing below 5.
  *
- * Below the gate there is NO figure — callers omit the section or fall back
- * to a cited stat (STAT_SOURCES), never a posting mean. The old per-page
- * `prisma.job.aggregate({ _avg })` mean-of-min/max calls this module
- * replaces ran over every published row: psychiatrist/PA/podiatrist pay,
- * hourly locum rows annualized to $728k, and estimated rows all fed
- * published "averages".
+ * Below the median tier there is NO figure: callers omit the section or
+ * cite the BLS figure (STAT_SOURCES, lib/salary-guide-bls-states.ts), never
+ * a posting mean and never "$0".
  *
- * Server-only (imports prisma) — client components receive plain numbers.
+ * Server-only (imports prisma and the company normalizer); client
+ * components receive plain numbers.
  */
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { findCanonicalName, normalizeCompanyName } from '@/lib/company-normalizer';
+import { employerKey as pureEmployerKey } from '@/lib/jobs/employer-key';
 import {
     npSalaryAnalyticsWhere,
     NP_SALARY_ANALYTICS_SELECT,
-    filterNpEligibleRows,
+    filterSalaryScopeRows,
     type NpSalaryAnalyticsRow,
+    type SalaryRoleScope,
 } from '@/lib/salary-utils';
 import {
+    summarizeBenchmarks,
+    summarizeScope,
     type BenchmarkInputRow,
     type BenchmarkRow,
 } from '@/components/tools/benchmark-model';
-import {
-    employerConcentration,
-    summarizeCappedBenchmarks,
-    summarizeCappedPool,
-    type EmployerConcentration,
-} from '@/lib/salary-guide-gate';
+import { displayThousands, type SalaryTier } from '@/lib/salary-report/stats';
+
+/* ── Employer identity ──────────────────────────────────────────────── */
 
 /**
- * Fetch the NP-eligible analytics rows for a sub-pool. `extra` is composed
- * via a top-level AND — both sides can carry their own AND/OR trees, so an
- * object spread would silently drop clauses.
+ * Memo for the alias-merged key. findCanonicalName re-normalizes every known
+ * alias on each call, and one render summarizes the same employer names
+ * several times, so keys are kept per process. Bounded: cleared when it
+ * outgrows any realistic employer roster.
  */
-export async function fetchNpAnalyticsRows(
+const EMPLOYER_KEY_MEMO_LIMIT = 5_000;
+const employerKeyMemo = new Map<string, string>();
+
+/**
+ * The employer identity the engine groups by: the canonical company name,
+ * else the normalizer's key, so "LifeStance" and "LifeStance Health" are one
+ * employer (the rule the listing facts use). A missing or placeholder name
+ * ("Confidential", "Company Not Listed") returns null, which the engine
+ * counts as an employer of its own, never as one large anonymous employer.
+ */
+export function salaryEmployerIdentity(raw: string | null | undefined): string | null {
+    const name = raw?.trim() ?? '';
+    if (pureEmployerKey(name) === '') return null;
+    const memo = employerKeyMemo.get(name);
+    if (memo !== undefined) return memo;
+    const canonical = findCanonicalName(name);
+    const key = canonical ? `canonical ${canonical}` : normalizeCompanyName(name) || name.toLowerCase();
+    if (employerKeyMemo.size >= EMPLOYER_KEY_MEMO_LIMIT) employerKeyMemo.clear();
+    employerKeyMemo.set(name, key);
+    return key;
+}
+
+/* ── The pool ───────────────────────────────────────────────────────── */
+
+/** The full pool predicate for a scope: the listing predicate AND the salary hygiene predicate. */
+export function salaryPoolWhere(scope: SalaryRoleScope = 'np', now: Date = new Date()): Prisma.JobWhereInput {
+    return { AND: [activeIndexableJobWhere(now), npSalaryAnalyticsWhere(now, scope)] };
+}
+
+/**
+ * Fetch the scope's analytics rows for a sub-pool, with `employer` replaced
+ * by the alias-merged identity (salaryEmployerIdentity). `extra` is
+ * composed through a top-level AND: both sides can carry their own AND/OR
+ * trees, so an object spread would silently drop clauses.
+ */
+export async function fetchSalaryAnalyticsRows(
     extra: Prisma.JobWhereInput = {},
+    scope: SalaryRoleScope = 'np',
 ): Promise<NpSalaryAnalyticsRow[]> {
     const rows = await prisma.job.findMany({
-        where: { AND: [npSalaryAnalyticsWhere(), extra] },
+        where: { AND: [salaryPoolWhere(scope), extra] },
         select: NP_SALARY_ANALYTICS_SELECT,
     });
-    return filterNpEligibleRows(rows);
+    return filterSalaryScopeRows(rows, scope).map((row) => ({ ...row, employer: salaryEmployerIdentity(row.employer) }));
 }
 
-/**
- * Gated benchmark for a sub-pool as a whole (e.g. one category tag).
- * Rows without a state still count. Returns null below the publishing gate
- * or the employer-share cap.
- */
-export async function getGatedBenchmark(
-    extra: Prisma.JobWhereInput = {},
-): Promise<BenchmarkRow | null> {
-    return (await getGatedBenchmarkDetail(extra)).benchmark;
+/** The NP scope of fetchSalaryAnalyticsRows: every NP figure on the site reads this. */
+export function fetchNpAnalyticsRows(extra: Prisma.JobWhereInput = {}): Promise<NpSalaryAnalyticsRow[]> {
+    return fetchSalaryAnalyticsRows(extra, 'np');
 }
 
-/**
- * getGatedBenchmark plus WHY a figure is missing: `heldByEmployerShare` is
- * the sample's employer split when the benchmark gate passed and the
- * employer-share cap alone withheld the median (CQ-15), else null. Surfaces
- * that explain a missing figure use it so a large, one-employer sample is
- * never described as too small.
- */
-export async function getGatedBenchmarkDetail(
-    extra: Prisma.JobWhereInput = {},
-): Promise<{ benchmark: BenchmarkRow | null; heldByEmployerShare: EmployerConcentration | null }> {
-    const { national, nationalHeld } = summarizeCappedPool(await fetchNpAnalyticsRows(extra));
-    return { benchmark: national, heldByEmployerShare: nationalHeld };
-}
+/* ── Gated figures ──────────────────────────────────────────────────── */
 
 /**
- * Gated median for a sub-pool in whole $k (the category-page display unit),
- * or 0 below the publishing gate — callers already branch to their static
- * fallback copy on 0, exactly as they did when a pool had no salaries.
- */
-export async function getGatedMedianKForWhere(
-    extra: Prisma.JobWhereInput = {},
-): Promise<number> {
-    const row = await getGatedBenchmark(extra);
-    return row ? Math.round(row.median / 1000) : 0;
-}
-
-/**
- * Gated per-state benchmark rows (median/p25/p75/postings/employers per
- * state that clears the gate). The shared source for every "salary by
- * state" table outside the salary-guide hub (which runs the same pipeline
- * inline to also list below-gate states).
- */
-export async function getGatedStateBenchmarks(): Promise<BenchmarkRow[]> {
-    const npRows = await fetchNpAnalyticsRows({ state: { not: null } });
-    return summarizeCappedBenchmarks(npRows).states;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
- * GATED LOCATION SALARY (pSEO thin-content program, PLAN C.3)
- *
- * One shape for every state, city, metro and sub-pool figure on the pSEO
- * surfaces, so the state hub, the city directory, the metro guide and the
- * salary guide can never disagree about a state's median. Same pool, same
- * gate, same rounding as the helpers above.
- * ═══════════════════════════════════════════════════════════════════════ */
-
-/**
- * One gated figure for a location or sub-pool. `postings` and `employers`
- * are the benchmark sample (rows with an employer and a positive normalized
- * minimum, exactly what summarizeBenchmarks counts), so the n a page prints
- * is always the n behind its median. Below the gate every figure is null:
- * callers omit the sentence, row or FAQ entry, or fall back to the cited
- * BLS figure (STAT_SOURCES); they never print a mean or a "$0".
+ * One gated figure for a location or sub-pool. `employers` is the sample
+ * size (each employer once) and `postings` the postings behind it, for
+ * context only. Below the median tier every dollar figure is null; p25 and
+ * p75 are null below the full tier. Callers never print a mean or a "$0".
  */
 export interface GatedSalary {
-    /** NP-eligible analytics rows in scope that entered the benchmark sample. */
+    /** Postings that survived the engine's gates (context, never the n). */
     postings: number;
-    /** Distinct employers behind them. */
+    /** Employers behind the figure, each counted once: the n. */
     employers: number;
-    /**
-     * n >= BENCHMARK_MIN_POSTINGS (5) from >= BENCHMARK_MIN_EMPLOYERS (3),
-     * with no employer above MAX_EMPLOYER_SHARE_PERCENT of them (CQ-15).
-     */
+    /** The engine tier: 'full' (quartiles), 'median', 'countOnly' or 'none'. */
+    tier: SalaryTier;
+    /** True at the median or full tier: a median is published. */
     gatePassed: boolean;
-    /** Whole dollars (BenchmarkRow units); null below the gate. */
+    /** Whole dollars on the $500 display grid; null below the median tier. */
     median: number | null;
+    /** Null below the full tier. */
     p25: number | null;
     p75: number | null;
-    /** Whole $k, Math.round(x / 1000) (the pSEO display unit); null below the gate. */
+    /** Whole $k for the pSEO display unit; null where the dollar figure is. */
     medianK: number | null;
     p25K: number | null;
     p75K: number | null;
-}
-
-/**
- * A GatedSalary plus how its sample splits between employers (CQ-15), for
- * the pages that must name WHY no figure is published. It is a subtype, so
- * every GatedSalary consumer accepts it unchanged.
- */
-export interface GatedSalaryDetail extends GatedSalary {
-    /** Postings from the single largest employer in the sample (alias merged). */
-    topEmployerPostings: number;
-    /**
-     * True when the sample cleared the benchmark gate (n and employer count)
-     * and the employer-share cap ALONE withheld the median. False whenever a
-     * figure is published, and whenever the sample is simply too small.
-     */
-    heldByEmployerShare: boolean;
 }
 
 /** A gated benchmark row labeled by the caller's key (a table row label). */
@@ -162,76 +135,66 @@ export interface LabeledBenchmarkRow extends BenchmarkRow {
     label: string;
 }
 
-const BELOW_GATE: Omit<GatedSalary, 'postings' | 'employers'> = {
-    gatePassed: false,
-    median: null,
-    p25: null,
-    p75: null,
-    medianK: null,
-    p25K: null,
-    p75K: null,
-};
-
-function toK(dollars: number): number {
-    return Math.round(dollars / 1000);
+/**
+ * Collapse one scope's rows into a GatedSalary. Pure: the rows are one pool
+ * whatever their state (stateless rows count). Exported for tests and for
+ * callers that already hold the rows.
+ */
+export function summarizeGatedSalary(rows: readonly BenchmarkInputRow[]): GatedSalary {
+    const { row, summary, postings } = summarizeScope('pool', rows);
+    if (!row) {
+        return { postings, employers: summary.n, tier: summary.tier, gatePassed: false, median: null, p25: null, p75: null, medianK: null, p25K: null, p75K: null };
+    }
+    return fromBenchmarkRow(row);
 }
 
 function fromBenchmarkRow(row: BenchmarkRow): GatedSalary {
     return {
         postings: row.postings,
         employers: row.employers,
+        tier: row.tier,
         gatePassed: true,
         median: row.median,
         p25: row.p25,
         p75: row.p75,
-        medianK: toK(row.median),
-        p25K: toK(row.p25),
-        p75K: toK(row.p75),
+        medianK: displayThousands(row.median),
+        p25K: row.p25 === null ? null : displayThousands(row.p25),
+        p75K: row.p75 === null ? null : displayThousands(row.p75),
     };
 }
 
-/** Sample counts with the benchmark model's own row eligibility. */
-function countBenchmarkSample(rows: readonly BenchmarkInputRow[]): { postings: number; employers: number } {
-    const eligible = rows.filter((row) => Boolean(row.employer) && (row.normalizedMinSalary ?? 0) > 0);
-    const employers = new Set(eligible.map((row) => row.employer as string));
-    return { postings: eligible.length, employers: employers.size };
-}
-
-/** The employer-split fields of a GatedSalaryDetail. */
-function shareFacts(
-    held: EmployerConcentration | null,
-    rows: readonly BenchmarkInputRow[],
-): Pick<GatedSalaryDetail, 'topEmployerPostings' | 'heldByEmployerShare'> {
-    const concentration = held ?? employerConcentration(rows);
-    return { topEmployerPostings: concentration.topEmployerPostings, heldByEmployerShare: held !== null };
-}
-
-/**
- * Collapse one scope's NP-eligible rows into a GatedSalary. Pure: the rows
- * are treated as one pool regardless of their state (stateless rows count,
- * as in getGatedBenchmark). The pooled figure passes only under the
- * benchmark gate AND the employer-share cap. Exported for tests and for
- * callers that already hold the rows.
- */
-export function summarizeGatedSalary(rows: readonly BenchmarkInputRow[]): GatedSalaryDetail {
-    const { postings, employers } = countBenchmarkSample(rows);
-    const { national, nationalHeld } = summarizeCappedPool(rows);
-    const split = shareFacts(nationalHeld, rows);
-    if (!national) return { postings, employers, ...BELOW_GATE, ...split };
-    return { ...fromBenchmarkRow(national), ...split };
+/** The BenchmarkRow of a GatedSalary, or null below the median tier. */
+export function benchmarkRowOf(scope: string, salary: GatedSalary): BenchmarkRow | null {
+    if (!salary.gatePassed || salary.median === null || (salary.tier !== 'full' && salary.tier !== 'median')) return null;
+    return { scope, tier: salary.tier, median: salary.median, p25: salary.p25, p75: salary.p75, postings: salary.postings, employers: salary.employers };
 }
 
 /**
  * Gated figure for one location scope: `{ state: stateName }` for a state
- * or salary-guide page, `metroScopeWhere(metro)` for a metro (the analytics
- * where already carries the published and expiry clauses), or any sub-pool
- * where. `{ gatePassed: false }` with null figures below the gate or the
- * employer-share cap; `heldByEmployerShare` says which.
+ * page, `metroScopeWhere(metro)` for a metro, or any sub-pool where.
  */
-export async function getGatedLocationSalary(
-    extra: Prisma.JobWhereInput = {},
-): Promise<GatedSalaryDetail> {
+export async function getGatedLocationSalary(extra: Prisma.JobWhereInput = {}): Promise<GatedSalary> {
     return summarizeGatedSalary(await fetchNpAnalyticsRows(extra));
+}
+
+/** Gated benchmark for a sub-pool as a whole (e.g. one category tag); null below the median tier. */
+export async function getGatedBenchmark(extra: Prisma.JobWhereInput = {}): Promise<BenchmarkRow | null> {
+    return summarizeScope('National', await fetchNpAnalyticsRows(extra)).row;
+}
+
+/**
+ * Gated median for a sub-pool in whole $k (the category-page display unit),
+ * or 0 below the median tier: callers branch to their static copy on 0.
+ */
+export async function getGatedMedianKForWhere(extra: Prisma.JobWhereInput = {}): Promise<number> {
+    const row = await getGatedBenchmark(extra);
+    return row ? displayThousands(row.median) : 0;
+}
+
+/** Gated per-state rows: every state at the median tier or above, by name. */
+export async function getGatedStateBenchmarks(): Promise<BenchmarkRow[]> {
+    const npRows = await fetchNpAnalyticsRows({ state: { not: null } });
+    return summarizeBenchmarks(npRows).states;
 }
 
 /** The analytics select plus the city column, for the per-city pass. */
@@ -239,30 +202,29 @@ const NP_CITY_SALARY_ANALYTICS_SELECT = { ...NP_SALARY_ANALYTICS_SELECT, city: t
 
 /**
  * Per-city gated figures for a state (the city directory): one fetch for
- * the state, grouped in memory by city through summarizeBenchmarks with the
- * city name as the scope. Only cities that clear the gate are in the map,
- * keyed by the city spelling stored on Job.city (trimmed).
+ * the state, grouped in memory by city. Only cities at the median tier are
+ * in the map, keyed by the city spelling stored on Job.city (trimmed).
  */
 export async function getGatedCitySalaries(stateName: string): Promise<Map<string, GatedSalary>> {
     const rows = await prisma.job.findMany({
-        where: { AND: [npSalaryAnalyticsWhere(), { state: stateName, city: { not: null } }] },
+        where: { AND: [salaryPoolWhere('np'), { state: stateName, city: { not: null } }] },
         select: NP_CITY_SALARY_ANALYTICS_SELECT,
     });
-    const npRows = filterNpEligibleRows(rows);
-    const { states: cities } = summarizeCappedBenchmarks(
-        npRows.map((row) => ({ ...row, state: row.city?.trim() || null })),
+    const { states: cities } = summarizeBenchmarks(
+        filterSalaryScopeRows(rows, 'np').map((row) => ({
+            state: row.city?.trim() || null,
+            employer: salaryEmployerIdentity(row.employer),
+            normalizedMinSalary: row.normalizedMinSalary,
+            normalizedMaxSalary: row.normalizedMaxSalary,
+        })),
     );
     return new Map(cities.map((row) => [row.scope, fromBenchmarkRow(row)]));
 }
 
 /**
- * Gated benchmark rows for several sub-pools at once (salary guide SAL-S2:
- * pay by work arrangement and employment type). Keys are the visible row
- * labels; values are each sub-pool's extra where, composed with the
- * analytics pool by fetchNpAnalyticsRows. Only sub-pools that clear the
- * gate come back, in input order, with `scope` and `label` both set to the
- * key. Callers render the table only at 2 or more rows: a single row is the
- * scope median again.
+ * Gated benchmark rows for several sub-pools at once (pay by work
+ * arrangement and employment type). Keys are the visible row labels; only
+ * sub-pools at the median tier come back, in input order.
  */
 export async function getGatedBenchmarkRows(
     extras: Record<string, Prisma.JobWhereInput>,
@@ -276,12 +238,10 @@ export async function getGatedBenchmarkRows(
 }
 
 /**
- * States whose `/salary-guide/{state}` page publishes a median: the scopes
- * of getGatedStateBenchmarks, keyed by the state name stored on Job.state
- * (the same key the page queries with). The page robots decision
- * (shouldIndexSalaryGuideState) and app/sitemap.ts read this one set (the
- * sitemap slugifies the names and intersects with its active-job state
- * set), so the hub, the guide and the sitemap cannot disagree.
+ * States whose posted median is published (the median tier), keyed by the
+ * state name stored on Job.state. The salary guide's robots predicate reads
+ * it as `salaryGatePassed` (beside the BLS median), and the state hubs and
+ * job breadcrumbs read it as their salary signal.
  */
 export async function getPublishableSalaryGuideStates(): Promise<Set<string>> {
     const rows = await getGatedStateBenchmarks();

@@ -94,6 +94,11 @@ describe('D2 salary benchmark shares the salary guide pipeline', () => {
     expect(pool.states).toEqual(summarizeBenchmarks(rows).states);
     expect(pool.states.map((s) => s.scope)).toEqual(['Texas']);
     expect(pool.national?.postings).toBe(8);
+    // The engine's n: A and B post in two states and count once each, so
+    // the national row is six employers, not eight postings.
+    expect(pool.national?.employers).toBe(6);
+    // Five Texas employers: the median tier, with no quartiles.
+    expect(pool.states[0]).toMatchObject({ tier: 'median', employers: 5, p25: null, p75: null });
     expect(pool.states.some((s) => s.scope === 'Unknown')).toBe(false);
   });
 });

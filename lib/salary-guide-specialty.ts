@@ -6,14 +6,18 @@
  * robots meta and the sitemap must agree on which specialty pages index, so
  * both read getSalarySpecialtyIndexBasis / shouldIndexSalarySpecialty from
  * here, over the same pool and the same gate:
- *   - a gated POSTED median (the npSalaryAnalyticsWhere pool scoped to the
- *     specialty tag and to NP-eligible titles, n of BENCHMARK_MIN_POSTINGS
- *     or more from BENCHMARK_MIN_EMPLOYERS or more employers, and no
- *     employer above the CQ-15 share cap), or
+ *   - a gated POSTED median (the one salary pool scoped to the specialty
+ *     tag, through the one engine: each employer counted once, a median at
+ *     BENCHMARK_MIN_EMPLOYERS or more employers), or
  *   - the role's own cited BLS OEWS occupation median, which only the two
  *     non-niche APRN roles have (29-1151 nurse anesthetists, 29-1161 nurse
  *     midwives; lib/salary-guide-occupation-wages.ts).
  * Anything else renders `noindex, follow` and stays out of the sitemap.
+ *
+ * ROLE SCOPE. An NP specialty reads the NP scope, which excludes CRNA, CNM
+ * and CNS postings. The anesthesia and midwifery pages read their own APRN
+ * scope (salaryRoleScopeOf), so their posted pay is reported only on their
+ * own pages and never moves an NP figure.
  *
  * Every live figure the page prints comes from the loaders below, so the
  * number a reader sees is the number behind the verdict. The loaders are
@@ -24,8 +28,9 @@ import { cache } from 'react';
 import type { Prisma } from '@prisma/client';
 import { withTagFallback, type CategoryTag } from '@/lib/pseo/category-tagger';
 import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
-import { fetchNpAnalyticsRows } from '@/lib/salary-analytics';
-import { summarizeCappedBenchmarks, summarizeCappedPool } from '@/lib/salary-guide-gate';
+import { fetchSalaryAnalyticsRows } from '@/lib/salary-analytics';
+import { summarizeBenchmarks, summarizePool } from '@/components/tools/benchmark-model';
+import type { SalaryRoleScope } from '@/lib/salary-utils';
 import {
     getSpecialtySalaryPage,
     SALARY_SPECIALTY_PAGES,
@@ -51,24 +56,37 @@ export function specialtyTagWhere(slug: CategoryTag): Prisma.JobWhereInput {
 }
 
 /**
- * NP-eligible analytics rows for one specialty tag: fetchNpAnalyticsRows
- * (the hygiene pool ANDed with the scope, then the NP-title screen) with
- * the tag predicate and any extra clause composed under a top-level AND, so
- * neither side's own AND and OR trees can be dropped by an object spread.
+ * The role a specialty page reports: its own APRN occupation for the two
+ * non-niche roles (by the BLS code of the occupation wage it cites), else
+ * nurse practitioners.
+ */
+export function salaryRoleScopeOf(slug: CategoryTag): SalaryRoleScope {
+    const page = getSpecialtySalaryPage(slug);
+    if (!page || page.isNicheRole) return 'np';
+    if (page.occupationWage.soc === '29-1151') return 'aprn_crna';
+    if (page.occupationWage.soc === '29-1161') return 'aprn_midwife';
+    return 'np';
+}
+
+/**
+ * The specialty's analytics rows: the one salary pool in the page's role
+ * scope, with the tag predicate and any extra clause composed under a
+ * top-level AND, so neither side's own AND and OR trees can be dropped by
+ * an object spread.
  */
 function fetchSpecialtyAnalyticsRows(slug: CategoryTag, extra?: Prisma.JobWhereInput) {
     const scope = extra ? { AND: [specialtyTagWhere(slug), extra] } : specialtyTagWhere(slug);
-    return fetchNpAnalyticsRows(scope);
+    return fetchSalaryAnalyticsRows(scope, salaryRoleScopeOf(slug));
 }
 
 /**
  * The specialty-wide posted median, pooled across every row (stateless
  * ones included), plus the lowest and highest disclosed figure for the
- * "Reported range" card. `gatePassed` is the gate AND the share cap.
+ * "Reported range" card. `gatePassed` is the engine's median tier.
  */
 export const getSpecialtyLiveStats = cache(async (slug: CategoryTag): Promise<SpecialtyLiveStats> => {
     const npRows = await fetchSpecialtyAnalyticsRows(slug);
-    const { national } = summarizeCappedPool(npRows);
+    const national = summarizePool(npRows);
     const mins = npRows
         .map((row) => row.normalizedMinSalary)
         .filter((value): value is number => typeof value === 'number' && value > 0);
@@ -79,21 +97,23 @@ export const getSpecialtyLiveStats = cache(async (slug: CategoryTag): Promise<Sp
         medianSalary: national?.median ?? 0,
         minSalary: mins.length > 0 ? Math.min(...mins) : 0,
         maxSalary: maxs.length > 0 ? Math.max(...maxs) : 0,
-        // The sample behind the published median when gated (rows lacking
-        // an employer are excluded there), else the raw eligible-row count.
+        // Postings behind the published median when gated, else the
+        // eligible-row count; context only, never the sample size.
         jobCount: national?.postings ?? npRows.length,
+        // The sample size: employers behind the median, each counted once.
+        employers: national?.employers ?? 0,
         gatePassed: national != null,
     };
 });
 
 /**
  * Gated per-state medians for the specialty, highest first. Each state
- * clears the benchmark gate and the share cap on its own sample; a ranked
- * list over anything less re-created the n=1 "top paying state" defect.
+ * reaches the median tier on its own employers; a ranked list over anything
+ * less re-created the n=1 "top paying state" defect.
  */
 export const getSpecialtyTopPayingStates = cache(async (slug: CategoryTag): Promise<SpecialtyStateRow[]> => {
     const npRows = await fetchSpecialtyAnalyticsRows(slug, { state: { not: null } });
-    return summarizeCappedBenchmarks(npRows).states
+    return summarizeBenchmarks(npRows).states
         .filter((row) => STATE_CODES[row.scope])
         .map((row) => ({
             state: row.scope,
@@ -101,6 +121,7 @@ export const getSpecialtyTopPayingStates = cache(async (slug: CategoryTag): Prom
             slug: stateToSlug(row.scope),
             medianSalary: row.median,
             jobCount: row.postings,
+            employers: row.employers,
         }))
         .sort((a, b) => b.medianSalary - a.medianSalary)
         .slice(0, TOP_STATES_LIMIT);
@@ -112,13 +133,13 @@ const EXPERIENCE_BANDS = [
     { label: 'Roles requiring 5+ years', extra: { minYearsExperience: { gte: 5 } } },
 ] as const satisfies ReadonlyArray<{ label: string; extra: Prisma.JobWhereInput }>;
 
-/** Gated medians per experience bucket; buckets below the gate or cap are omitted. */
+/** Gated medians per experience bucket; buckets below the median tier are omitted. */
 export async function getSpecialtyExperienceBands(slug: CategoryTag): Promise<SpecialtyExperienceRow[]> {
     const results = await Promise.all(
         EXPERIENCE_BANDS.map(async (band): Promise<SpecialtyExperienceRow | null> => {
-            const { national } = summarizeCappedPool(await fetchSpecialtyAnalyticsRows(slug, band.extra));
+            const national = summarizePool(await fetchSpecialtyAnalyticsRows(slug, band.extra));
             return national
-                ? { label: band.label, medianSalary: national.median, jobCount: national.postings }
+                ? { label: band.label, medianSalary: national.median, jobCount: national.postings, employers: national.employers }
                 : null;
         }),
     );

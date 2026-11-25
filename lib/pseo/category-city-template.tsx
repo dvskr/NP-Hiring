@@ -90,6 +90,7 @@ import { CityData } from './city-data/types';
 import { getCityBySlug } from './city-data/cities';
 import { SETTING_CONFIGS, SettingConfig, stateToSlug } from './setting-state-config';
 import { categoryNavArt, getCategoryAssets, NAV_ICONS } from './category-asset-registry';
+import { ogCitySalaryParams } from '@/app/api/og/city/salary-label';
 import { emptyListingFacts, getListingFacts, type ListingFacts } from './listing-facts';
 import {
   buildCategoryCityDescription,
@@ -1279,13 +1280,14 @@ export async function buildCategoryCityMetadata(
     facts: { ...facts, total: stats.totalJobs },
   });
 
-  // OG: the count and, only when the category pool clears the publishing
-  // gate, the gated middle half of posted pay. Never a mean.
+  // OG: the count and, only when the category pool reaches the median tier,
+  // its posted pay: the gated middle half at the full tier (10 or more
+  // employers), the median under the median label below it. Never a mean.
   const ogParams = new URLSearchParams({
     category: config.label,
     city: `${city.name}, ${city.stateCode}`,
     jobs: String(stats.totalJobs),
-    ...(facts.benchmark && { salary: `${formatK(facts.benchmark.p25)} to ${formatK(facts.benchmark.p75)}` }),
+    ...ogCitySalaryParams(facts.benchmark, formatK),
   });
   const ogImage = `/api/og/city?${ogParams.toString()}`;
 

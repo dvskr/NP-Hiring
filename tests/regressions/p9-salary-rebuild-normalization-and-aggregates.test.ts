@@ -47,14 +47,13 @@ import {
 import {
   npSalaryAnalyticsWhere,
   isNpEligibleTitle,
-  filterNpEligibleRows,
+  filterSalaryScopeRows,
   roundSalaryToNearestThousand,
   SALARY_ANALYTICS_MIN_CONFIDENCE,
   CONTRACT_CADENCE_PERIODS,
 } from '@/lib/salary-utils';
 import {
   summarizeBenchmarks,
-  BENCHMARK_MIN_POSTINGS,
   BENCHMARK_MIN_EMPLOYERS,
 } from '@/components/tools/benchmark-model';
 import { canonicalSalaryPeriod, formatSalary } from '@/lib/utils';
@@ -199,7 +198,13 @@ describe('P9 #2c — analytics pool predicate and interim NP gate', () => {
     expect(isNpEligibleTitle('Psychiatric Nurse Practitioner (PMHNP)')).toBe(true);
     expect(isNpEligibleTitle('Family Nurse Practitioner')).toBe(true);
     expect(isNpEligibleTitle('APRN - Cardiology')).toBe(true);
-    expect(isNpEligibleTitle('Certified Nurse Midwife (CNM)')).toBe(true);
+    // Salary build 2026-11: the other APRN roles have their own BLS
+    // occupations and never enter an NP figure (CRNA pay pulled NP medians up).
+    expect(isNpEligibleTitle('Certified Nurse Midwife (CNM)')).toBe(false);
+    expect(isNpEligibleTitle('CRNA - Nights')).toBe(false);
+    expect(isNpEligibleTitle('Certified Registered Nurse Anesthetist')).toBe(false);
+    expect(isNpEligibleTitle('Clinical Nurse Specialist (CNS)')).toBe(false);
+    expect(isNpEligibleTitle('NP/CRNA Hybrid Role')).toBe(false);
     // No credential signal at all → not eligible for the salary pool.
     expect(isNpEligibleTitle('Clinical Educator')).toBe(false);
     expect(isNpEligibleTitle(null)).toBe(false);
@@ -231,7 +236,7 @@ describe('P9 #2c — analytics pool predicate and interim NP gate', () => {
   it('a psychiatrist outlier can no longer move a state median', () => {
     const npRows = [100_000, 110_000, 120_000, 130_000, 140_000].map((mid, i) => ({
       state: 'Delaware',
-      employer: `Employer ${i % 3}`, // 3 distinct employers
+      employer: `Employer ${i}`, // 5 distinct employers: the median tier
       title: 'Psychiatric Nurse Practitioner (PMHNP)',
       normalizedMinSalary: mid,
       normalizedMaxSalary: mid,
@@ -246,17 +251,18 @@ describe('P9 #2c — analytics pool predicate and interim NP gate', () => {
         normalizedMaxSalary: 728_000,
       },
     ];
-    const { states } = summarizeBenchmarks(filterNpEligibleRows(contaminated));
+    const { states } = summarizeBenchmarks(filterSalaryScopeRows(contaminated, 'np'));
     expect(states).toHaveLength(1);
     expect(states[0].median).toBe(120_000);
     expect(states[0].postings).toBe(5);
+    expect(states[0].employers).toBe(5);
   });
 });
 
 /* ─── 2d: minimum-sample gate + median (not mean-of-min/max) ───────────── */
 
 describe('P9 #2d — publishing gate and median', () => {
-  it('a state below n≥5 / 3-employer never yields a published figure', () => {
+  it('a state below the median tier (5 employers) never yields a published figure', () => {
     const oneRow = [{
       state: 'New Hampshire',
       employer: 'Solo Clinic',
@@ -268,24 +274,26 @@ describe('P9 #2d — publishing gate and median', () => {
     expect(states).toHaveLength(0); // the n=1 "gold badge" state
     expect(national).toBeNull();
 
-    const fourRows = Array.from({ length: BENCHMARK_MIN_POSTINGS - 1 }, (_, i) => ({
+    const fourRows = Array.from({ length: BENCHMARK_MIN_EMPLOYERS - 1 }, (_, i) => ({
       state: 'Vermont',
       employer: `E${i}`,
       title: 'Nurse Practitioner',
       normalizedMinSalary: 120_000,
       normalizedMaxSalary: 130_000,
     }));
+    expect(fourRows).toHaveLength(4);
     expect(summarizeBenchmarks(fourRows).states).toHaveLength(0);
   });
 
   it('enough postings from too few employers still fails the gate', () => {
-    const oneEmployer = Array.from({ length: BENCHMARK_MIN_POSTINGS + 2 }, () => ({
+    const oneEmployer = Array.from({ length: BENCHMARK_MIN_EMPLOYERS + 2 }, () => ({
       state: 'Oregon',
       employer: 'One Hospital System',
       title: 'Nurse Practitioner',
       normalizedMinSalary: 130_000,
       normalizedMaxSalary: 150_000,
     }));
+    expect(oneEmployer).toHaveLength(7);
     expect(BENCHMARK_MIN_EMPLOYERS).toBeGreaterThan(1);
     expect(summarizeBenchmarks(oneEmployer).states).toHaveLength(0);
   });
@@ -293,7 +301,7 @@ describe('P9 #2d — publishing gate and median', () => {
   it('published figure is a true median, not a mean of min/max', () => {
     const skewed = [100_000, 100_000, 100_000, 100_000, 300_000].map((mid, i) => ({
       state: 'Texas',
-      employer: `E${i % 3}`,
+      employer: `E${i}`,
       title: 'Nurse Practitioner',
       normalizedMinSalary: mid,
       normalizedMaxSalary: mid,
@@ -304,18 +312,17 @@ describe('P9 #2d — publishing gate and median', () => {
 
   it('salary-guide surfaces run the gated pipeline and dropped the ranked-badge/mean presentation', () => {
     const hub = read('app/salary-guide/page.tsx');
-    expect(hub).toContain('npSalaryAnalyticsWhere');
-    expect(hub).toContain('filterNpEligibleRows');
-    // CQ-15: the benchmark gate now runs under the employer-share cap
-    // (lib/salary-guide-gate.ts, pinned onto summarizeBenchmarks below).
-    expect(hub).toContain('summarizeCappedBenchmarks(npRows)');
-    expect(hub).toContain('BENCHMARK_MIN_POSTINGS');
+    // Salary build 2026-11: the hub reads the one pool and the one engine,
+    // the same calls /reports makes (tests/regressions/salary-one-engine-parity.test.ts).
+    expect(hub).toContain('await fetchNpAnalyticsRows()');
+    expect(hub).toContain('summarizeBenchmarkPool(npRows)');
+    expect(hub).toContain('BENCHMARK_MIN_EMPLOYERS');
     // Gold top-3 medal treatment is gone…
     expect(hub).not.toContain('rgba(251,191,36');
     // …and no mean-of-min/max aggregate remains on the page.
     expect(hub).not.toContain('_avg');
-    // Below-gate states are listed without a figure.
-    expect(hub).toContain('too few postings');
+    // Below-tier states are listed without a figure.
+    expect(hub).toContain('employers disclose pay');
 
     // WHY THESE PINS CHANGED (PLAN C.1 truth fixes, T0-3): the state page ran
     // this pipeline inline in getStateSalaryData, getStateSalaryBySetting and
@@ -357,13 +364,17 @@ describe('P9 #2d — publishing gate and median', () => {
       return analytics.slice(from, to);
     };
 
-    // Stages 1 and 2, in the one fetcher the location helper calls.
+    // Stage 1, the pool: the listing predicate AND the salary hygiene predicate.
+    const poolWhere = analyticsFn('export function salaryPoolWhere(', 'export async function fetchSalaryAnalyticsRows(');
+    expect(poolWhere).toContain('activeIndexableJobWhere(now), npSalaryAnalyticsWhere(now, scope)');
+
+    // Stage 2, in the one fetcher every NP helper calls: the role screen.
     const fetcher = analyticsFn(
-      'export async function fetchNpAnalyticsRows(',
-      'export async function getGatedBenchmark(',
+      'export async function fetchSalaryAnalyticsRows(',
+      'export function fetchNpAnalyticsRows(',
     );
-    expect(fetcher).toContain('where: { AND: [npSalaryAnalyticsWhere(), extra] }');
-    expect(fetcher).toContain('return filterNpEligibleRows(rows);');
+    expect(fetcher).toContain('where: { AND: [salaryPoolWhere(scope), extra] }');
+    expect(fetcher).toContain('filterSalaryScopeRows(rows, scope)');
 
     // Stage 3, the publishing gate, in the summary that helper runs. The
     // below-gate branch is pinned beside it: without that early return the
@@ -371,21 +382,17 @@ describe('P9 #2d — publishing gate and median', () => {
     // which is the presentation this describe block exists to retire.
     const gatedSummary = analyticsFn(
       'export function summarizeGatedSalary(',
-      'export async function getGatedLocationSalary(',
+      'function fromBenchmarkRow(',
     );
-    // CQ-15: the pooled summary is the benchmark gate plus the employer-share
-    // cap, and the capped helpers are pinned onto summarizeBenchmarks in the
-    // gate module, so the gate cannot be dropped one level down either.
-    expect(gatedSummary).toContain('summarizeCappedPool(rows)');
-    expect(gatedSummary).toContain('if (!national) return { postings, employers, ...BELOW_GATE, ...split };');
-    const gate = read('lib/salary-guide-gate.ts');
-    const cappedFrom = gate.indexOf('export function summarizeCappedBenchmarks(');
-    expect(cappedFrom).toBeGreaterThan(-1);
-    expect(gate.slice(cappedFrom, gate.indexOf('export function summarizeCappedPool(', cappedFrom)))
-      .toContain('return applyEmployerShareCap(summarizeBenchmarks(rows), rows);');
-    const poolFrom = gate.indexOf('export function summarizeCappedPool(');
-    expect(gate.slice(poolFrom, gate.indexOf('export function summarizeCappedBenchmarkPool(', poolFrom)))
-      .toContain('summarizeCappedBenchmarks(');
+    expect(gatedSummary).toContain("summarizeScope('pool', rows)");
+    expect(gatedSummary).toContain('if (!row) {');
+    // ...and summarizeScope is the engine, one level down.
+    const model = read('components/tools/benchmark-model.ts');
+    const scopeFrom = model.indexOf('export function summarizeScope(');
+    expect(scopeFrom).toBeGreaterThan(-1);
+    const scopeFn = model.slice(scopeFrom, model.indexOf('export function summarizePool(', scopeFrom));
+    expect(scopeFn).toContain('cleanSalaryRows(rows)');
+    expect(scopeFn).toContain('summarizeMidpoints(midpoints)');
 
     // ...and the entry point the state page imports is wired to both of them.
     const locationHelper = analyticsFn(
@@ -396,9 +403,10 @@ describe('P9 #2d — publishing gate and median', () => {
       'return summarizeGatedSalary(await fetchNpAnalyticsRows(extra));',
     );
 
-    // Below the gate: "sample too small" + the cited BLS figure, never a posting mean.
-    expect(statePage).toContain('Sample too small');
-    expect(statePage).toContain('STAT_SOURCES.averageSalary');
+    // Below the tier: no figure, the reason in employers, and the cited BLS
+    // figures, never a posting mean.
+    expect(statePage).toContain('employers disclose pay in live postings');
+    expect(statePage).toContain('blsStateWage(stateName)');
 
     // The sitemap'd sibling surface runs the SAME pipeline — the specialty
     // pages published mean-of-min/max over every isPublished row (psych-
@@ -414,12 +422,12 @@ describe('P9 #2d — publishing gate and median', () => {
     const specialtyPage = read('app/salary-guide/specialty/[specialty]/page.tsx');
     expect(specialtyPage).toContain("from '@/lib/salary-guide-specialty'");
     expect(specialtyPage).toContain('getSpecialtyLiveStats(page.slug)');
-    expect(specialtyPage).toContain('BENCHMARK_MIN_POSTINGS');
+    expect(specialtyPage).toContain('BENCHMARK_MIN_EMPLOYERS');
     expect(specialtyPage).not.toContain('_avg');
     const specialtyLib = read('lib/salary-guide-specialty.ts');
-    expect(specialtyLib).toContain('return fetchNpAnalyticsRows(scope);');
-    expect(specialtyLib).toContain('summarizeCappedPool(npRows)');
-    expect(specialtyLib).toContain('summarizeCappedBenchmarks(npRows).states');
+    expect(specialtyLib).toContain('return fetchSalaryAnalyticsRows(scope, salaryRoleScopeOf(slug));');
+    expect(specialtyLib).toContain('summarizePool(npRows)');
+    expect(specialtyLib).toContain('summarizeBenchmarks(npRows).states');
     expect(specialtyLib).not.toContain('_avg');
   });
 

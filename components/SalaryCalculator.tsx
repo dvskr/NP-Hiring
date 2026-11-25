@@ -18,16 +18,16 @@ import { roundSalaryToNearestThousand } from '@/lib/salary-utils';
 interface StateSalary {
   state: string;
   stateCode: string;
-  /** Gated median of the state's NP-eligible postings (n ≥ 5, ≥ 3 employers). */
+  /** Gated median posted pay for the state (the engine's median tier: 5 or more employers). */
   medianSalary: number;
-  /** Sample size behind that median — rendered in the basis footnote. */
-  jobCount: number;
+  /** Sample size behind that median, in employers (each counted once); rendered in the basis footnote. */
+  employers: number;
 }
 
 /**
  * Review P9 #2f: the base figure's provenance travels WITH the number.
- *   - 'postings': the gated median of NP-eligible postings on this board
- *     (jobCount = sample size).
+ *   - 'postings': the gated median of NP postings on this board
+ *     (employers = sample size).
  *   - 'bls': the cited BLS OEWS national median — used only when the
  *     board's own pool fails the publishing gate, and the footnote then
  *     names BLS as the actual base (previously BLS was credited while
@@ -36,7 +36,7 @@ interface StateSalary {
 interface NationalBase {
   base: number;
   basis: 'postings' | 'bls';
-  jobCount?: number;
+  employers?: number;
 }
 
 interface Props {
@@ -111,7 +111,7 @@ export default function SalaryCalculator({ stateSalaries, national }: Props) {
       stateCode: stateData?.stateCode || 'US',
       // Basis of the base figure, for the honest footnote below.
       basis: stateData ? ('postings' as const) : national.basis,
-      basisCount: stateData ? stateData.jobCount : national.jobCount,
+      basisCount: stateData ? stateData.employers : national.employers,
     };
   }, [selectedState, experience, setting, specialty, stateSalaries, national]);
 
@@ -151,7 +151,7 @@ export default function SalaryCalculator({ stateSalaries, national }: Props) {
                   onChange={e => setSelectedState(e.target.value)}
                   style={selectStyle}
                 >
-                  <option value="">National Average</option>
+                  <option value="">National median</option>
                   {stateSalaries.map(s => (
                     <option key={s.state} value={s.state}>{s.state} ({s.stateCode})</option>
                   ))}
@@ -271,7 +271,7 @@ export default function SalaryCalculator({ stateSalaries, national }: Props) {
               editorial estimates and say so. */}
           <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '14px', lineHeight: 1.4 }}>
             {result.basis === 'postings' ? (
-              <>* Estimate based on the median of {result.basisCount ?? 'current'} {result.stateName === 'National' ? '' : `${result.stateName} `}live job postings on {brand.name} with disclosed salary. </>
+              <>* Estimate based on the median posted pay across {result.basisCount ?? 'the'} employers that disclose pay in {result.stateName === 'National' ? '' : `${result.stateName} `}live job postings on {brand.name}, each employer counted once. </>
             ) : (
               <>* Base: BLS OEWS national median wage ({formatStatVintage(STAT_SOURCES.averageSalary.asOf)} release). Too few disclosed-salary postings were available to use board data. </>
             )}

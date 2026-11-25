@@ -14,7 +14,6 @@ import { categorySlugLabel } from '@/lib/pseo/category-landing-template';
 import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { RECRUITMENT_TYPE_LABELS } from '@/lib/filters';
-import { BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
 import { shouldIndexCompanyProfile } from '@/lib/pseo/render-gate';
 import { getPracticeEnvironment } from '@/lib/pseo/practice-environment';
 import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
@@ -147,21 +146,23 @@ async function resolveCompanyRoute(slug: string): Promise<CompanyRoute | null> {
 const VALID_CATEGORY_SLUGS = new Set(ALL_CATEGORY_SLUGS);
 
 /**
- * Minimum active postings with a disclosed pay range before the salary
- * snapshot publishes figures.
+ * The company profile's OWN floor: active postings with a disclosed pay
+ * range before the salary snapshot publishes figures.
  *
  * CO-B6 (thin plan, spec 4 defect B6): this was 2, which published a
- * "median" from a two-row sample on a named real employer while every
- * other salary surface on the site waits for `BENCHMARK_MIN_POSTINGS`.
- * One floor, one rule. The distinct-employer half of the benchmark gate
- * deliberately does NOT apply here: a company profile has exactly one
- * employer by construction, and the copy already says the figures are
- * employer posted rather than a market median.
+ * "median" from a two-row sample on a named real employer. It is 5
+ * postings, and it belongs to this page alone. The salary engine
+ * (lib/salary-report/stats.ts) tiers a market figure by the number of
+ * EMPLOYERS behind it, each counted once; that rule cannot apply here,
+ * because a company profile is one employer's own postings by
+ * construction, and the copy says the figures are that employer's posted
+ * ranges rather than a market median. So the snapshot does not route
+ * through the engine and must not import its tier constants.
  *
  * Below the floor the block still renders, as the count sentence from
- * `buildCompanyPaySentence` (CO-C2) — never a figure.
+ * `buildCompanyPaySentence` (CO-C2), never a figure.
  */
-const SALARY_SNAPSHOT_MIN_SAMPLE = BENCHMARK_MIN_POSTINGS;
+const SALARY_SNAPSHOT_MIN_SAMPLE = 5;
 
 /** Max chips per breakdown row and max similar-employer cards. */
 const MAX_BREAKDOWN_CHIPS = 8;

@@ -412,15 +412,6 @@ async function getEmployerFactsSafe(
 }
 
 /**
- * Get average salary for a state
- */
-/**
- * P9 #2c/#2d: the state figure the comparison widget renders is a gated
- * MEDIAN over the NP-eligible analytics pool (lib/salary-analytics), in
- * whole $k. 0 below the n ≥ 5 / 3-employer publishing gate — the widget
- * is omitted entirely rather than showing an ungated posting mean.
- */
-/**
  * Get relevant blog posts for this job
  */
 async function getRelevantBlogPosts(job: Job) {

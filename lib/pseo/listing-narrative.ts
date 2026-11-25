@@ -19,8 +19,7 @@
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
-import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS, type BenchmarkRow } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BENCHMARK_MIN_EMPLOYERS, type BenchmarkRow } from '@/components/tools/benchmark-model';
 import { BLS_OEWS_REFERENCE_PERIOD, formatBlsDollars, type BlsStateWage } from '@/lib/salary-guide-bls-states';
 import { formatCount, indefiniteArticle, isAre, joinWithAnd, pluralize, wasWere } from '@/lib/display-text';
 import {
@@ -141,7 +140,7 @@ const BLS_AS_OF_LABEL = new Date(`${STAT_SOURCES.averageSalary.asOf}-01T00:00:00
 /** Short inline cite for metadata, where the full source string would never fit the budget. */
 const BLS_SHORT_REFERENCE = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source.split(',')[0]}, ${BLS_AS_OF_LABEL})`;
 /** BLS sentence for category-state S4. */
-export const NATIONAL_MEDIAN_SENTENCE = `Nationally, ${NP_PROSE_PLURAL} earn a median annual wage of ${BLS_REFERENCE}.`;
+export const NATIONAL_MEDIAN_SENTENCE = `Nationally, the median annual wage for ${NP_PROSE_PLURAL} is ${BLS_REFERENCE}.`;
 /** BLS reference sentence for city C5 and category-city K3. */
 export const NATIONAL_REFERENCE_SENTENCE = `For reference, the national median wage for ${NP_PROSE_PLURAL} is ${BLS_REFERENCE}.`;
 /** B8: the board-wide median is never called "national". */
@@ -546,28 +545,30 @@ type PayFacts = Pick<ListingFacts, 'benchmark' | 'salaryDisclosedCount'> &
   Partial<Pick<ListingFacts, 'salaryDisclosedEmployers'>>;
 
 /**
- * CQ-15: every published median also needs no single employer above
- * MAX_EMPLOYER_SHARE_PERCENT of its postings (lib/salary-guide-gate.ts
- * applies it on every getGated* read). Copy that states the publishing rule
- * names the cap with this clause. The number comes from the import-free
- * lib/salary-guide-policy.ts, never from the gate module, which reaches the
- * Prisma client; this builder stays pure.
+ * The publishing rule every pay builder states: the engine's tiers
+ * (lib/salary-report/stats.ts), counted in employers, each employer once. A
+ * median appears at BENCHMARK_MIN_EMPLOYERS employers and the middle half at
+ * BENCHMARK_FULL_MIN_EMPLOYERS; a row below the full tier carries no
+ * quartiles, so no builder prints a range it does not have.
  */
-const CAP_CLAUSE = `, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them`;
+const EACH_ONCE = 'each counted once';
+
+/** "The middle half ... $A to $B." at the full tier, else nothing. */
+function middleHalfClause(row: BenchmarkRow, format: (dollars: number) => string, lead: string): string {
+  return row.p25 !== null && row.p75 !== null ? ` ${lead} ${format(row.p25)} to ${format(row.p75)}.` : '';
+}
 
 /**
  * The below-gate pay sentence names the condition that actually failed
- * (CQ-08: "13 postings in Illinois state a salary, which is below the
- * minimum of 5 postings" read as false, because the posting count passed and
- * the employer count did not). Three cases:
- *   - fewer disclosing postings than the posting floor;
- *   - enough postings, too few employers behind them;
- *   - both counts clear, yet the gate still fails, because it counts only
- *     annual pay on NP postings (hourly, estimated and non-NP pay excluded)
- *     or because one employer holds more than the cap (CQ-15). The facts
- *     cannot tell those two apart, so the sentence states the whole rule
- *     and claims neither.
- * Without an employer count only the posting case can be told apart.
+ * (CQ-08: a sentence that blamed the wrong count read as false). Two cases:
+ *   - the postings that state a salary come from fewer employers than the
+ *     median tier needs;
+ *   - enough employers disclose some salary, yet the engine still has fewer
+ *     than the tier, because it counts only annual pay ranges on NP postings
+ *     (hourly, estimated, single-figure and non-NP pay excluded). The facts
+ *     cannot tell which rows fell out, so the sentence states the whole rule
+ *     and claims no reason.
+ * Without an employer count the sentence states the rule alone.
  */
 function belowGatePaySentence(input: { scopeName: string; scopeNoun: 'state' | 'metro'; facts: PayFacts }): string {
   const { scopeName, scopeNoun, facts } = input;
@@ -577,29 +578,25 @@ function belowGatePaySentence(input: { scopeName: string; scopeNoun: 'state' | '
   const e = facts.salaryDisclosedEmployers !== undefined && facts.salaryDisclosedEmployers >= 1
     ? facts.salaryDisclosedEmployers
     : undefined;
-  const requirement = `at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers`;
   const lead = `${formatCount(d, 'posting')} in ${scopeName} ${d === 1 ? 'states' : 'state'} a salary`;
-  if (d < BENCHMARK_MIN_POSTINGS) {
-    return `${lead}. A ${scopeNoun} median appears once ${requirement} do${CAP_CLAUSE}.`;
-  }
   if (e !== undefined && e < BENCHMARK_MIN_EMPLOYERS) {
     const from = e === 1 ? 'only 1 employer' : `only ${e} employers`;
-    return `${lead}, but they come from ${from}. A ${scopeNoun} median appears once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do.`;
+    return `${lead}, from ${from}. A ${scopeNoun} median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, ${EACH_ONCE}.`;
   }
   const from = e !== undefined ? ` from ${formatCount(e, 'employer')}` : '';
-  return `${lead}${from}. A ${scopeNoun} median appears once ${requirement} list annual pay for an ${NP} role${CAP_CLAUSE}.`;
+  return `${lead}${from}. A ${scopeNoun} median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers list an annual pay range for an ${NP} role, ${EACH_ONCE}.`;
 }
 
-/**
- * The local figure is withheld: too few listings disclose annual pay, or one
- * employer holds more than the cap. States the whole rule, claims neither.
- */
+/** The local figure is withheld: fewer employers disclose annual pay than the median tier needs. */
 function gateFailClause(scope: string): string {
-  return `A local median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers ${scope} disclose annual pay${CAP_CLAUSE}.`;
+  return `A local median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers ${scope} disclose annual pay, ${EACH_ONCE}.`;
 }
 
 function medianClause(row: BenchmarkRow, scope: string, subject = 'listings'): string {
-  return `Across ${row.postings} ${subject} from ${row.employers} employers that disclose annual pay, the median ${scope} is ${formatDollars(row.median)}. The middle half falls between ${formatDollars(row.p25)} and ${formatDollars(row.p75)}.`;
+  const half = row.p25 !== null && row.p75 !== null
+    ? ` The middle half falls between ${formatDollars(row.p25)} and ${formatDollars(row.p75)}.`
+    : '';
+  return `Across ${formatCount(row.employers, 'employer')} that disclose annual pay in their ${subject}, the median ${scope} is ${formatDollars(row.median)}.${half}`;
 }
 
 /**
@@ -613,7 +610,7 @@ export function buildHubPayParagraph(
   const { scopeName, scopeNoun, facts } = input;
   const row = facts.benchmark;
   if (row) {
-    return `The median posted salary for ${NP} roles in ${scopeName} is ${formatK(row.median)}, and the middle half of postings runs ${formatK(row.p25)} to ${formatK(row.p75)}. It is based on ${row.postings} postings from ${row.employers} employers that list annual pay. Hourly, estimated and non-${NP} postings are excluded.`;
+    return `The median posted salary for ${NP} roles in ${scopeName} is ${formatK(row.median)}, across ${formatCount(row.employers, 'employer')} that list annual pay, ${EACH_ONCE}.${middleHalfClause(row, formatK, 'The middle half of those employers advertise')} Hourly, estimated and non-${NP} postings are excluded.`;
   }
   const d = facts.salaryDisclosedCount;
   const bls = `The national median for ${NP_PROSE_PLURAL} is ${BLS_REFERENCE}.`;
@@ -626,11 +623,11 @@ export function buildPostedPaySentence(input: { slug: string; facts: PayFacts & 
   const { slug, facts } = input;
   const row = facts.benchmark;
   if (row) {
-    return `Across ${row.postings} listings from ${row.employers} employers that state an annual salary, the median posted pay is ${formatK(row.median)}. The middle half of those listings ${row.postings === 1 ? 'falls' : 'fall'} between ${formatK(row.p25)} and ${formatK(row.p75)}.`;
+    return `Across ${formatCount(row.employers, 'employer')} that state an annual salary in their listings, the median posted pay is ${formatK(row.median)}.${middleHalfClause(row, formatK, 'The middle half runs')}`;
   }
   const d = facts.salaryDisclosedCount;
   if (d < 1 || !receivesNpMedian(slug)) return null;
-  return `${d} of ${formatCount(facts.total, 'listing')} ${d === 1 ? 'states' : 'state'} an annual salary. A median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do${CAP_CLAUSE}. Until then, compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`;
+  return `${d} of ${formatCount(facts.total, 'listing')} ${d === 1 ? 'states' : 'state'} an annual salary. A median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers do, ${EACH_ONCE}. Until then, compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`;
 }
 
 /** CITY-C5: always one paragraph, two branches, national reference in both. */
@@ -648,8 +645,8 @@ export function buildCategoryCityPayParagraph(
   const reference = receivesNpMedian(slug) ? ` ${NATIONAL_REFERENCE_SENTENCE}` : '';
   if (categoryBenchmark) return `${medianClause(categoryBenchmark, `in ${city}`, `${labelSentence} listings`)}${reference}`;
   if (cityBenchmark) {
-    // Too few category listings disclose pay, or one employer holds more
-    // than the cap (CQ-15): the sentence claims neither reason.
+    // Too few employers disclose pay in the category listings alone: the
+    // city pool's figure stands in, labelled as such.
     return `No median is published for ${labelSentence} listings alone. ${medianClause(cityBenchmark, `across all ${NP} listings in ${city}`)}${reference}`;
   }
   return `${gateFailClause(`in ${city}`)}${reference}`;
@@ -658,7 +655,7 @@ export function buildCategoryCityPayParagraph(
 /** DIR-L3 card line, gate passed only. */
 export function buildCityCardPayLine(benchmark: BenchmarkRow | null): string | null {
   if (!benchmark) return null;
-  return `Median posted pay ${formatK(benchmark.median)} (${formatCount(benchmark.postings, 'posting')})`;
+  return `Median posted pay ${formatK(benchmark.median)} (${formatCount(benchmark.employers, 'employer')})`;
 }
 
 /** CO-C2 below the snapshot floor: a count sentence, never a figure. */
@@ -840,7 +837,8 @@ export function buildLiveRolesBadge(total: number): string {
 export function buildSalaryStateSummary(input: { stateName: string; benchmark: BenchmarkRow | null; bls?: BlsStateWage | null }): string {
   const { stateName, benchmark, bls = null } = input;
   if (benchmark) {
-    return `Median posted pay for ${NP_PROSE_PLURAL} in ${stateName}, from ${benchmark.postings} postings with disclosed pay across ${benchmark.employers} employers.`;
+    const beside = bls && bls.annualMedian.value !== null ? ', beside the state\'s BLS wage figures' : '';
+    return `Median posted pay for ${NP_PROSE_PLURAL} in ${stateName}, across ${formatCount(benchmark.employers, 'employer')} that disclose pay in live postings${beside}.`;
   }
   if (bls && bls.annualMedian.value !== null) {
     return `The BLS median annual wage for ${NP_PROSE_PLURAL} in ${stateName} was ${formatBlsDollars(bls.annualMedian)} in ${BLS_OEWS_REFERENCE_PERIOD}. This page adds the open roles, the state's practice rules and the pay employers post here.`;
@@ -888,7 +886,7 @@ export const SALARY_NEARBY_NOT_PUBLISHED = 'Not published';
 
 /** SAL-S5 table caption. */
 export function buildSalaryNearbyCaption(nlcVerifiedLabel: string): string {
-  return `Practice classifications from AANP. Compact status verified against the NCSBN roster on ${nlcVerifiedLabel}. Medians from ${brand.name} postings with disclosed pay, published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers${CAP_CLAUSE}.`;
+  return `Practice classifications from AANP. Compact status verified against the NCSBN roster on ${nlcVerifiedLabel}. Medians from ${brand.name} postings with disclosed pay, published once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, ${EACH_ONCE}.`;
 }
 
 /** SPEC CTA line, count based; null at 0. */
@@ -1433,9 +1431,13 @@ export function buildSalaryStateDescription(input: { env: PracticeEnvironment; f
   const { env, facts, bls = null } = input;
   const row = facts.benchmark;
   if (row) {
+    const half = row.p25 !== null && row.p75 !== null
+      ? `, middle half ${formatDollars(row.p25)} to ${formatDollars(row.p75)}`
+      : '';
     return assembleDescription([
-      `Median posted ${NP} pay in ${env.stateName} is ${formatDollars(row.median)} across ${row.postings} postings from ${row.employers} employers, middle half ${formatDollars(row.p25)} to ${formatDollars(row.p75)}.`,
+      `Median posted ${NP} pay in ${env.stateName} is ${formatDollars(row.median)} across ${formatCount(row.employers, 'employer')} that disclose pay${half}.`,
       `${formatCount(facts.total, 'open role')}.`,
+      bls && bls.annualMedian.value !== null ? `BLS ${BLS_OEWS_REFERENCE_PERIOD} median wage ${formatBlsDollars(bls.annualMedian)}.` : null,
     ]);
   }
   // The compact BLS form: the page's full sentence runs about 140 characters
@@ -1454,7 +1456,7 @@ export function buildSalaryStateDescription(input: { env: PracticeEnvironment; f
     `${formatCount(facts.total, `open ${NP} role`)} in ${env.stateName} from ${formatCount(facts.distinctEmployers, 'employer')}.`,
     aanpClassificationClause(env.authority),
     `${env.stateName} ${nlcMembershipPhrase(env.nlcStatus)} the Nurse Licensure Compact.`,
-    `Pay median published at ${BENCHMARK_MIN_POSTINGS} or more disclosed postings${CAP_CLAUSE}.`,
+    `A pay median is published once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay.`,
   ]);
 }
 
@@ -1485,7 +1487,7 @@ export function buildCompanyDescription(input: {
 export function buildSpecialtyDescription(input: { role: string; total: number; benchmark: BenchmarkRow | null; isNicheRole: boolean }): string {
   const { role, total, benchmark, isNicheRole } = input;
   return assembleDescription([
-    `${role} salary guide: ${formatCount(total, 'open role')} on ${brand.name}${benchmark ? `, board median ${formatDollars(benchmark.median)} across ${benchmark.postings} postings with disclosed pay` : ''}.`,
+    `${role} salary guide: ${formatCount(total, 'open role')} on ${brand.name}${benchmark ? `, board median ${formatDollars(benchmark.median)} across ${formatCount(benchmark.employers, 'employer')} that disclose pay` : ''}.`,
     isNicheRole ? `National all-${NP} median ${BLS_SHORT_REFERENCE}.` : null,
   ]);
 }

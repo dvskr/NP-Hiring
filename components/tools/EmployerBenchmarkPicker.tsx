@@ -4,9 +4,11 @@
  * Employer salary-benchmark picker (P2 #17) — public, aggregate-only.
  *
  * Receives already-aggregated rows from the server component; it never sees
- * per-employer data. See ./benchmark-model.ts for the public-safety rules
- * (minimum postings AND minimum distinct employers per published row) and
- * lib/salary-guide-gate.ts for the employer-share cap the server applies.
+ * per-employer data. See ./benchmark-model.ts for the public-safety rules:
+ * each employer counts once, a row publishes its median at
+ * BENCHMARK_MIN_EMPLOYERS employers and its 25th to 75th percentile range at
+ * BENCHMARK_FULL_MIN_EMPLOYERS. A median-tier row has null quartiles, so the
+ * range bar and the offer standing render only at the full tier.
  *
  * Accessibility: labelled select + labelled number input, keyboard operable,
  * the result region is always mounted so nothing shifts as the selection
@@ -19,16 +21,15 @@ import Link from 'next/link';
 import { ArrowRight, BarChart3, Info } from 'lucide-react';
 import { brand } from '@/config/brand';
 import {
+  BENCHMARK_FULL_MIN_EMPLOYERS,
   BENCHMARK_MIN_EMPLOYERS,
-  BENCHMARK_MIN_POSTINGS,
   classifyOffer,
   parseOfferInput,
   type BenchmarkRow,
   type OfferStanding,
 } from './benchmark-model';
-// The cap's value only: lib/salary-guide-policy.ts is import free. Never
-// import lib/salary-guide-gate.ts here; it pulls Prisma into the client bundle.
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+// Pure (no Prisma): safe in this client bundle, unlike lib/salary-analytics.
+import { ONE_EMPLOYER_NOTE } from '@/lib/salary-report/stats';
 import ToolStyles from './ToolStyles';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle, selectStyle } from './tool-theme';
 
@@ -64,6 +65,16 @@ function stateSlug(state: string): string {
   return state.toLowerCase().replace(/\s+/g, '-');
 }
 
+/** "7 employers": the figure's n, each employer counted once. */
+function employerCount(n: number): string {
+  return `${n.toLocaleString('en-US')} ${n === 1 ? 'employer' : 'employers'}`;
+}
+
+/** The row's 25th to 75th percentile range, or null below the full tier. */
+function quartileRange(row: BenchmarkRow): { p25: number; p75: number } | null {
+  return row.p25 !== null && row.p75 !== null ? { p25: row.p25, p75: row.p75 } : null;
+}
+
 export default function EmployerBenchmarkPicker({ national, states, compact = false }: Props) {
   const [scope, setScope] = useState('');
   const [offer, setOffer] = useState('');
@@ -84,18 +95,18 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
           Not enough posted pay data to publish a benchmark yet
         </p>
         <p style={{ fontSize: '13.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-          A figure appears once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
-          {BENCHMARK_MIN_EMPLOYERS} or more employers disclose ranges, with no single employer contributing more
-          than {MAX_EMPLOYER_SHARE_PERCENT}% of them.
+          A median appears once at least {BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once
+          however many postings it has.
         </p>
       </div>
     );
   }
 
-  const spread = Math.max(1, row.p75 - row.p25);
-  const markerPct = offerValue
-    ? Math.min(100, Math.max(0, ((offerValue - row.p25) / spread) * 100))
+  const range = quartileRange(row);
+  const markerPct = range && offerValue
+    ? Math.min(100, Math.max(0, ((offerValue - range.p25) / Math.max(1, range.p75 - range.p25)) * 100))
     : null;
+  const scopeName = row.scope === 'National' ? 'all states' : row.scope;
 
   return (
     <div style={{ ...clayCard, padding: compact ? '24px 24px 22px' : '28px 28px 24px' }}>
@@ -140,38 +151,50 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
       {/* Headline */}
       <div style={{ padding: '20px 22px', borderRadius: '16px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '1.5px solid rgba(190,24,93,0.14)', marginBottom: '16px' }}>
         <p style={{ fontSize: '11px', fontWeight: 700, color: TOOL_ACCENT, textTransform: 'uppercase', letterSpacing: '0.09em', margin: '0 0 3px' }}>
-          Median posted salary · {row.scope === 'National' ? 'all states' : row.scope}
+          Median posted salary · {scopeName}
         </p>
         <div aria-live="polite" style={{ fontSize: '34px', fontWeight: 800, color: '#831843', lineHeight: 1.05, fontVariantNumeric: 'tabular-nums' }}>
           {formatUsd(row.median)}
         </div>
         <p style={{ fontSize: '13px', color: '#5A4A42', margin: '8px 0 0', lineHeight: 1.6 }}>
-          Middle of the market: <strong>{formatUsd(row.p25)} to {formatUsd(row.p75)}</strong> (25th to 75th
-          percentile), from {row.postings.toLocaleString('en-US')} published {brand.niche.short} postings that
-          disclose pay, across {row.employers.toLocaleString('en-US')} employers.
+          {range ? (
+            <>
+              Middle of the market: <strong>{formatUsd(range.p25)} to {formatUsd(range.p75)}</strong> (25th to
+              75th percentile), across {employerCount(row.employers)} that disclose pay on{' '}
+              {row.postings.toLocaleString('en-US')} published {brand.niche.short} postings.
+            </>
+          ) : (
+            <>
+              Median across {employerCount(row.employers)} that disclose pay on{' '}
+              {row.postings.toLocaleString('en-US')} published {brand.niche.short} postings. The 25th to 75th
+              percentile range appears once at least {BENCHMARK_FULL_MIN_EMPLOYERS} employers disclose pay.
+            </>
+          )}
         </p>
       </div>
 
-      {/* Range bar */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: 700, color: '#64748B', marginBottom: '6px' }}>
-          <span>{formatUsd(row.p25)}</span>
-          <span>Median {formatUsd(row.median)}</span>
-          <span>{formatUsd(row.p75)}</span>
+      {/* Range bar: only where the row publishes its quartiles. */}
+      {range && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: 700, color: '#64748B', marginBottom: '6px' }}>
+            <span>{formatUsd(range.p25)}</span>
+            <span>Median {formatUsd(row.median)}</span>
+            <span>{formatUsd(range.p75)}</span>
+          </div>
+          <div style={{ position: 'relative', height: '12px', borderRadius: '8px', background: 'linear-gradient(90deg, #FCE7F3, #BE185D)' }}>
+            {markerPct !== null && (
+              <span
+                aria-hidden="true"
+                style={{
+                  position: 'absolute', top: '-5px', left: `${markerPct}%`, transform: 'translateX(-50%)',
+                  width: '4px', height: '22px', borderRadius: '3px', background: '#1A2E35',
+                  boxShadow: '0 0 0 3px rgba(255,255,255,0.9)',
+                }}
+              />
+            )}
+          </div>
         </div>
-        <div style={{ position: 'relative', height: '12px', borderRadius: '8px', background: 'linear-gradient(90deg, #FCE7F3, #BE185D)' }}>
-          {markerPct !== null && (
-            <span
-              aria-hidden="true"
-              style={{
-                position: 'absolute', top: '-5px', left: `${markerPct}%`, transform: 'translateX(-50%)',
-                width: '4px', height: '22px', borderRadius: '3px', background: '#1A2E35',
-                boxShadow: '0 0 0 3px rgba(255,255,255,0.9)',
-              }}
-            />
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Offer standing */}
       {standing && (
@@ -182,15 +205,30 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
           <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>{STANDING_META[standing].note}</p>
         </div>
       )}
+      {/* An offer against a median-tier row: classifyOffer has no range to
+          grade it on, so no standing is shown, and the note says why. */}
+      {!standing && offerValue !== null && !range && (
+        <div style={{ padding: '16px 18px', borderRadius: '14px', background: '#F1F5F9', marginBottom: '16px' }}>
+          <p style={{ fontSize: '13.5px', fontWeight: 800, color: '#334155', margin: '0 0 5px' }}>
+            {formatUsd(offerValue)}: no market range to compare with yet
+          </p>
+          <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
+            {row.scope === 'National'
+              ? <>The national 25th to 75th percentile range appears once at least {BENCHMARK_FULL_MIN_EMPLOYERS} employers disclose pay.</>
+              : <>The 25th to 75th percentile range for {row.scope} appears once at least {BENCHMARK_FULL_MIN_EMPLOYERS} employers there disclose pay.</>}
+            {' '}Until then, the median above is the reference point.
+          </p>
+        </div>
+      )}
 
       {/* Method note */}
       <div style={{ display: 'flex', gap: '9px', alignItems: 'flex-start', padding: '14px 16px', borderRadius: '13px', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.05)' }}>
         <Info size={15} color="#64748B" aria-hidden="true" style={{ flexShrink: 0, marginTop: '1px' }} />
         <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-          Aggregates only. A state appears once at least {BENCHMARK_MIN_POSTINGS} postings from{' '}
-          {BENCHMARK_MIN_EMPLOYERS} or more employers disclose ranges, with no single employer contributing more
-          than {MAX_EMPLOYER_SHARE_PERCENT}% of them. Listings whose pay was inferred rather than posted are left
-          out. This is posted pay, not accepted offers or total compensation.
+          Aggregates only. {ONE_EMPLOYER_NOTE} A state appears once at least {BENCHMARK_MIN_EMPLOYERS} employers
+          there disclose pay, and its 25th to 75th percentile range once at least {BENCHMARK_FULL_MIN_EMPLOYERS}{' '}
+          do. Listings whose pay was inferred rather than posted are left out. This is posted pay, not accepted
+          offers or total compensation.
         </p>
       </div>
 

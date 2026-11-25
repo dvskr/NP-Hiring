@@ -1,14 +1,25 @@
 import { z } from 'zod';
 import { computeTakeHome } from '@/components/tools/take-home-model';
 import { TAX_MODEL_YEAR } from '@/components/tools/federal-tax-model';
-import { classifyOffer, type OfferStanding } from '@/components/tools/benchmark-model';
+import { BENCHMARK_FULL_MIN_EMPLOYERS, classifyOffer, type OfferStanding } from '@/components/tools/benchmark-model';
 import { getStatesByAuthority, type PracticeAuthority } from '@/lib/state-practice-authority';
 import { getPracticeEnvironment, nlcSentence } from '@/lib/pseo/practice-environment';
 import type { FactRow, FactSection, FactsViewData } from '@/lib/mcp/widgets/src/contracts';
 import { defineTool, UserFacingError } from '@/lib/mcp/server/types';
 import { BOARD_NAME, ROLE_TOKEN } from './board-words';
 import { AANP_SOURCE, AANP_SOURCE_URL, practiceAuthorityAnswer } from './practice-authority';
-import { BOARD_MEDIAN_LABEL, PAY_METHOD_LINE, guideUrl, isPublished, payFigure, stateGuideUrl, withheldLine } from './np-pay';
+import {
+  BOARD_MEDIAN_LABEL,
+  PAY_METHOD_LINE,
+  employersCount,
+  guideUrl,
+  hasPayRange,
+  isPublished,
+  noRangeLine,
+  payFigure,
+  stateGuideUrl,
+  withheldLine,
+} from './np-pay';
 import { resolveStateName } from './shared';
 
 /**
@@ -188,7 +199,7 @@ function requirePlausibleAnnual(annual: number): void {
 async function boardMedianNote(): Promise<string | null> {
   const figure = await payFigure({ kind: 'board' });
   if (!isPublished(figure)) return null;
-  return `For context, the ${BOARD_MEDIAN_LABEL.charAt(0).toLowerCase()}${BOARD_MEDIAN_LABEL.slice(1)} is ${dollars(figure.median)} a year, from ${figure.postings.toLocaleString('en-US')} postings.`;
+  return `For context, the ${BOARD_MEDIAN_LABEL.charAt(0).toLowerCase()}${BOARD_MEDIAN_LABEL.slice(1)} is ${dollars(figure.median)} a year in advertised pay, across ${employersCount(figure.employers)} that disclose pay.`;
 }
 
 export const convertPay = defineTool({
@@ -242,7 +253,8 @@ export const analyzeOffer = defineTool({
   name: 'analyze_offer',
   title: 'Check an offer against advertised pay',
   description:
-    `Place a job offer against advertised pay on live ${BOARD_NAME} postings: below, within or above the middle half (25th to 75th percentile) in a state, among remote roles or across all ${BOARD_NAME} postings, next to the median, with the sample size. ` +
+    `Place a job offer against advertised pay on live ${BOARD_NAME} postings: below, within or above the middle half (25th to 75th percentile) in a state, among remote roles or across all ${BOARD_NAME} postings, next to the median, with the number of employers behind the figures. ` +
+    `A scope where fewer than ${BENCHMARK_FULL_MIN_EMPLOYERS} employers disclose pay has no middle half, so the offer is compared with all ${BOARD_NAME} postings instead. ` +
     'The comparison is with advertised salary ranges, not reported earnings, and the amount is not stored. It gives figures, not advice on whether to accept.',
   input: {
     amount: z.number().positive().max(10_000_000).describe('The offer in dollars.'),
@@ -265,28 +277,39 @@ export const analyzeOffer = defineTool({
     const annual = args.period === 'annual' ? args.amount : args.amount * hours * 52;
     requirePlausibleAnnual(annual);
 
-    // The scope asked for, and the site-wide figure where that one is not published.
+    // The scope asked for, and the site-wide figure where that one has no
+    // middle half to compare with: no median at all below
+    // BENCHMARK_MIN_EMPLOYERS employers, and a median but no 25th to 75th
+    // percentile range below BENCHMARK_FULL_MIN_EMPLOYERS.
     const asked = stateName
       ? { label: stateName, figure: await payFigure({ kind: 'state', stateName }) }
       : args.remote
         ? { label: 'remote postings', figure: await payFigure({ kind: 'remote' }) }
         : null;
     const board = await payFigure({ kind: 'board' });
-    const usingAsked = !!asked && isPublished(asked.figure);
+    const usingAsked = !!asked && hasPayRange(asked.figure);
     const scope = usingAsked ? asked! : { label: `all ${BOARD_NAME} postings`, figure: board };
     if (!scope.figure) throw new UserFacingError('Pay data is unavailable for a moment. Try again shortly.');
-    if (!isPublished(scope.figure) || scope.figure.p25 === null || scope.figure.p75 === null) {
-      throw new UserFacingError(`${withheldLine(scope.figure, scope.label)} So there is nothing to compare the offer with right now.`);
-    }
     const figure = scope.figure;
-    const standing = classifyOffer(annual, {
-      scope: scope.label,
-      median: figure.median,
-      p25: figure.p25!,
-      p75: figure.p75!,
-      postings: figure.postings,
-      employers: figure.employers,
-    });
+    const standing = hasPayRange(figure)
+      ? classifyOffer(annual, {
+          scope: scope.label,
+          tier: 'full',
+          median: figure.median,
+          p25: figure.p25,
+          p75: figure.p75,
+          postings: figure.postings,
+          employers: figure.employers,
+        })
+      : null;
+    if (!hasPayRange(figure) || !standing) {
+      const why = isPublished(figure) ? noRangeLine(figure, scope.label) : withheldLine(figure, scope.label);
+      throw new UserFacingError(`${why} So there is nothing to compare the offer with right now.`);
+    }
+    // Why the scope asked for was not used, with its median when it has one.
+    const askedNote = asked && !usingAsked
+      ? `${isPublished(asked.figure) ? noRangeLine(asked.figure, asked.label) : withheldLine(asked.figure, asked.label)} This uses all ${BOARD_NAME} postings instead.`
+      : null;
 
     const structured: FactsViewData = {
       view: 'facts',
@@ -301,17 +324,14 @@ export const analyzeOffer = defineTool({
               label: args.period === 'hourly' ? `Offer (${cents(args.amount)} an hour, ${hours} hours a week)` : 'Offer',
               value: `${dollars(annual)} a year`,
             },
-            { label: '25th percentile', value: dollars(figure.p25!) },
+            { label: '25th percentile', value: dollars(figure.p25) },
             { label: 'Median', value: dollars(figure.median), emphasis: true },
-            { label: '75th percentile', value: dollars(figure.p75!) },
-            { label: 'Postings compared', value: figure.postings.toLocaleString('en-US') },
+            { label: '75th percentile', value: dollars(figure.p75) },
+            { label: 'Employers compared', value: figure.employers.toLocaleString('en-US') },
           ],
         },
       ],
-      notes: [
-        ...(asked && !usingAsked ? [`${withheldLine(asked.figure, asked.label)} This uses all ${BOARD_NAME} postings instead.`] : []),
-        PAY_METHOD_LINE,
-      ],
+      notes: [...(askedNote ? [askedNote] : []), PAY_METHOD_LINE],
       links: [{ label: 'Salary guide', url: stateName ? stateGuideUrl(ctx.baseUrl, stateName) : guideUrl(ctx.baseUrl) }],
     };
     return { text: factsText(structured), structured };

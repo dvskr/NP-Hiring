@@ -1,10 +1,13 @@
 /**
  * Indexing audit, wave 2 handoffs that have no suite of their own:
  *
- *   CQ-15  every statement of the salary publishing rule in the shared pSEO
- *          copy names the employer-share cap, and no below-gate sentence
- *          claims a reason the facts cannot support. The builder stays pure:
- *          it reads the cap from the import-free lib/salary-guide-policy.ts.
+ *   CQ-15  retired 2026-11-25. The 40% employer-share cap existed because
+ *          a figure counted postings, so one employer could be most of a
+ *          sample. The salary engine (lib/salary-report/stats.ts) counts
+ *          each employer once, so no employer can be more than 1 in n and
+ *          the cap is gone. Every statement of the publishing rule now names
+ *          the engine's employer floor, none names the cap, and no
+ *          below-gate sentence claims a reason the facts cannot support.
  *   CQ-14  one predicate per category: the market report and the company
  *          profile's similar-employer module count a category with
  *          categoryPredicate, the clause its landing and state pages use.
@@ -13,7 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
 import { emptyListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import {
     buildCategoryCityPayParagraph,
@@ -35,23 +38,38 @@ const read = (rel: string): string => fs.readFileSync(path.join(ROOT, ...rel.spl
 const NOW = new Date('2026-09-29T12:00:00Z');
 const facts = (over: Partial<ListingFacts> = {}): ListingFacts => ({ ...emptyListingFacts(NOW), ...over });
 
-const CAP = `with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them`;
+/** Comments blanked, so a note explaining the retired cap is not read as copy. */
+const code = (src: string): string => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-describe('CQ-15: the shared pay copy names the employer-share cap', () => {
-    it('the below-gate hub and metro sentences state the cap wherever they state the rule', () => {
+/** The retired cap in any wording: the sentence, the share, or a percentage. */
+const RETIRED_CAP = /no single employer|employer share|\d+%/i;
+
+/** The engine's floor stated in a sentence: "5 employers" in any phrasing ("at least 5 employers", "5 or more employers"). */
+const EMPLOYER_FLOOR = new RegExp(`\\b${BENCHMARK_MIN_EMPLOYERS}\\b[^.]*\\bemployers\\b`);
+
+/** A rule-stating sentence: the employer floor, and never the cap. */
+function expectEngineRule(text: string | null, where: string): void {
+    expect(text, where).toBeTruthy();
+    expect(text, `${where}: names the employer floor`).toMatch(EMPLOYER_FLOOR);
+    expect(text, `${where}: names no retired cap`).not.toMatch(RETIRED_CAP);
+}
+
+describe('CQ-15 retired: the shared pay copy states the engine rule, never the employer-share cap', () => {
+    it('the below-gate hub and metro sentences state the employer floor wherever they state the rule', () => {
         // Too few postings.
-        expect(buildHubPayParagraph({ scopeName: 'Ohio', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 2 }) })).toContain(CAP);
-        // Both counts clear: the rule or the cap failed, and the sentence claims neither.
-        const cleared = buildHubPayParagraph({ scopeName: 'Virginia', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 26, salaryDisclosedEmployers: 5 }) });
-        expect(cleared).toContain(CAP);
-        expect(cleared).not.toMatch(/fewer than \d+ of them/);
+        expectEngineRule(buildHubPayParagraph({ scopeName: 'Ohio', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 2 }) }), 'hub, 2 postings');
+        // Twenty-six postings from four employers: the employer floor failed,
+        // and the sentence never claims too few postings.
+        const crowded = buildHubPayParagraph({ scopeName: 'Virginia', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 26, salaryDisclosedEmployers: 4 }) });
+        expectEngineRule(crowded, 'hub, 26 postings from 4 employers');
+        expect(crowded).not.toMatch(/fewer than \d+ of them/);
         // No employer count at all.
-        expect(buildHubPayParagraph({ scopeName: 'Ohio', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 9 }) })).toContain(CAP);
+        expectEngineRule(buildHubPayParagraph({ scopeName: 'Ohio', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 9 }) }), 'hub, no employer count');
     });
 
     it('a withheld city figure states the whole rule instead of claiming too few listings', () => {
         const text = buildCityPayParagraph({ city: 'Richmond', benchmark: null });
-        expect(text).toContain(CAP);
+        expectEngineRule(text, 'city');
         // States the rule a local median needs, positively, with no narration.
         expect(text).toContain('A local median appears once');
         expect(text).not.toContain('does not publish');
@@ -59,24 +77,25 @@ describe('CQ-15: the shared pay copy names the employer-share cap', () => {
     });
 
     it('a withheld category pool in a city never claims too few disclose pay', () => {
-        const bench = { key: 'Richmond', postings: 6, employers: 3, median: 132000, p25: 118000, p75: 150000 };
+        const bench = { scope: 'Richmond', tier: 'median', postings: 9, employers: 6, median: 132000, p25: null, p75: null };
         const text = buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Richmond', categoryBenchmark: null, cityBenchmark: bench as never });
         expect(text).toMatch(/^No median is published for remote listings alone\./);
         expect(text).not.toContain('Not enough');
+        expect(text).not.toMatch(/null|NaN|\$0K/);
     });
 
-    it('the landing pay sentence, the nearby-states caption and cell and the salary meta line name the cap', () => {
-        expect(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 2 }) })).toContain(CAP);
-        expect(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL)).toContain(`${CAP}.`);
+    it('the landing pay sentence, the nearby-states caption and cell and the salary meta line state the engine rule', () => {
+        expectEngineRule(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 2 }) }), 'landing');
+        expectEngineRule(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL), 'nearby caption');
         expect(SALARY_NEARBY_NOT_PUBLISHED).not.toContain('below minimum');
         // The meta line is the last part of the description and is dropped
-        // when it does not fit, so the pin is on the builder's own part.
-        expect(read('lib/pseo/listing-narrative.ts')).toContain(
-            '`Pay median published at ${BENCHMARK_MIN_POSTINGS} or more disclosed postings${CAP_CLAUSE}.`,',
-        );
+        // when it does not fit; the builder may state no posting floor and no cap.
+        const src = code(read('lib/pseo/listing-narrative.ts'));
+        expect(src).not.toMatch(/CAP_CLAUSE|MAX_EMPLOYER_SHARE_PERCENT|BENCHMARK_MIN_POSTINGS/);
         const env = getPracticeEnvironment('Texas');
         expect(env).not.toBeNull();
         const description = buildSalaryStateDescription({ env: env!, facts: facts({ total: 3, distinctEmployers: 2 }) });
+        expect(description).not.toMatch(RETIRED_CAP);
         expect(description).not.toContain('Pay median published at 5 or more disclosed postings.');
     });
 
@@ -94,21 +113,24 @@ describe('CQ-15: the shared pay copy names the employer-share cap', () => {
         expect(text).not.toContain('Not enough');
     });
 
-    it('the license guide snapshot and body state the whole rule, cap included', () => {
-        const below = buildSnapshotPaySentence('Virginia', { gatePassed: false, median: null, postings: 26, employers: 5 } as never);
-        expect(below).toContain(CAP);
+    it('the license guide snapshot and body state the engine rule, and no cap', () => {
+        // Twenty-six postings from four employers is below the median tier.
+        const below = buildSnapshotPaySentence('Virginia', { tier: 'countOnly', gatePassed: false, median: null, postings: 26, employers: 4 } as never);
+        expect(below).toBe(`A Virginia median appears here once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once however many postings it has.`);
         expect(below).not.toMatch(/because fewer than/);
         const guides = read('lib/blog-license-guides.ts');
-        expect(guides.split('employers support it, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.').length - 1).toBe(2);
-        expect(guides).not.toContain('employers support it.');
-        expect(guides).toContain("import { MAX_EMPLOYER_SHARE_PERCENT } from './salary-guide-policy';");
+        // One rule sentence, used by the pay FAQ and the pay section alike.
+        expect(guides.match(/\$\{statePayRuleSentence\(s\)\}/g) ?? []).toHaveLength(2);
+        expect(code(guides)).not.toMatch(/MAX_EMPLOYER_SHARE_PERCENT|salary-guide-policy|BENCHMARK_MIN_POSTINGS|no single employer/);
     });
 
-    it('the builder stays pure: the cap comes from the import-free policy module', () => {
+    it('the builder stays pure, and the retired cap modules are gone', () => {
         const src = read('lib/pseo/listing-narrative.ts');
-        expect(src).toContain("import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';");
         expect(src).not.toContain('@/lib/salary-guide-gate');
-        expect(src).toContain('const CAP_CLAUSE = `, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them`;');
+        expect(src).not.toContain('@/lib/salary-guide-policy');
+        expect(src).not.toMatch(/from '@\/lib\/prisma'|from '@\/lib\/salary-analytics'/);
+        expect(fs.existsSync(path.join(ROOT, 'lib', 'salary-guide-gate.ts'))).toBe(false);
+        expect(fs.existsSync(path.join(ROOT, 'lib', 'salary-guide-policy.ts'))).toBe(false);
     });
 });
 

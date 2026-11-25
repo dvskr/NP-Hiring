@@ -1,21 +1,29 @@
 import type { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
-import { getGatedLocationSalary, getGatedStateBenchmarks, type GatedSalaryDetail } from '@/lib/salary-analytics';
-import type { BenchmarkRow } from '@/components/tools/benchmark-model';
+import { getGatedLocationSalary, getGatedStateBenchmarks, type GatedSalary } from '@/lib/salary-analytics';
+import {
+  BENCHMARK_FULL_MIN_EMPLOYERS,
+  BENCHMARK_MIN_EMPLOYERS,
+  type BenchmarkRow,
+} from '@/components/tools/benchmark-model';
+import { ONE_EMPLOYER_NOTE } from '@/lib/salary-report/stats';
 import { BOARD_MEDIAN_LABEL } from '@/lib/pseo/listing-narrative';
 import { stateToSlug } from '@/lib/pseo/setting-state-config';
 
 /**
  * NP Hiring's advertised pay figures for the assistant tools: the same gated
- * figures the salary guide prints (lib/salary-analytics.ts).
+ * figures the salary guide prints (lib/salary-analytics.ts, on the salary
+ * engine in lib/salary-report/stats.ts).
  *
- * How they are made, which the tools say when they quote one: the midpoint
- * of each posting's advertised range, counted per posting, published only
- * when at least 5 postings from at least 3 employers are in the sample and
- * no single employer holds more than 40% of it. Below that the figure is
- * null and nothing is quoted. The site-wide figure is "Median across all NP
- * Hiring postings" (BOARD_MEDIAN_LABEL), never a national figure: "national"
- * is reserved for the cited BLS statistics.
+ * How they are made, which the tools say when they quote one: each employer
+ * counts once, at the middle of the pay ranges it advertises, however many
+ * postings it has. A median is published once at least 5 employers disclose
+ * pay, and the 25th to 75th percentile range once at least 10 do; below 5
+ * the figure carries no dollars and nothing is quoted. Every figure travels
+ * with its n, the number of employers behind it, never a posting count. The
+ * site-wide figure is "Median across all NP Hiring postings"
+ * (BOARD_MEDIAN_LABEL), never a national figure: "national" is reserved for
+ * the cited BLS statistics.
  *
  * getGatedLocationSalary reads every salaried posting in scope and has no
  * cache of its own outside a page render, so the figures are kept here for
@@ -26,8 +34,14 @@ export { BOARD_MEDIAN_LABEL };
 
 export type PayScope = { kind: 'state'; stateName: string } | { kind: 'remote' } | { kind: 'board' };
 
+/** A published figure: the median tier or above, so the median is a number. */
+export type PublishedPay = GatedSalary & { median: number; medianK: number };
+
+/** A figure at the full tier: the 25th and 75th percentiles are numbers too. */
+export type PublishedPayWithRange = PublishedPay & { p25: number; p75: number; p25K: number; p75K: number };
+
 const PAY_TTL_MS = 60 * 60 * 1000;
-const cache = new Map<string, { figure: GatedSalaryDetail; at: number }>();
+const cache = new Map<string, { figure: GatedSalary; at: number }>();
 
 function scopeKey(scope: PayScope): string {
   return scope.kind === 'state' ? `state:${scope.stateName}` : scope.kind;
@@ -40,7 +54,7 @@ function scopeWhere(scope: PayScope): Prisma.JobWhereInput {
 }
 
 /** The gated figure for a scope, or null when it could not be read. */
-export async function payFigure(scope: PayScope): Promise<GatedSalaryDetail | null> {
+export async function payFigure(scope: PayScope): Promise<GatedSalary | null> {
   const key = scopeKey(scope);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < PAY_TTL_MS) return hit.figure;
@@ -75,9 +89,25 @@ export function resetPayCacheForTests(): void {
   statesCache = null;
 }
 
-/** True when the figure is published: the sample cleared the gate. */
-export function isPublished(figure: GatedSalaryDetail | null): figure is GatedSalaryDetail & { median: number; medianK: number } {
+/** True when the figure is published: at least BENCHMARK_MIN_EMPLOYERS employers disclose pay. */
+export function isPublished(figure: GatedSalary | null): figure is PublishedPay {
   return !!figure && figure.gatePassed && typeof figure.median === 'number' && typeof figure.medianK === 'number';
+}
+
+/** True when the figure also publishes its 25th to 75th percentile range (BENCHMARK_FULL_MIN_EMPLOYERS employers). */
+export function hasPayRange(figure: GatedSalary | null): figure is PublishedPayWithRange {
+  return (
+    isPublished(figure) &&
+    typeof figure.p25 === 'number' &&
+    typeof figure.p75 === 'number' &&
+    typeof figure.p25K === 'number' &&
+    typeof figure.p75K === 'number'
+  );
+}
+
+/** "7 employers": a figure's n, the employers behind it, each counted once. */
+export function employersCount(n: number): string {
+  return `${n.toLocaleString('en-US')} ${n === 1 ? 'employer' : 'employers'}`;
 }
 
 /** "$128k" from whole thousands, as the salary guide prints a median. */
@@ -97,13 +127,23 @@ export function guideUrl(baseUrl: string): string {
 
 /** What a published figure is, in one line the tools add after quoting it. */
 export const PAY_METHOD_LINE =
-  'Figures are the midpoints of advertised pay on live postings, counted per posting, published only from at least 5 postings by at least 3 employers with no employer above 40% of them. They are advertised pay, not reported earnings.';
+  `Figures are medians of advertised pay on live postings. ${ONE_EMPLOYER_NOTE} ` +
+  `A median is published once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, and the 25th to 75th percentile range once at least ${BENCHMARK_FULL_MIN_EMPLOYERS} do. ` +
+  'They are advertised pay, not reported earnings.';
+
+/** "no employer discloses", "1 employer discloses", "3 employers disclose". */
+function disclosingEmployers(n: number): string {
+  if (n === 0) return 'no employer discloses';
+  return n === 1 ? '1 employer discloses' : `${employersCount(n)} disclose`;
+}
 
 /** Why no figure is quoted for a scope, in one line. */
-export function withheldLine(figure: GatedSalaryDetail | null, where: string): string {
+export function withheldLine(figure: GatedSalary | null, where: string): string {
   if (!figure) return `Pay data for ${where} could not be read just now.`;
-  if (figure.heldByEmployerShare) {
-    return `No median is published for ${where}: one employer holds too large a share of its ${figure.postings} postings with pay.`;
-  }
-  return `No median is published for ${where}: ${figure.postings} posting${figure.postings === 1 ? '' : 's'} with pay from ${figure.employers} employer${figure.employers === 1 ? '' : 's'} is below the 5 postings from 3 employers the figure needs.`;
+  return `No median is published for ${where}: ${disclosingEmployers(figure.employers)} pay, and a median needs at least ${BENCHMARK_MIN_EMPLOYERS}.`;
+}
+
+/** A published median without its 25th to 75th percentile range, and why, in one line. */
+export function noRangeLine(figure: PublishedPay, where: string): string {
+  return `For ${where}, the median is ${thousands(figure.medianK)} across ${employersCount(figure.employers)} that disclose pay, with no 25th to 75th percentile range yet: that appears once at least ${BENCHMARK_FULL_MIN_EMPLOYERS} employers disclose pay.`;
 }

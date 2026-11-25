@@ -12,10 +12,10 @@
  *
  * TRUTH RULES
  *   1. Every posting-derived figure is a GATED MEDIAN from
- *      lib/salary-analytics.ts (the npSalaryAnalyticsWhere pool scoped to
- *      NP-eligible titles, published only at n of BENCHMARK_MIN_POSTINGS
- *      or more from BENCHMARK_MIN_EMPLOYERS or more employers). Below the
- *      gate there is no posted figure. Every page also carries the state's
+ *      lib/salary-analytics.ts (the one salary pool and engine: NP postings
+ *      only, each employer counted once, a median at BENCHMARK_MIN_EMPLOYERS
+ *      or more employers and the middle half at BENCHMARK_FULL_MIN_EMPLOYERS
+ *      or more). Below the tier there is no posted figure. Every page also carries the state's
  *      cited BLS OEWS wages (lib/salary-guide-bls-states.ts): its title
  *      figure, the BLS wage band and the lead FAQ, labelled as BLS survey
  *      estimates with their vintage, never as posted pay.
@@ -48,7 +48,6 @@ import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
 import GuidePromo from '@/components/guides/GuidePromo';
 import StateImage, { hasStateDiorama } from '@/components/StateImage';
 import {
-    BENCHMARK_MIN_POSTINGS,
     BENCHMARK_MIN_EMPLOYERS,
     type BenchmarkRow,
 } from '@/components/tools/benchmark-model';
@@ -115,15 +114,14 @@ import {
     shouldIndexSalaryGuideState,
 } from '@/lib/pseo/render-gate';
 import {
+    benchmarkRowOf,
     getGatedBenchmarkRows,
     getGatedCitySalaries,
     getGatedLocationSalary,
     getGatedStateBenchmarks,
     type GatedSalary,
-    type GatedSalaryDetail,
     type LabeledBenchmarkRow,
 } from '@/lib/salary-analytics';
-import { buildEmployerShareHoldSentence, MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-gate';
 import { withTagFallback, type CategoryTag } from '@/lib/pseo/category-tagger';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
@@ -213,28 +211,17 @@ function loadFacts(stateName: string, slug: string): Promise<ListingFacts> {
 
 /**
  * The state's own gated figure, from the pool getPublishableSalaryGuideStates
- * reads, with the employer split so a cap hold can be named (CQ-15).
+ * reads. Below the median tier it still carries n (employers disclosing
+ * pay), so the page can say how far the state is from a published median.
  */
-const loadSalary = cache((stateName: string): Promise<GatedSalaryDetail> =>
+const loadSalary = cache((stateName: string): Promise<GatedSalary> =>
     getGatedLocationSalary({ state: stateName }));
 
 /** Board-wide gated median (BOARD_MEDIAN_LABEL), never called "national". */
 const loadBoardMedian = cache((): Promise<GatedSalary> => getGatedLocationSalary());
 
-/** A GatedSalary in the BenchmarkRow shape the narrative builders take. */
-function toBenchmarkRow(scope: string, salary: GatedSalary): BenchmarkRow | null {
-    if (!salary.gatePassed || salary.median === null || salary.p25 === null || salary.p75 === null) {
-        return null;
-    }
-    return {
-        scope,
-        median: salary.median,
-        p25: salary.p25,
-        p75: salary.p75,
-        postings: salary.postings,
-        employers: salary.employers,
-    };
-}
+/** A GatedSalary in the BenchmarkRow shape the narrative builders take (median tier or above). */
+const toBenchmarkRow = benchmarkRowOf;
 
 /**
  * SAL-S2 sub-pools. The employment-type rows use the SAME tag predicate
@@ -609,19 +596,6 @@ export default async function StateSalaryPage({ params }: PageProps) {
     // schema and the visible content cannot diverge. No answer asserts a
     // board-derived figure below the publishing gate: buildHubPayParagraph
     // states the sample honestly and cites the BLS median instead.
-    // CQ-15: a sample that cleared the benchmark gate but not the employer
-    // share cap is not "too small"; the answer and the tile name the real
-    // condition with the sample's own counts, and cite BLS instead.
-    const employerShareHold = salaryData.heldByEmployerShare
-        ? buildEmployerShareHoldSentence({
-            scopeName: stateName,
-            concentration: {
-                postings: salaryData.postings,
-                employers: salaryData.employers,
-                topEmployerPostings: salaryData.topEmployerPostings,
-            },
-        })
-        : null;
     // The BLS answer leads: every state has one, it is cited and dated, and
     // it is the question state salary searches ask. The live posted median
     // joins it only when that median is published.
@@ -642,9 +616,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
         ...(blsFaq ? [blsFaq] : []),
         {
             question: `What is the median ${brand.niche.short} salary in ${stateName}?`,
-            answer: employerShareHold
-                ? `${employerShareHold} The national median for ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`
-                : buildHubPayParagraph({ scopeName: stateName, scopeNoun: 'state', facts: payFacts }),
+            answer: buildHubPayParagraph({ scopeName: stateName, scopeNoun: 'state', facts: payFacts }),
         },
         {
             question: `How many ${brand.niche.short} jobs are open in ${stateName}?`,
@@ -680,25 +652,22 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 label: 'Median posted pay',
                 value: formatDollars(benchmark.median),
                 sub: [
-                    comparison
-                        ? `${formatCount(benchmark.postings, 'posting')}, ${comparison}`
-                        : `${formatCount(benchmark.postings, 'posting')} with disclosed pay`,
-                    `middle half ${formatK(benchmark.p25)} to ${formatK(benchmark.p75)}`,
-                ].join('; '),
+                    `${formatCount(benchmark.employers, 'employer')} disclosing pay${comparison ? `, ${comparison}` : ''}`,
+                    benchmark.p25 !== null && benchmark.p75 !== null
+                        ? `middle half ${formatK(benchmark.p25)} to ${formatK(benchmark.p75)}`
+                        : null,
+                ].filter(Boolean).join('; '),
             }
-            : salaryData.heldByEmployerShare
-                ? {
-                    key: 'median',
-                    label: 'Median posted pay',
-                    value: 'Not published',
-                    sub: `One employer posts ${salaryData.topEmployerPostings} of ${salaryData.postings}. A median is published when none exceeds ${MAX_EMPLOYER_SHARE_PERCENT}%`,
-                }
-                : {
-                    key: 'median',
-                    label: 'Median posted pay',
-                    value: 'Sample too small',
-                    sub: `Published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, none above ${MAX_EMPLOYER_SHARE_PERCENT}%`,
-                },
+            : {
+                // Below the median tier: the count shows only at the count
+                // tier (3 or 4 employers), as the engine allows; never a figure.
+                key: 'median',
+                label: 'Median posted pay',
+                value: 'Not published',
+                sub: salaryData.tier === 'countOnly'
+                    ? `${formatCount(salaryData.employers, 'employer')} disclose pay in live postings; a median appears at ${BENCHMARK_MIN_EMPLOYERS}`
+                    : `Fewer than ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay in live postings`,
+            },
         {
             key: 'roles',
             label: `Open ${brand.niche.short} roles`,
@@ -710,7 +679,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 key: 'board',
                 label: BOARD_MEDIAN_LABEL,
                 value: formatDollars(boardRow.median),
-                sub: `${formatCount(boardRow.postings, 'posting')} with disclosed pay, every state`,
+                sub: `${formatCount(boardRow.employers, 'employer')} disclosing pay, every state`,
             }
             : {
                 key: 'bls',
@@ -885,7 +854,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     no editorial review date (B54; its Article schema omits
                     dates for the same reason). */}
                 <SalaryProvenance
-                    live={salaryData.gatePassed ? { count: salaryData.postings, minimum: BENCHMARK_MIN_POSTINGS } : undefined}
+                    live={salaryData.gatePassed ? { count: salaryData.employers, minimum: BENCHMARK_MIN_EMPLOYERS, noun: 'employers that disclose pay in live postings' } : undefined}
                     style={{ margin: '16px 0 0' }}
                 />
             </section>
@@ -945,7 +914,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 <Band
                     eyebrow="Pay breakdown"
                     title="Pay by work arrangement and employment type"
-                    lede={`Each row is a median over ${stateName} postings that disclose annual pay, published only at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. Rows overlap, because a posting can be both remote and full time.`}
+                    lede={`Each row is the median posted pay across the employers that disclose annual pay in ${stateName} postings of that kind, each employer counted once, published only where at least ${BENCHMARK_MIN_EMPLOYERS} employers do. Rows overlap, because a posting can be both remote and full time.`}
                 >
                     <ClayCard chip="Arrangement" index={1} icon={Banknote} title={`${stateName} posted medians`} headingLevel={3}>
                         <ul className="pseo-clay-list" style={clayList}>
@@ -975,7 +944,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                                             />
                                         </span>
                                         <span style={{ ...clayMeta, minWidth: '116px', textAlign: 'right' }}>
-                                            {formatK(row.median)}, {formatCount(row.postings, 'posting')}
+                                            {formatK(row.median)}, {formatCount(row.employers, 'employer')}
                                         </span>
                                     </li>
                                 );
@@ -1000,7 +969,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         />
                         {cityRows.length > 0 && (
                             <ClayTable
-                                caption={`Cities by open ${brand.niche.short} roles on ${brand.name}. A city links its own page at ${MIN_CITY_JOBS_FOR_LINK} or more roles, and a median is published at ${BENCHMARK_MIN_POSTINGS} or more postings with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`}
+                                caption={`Cities by open ${brand.niche.short} roles on ${brand.name}. A city links its own page at ${MIN_CITY_JOBS_FOR_LINK} or more roles, and a posted median is published once at least ${BENCHMARK_MIN_EMPLOYERS} employers in the city disclose pay, each counted once.`}
                                 columns={['City', { label: 'Open roles', numeric: true }, { label: 'Posted median', numeric: true }]}
                                 rows={cityRows.map((city) => [
                                     city.href ? <Link href={city.href} style={clayLink}>{city.name}</Link> : city.name,

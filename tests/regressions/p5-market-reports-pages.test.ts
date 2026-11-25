@@ -122,15 +122,15 @@ describe('P5 reports — sample gates are shared constants, honestly rendered', 
     it('gates come from report-model and benchmark-model, not page literals', () => {
         expect(reportPage).toContain('REPORT_MIN_SHARE_SAMPLE');
         expect(reportPage).toContain('REPORT_MIN_GROUP_COUNT');
-        expect(reportPage).toContain('BENCHMARK_MIN_POSTINGS');
         expect(reportPage).toContain('BENCHMARK_MIN_EMPLOYERS');
+        expect(reportPage).toContain('BENCHMARK_FULL_MIN_EMPLOYERS');
         expect(payPage).toContain('REPORT_MIN_SHARE_SAMPLE');
         expect(payPage).toContain('TREND_MIN_MONTH_SAMPLE');
         expect(payPage).toContain('TREND_MIN_MONTHS');
-        // The model file is the only place the report thresholds are defined.
-        for (const page of [reportPage, payPage]) {
+        // The model files are the only place the thresholds are defined.
+        for (const page of [hubPage, reportPage, payPage]) {
             expect(code(page)).not.toMatch(/REPORT_MIN_SHARE_SAMPLE\s*=/);
-            expect(code(page)).not.toMatch(/BENCHMARK_MIN_POSTINGS\s*=/);
+            expect(code(page)).not.toMatch(/BENCHMARK_(FULL_)?MIN_EMPLOYERS\s*=/);
         }
     });
 
@@ -140,23 +140,36 @@ describe('P5 reports — sample gates are shared constants, honestly rendered', 
         expect(payPage).toContain('Not enough history to publish a trend');
     });
 
-    it('salary aggregation reuses the benchmark widget gates and excludes estimates', () => {
-        expect(queries).toContain("from '@/components/tools/benchmark-model'");
-        // CQ-15: under the salary guide's employer-share cap as well.
-        expect(queries).toContain('summarizeCappedBenchmarks');
-        expect(code(queries)).not.toMatch(/\bsummarizeBenchmarks\(/);
-        expect(queries).toContain('salaryIsEstimated: false');
-        expect(queries).toContain('activeIndexableJobWhere');
+    it('salary aggregation runs on the salary engine, never the retired employer-share cap', () => {
+        // The engine sits behind benchmark-model (summarize*) and
+        // salary-analytics (the NP pool); queries reach it through one of them.
+        expect(queries).toMatch(/from '@\/components\/tools\/benchmark-model'|from '@\/lib\/salary-analytics'/);
+        expect(code(queries)).not.toMatch(/summarizeCapped|salary-guide-gate|nationalHeldByEmployerShare/);
     });
 
-    it('a national pay row held by the employer-share cap says so, never "sample too small"', () => {
-        expect(queries).toContain('nationalHeldByEmployerShare: nationalHeld !== null');
-        expect(reportPage).toContain("import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';");
-        expect(reportPage).toMatch(/\) : snapshot\.salary\.nationalHeldByEmployerShare \? \(\s*<EmployerShareHoldNote \/>\s*\) : \(\s*<SampleTooSmallNote what="an advertised-pay distribution" \/>/);
-        expect(reportPage).toMatch(/Not published: one employer accounts for more than \{MAX_EMPLOYER_SHARE_PERCENT\}% of the\s+postings that state pay/);
-        // The pay intro, the methodology and the hub all state the cap.
-        expect(reportPage.match(/\{MAX_EMPLOYER_SHARE_PERCENT\}%/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
-        expect(read('app/reports/page.tsx')).toMatch(/no single employer contributing\s+more than \{MAX_EMPLOYER_SHARE_PERCENT\}% of them/);
+    it('the pay copy states the engine rule: each employer once, a median at 5, quartiles at 10', () => {
+        // Copy that interpolates the tier constants cannot describe a floor
+        // the engine stopped using, and the cap is gone from both surfaces.
+        for (const src of [hubPage, reportPage]) {
+            expect(src).toMatch(/at least \{BENCHMARK_MIN_EMPLOYERS\} employers disclose/);
+            expect(src).toContain('{BENCHMARK_FULL_MIN_EMPLOYERS}');
+            expect(src).toMatch(/each\s+employer\s+count(s|ed)\s+once/);
+            expect(code(src)).not.toMatch(/MAX_EMPLOYER_SHARE_PERCENT|salary-guide-policy|EmployerShareHold|nationalHeldByEmployerShare/);
+            expect(src).not.toMatch(/no single employer/i);
+        }
+    });
+
+    it('a median-tier pay row never prints a quartile it does not have', () => {
+        // p25/p75 are null below the full tier: the one place the page
+        // formats them sits behind the null guard, and the cell states the
+        // rule instead of formatting null into "$null".
+        const src = code(reportPage);
+        expect(src).toMatch(/if \(row\.p25 === null \|\| row\.p75 === null\) return [^\n]+\n\s*return `\$\{money\(row\.p25\)\} to \$\{money\(row\.p75\)\}`;/);
+        expect(src.match(/money\(row\.p25\)/g)).toHaveLength(1);
+        expect(src.match(/money\(row\.p75\)/g)).toHaveLength(1);
+        expect(src).toContain('{quartileRangeCell(row)}');
+        // A national row below the median tier is "sample too small".
+        expect(reportPage).toMatch(/\) : \(\s*<SampleTooSmallNote what="an advertised-pay distribution" \/>/);
     });
 
     it('the trend cohort excludes the current partial month', () => {

@@ -1,139 +1,147 @@
 /**
- * Public salary-benchmark aggregation for employers (P2 #17).
+ * Public salary-benchmark aggregation (P2 #17), on the one salary engine
+ * (lib/salary-report/stats.ts, the sister board's rules since 2026-11-25).
  *
- * PUBLIC-SAFETY RULES — this surface is unauthenticated, so it may only ever
- * publish aggregates that cannot be resolved back to one employer's pay:
- *   1. A state appears only with at least BENCHMARK_MIN_POSTINGS salaried
- *      postings AND at least BENCHMARK_MIN_EMPLOYERS distinct employers behind
- *      them. Five postings from one hospital system is that system's pay
- *      scale, not a market benchmark.
- *   2. Nothing employer-identifying leaves this module. Employer names are
- *      used to COUNT distinct employers and are then discarded.
- *   3. `salaryIsEstimated` rows must be filtered out by the caller before they
- *      reach here — see the TRUTH RULE note in app/companies/[slug]/page.tsx.
- *      Those rows carry LLM-inferred or clamped numbers, and publishing them
- *      as "what employers pay" would be a fabricated benchmark.
+ * PUBLIC-SAFETY RULES: these aggregates reach unauthenticated pages, so they
+ * may only ever publish figures that cannot be resolved back to one
+ * employer's pay:
+ *   1. Each employer counts once, at the median of the distinct ranges it
+ *      advertises in the scope, however many postings it has. A figure's n
+ *      is its number of employers, so no employer can be more than 1 in n
+ *      of a published median (20% at the smallest published n of 5). This
+ *      replaced the 40% employer-share cap, which a per-posting count needed.
+ *   2. Tiers by employers: a median at BENCHMARK_MIN_EMPLOYERS (5) or more,
+ *      the 25th and 75th percentiles at BENCHMARK_FULL_MIN_EMPLOYERS (10) or
+ *      more, nothing below 5. Below the median tier there is no row.
+ *   3. Nothing employer-identifying leaves this module. Employer names (or
+ *      the keys the server passes as `employer`) are used to group and are
+ *      then discarded.
+ *   4. Estimated pay, a single figure with no range, a midpoint outside
+ *      $50k to $500k and a range wider than 3 to 1 never count (the engine's
+ *      quarantine). Callers still filter estimated rows in their query.
  *
- * The employer analytics API (app/api/employer/analytics/benchmarks) computes
- * a platform median for signed-in employers over their own + platform data.
- * This module deliberately does NOT call it: that endpoint is auth-gated and
- * returns per-employer rows, neither of which belongs on a public page.
+ * Pure: no Prisma, safe in a client bundle.
  */
 
 import { parsePlainAmount } from './parse-amount';
+import {
+    cleanSalaryRows,
+    roundDisplayDollars,
+    summarizeMidpoints,
+    TIER_FULL_MIN_N,
+    TIER_MEDIAN_MIN_N,
+    type SalaryTierSummary,
+} from '@/lib/salary-report/stats';
 
-/** Minimum salaried postings before a state is shown. */
-export const BENCHMARK_MIN_POSTINGS = 5;
+/** Employers that must disclose pay before a scope publishes a median. */
+export const BENCHMARK_MIN_EMPLOYERS = TIER_MEDIAN_MIN_N;
 
-/** Minimum distinct employers behind those postings. */
-export const BENCHMARK_MIN_EMPLOYERS = 3;
+/** Employers that must disclose pay before a scope publishes its 25th to 75th percentile range. */
+export const BENCHMARK_FULL_MIN_EMPLOYERS = TIER_FULL_MIN_N;
 
 export interface BenchmarkInputRow {
-  state: string | null;
-  employer: string | null;
-  normalizedMinSalary: number | null;
-  normalizedMaxSalary: number | null;
+    state: string | null;
+    /** The employer identity to group by (lib/salary-analytics.ts passes the alias-merged key). */
+    employer: string | null;
+    normalizedMinSalary: number | null;
+    normalizedMaxSalary: number | null;
+    salaryIsEstimated?: boolean | null;
 }
 
 export interface BenchmarkRow {
-  /** Full state name, or 'National' for the pooled row. */
-  scope: string;
-  median: number;
-  p25: number;
-  p75: number;
-  postings: number;
-  employers: number;
+    /** Full state name, 'National' for the pooled row, or a caller's label. */
+    scope: string;
+    /** 'full' carries quartiles; 'median' carries the median alone. */
+    tier: 'full' | 'median';
+    /** Whole dollars on the $500 display grid. */
+    median: number;
+    /** Null below the full tier (fewer than BENCHMARK_FULL_MIN_EMPLOYERS employers). */
+    p25: number | null;
+    p75: number | null;
+    /** Postings behind the figure, for context only; never the sample size. */
+    postings: number;
+    /** The sample size: employers behind the figure, each counted once. */
+    employers: number;
 }
 
 export interface BenchmarkSummary {
-  national: BenchmarkRow | null;
-  states: BenchmarkRow[];
+    national: BenchmarkRow | null;
+    states: BenchmarkRow[];
 }
 
-/** Nearest-rank percentile over a pre-sorted ascending array. */
-function percentile(sorted: readonly number[], fraction: number): number {
-  if (sorted.length === 0) return 0;
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(fraction * sorted.length) - 1));
-  return sorted[index];
+/** One scope's summary at every tier, for pages that state why a figure is missing. */
+export interface ScopeSummary {
+    /** The publishable row, or null below the median tier. */
+    row: BenchmarkRow | null;
+    /** The tier summary, including n employers below the median tier. */
+    summary: SalaryTierSummary;
+    /** Postings that survived the engine's gates. */
+    postings: number;
 }
 
-/** True median (mean of the two central values on an even-length sample). */
-function median(sorted: readonly number[]): number {
-  if (sorted.length === 0) return 0;
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+/** Summarize one scope's rows (treated as one pool, whatever their state). */
+export function summarizeScope(scope: string, rows: readonly BenchmarkInputRow[]): ScopeSummary {
+    const { midpoints, postings } = cleanSalaryRows(rows);
+    const summary = summarizeMidpoints(midpoints);
+    if (summary.tier === 'full') {
+        return {
+            summary,
+            postings,
+            row: {
+                scope,
+                tier: 'full',
+                median: roundDisplayDollars(summary.median),
+                p25: roundDisplayDollars(summary.p25),
+                p75: roundDisplayDollars(summary.p75),
+                postings,
+                employers: summary.n,
+            },
+        };
+    }
+    if (summary.tier === 'median') {
+        return {
+            summary,
+            postings,
+            row: { scope, tier: 'median', median: roundDisplayDollars(summary.median), p25: null, p75: null, postings, employers: summary.n },
+        };
+    }
+    return { summary, postings, row: null };
 }
 
-function summarize(scope: string, midpoints: number[], employers: ReadonlySet<string>): BenchmarkRow {
-  const sorted = [...midpoints].sort((a, b) => a - b);
-  return {
-    scope,
-    median: Math.round(median(sorted)),
-    p25: Math.round(percentile(sorted, 0.25)),
-    p75: Math.round(percentile(sorted, 0.75)),
-    postings: sorted.length,
-    employers: employers.size,
-  };
+/** The publishable row for one pool, every row counted (stateless ones included). */
+export function summarizePool(rows: readonly BenchmarkInputRow[], scope = 'National'): BenchmarkRow | null {
+    return summarizeScope(scope, rows).row;
 }
 
 /**
  * Collapse raw posting rows into publishable state and national benchmarks.
- * Rows without a state, an employer, or a usable pay range are dropped.
+ * Rows without a state are left out of both (the national row here pools
+ * the state rows); summarizeBenchmarkPool counts them nationally.
  */
 export function summarizeBenchmarks(rows: readonly BenchmarkInputRow[]): BenchmarkSummary {
-  const byState = new Map<string, { midpoints: number[]; employers: Set<string> }>();
-  const nationalMidpoints: number[] = [];
-  const nationalEmployers = new Set<string>();
-
-  for (const row of rows) {
-    const min = row.normalizedMinSalary ?? 0;
-    const max = row.normalizedMaxSalary ?? min;
-    if (!row.state || !row.employer || min <= 0) continue;
-
-    const midpoint = Math.round((min + max) / 2);
-    nationalMidpoints.push(midpoint);
-    nationalEmployers.add(row.employer);
-
-    const bucket = byState.get(row.state);
-    if (bucket) {
-      bucket.midpoints.push(midpoint);
-      bucket.employers.add(row.employer);
-    } else {
-      byState.set(row.state, { midpoints: [midpoint], employers: new Set([row.employer]) });
+    const byState = new Map<string, BenchmarkInputRow[]>();
+    const stated: BenchmarkInputRow[] = [];
+    for (const row of rows) {
+        if (!row.state) continue;
+        stated.push(row);
+        const bucket = byState.get(row.state);
+        if (bucket) bucket.push(row);
+        else byState.set(row.state, [row]);
     }
-  }
-
-  const states = [...byState.entries()]
-    .filter(
-      ([, bucket]) =>
-        bucket.midpoints.length >= BENCHMARK_MIN_POSTINGS &&
-        bucket.employers.size >= BENCHMARK_MIN_EMPLOYERS,
-    )
-    .map(([state, bucket]) => summarize(state, bucket.midpoints, bucket.employers))
-    .sort((a, b) => a.scope.localeCompare(b.scope));
-
-  const national =
-    nationalMidpoints.length >= BENCHMARK_MIN_POSTINGS && nationalEmployers.size >= BENCHMARK_MIN_EMPLOYERS
-      ? summarize('National', nationalMidpoints, nationalEmployers)
-      : null;
-
-  return { national, states };
+    const states = [...byState.entries()]
+        .map(([state, bucket]) => summarizeScope(state, bucket).row)
+        .filter((row): row is BenchmarkRow => row !== null)
+        .sort((a, b) => a.scope.localeCompare(b.scope));
+    return { national: summarizePool(stated), states };
 }
 
 /**
- * The public benchmark over one analytics pool, aligned with the salary
- * guide: state rows exactly as /salary-guide gates them (rows without a
- * state are dropped), and a national row over EVERY pool row, stateless
- * ones included, exactly as /salary-guide/<state> computes its national
- * base. The placeholder scope never leaks: only `national` is read from
- * the stateless pass.
+ * State rows exactly as summarizeBenchmarks gates them, and a national row
+ * over EVERY pool row, stateless ones included, as /salary-guide/<state>
+ * computes its national base.
  */
 export function summarizeBenchmarkPool(rows: readonly BenchmarkInputRow[]): BenchmarkSummary {
-  const { states } = summarizeBenchmarks(rows);
-  const { national } = summarizeBenchmarks(
-    rows.map((row) => ({ ...row, state: row.state ?? 'Unknown' })),
-  );
-  return { national, states };
+    return { national: summarizePool(rows), states: summarizeBenchmarks(rows).states };
 }
 
 /**
@@ -143,15 +151,20 @@ export function summarizeBenchmarkPool(rows: readonly BenchmarkInputRow[]): Benc
  * previous parser) turned "-120000" into 120000 and graded it.
  */
 export function parseOfferInput(raw: string): number | null {
-  const value = parsePlainAmount(raw);
-  return value !== null && value > 0 ? value : null;
+    const value = parsePlainAmount(raw);
+    return value !== null && value > 0 ? value : null;
 }
 
 /** Where a proposed offer sits against a benchmark row. */
 export type OfferStanding = 'below' | 'competitive' | 'above';
 
-export function classifyOffer(offer: number, row: BenchmarkRow): OfferStanding {
-  if (offer < row.p25) return 'below';
-  if (offer > row.p75) return 'above';
-  return 'competitive';
+/**
+ * The offer against the row's 25th to 75th percentile range, or null when
+ * the row is at the median tier and publishes no range to compare with.
+ */
+export function classifyOffer(offer: number, row: BenchmarkRow): OfferStanding | null {
+    if (row.p25 === null || row.p75 === null) return null;
+    if (offer < row.p25) return 'below';
+    if (offer > row.p75) return 'above';
+    return 'competitive';
 }

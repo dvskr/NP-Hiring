@@ -32,7 +32,7 @@ const blog = vi.hoisted(() => ({ posts: [] as Record<string, unknown>[], getPubl
 vi.mock('@/lib/prisma', () => ({ prisma: db }));
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 vi.mock('@/lib/salary-analytics', () => ({
-  getGatedLocationSalary: vi.fn(async () => ({ postings: 0, employers: 0, gatePassed: false, median: null, p25: null, p75: null, medianK: null, p25K: null, p75K: null, topEmployerPostings: 0, heldByEmployerShare: false })),
+  getGatedLocationSalary: vi.fn(async () => ({ postings: 0, employers: 0, tier: 'none', gatePassed: false, median: null, p25: null, p75: null, medianK: null, p25K: null, p75K: null })),
   getGatedStateBenchmarks: vi.fn(async () => []),
 }));
 // The blog's own merged list (blog_posts, the license guides and the MDX

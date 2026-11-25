@@ -22,23 +22,19 @@ import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availabil
 // stays confined there (niche-copy debt ratchet).
 import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 import { SALARY_SPECIALTY_PAGES } from '@/app/salary-guide/specialty/specialty-config';
-// Review P9 #2c/#2d: published aggregates run on the gated NP-eligible
-// pool and adopt the benchmark widget's policy (median, n ≥ 5 postings,
-// ≥ 3 employers) — the one salary surface the live review found correct —
-// plus the indexing audit's CQ-15 employer-share cap
-// (summarizeCappedBenchmarks: summarizeBenchmarks, then no employer above
-// MAX_EMPLOYER_SHARE_PERCENT of a published median's postings).
+// Review P9 #2c/#2d, salary build 2026-11: every posted-pay figure on this
+// page runs the one salary pool (fetchNpAnalyticsRows: live NP postings,
+// no CRNA, CNM or CNS) through the one engine (each employer counted once,
+// a median at 5 or more employers, quartiles at 10 or more), the same
+// figures /reports and the state pages print.
 import {
-  BENCHMARK_MIN_POSTINGS,
+  BENCHMARK_FULL_MIN_EMPLOYERS,
   BENCHMARK_MIN_EMPLOYERS,
+  summarizeBenchmarkPool,
 } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT, summarizeCappedBenchmarks } from '@/lib/salary-guide-gate';
+import { fetchNpAnalyticsRows } from '@/lib/salary-analytics';
+import { ONE_EMPLOYER_NOTE } from '@/lib/salary-report/stats';
 import { formatStatVintage } from '@/components/SalaryProvenance';
-import {
-  npSalaryAnalyticsWhere,
-  NP_SALARY_ANALYTICS_SELECT,
-  filterNpEligibleRows,
-} from '@/lib/salary-utils';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 // The BLS OEWS May 2025 state wages: the all-state table, the highest and
 // lowest paying states and the state FAQ answer all read this one module.
@@ -156,17 +152,19 @@ const STATE_CODES: Record<string, string> = {
 interface StateSalary {
   state: string;
   stateCode: string;
-  /** True median over NP-eligible postings — never a mean of min/max. */
+  /** Median posted pay for the state: the engine's median tier, never a mean. */
   medianSalary: number;
-  /** 25th / 75th percentile of the same gated pool. */
-  p25: number;
-  p75: number;
+  /** 25th / 75th percentile, null below the full tier (fewer than 10 employers). */
+  p25: number | null;
+  p75: number | null;
+  /** Postings behind the figure; context only, never the sample size. */
   jobCount: number;
+  /** The sample size: employers behind the figure, each counted once. */
   employers: number;
   slug: string;
 }
 
-/** A state with disclosed-salary postings but below the publishing gate. */
+/** A state with NP postings in the pool but below the median tier. */
 interface SmallSampleState {
   state: string;
   stateCode: string;
@@ -174,50 +172,22 @@ interface SmallSampleState {
   slug: string;
 }
 
-/**
- * A state whose sample clears the benchmark gate but not the CQ-15
- * employer-share cap: named with its counts, never with a figure or the
- * employer (a figure dominated by one named employer is that employer's pay
- * band, which benchmark-model's public-safety rule 2 forbids publishing).
- */
-interface EmployerHeldState {
-  state: string;
-  stateCode: string;
-  /** Postings in the benchmark sample. */
-  jobCount: number;
-  /** Postings from the single largest employer. */
-  topEmployerPostings: number;
-  slug: string;
-}
-
 const stateSlug = (name: string) => name.toLowerCase().replace(/\s+/g, '-');
 
 /**
- * Review P9 #2c/#2d rebuild. One fetch feeds every posting-derived figure
- * on this page:
- *   - pool     = npSalaryAnalyticsWhere (published, non-expired,
- *                non-estimated, confidence ≥ 0.8, annual-cadence) further
- *                scoped to NP-eligible titles (interim deterministic
- *                heuristic until the professionClass column lands).
- *   - figures  = benchmark-model medians/percentiles under its n ≥ 5
- *                postings / ≥ 3 employers gate — the same policy the
- *                public benchmark widget already enforces.
- * States below the gate are listed WITHOUT a figure ("sample too small"),
- * never as a ranked row.
+ * One fetch feeds every posting-derived figure on this page:
+ *   - pool     = fetchNpAnalyticsRows (live NP postings with a non-estimated
+ *                annual pay range, confidence 0.8 or more; no CRNA, CNM or
+ *                CNS postings), the pool /reports and the state pages read.
+ *   - figures  = the engine through summarizeBenchmarkPool: each employer
+ *                counted once, a median at 5 or more employers, quartiles
+ *                at 10 or more; the national row over every pool row.
+ * States below the median tier are listed WITHOUT a figure, never as a
+ * ranked row.
  */
 async function getSalaryAnalytics() {
-  const rows = await prisma.job.findMany({
-    where: {
-      // Base disclosed-salary predicate — pinned byte-identical against
-      // scripts/generate-salary-pdf.ts by p1-salary-pdf-deliverable.
-      isPublished: true, normalizedMinSalary: { not: null },
-      ...npSalaryAnalyticsWhere(),
-    },
-    select: NP_SALARY_ANALYTICS_SELECT,
-  });
-
-  const npRows = filterNpEligibleRows(rows);
-  const { national, states, heldStates } = summarizeCappedBenchmarks(npRows);
+  const npRows = await fetchNpAnalyticsRows();
+  const { national, states } = summarizeBenchmarkPool(npRows);
 
   const gatedStates: StateSalary[] = states
     .map((s) => ({
@@ -232,17 +202,7 @@ async function getSalaryAnalytics() {
     }))
     .sort((a, b) => b.medianSalary - a.medianSalary);
 
-  const employerHeldStates: EmployerHeldState[] = heldStates
-    .map(({ scope, concentration }) => ({
-      state: scope,
-      stateCode: STATE_CODES[scope] || '',
-      jobCount: concentration.postings,
-      topEmployerPostings: concentration.topEmployerPostings,
-      slug: stateSlug(scope),
-    }))
-    .sort((a, b) => a.state.localeCompare(b.state));
-
-  const listedNames = new Set([...gatedStates, ...employerHeldStates].map((s) => s.state));
+  const listedNames = new Set(gatedStates.map((s) => s.state));
   const countsByState = new Map<string, number>();
   for (const row of npRows) {
     if (row.state) countsByState.set(row.state, (countsByState.get(row.state) ?? 0) + 1);
@@ -260,11 +220,10 @@ async function getSalaryAnalytics() {
   return {
     stateSalaries: gatedStates,
     smallSampleStates,
-    employerHeldStates,
     national,
     overallStats: {
-      // Size of the gated analytics pool — the honest "postings analyzed"
-      // basis for every figure on this page.
+      // Size of the pool: postings with a usable annual pay range. Context
+      // for the page; each figure's own n is its employer count.
       jobsWithSalary: npRows.length,
     },
   };
@@ -469,7 +428,7 @@ const faqData = [
 
 export default async function SalaryGuidePage() {
   const [
-    { stateSalaries, smallSampleStates, employerHeldStates, national, overallStats },
+    { stateSalaries, smallSampleStates, national, overallStats },
     activeJobsByState,
   ] = await Promise.all([getSalaryAnalytics(), getActiveJobsByState()]);
 
@@ -477,7 +436,7 @@ export default async function SalaryGuidePage() {
   // when it exists; otherwise fall back to the cited BLS OEWS national
   // median — never an ungated posting mean.
   const calculatorNational = national
-    ? { base: national.median, basis: 'postings' as const, jobCount: national.postings }
+    ? { base: national.median, basis: 'postings' as const, employers: national.employers }
     : { base: Number(NATIONAL_SALARY.value), basis: 'bls' as const };
 
   // FAQ Schema — generated from visible faqData so schema + content stay in sync
@@ -575,7 +534,7 @@ export default async function SalaryGuidePage() {
             {/* Calculator (8 cols on desktop, full row on mobile) */}
             <div className="sal-hero-calc" style={{ minWidth: 0 }}>
               <SalaryCalculator
-                stateSalaries={stateSalaries.map(s => ({ state: s.state, stateCode: s.stateCode, medianSalary: s.medianSalary, jobCount: s.jobCount }))}
+                stateSalaries={stateSalaries.map(s => ({ state: s.state, stateCode: s.stateCode, medianSalary: s.medianSalary, employers: s.employers }))}
                 national={calculatorNational}
               />
             </div>
@@ -825,7 +784,7 @@ export default async function SalaryGuidePage() {
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 3: STATE SALARY TABLE (slate bg)
           ═══════════════════════════════════════════════════════════════ */}
-      {(stateSalaries.length > 0 || employerHeldStates.length > 0) && (
+      {stateSalaries.length > 0 && (
         <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
@@ -848,9 +807,7 @@ export default async function SalaryGuidePage() {
                     the download must never be advertised as the place to get
                     state data. Traffic flows the other way: the PDF points
                     readers here. */}
-                <strong>Note:</strong> Each figure is the <strong>median</strong> of that state&apos;s active {brand.niche.short}-eligible postings with disclosed,
-                non-estimated salary (screened by job title), recomputed daily. A state appears with a figure only when it has at least {BENCHMARK_MIN_POSTINGS} such
-                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers, with no single employer contributing more than {MAX_EMPLOYER_SHARE_PERCENT}% of them. States that miss either condition are listed separately without a figure.
+                <strong>Note:</strong> Each figure is the <strong>median posted pay</strong> across the employers that disclose a non-estimated annual pay range in that state&apos;s live {brand.niche.short} postings, recomputed daily. {ONE_EMPLOYER_NOTE} A state appears with a figure once at least {BENCHMARK_MIN_EMPLOYERS} employers disclose pay, and with its 25th to 75th percentile range once at least {BENCHMARK_FULL_MIN_EMPLOYERS} do; other states are listed separately without a figure.
                 {' '}Each state name links to a detailed page with pay by setting and top employers.
               </p>
               {/* A4: the table's own snapshot basis — the same national
@@ -863,7 +820,7 @@ export default async function SalaryGuidePage() {
               />
             </div>
 
-            {/* Table (omitted when every sizable state is held by the cap) */}
+            {/* Table of the states at the median tier */}
             {stateSalaries.length > 0 && (
             <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
               <table role="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
@@ -880,7 +837,7 @@ export default async function SalaryGuidePage() {
                   {/* Review P9 #2d: no gold top-3 badges or highlight rows —
                       the ranked-with-medals treatment was the maximally
                       confident presentation of a contaminated number. Rows
-                      here already cleared the n≥5 / 3-employer gate. */}
+                      here already reached the median tier (5 or more employers). */}
                   {stateSalaries.map((state, i) => (
                     <tr key={state.state} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
                       <td style={{ padding: '12px 20px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
@@ -900,10 +857,12 @@ export default async function SalaryGuidePage() {
                         ${fmt(state.medianSalary)}
                       </td>
                       <td className="sal-range-col" style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B' }}>
-                        ${fmt(state.p25)} to ${fmt(state.p75)}
+                        {state.p25 !== null && state.p75 !== null
+                          ? `$${fmt(state.p25)} to $${fmt(state.p75)}`
+                          : `At ${BENCHMARK_FULL_MIN_EMPLOYERS} or more employers`}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B', whiteSpace: 'nowrap' }}>
-                        {state.jobCount} · {state.employers} emp.
+                        {state.employers} employers
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <Link href={`/jobs/state/${state.slug}`} style={{ fontSize: '12px', color: '#BE185D', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
@@ -923,10 +882,10 @@ export default async function SalaryGuidePage() {
             {smallSampleStates.length > 0 && (
               <div style={{ ...clayCard, marginTop: '20px', padding: '18px 24px' }}>
                 <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
-                  States with too few postings for a reliable figure
+                  States where fewer than {BENCHMARK_MIN_EMPLOYERS} employers disclose pay
                 </p>
                 <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 10px', lineHeight: 1.5 }}>
-                  Fewer than {BENCHMARK_MIN_POSTINGS} qualifying postings (or fewer than {BENCHMARK_MIN_EMPLOYERS} employers), so the sample is too small to publish a salary figure. Browse the live listings instead:
+                  These states have live postings with pay ranges, but from fewer than {BENCHMARK_MIN_EMPLOYERS} employers, so no posted median is published yet. Each state page carries its BLS wage figures. The number beside a state counts its postings with a pay range:
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
                   {smallSampleStates.map((s) => (
@@ -938,27 +897,6 @@ export default async function SalaryGuidePage() {
               </div>
             )}
 
-            {/* CQ-15: states whose sample is large enough but where one
-                employer posts more than the cap allows. Named with the
-                sample's own counts, so a 26 posting state is never called
-                "too small", and never with a figure or the employer. */}
-            {employerHeldStates.length > 0 && (
-              <div style={{ ...clayCard, marginTop: '20px', padding: '18px 24px' }}>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
-                  States where one employer posts more than {MAX_EMPLOYER_SHARE_PERCENT}% of the pay data
-                </p>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 10px', lineHeight: 1.5 }}>
-                  Each of these states has at least {BENCHMARK_MIN_POSTINGS} qualifying postings from {BENCHMARK_MIN_EMPLOYERS}+ employers, but a single employer accounts for more than {MAX_EMPLOYER_SHARE_PERCENT}% of them, so a median would lean heavily on that one employer&apos;s pay scale. No figure is published until the mix broadens:
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
-                  {employerHeldStates.map((s) => (
-                    <Link key={s.state} href={`/salary-guide/${s.slug}`} className="sal-state-link" style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
-                      {s.state} <span style={{ color: '#64748B', fontWeight: 500 }}>({s.topEmployerPostings} of {s.jobCount} from one employer)</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </section>
       )}

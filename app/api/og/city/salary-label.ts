@@ -43,3 +43,28 @@ function isOgCitySalaryLabel(value: string): value is OgCitySalaryLabel {
 export function resolveOgCitySalaryLabel(raw: string | null): OgCitySalaryLabel {
   return raw !== null && isOgCitySalaryLabel(raw) ? raw : OG_CITY_SALARY_LABELS.range;
 }
+
+/** The slice of a gated benchmark row (components/tools/benchmark-model.ts) the salary tile reads. */
+export interface OgCitySalaryRow {
+  median: number;
+  /** Null below the salary engine's full tier (fewer than 10 employers). */
+  p25: number | null;
+  p75: number | null;
+}
+
+/**
+ * The salary tile's query params for a gated benchmark row: the middle half
+ * under the default range label at the full tier (10 or more employers), the
+ * median under the median label at the median tier (5 to 9 employers, which
+ * has no quartiles), and nothing without a row. A range URL sends no label,
+ * exactly as before the param existed. `formatK` is the page's own "$128K"
+ * formatter, so the tile prints the figure the page prints.
+ */
+export function ogCitySalaryParams(
+  row: OgCitySalaryRow | null,
+  formatK: (dollars: number) => string,
+): Record<string, string> {
+  if (!row) return {};
+  if (row.p25 !== null && row.p75 !== null) return { salary: `${formatK(row.p25)} to ${formatK(row.p75)}` };
+  return { salary: formatK(row.median), label: OG_CITY_SALARY_LABELS.median };
+}

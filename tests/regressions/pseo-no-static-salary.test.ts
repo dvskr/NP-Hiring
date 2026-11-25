@@ -6,7 +6,7 @@
  * hand-typed band (`config.salaryRange`, "$110K-150K") in the title, the
  * description, the hero and a bento card, and a posting mean (`_avg` over
  * minSalary / maxSalary, `rawAvgSalary`) at n = 1. Pay now comes from the
- * gated median (lib/salary-analytics.ts, 5 postings from 3 employers) or
+ * gated median (lib/salary-analytics.ts, 5 or more employers, each once) or
  * the cited BLS figure, and from nothing else.
  *
  * Three layers:
@@ -81,7 +81,8 @@ const STATE_SLUG = 'texas';
 const LABEL = SETTING_CONFIGS[SETTING_KEY].label;
 const HOUR_MS = 60 * 60 * 1000;
 
-const BENCHMARK: BenchmarkRow = { scope: 'Texas', median: 128_000, p25: 115_000, p75: 142_000, postings: 6, employers: 3 };
+/** A full-tier row, as the engine publishes one: quartiles need 10 or more employers. */
+const BENCHMARK: BenchmarkRow = { scope: 'Texas', tier: 'full', median: 128_000, p25: 115_000, p75: 142_000, postings: 16, employers: 12 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = prisma as any;

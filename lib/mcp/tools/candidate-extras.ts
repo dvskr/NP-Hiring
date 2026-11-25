@@ -6,7 +6,7 @@ import {
   isJobAlertForEmail,
   jobAlertsForEmailWhere,
 } from '@/lib/job-alerts/delete-alert';
-import type { GatedSalaryDetail } from '@/lib/salary-analytics';
+import type { GatedSalary } from '@/lib/salary-analytics';
 import type {
   ApplicantProfileSummary,
   FactRow,
@@ -21,7 +21,7 @@ import { NAME_NOT_SET, PROFILE_NOT_SENT, PROFILE_SELECT, RESUME_RULE, profileSum
 import { BOARD_DOMAIN, BOARD_NAME, ROLE_TOKEN, roleJobsProse } from './board-words';
 import { practiceAuthorityFor } from './practice-authority';
 import { isAprnRoleJob } from './candidate-search';
-import { PAY_METHOD_LINE, isPublished, payFigure, thousands as thousandsK } from './np-pay';
+import { PAY_METHOD_LINE, employersCount, isPublished, payFigure, thousands as thousandsK } from './np-pay';
 import {
   JOB_CARD_SELECT,
   clipLine,
@@ -497,11 +497,16 @@ function scheduleText(card: JobCard): string {
   return card.jobType ? clipLine(card.jobType, FACT_MAX) : NOT_LISTED;
 }
 
-/** The figure get_job quotes: the state's median advertised pay, withheld when the sample is too small to publish. */
-function stateMedianText(state: string | null, figure: GatedSalaryDetail | null | undefined): string {
+/**
+ * The figure get_job quotes: the state's median advertised pay with its n
+ * (employers, each counted once), withheld below the median tier.
+ */
+function stateMedianText(state: string | null, figure: GatedSalary | null | undefined): string {
   if (!state) return NO_STATE;
   if (!figure) return 'Unavailable right now';
-  return isPublished(figure) ? `${thousandsK(figure.medianK)} in ${state}` : `Too few ${state} postings publish pay to report one`;
+  return isPublished(figure)
+    ? `${thousandsK(figure.medianK)} in ${state}, across ${employersCount(figure.employers)} that disclose pay`
+    : `Too few ${state} employers disclose pay to report one`;
 }
 
 function practiceAuthorityText(state: string | null): string {
@@ -511,7 +516,7 @@ function practiceAuthorityText(state: string | null): string {
 }
 
 /** Every job gets the same rows in the same order, and none is given emphasis. */
-function comparisonRows(row: ComparedRow, card: JobCard, figure: GatedSalaryDetail | null | undefined): FactRow[] {
+function comparisonRows(row: ComparedRow, card: JobCard, figure: GatedSalary | null | undefined): FactRow[] {
   return [
     // With what the figure is for when that is not plain, so a part-time
     // posting's yearly pay is not read against another job's full-time salary.
@@ -534,7 +539,7 @@ interface ComparedJob {
   rows: FactRow[];
 }
 
-function comparedJob(row: ComparedRow, baseUrl: string, figure: GatedSalaryDetail | null | undefined): ComparedJob {
+function comparedJob(row: ComparedRow, baseUrl: string, figure: GatedSalary | null | undefined): ComparedJob {
   const card = toJobCard(row, baseUrl);
   const heading = `${clipLine(card.title, HEADING_TITLE_MAX)} at ${clipLine(card.employer, HEADING_EMPLOYER_MAX)}`;
   return { card, heading, rows: comparisonRows(row, card, figure) };

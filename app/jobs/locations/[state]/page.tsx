@@ -45,7 +45,7 @@ import {
 import { getNeighboringStates } from '@/lib/pseo/neighboring-states';
 import { shouldIndexStateCityDirectory } from '@/lib/pseo/render-gate';
 import { resolveStateSlug, stateToSlug, STATE_CODES } from '@/lib/pseo/setting-state-config';
-import { getGatedCitySalaries, type GatedSalary } from '@/lib/salary-analytics';
+import { benchmarkRowOf, getGatedCitySalaries, type GatedSalary } from '@/lib/salary-analytics';
 import { getAuthorityLabel, getStatePracticeAuthority } from '@/lib/state-practice-authority';
 import {
   activeJobsInStateWhere,
@@ -341,17 +341,13 @@ const sectionHeading: React.CSSProperties = {
 };
 const cardLine: React.CSSProperties = { fontSize: '12px', color: '#5A4A42', margin: '0 0 8px', lineHeight: 1.5 };
 
-/** The gated per-city figure as the narrative's BenchmarkRow, or null below the gate. */
+/**
+ * The gated per-city figure as the narrative's BenchmarkRow, or null below
+ * the median tier. A median-tier city (5 to 9 employers) keeps its median
+ * with null quartiles; requiring the quartiles here would drop it.
+ */
 function gatedCityBenchmark(city: string, salary: GatedSalary | undefined): BenchmarkRow | null {
-  if (!salary || !salary.gatePassed || salary.median === null || salary.p25 === null || salary.p75 === null) return null;
-  return {
-    scope: city,
-    median: salary.median,
-    p25: salary.p25,
-    p75: salary.p75,
-    postings: salary.postings,
-    employers: salary.employers,
-  };
+  return salary ? benchmarkRowOf(city, salary) : null;
 }
 
 interface MetroAreaGroup {

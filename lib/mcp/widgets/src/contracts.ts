@@ -232,9 +232,9 @@ export interface ApplicationsViewData {
 
 export interface PaySummary {
   label: string;
-  /** Sample size behind the figures. */
+  /** Sample size behind the figures: employers that disclose pay, each counted once. */
   n: number;
-  /** Dollars per year. p25/p75 are null when only the median clears the sample gate. */
+  /** Dollars per year. p25/p75 are null below 10 employers, where only the median is published. */
   median: number;
   p25: number | null;
   p75: number | null;

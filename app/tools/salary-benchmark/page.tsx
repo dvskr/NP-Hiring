@@ -14,8 +14,8 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import { toolApplicationCategory } from '@/app/tools/tools-registry';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget';
-import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BENCHMARK_FULL_MIN_EMPLOYERS, BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
+import { ONE_EMPLOYER_NOTE } from '@/lib/salary-report/stats';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 // The post-a-role cross-link follows the launch-promo clock: the promo end
@@ -66,15 +66,15 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: `What should I pay a ${brand.niche.descriptor}?`,
-    a: `Start from the median posted salary for your state in the tool above, then adjust for the things a median cannot see: setting, specialty, shift pattern, call burden, experience floor, and how quickly you need the seat filled. The 25th-to-75th percentile band is the practical decision range: below the 25th you are competing on something other than pay, and above the 75th you are buying speed. For national context, the BLS median annual wage for ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
+    a: `Start from the median posted salary for your state in the tool above, then adjust for the things a median cannot see: setting, specialty, shift pattern, call burden, experience floor, and how quickly you need the seat filled. Where at least ${BENCHMARK_FULL_MIN_EMPLOYERS} employers disclose pay, the tool also shows the 25th to 75th percentile band, which is the practical decision range: below the 25th you are competing on something other than pay, and above the 75th you are buying speed. For national context, the BLS median annual wage for ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
   },
   {
     q: 'Where does this benchmark data come from?',
-    a: `Published listings on this board that disclose a salary range. We take each posting's range midpoint, then report the median and the 25th and 75th percentiles per state. Listings whose pay was inferred rather than posted by the employer are excluded, as are expired listings, hourly or contract rates, and roles that are not ${brand.niche.short} positions, so every figure traces to an annual range a real employer chose to publish. It is the same pool the salary guide uses, and a state gets a figure here only when it clears the same sample gate and employer-share cap there.`,
+    a: `Published listings on this board that disclose a salary range. ${ONE_EMPLOYER_NOTE} We report the median across those employers per state, and the 25th and 75th percentiles where enough employers disclose pay. Listings whose pay was inferred rather than posted by the employer are excluded, as are expired listings, hourly or contract rates, and roles that are not ${brand.niche.short} positions, so every figure traces to an annual range a real employer chose to publish. It is the same pool and the same rules the salary guide uses, so a state gets a figure here only when it gets one there.`,
   },
   {
     q: 'Why is my state missing from the dropdown?',
-    a: `Because it has not cleared the disclosure threshold yet. A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them. Otherwise the figure would lean on one organization's pay scale. Use the national figure in the meantime.`,
+    a: `Because not enough employers there disclose pay yet. A state's median is published once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once however many postings it has, and its 25th to 75th percentile range once at least ${BENCHMARK_FULL_MIN_EMPLOYERS} do. With fewer employers the figure would lean on one or two organizations' pay scales. Use the national figure in the meantime.`,
   },
   {
     q: 'Is this posted pay or accepted pay?',
@@ -160,10 +160,10 @@ export default function SalaryBenchmarkPage() {
           <AssumptionsPanel
             title="How this benchmark is built"
             assumptions={[
-              'Each posting contributes the midpoint of its disclosed salary range. We report the median plus the 25th and 75th percentiles of those midpoints.',
-              `A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`,
+              `${ONE_EMPLOYER_NOTE} We report the median across those employers, plus the 25th and 75th percentiles where enough employers disclose pay.`,
+              `A state's median is published once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay there, and its 25th to 75th percentile range once at least ${BENCHMARK_FULL_MIN_EMPLOYERS} do.`,
               `The pool is the same one the salary guide publishes from: live ${brand.niche.descriptor} titles with an annual salary range the employer posted. Listings whose pay was inferred rather than posted, expired listings, hourly or contract rates, and roles that are not ${brand.niche.short} positions are excluded entirely.`,
-              'Figures refresh daily from live published listings on this board.',
+              'Figures refresh hourly from live published listings on this board.',
               `National context comes from ${STAT_SOURCES.averageSalary.source}: a median annual wage of ${STAT_SOURCES.averageSalary.formatted}.`,
             ]}
             exclusions={[

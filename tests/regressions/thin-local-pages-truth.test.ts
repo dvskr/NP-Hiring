@@ -9,7 +9,7 @@
  *   2. a "demand" / page-quality SCORE that no source publishes;
  *   3. a cost-of-living index and an unqualified HPSA shortage claim;
  *   4. hand-typed pay bands on the config objects.
- * Pay now comes from the gated median (5 postings from 3 employers) or the
+ * Pay now comes from the gated median (5 or more employers, each once) or the
  * cited BLS figure, and from nothing else; the rest are deleted outright.
  *
  * Also pinned here, because both are easy to regress silently:
@@ -59,7 +59,8 @@ const DASHES = new RegExp(`[${String.fromCharCode(0x2013, 0x2014)}]`);
 /** "$95K", "$129,210", "$95,000": a dollar figure typed by hand in code. */
 const DOLLAR_LITERAL = /\$\d{2,3}(?:,\d{3})*K?\b/;
 
-const BENCHMARK: BenchmarkRow = { scope: 'Austin', median: 128_000, p25: 115_000, p75: 142_000, postings: 6, employers: 3 };
+/** A full-tier row, as the engine publishes one: quartiles need 10 or more employers. */
+const BENCHMARK: BenchmarkRow = { scope: 'Austin', tier: 'full', median: 128_000, p25: 115_000, p75: 142_000, postings: 16, employers: 12 };
 
 const NOW = new Date('2026-09-21T00:00:00Z');
 

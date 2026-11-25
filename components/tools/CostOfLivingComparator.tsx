@@ -30,10 +30,11 @@ function stateSlug(state: string): string {
   return state.toLowerCase().replace(/\s+/g, '-');
 }
 
+/** The figure's basis with its n: the employers behind the median, each counted once. */
 function basisLabel(option: CityOption): string {
-  return option.basis === 'city'
-    ? `${option.name} postings (${option.sample.toLocaleString('en-US')} with pay)`
-    : `${option.state} median (${option.sample.toLocaleString('en-US')} postings with pay)`;
+  const employers = `${option.sample.toLocaleString('en-US')} ${option.sample === 1 ? 'employer' : 'employers'}`;
+  const scope = option.basis === 'city' ? option.name : option.state;
+  return `${scope} median across ${employers} that disclose pay`;
 }
 
 function CityColumn({ option, adjusted, accent }: { option: CityOption; adjusted: number; accent: string }) {

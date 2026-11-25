@@ -13,8 +13,7 @@ import { describe, it, expect } from 'vitest';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
-import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS, type BenchmarkRow } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BENCHMARK_MIN_EMPLOYERS, type BenchmarkRow } from '@/components/tools/benchmark-model';
 import {
   MIX_MIN_POSTINGS_HUB,
   MIX_MIN_POSTINGS_LISTING,
@@ -137,7 +136,10 @@ const BLS = STAT_SOURCES.averageSalary.formatted;
 const BLS_SOURCE = STAT_SOURCES.averageSalary.source;
 const NOW = new Date('2026-09-16T12:00:00Z');
 const SEP_1 = new Date('2026-09-01T00:00:00Z');
-const BENCH: BenchmarkRow = { scope: 'Texas', median: 132000, p25: 118000, p75: 150000, postings: 6, employers: 3 };
+/** A full-tier row: 12 employers (each counted once) behind 20 postings. */
+const BENCH: BenchmarkRow = { scope: 'Texas', tier: 'full', median: 132000, p25: 118000, p75: 150000, postings: 20, employers: 12 };
+/** A median-tier row: 6 employers, so no quartiles to print. */
+const BENCH_MEDIAN: BenchmarkRow = { scope: 'Texas', tier: 'median', median: 132000, p25: null, p75: null, postings: 9, employers: 6 };
 const TEXAS = getPracticeEnvironment('Texas')!;
 
 function emp(list: Array<[string, number]>): EmployerFact[] {
@@ -184,7 +186,7 @@ describe('formatting helpers', () => {
   it('the board median is never called national and the BLS figure is cited inline', () => {
     expect(keep(BOARD_MEDIAN_LABEL)).toBe(`Median across all ${BRAND} postings`);
     expect(BOARD_MEDIAN_LABEL.toLowerCase()).not.toContain('national');
-    expect(keep(NATIONAL_MEDIAN_SENTENCE)).toBe(`Nationally, ${NP_PROSE}s earn a median annual wage of ${BLS} (${BLS_SOURCE}).`);
+    expect(keep(NATIONAL_MEDIAN_SENTENCE)).toBe(`Nationally, the median annual wage for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     expect(keep(NATIONAL_REFERENCE_SENTENCE)).toBe(`For reference, the national median wage for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
   });
 
@@ -396,11 +398,14 @@ describe('recency', () => {
 describe('pay: gated median or a cited BLS sentence, never a mean', () => {
   it('HUB-S7 and METRO-M2 paragraph, both branches', () => {
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ benchmark: BENCH }) })))
-      .toBe(`The median posted salary for ${NP} roles in Texas is $132K, and the middle half of postings runs $118K to $150K. It is based on 6 postings from 3 employers that list annual pay. Hourly, estimated and non-${NP} postings are excluded.`);
+      .toBe(`The median posted salary for ${NP} roles in Texas is $132K, across 12 employers that list annual pay, each counted once. The middle half of those employers advertise $118K to $150K. Hourly, estimated and non-${NP} postings are excluded.`);
+    // At the median tier there is no middle half to print.
+    expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ benchmark: BENCH_MEDIAN }) })))
+      .toBe(`The median posted salary for ${NP} roles in Texas is $132K, across 6 employers that list annual pay, each counted once. Hourly, estimated and non-${NP} postings are excluded.`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 0 }) })))
       .toBe(`No current posting in Texas states a salary. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Austin', scopeNoun: 'metro', facts: facts({ salaryDisclosedCount: 1, salaryDisclosedEmployers: 1 }) })))
-      .toBe(`1 posting in Austin states a salary. A metro median appears once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+      .toBe(`1 posting in Austin states a salary, from only 1 employer. A metro median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     // The rule is stated plainly: no narration of what this site publishes.
     for (const d of [0, 1, 2]) {
       const text = buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: d }) });
@@ -412,13 +417,13 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
   it('the below-gate sentence names the condition that failed (CQ-08)', () => {
     // Enough postings, too few employers: the Illinois directory case.
     expect(keep(buildHubPayParagraph({ scopeName: 'Illinois', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 13, salaryDisclosedEmployers: 2 }) })))
-      .toBe(`13 postings in Illinois state a salary, but they come from only 2 employers. A state median appears once postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers do. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+      .toBe(`13 postings in Illinois state a salary, from only 2 employers. A state median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     expect(keep(buildHubPayParagraph({ scopeName: 'Maine', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 6, salaryDisclosedEmployers: 1 }) })))
-      .toMatch(/^6 postings in Maine state a salary, but they come from only 1 employer\. /);
-    // Both counts clear, so the annual-pay rule or the employer-share cap
-    // (CQ-15) failed; the facts cannot tell which, so the whole rule is stated.
-    expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 14, salaryDisclosedEmployers: 4 }) })))
-      .toBe(`14 postings in Texas state a salary from 4 employers. A state median appears once at least ${BENCHMARK_MIN_POSTINGS} postings from at least ${BENCHMARK_MIN_EMPLOYERS} employers list annual pay for an ${NP} role, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
+      .toMatch(/^6 postings in Maine state a salary, from only 1 employer\. /);
+    // Enough employers disclose some salary, so the engine's annual-range
+    // rule dropped rows; the facts cannot tell which, so the rule is stated.
+    expect(keep(buildHubPayParagraph({ scopeName: 'Texas', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: 14, salaryDisclosedEmployers: 6 }) })))
+      .toBe(`14 postings in Texas state a salary from 6 employers. A state median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers list an annual pay range for an ${NP} role, each counted once. The national median for ${NP_PROSE}s is ${BLS} (${BLS_SOURCE}).`);
     // No sentence ever claims a count that passed is "below the minimum".
     for (const [d, e] of [[13, 2], [14, 4], [5, 3], [2, 1]]) {
       const text = buildHubPayParagraph({ scopeName: 'Ohio', scopeNoun: 'state', facts: facts({ salaryDisclosedCount: d, salaryDisclosedEmployers: e }) });
@@ -430,9 +435,11 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
 
   it('CS-S4 and LAND-L4: benchmark, else a cited count, else nothing', () => {
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 8, benchmark: BENCH }) })))
-      .toBe('Across 6 listings from 3 employers that state an annual salary, the median posted pay is $132K. The middle half of those listings fall between $118K and $150K.');
+      .toBe('Across 12 employers that state an annual salary in their listings, the median posted pay is $132K. The middle half runs $118K to $150K.');
+    expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 8, benchmark: BENCH_MEDIAN }) })))
+      .toBe('Across 6 employers that state an annual salary in their listings, the median posted pay is $132K.');
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 2 }) })))
-      .toBe(`2 of 5 listings state an annual salary. A median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from ${BENCHMARK_MIN_EMPLOYERS} employers do, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. Until then, compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`);
+      .toBe(`2 of 5 listings state an annual salary. A median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers do, each counted once. Until then, compare pay listing by listing. ${NATIONAL_MEDIAN_SENTENCE}`);
     expect(keep(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 1, salaryDisclosedCount: 1 }) }))).toMatch(/^1 of 1 listing states an annual salary\./);
     expect(buildPostedPaySentence({ slug: 'outpatient', facts: facts({ total: 5, salaryDisclosedCount: 0 }) })).toBeNull();
   });
@@ -454,23 +461,25 @@ describe('pay: gated median or a cited BLS sentence, never a mean', () => {
 
   it('CITY-C5 always renders with the national reference in both branches', () => {
     expect(keep(buildCityPayParagraph({ city: 'Austin', benchmark: BENCH })))
-      .toBe(`Across 6 listings from 3 employers that disclose annual pay, the median in Austin is $132,000. The middle half falls between $118,000 and $150,000. ${NATIONAL_REFERENCE_SENTENCE}`);
+      .toBe(`Across 12 employers that disclose annual pay in their listings, the median in Austin is $132,000. The middle half falls between $118,000 and $150,000. ${NATIONAL_REFERENCE_SENTENCE}`);
+    expect(keep(buildCityPayParagraph({ city: 'Austin', benchmark: BENCH_MEDIAN })))
+      .toBe(`Across 6 employers that disclose annual pay in their listings, the median in Austin is $132,000. ${NATIONAL_REFERENCE_SENTENCE}`);
     expect(keep(buildCityPayParagraph({ city: 'Austin', benchmark: null })))
-      .toBe(`A local median appears once at least ${BENCHMARK_MIN_POSTINGS} listings from at least ${BENCHMARK_MIN_EMPLOYERS} employers in Austin disclose annual pay, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. ${NATIONAL_REFERENCE_SENTENCE}`);
+      .toBe(`A local median appears once at least ${BENCHMARK_MIN_EMPLOYERS} employers in Austin disclose annual pay, each counted once. ${NATIONAL_REFERENCE_SENTENCE}`);
   });
 
   it('CC-K3 has three branches', () => {
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: BENCH, cityBenchmark: BENCH })))
-      .toMatch(/^Across 6 remote listings from 3 employers that disclose annual pay, the median in Austin is \$132,000\./);
+      .toMatch(/^Across 12 employers that disclose annual pay in their remote listings, the median in Austin is \$132,000\./);
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: null, cityBenchmark: BENCH })))
-      .toMatch(new RegExp(`^No median is published for remote listings alone\\. Across 6 listings from 3 employers that disclose annual pay, the median across all ${NP} listings in Austin is \\$132,000\\.`));
+      .toMatch(new RegExp(`^No median is published for remote listings alone\\. Across 12 employers that disclose annual pay in their listings, the median across all ${NP} listings in Austin is \\$132,000\\.`));
     expect(keep(buildCategoryCityPayParagraph({ slug: 'remote', labelSentence: 'remote', city: 'Austin', categoryBenchmark: null, cityBenchmark: null })))
-      .toMatch(/^A local median appears once at least 5 listings from at least 3 employers in Austin disclose annual pay, with no single employer above 40% of them\./);
+      .toMatch(/^A local median appears once at least 5 employers in Austin disclose annual pay, each counted once\./);
   });
 
   it('DIR-L3 card line and CO-C2 count sentence', () => {
     expect(buildCityCardPayLine(null)).toBeNull();
-    expect(keep(buildCityCardPayLine(BENCH))).toBe('Median posted pay $132K (6 postings)');
+    expect(keep(buildCityCardPayLine(BENCH))).toBe('Median posted pay $132K (12 employers)');
     expect(keep(buildCompanyPaySentence({ company: 'Acme', total: 1, disclosed: 1 }))).toBe('1 of 1 open role lists a pay range.');
     expect(keep(buildCompanyPaySentence({ company: 'Acme', total: 4, disclosed: 2 }))).toBe('2 of 4 open roles list a pay range.');
     expect(keep(buildCompanyPaySentence({ company: 'Acme', total: 4, disclosed: 0 }))).toBe(`None of Acme's current ${NP} listings on ${BRAND} state a pay range.`);
@@ -535,7 +544,7 @@ describe('small blocks pluralize at one and carry no trend claims', () => {
     expect(keep(buildMetroHeadlineSub('TX'))).toBe('jobs in TX.');
     expect(keep(buildLiveRolesBadge(1))).toBe('1 live role');
     expect(keep(buildLiveRolesBadge(12))).toBe('12 live roles');
-    expect(keep(buildSalaryStateSummary({ stateName: 'Texas', benchmark: BENCH }))).toBe(`Median posted pay for ${NP_PROSE}s in Texas, from 6 postings with disclosed pay across 3 employers.`);
+    expect(keep(buildSalaryStateSummary({ stateName: 'Texas', benchmark: BENCH }))).toBe(`Median posted pay for ${NP_PROSE}s in Texas, across 12 employers that disclose pay in live postings.`);
     expect(keep(buildSalaryStateSummary({ stateName: 'Texas', benchmark: null }))).toBe(`Open ${NP_PROSE} roles in Texas, the state's practice rules, and how pay data is published here.`);
   });
 
@@ -549,7 +558,7 @@ describe('small blocks pluralize at one and carry no trend claims', () => {
 
   it('SAL-S5 caption, SPEC CTA, CO-C1 footprint, DIR-L5 editorial', () => {
     expect(keep(SALARY_NEARBY_NOT_PUBLISHED)).toBe('Not published');
-    expect(keep(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL))).toContain(`published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`);
+    expect(keep(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL))).toContain(`published once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once.`);
     // The caption is split into sentences, never chained with semicolons.
     expect(buildSalaryNearbyCaption(NLC_VERIFIED_LABEL)).not.toContain(';');
     expect(buildSpecialtyCtaLine({ label: 'Family Practice', total: 0 })).toBeNull();
@@ -893,7 +902,7 @@ describe('titles print counts only at the display floor and stay inside the SERP
     const gated = keep(buildSalaryStateDescription({ env: TEXAS, facts: facts({ total: 9, benchmark: BENCH }) }));
     // No bare tier beside the pay sentence: the attributed clause cannot fit
     // there, and "restricted practice" alone read as a rule for the state.
-    expect(gated).toBe(`Median posted ${NP} pay in Texas is $132,000 across 6 postings from 3 employers, middle half $118,000 to $150,000. 9 open roles.`);
+    expect(gated).toBe(`Median posted ${NP} pay in Texas is $132,000 across 12 employers that disclose pay, middle half $118,000 to $150,000. 9 open roles.`);
     const below = keep(buildSalaryStateDescription({ env: TEXAS, facts: facts({ total: 2, distinctEmployers: 1 }) }));
     // The gate clause is assembled last and is dropped whenever the first three fill the budget.
     expect(below).toBe(`2 open ${NP} roles in Texas from 1 employer. AANP classification: Restricted Practice. Texas is a member of the Nurse Licensure Compact.`);
@@ -915,7 +924,7 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(keep(buildSpecialtyDescription({ role: 'FNP', total: 1, benchmark: null, isNicheRole: true })))
       .toBe(`FNP salary guide: 1 open role on ${BRAND}. National all-${NP} median ${BLS} (BLS OEWS, May 2025).`);
     const gatedSpecialty = keep(buildSpecialtyDescription({ role: 'Family Nurse Practitioner (FNP)', total: 1, benchmark: BENCH, isNicheRole: true }));
-    expect(gatedSpecialty).toBe(`Family Nurse Practitioner (FNP) salary guide: 1 open role on ${BRAND}, board median $132,000 across 6 postings with disclosed pay.`);
+    expect(gatedSpecialty).toBe(`Family Nurse Practitioner (FNP) salary guide: 1 open role on ${BRAND}, board median $132,000 across 12 employers that disclose pay.`);
     expect(gatedSpecialty.length).toBeLessThanOrEqual(DESCRIPTION_MAX);
   });
 });

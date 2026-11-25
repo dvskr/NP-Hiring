@@ -14,6 +14,7 @@ import { practiceAuthorityFor } from './practice-authority';
 import {
   BOARD_MEDIAN_LABEL,
   PAY_METHOD_LINE,
+  employersCount,
   guideUrl,
   isPublished,
   payFigure,
@@ -502,6 +503,7 @@ export const getJob = defineTool({
     const npRole = !isAprnRoleJob(job);
     const stateFigure = npRole && job.state ? await payFigure({ kind: 'state', stateName: job.state }) : null;
     const stateMedianK = isPublished(stateFigure) ? stateFigure.medianK : 0;
+    const stateMedianEmployers = isPublished(stateFigure) ? stateFigure.employers : 0;
     const practiceAuthority = npRole ? practiceAuthorityFor(job.state) : null;
     const saved = ctx.access
       ? !!(await prisma.savedJob.findUnique({
@@ -544,7 +546,9 @@ export const getJob = defineTool({
       job.setting ? `Setting: ${job.setting}` : '',
       job.population ? `Population: ${job.population}` : '',
       practiceAuthority ? `NP practice authority in ${practiceAuthority.state} (AANP category): ${practiceAuthority.label}` : '',
-      stateMedianK > 0 && job.state ? `Median advertised pay on ${BOARD_NAME} postings in ${job.state}: ${thousands(stateMedianK)}` : '',
+      stateMedianK > 0 && job.state
+        ? `Median advertised pay on ${BOARD_NAME} postings in ${job.state}: ${thousands(stateMedianK)}, across ${employersCount(stateMedianEmployers)} that disclose pay`
+        : '',
       job.benefits.length > 0 ? `Benefits: ${job.benefits.slice(0, 12).join(', ')}` : '',
       card.employerPosted ? EMPLOYER_POSTED_LINE : '',
       card.easyApply
@@ -565,23 +569,27 @@ export const getJob = defineTool({
 
 const k = (dollars: number) => `$${Math.round(dollars / 1000)}k`;
 
-/** A published figure as a pay card row, or null below the gate. */
+/**
+ * A published figure as a pay card row, or null below the median tier. n is
+ * the employers behind the figure, each counted once; p25 and p75 stay null
+ * below the full tier.
+ */
 function payRow(label: string, figure: Awaited<ReturnType<typeof payFigure>>): PaySummary | null {
   if (!isPublished(figure)) return null;
-  return { label, n: figure.postings, median: figure.median, p25: figure.p25, p75: figure.p75 };
+  return { label, n: figure.employers, median: figure.median, p25: figure.p25, p75: figure.p75 };
 }
 
 function payLine(row: PaySummary): string {
   const range = row.p25 !== null && row.p75 !== null ? `, middle half ${k(row.p25)} to ${k(row.p75)}` : '';
-  return `${row.label}: median ${k(row.median)}${range} (${row.n.toLocaleString('en-US')} postings)`;
+  return `${row.label}: median ${k(row.median)}${range} (${employersCount(row.n)} that disclose pay)`;
 }
 
 export const getPayInsights = defineTool({
   name: 'get_pay_insights',
   title: `Get ${ROLE_TOKEN} pay insights`,
   description:
-    `Advertised pay on ${BOARD_NAME} postings: the median and middle range for a US state, for remote roles, and across all ${BOARD_NAME} postings, with sample sizes, plus the state's NP practice authority. ` +
-    'Figures are advertised salary ranges on live postings, not reported earnings, and a sample too small to publish is withheld rather than estimated.',
+    `Advertised pay on ${BOARD_NAME} postings: the median and middle range for a US state, for remote roles, and across all ${BOARD_NAME} postings, with the number of employers behind each figure, plus the state's NP practice authority. ` +
+    'Figures are advertised salary ranges on live postings, not reported earnings, with each employer counted once; a sample too small to publish is withheld rather than estimated.',
   input: {
     state: z.string().trim().max(40).optional().describe('US state name or two-letter code, such as "Texas" or "TX".'),
     remote_only: z.boolean().optional().describe('Remote roles instead of a state.'),
@@ -608,7 +616,7 @@ export const getPayInsights = defineTool({
     const remote = payRow('Remote postings', remoteFigure);
     const focus = stateName ? payRow(stateName, stateFigure) : args.remote_only ? remote : null;
     const topStates = (states ?? [])
-      .map((row): PaySummary => ({ label: row.scope, n: row.postings, median: row.median, p25: row.p25, p75: row.p75 }))
+      .map((row): PaySummary => ({ label: row.scope, n: row.employers, median: row.median, p25: row.p25, p75: row.p75 }))
       .sort((a, b) => b.median - a.median)
       .slice(0, 5);
     const note = stateName && !focus ? withheldLine(stateFigure, stateName) : args.remote_only && !remote ? withheldLine(remoteFigure, 'remote roles') : null;

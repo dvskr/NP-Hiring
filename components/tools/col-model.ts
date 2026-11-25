@@ -16,7 +16,12 @@
 /** National-average cost-of-living index. Cities above 100 are more expensive. */
 export const NATIONAL_COL_INDEX = 100;
 
-/** Minimum salaried postings a single city needs before its own average is used. */
+/**
+ * Minimum sample (employers that disclose pay, each counted once) a single
+ * city needs before its own median is used. The salary engine publishes a
+ * city median only at 5 employers, so this is a backstop for callers that
+ * pass their own aggregates.
+ */
 export const CITY_SAMPLE_THRESHOLD = 3;
 
 export type NominalBasis = 'city' | 'state';
@@ -26,7 +31,7 @@ export interface CitySalaryBasis {
   nominal: number;
   /** Whether the nominal figure came from city-level or state-level postings. */
   basis: NominalBasis;
-  /** Number of salaried postings behind the figure. */
+  /** The sample behind the figure: employers that disclose pay, each counted once. */
   sample: number;
 }
 

@@ -42,12 +42,13 @@ vi.mock('@/lib/applications/submit-direct-application', () => ({
   MAX_COVER_LETTER_LENGTH: 5000,
   submitDirectApplication: vi.fn(),
 }));
-// Texas clears the salary guide's gate for a median; Ohio does not.
+// Texas clears the salary guide's median tier (5 to 9 employers: a median,
+// no quartiles); Ohio does not.
 vi.mock('@/lib/salary-analytics', () => ({
   getGatedLocationSalary: vi.fn(async (where: { state?: string } = {}) =>
     where.state === 'Texas'
-      ? { postings: 5, employers: 3, gatePassed: true, median: 150_000, p25: 140_000, p75: 160_000, medianK: 150, p25K: 140, p75K: 160, topEmployerPostings: 1, heldByEmployerShare: false }
-      : { postings: 2, employers: 1, gatePassed: false, median: null, p25: null, p75: null, medianK: null, p25K: null, p75K: null, topEmployerPostings: 2, heldByEmployerShare: false },
+      ? { postings: 11, employers: 6, tier: 'median', gatePassed: true, median: 150_000, p25: null, p75: null, medianK: 150, p25K: null, p75K: null }
+      : { postings: 2, employers: 1, tier: 'none', gatePassed: false, median: null, p25: null, p75: null, medianK: null, p25K: null, p75K: null },
   ),
   getGatedStateBenchmarks: vi.fn(async () => []),
 }));
@@ -574,7 +575,8 @@ describe('compare_jobs', () => {
     expect(austin.Population).toBe('Adults');
     expect(austin[RULES]).toBe(`Texas: ${practiceAuthorityFor('Texas')!.label}`);
     expect(remote[RULES]).toMatch(/no state/i);
-    expect(austin[MEDIAN]).toBe('$150k in Texas');
+    // A median-tier figure: the median with its n in employers, no quartiles.
+    expect(austin[MEDIAN]).toBe('$150k in Texas, across 6 employers that disclose pay');
     expect(remote[MEDIAN]).toMatch(/no state/i);
     expect(austin['How to apply']).toMatch(/^From this conversation/);
 
@@ -600,12 +602,16 @@ describe('compare_jobs', () => {
     ]);
   });
 
-  it('withholds a state median it has too few postings for, rather than guessing', async () => {
+  it('withholds a state median too few employers disclose pay for, rather than guessing', async () => {
     const outcome = await compareJobs.run({ job_ids: [OPEN_AUSTIN, OPEN_OHIO] }, signedOut());
     const ohio = (outcome.structured as FactsViewData).sections[1];
     const median = ohio.rows.find((row) => row.label === MEDIAN)!.value;
-    expect(median).toMatch(/too few/i);
-    expect(median).not.toMatch(/\$/);
+    expect(median).toMatch(/too few Ohio employers disclose pay/i);
+    expect(median).not.toMatch(/\$|null/);
+    // The method note states the engine rule, never the retired cap.
+    expect(outcome.text).toMatch(/Each employer counts once/);
+    expect(outcome.text).toMatch(/A median is published once at least 5 employers disclose pay, and the 25th to 75th percentile range once at least 10 do\./);
+    expect(outcome.text).not.toMatch(/40%|counted per posting|no employer above/);
   });
 
   it(`accepts ids, slugs and ${brand.domain} job addresses`, async () => {

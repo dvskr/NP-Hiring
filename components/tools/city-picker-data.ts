@@ -18,9 +18,9 @@ import { localJobsPath } from '@/lib/city-link-path';
 import { CITY_SAMPLE_THRESHOLD, type NominalBasis } from './col-model';
 
 export interface SalaryAggregate {
-  /** Gated median of posting midpoints, annual USD (see lib/salary-analytics). */
+  /** The engine's median advertised pay, annual USD (see lib/salary-analytics). */
   nominal: number;
-  /** Number of salaried postings behind the median. */
+  /** The sample behind the median: employers that disclose pay, each counted once. */
   sample: number;
 }
 
@@ -58,8 +58,9 @@ export interface CityOption {
  * The picker admits the 15 largest cities per state on state-median fallback
  * alone, so cities with 0-2 postings are certainly present. `basis === 'city'`
  * is the honest proxy for (1): it means the city cleared
- * CITY_SAMPLE_THRESHOLD postings that disclose pay, and those are a subset of
- * the published postings the city page counts, so the count gate is already met.
+ * CITY_SAMPLE_THRESHOLD employers that disclose pay (each with at least one
+ * posting), and those postings are a subset of the published postings the
+ * city page counts, so the count gate is already met.
  * A state-basis city has no verified inventory of its own and gets no jobs link.
  *
  * The href is built with `buildCitySlug`, NOT with the dataset's own `slug`

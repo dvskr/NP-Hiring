@@ -6,17 +6,15 @@
  *     with the same activeIndexableJobWhere() filter the sitemaps and
  *     /press use. The pages must present these as board aggregates, never
  *     as market or census figures.
- *   - Salary aggregation excludes `salaryIsEstimated` rows and reuses
- *     `summarizeBenchmarks` from components/tools/benchmark-model.ts, so
- *     the report's pay table carries the exact min-sample /
- *     min-distinct-employer gates of the public benchmark widget (see the
- *     TRUTH RULE note in components/tools/EmployerBenchmarkWidget.tsx).
- *   - The pay table also sits under the employer-share cap (indexing audit
- *     CQ-15, lib/salary-guide-gate.ts summarizeCappedBenchmarks): a state, or
- *     the national row, is published only when no single employer contributes
- *     more than MAX_EMPLOYER_SHARE_PERCENT of the postings behind it, the
- *     policy /salary-guide uses. A national row held by the cap is reported
- *     as such (nationalHeldByEmployerShare), never as "sample too small".
+ *   - The pay table reads the ONE salary pool and engine every salary
+ *     surface uses (fetchNpAnalyticsRows in lib/salary-analytics.ts, then
+ *     summarizeBenchmarkPool): NP postings only (no CRNA, CNM or CNS), both
+ *     bounds, no estimated, hourly-cadence or low-confidence pay, each
+ *     employer counted once, a median at 5 or more employers and quartiles
+ *     at 10 or more. /reports and /salary-guide therefore print the same
+ *     national median from the same postings; the looser second pool this
+ *     file used to run (no title screen, no confidence floor, hourly rows
+ *     annualized) is gone.
  *   - "Disclosed pay" means the pay range came from the posting itself:
  *     a normalized range present AND salaryIsEstimated=false. Figures the
  *     enrichment pipeline inferred count as NOT disclosed.
@@ -36,9 +34,10 @@ import { categoryPredicateWhere, type CategoryTag } from '@/lib/pseo/category-ta
 import { CATEGORY_LABELS, isCategoryFaqSlug } from '@/lib/pseo/category-faq-data';
 import { SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
 import {
+    summarizeBenchmarkPool,
     type BenchmarkSummary,
 } from '@/components/tools/benchmark-model';
-import { summarizeCappedBenchmarks } from '@/lib/salary-guide-gate';
+import { fetchNpAnalyticsRows } from '@/lib/salary-analytics';
 import type { CountGroup, MonthlyDisclosureRow } from './report-model';
 
 /**
@@ -85,12 +84,8 @@ export interface HiringReportSnapshot {
     modes: ModeCounts;
     /** Active postings flagged open to new grads. */
     newGradFriendly: number;
-    /**
-     * Advertised-pay distribution, benchmark-gated and under the employer-share
-     * cap. nationalHeldByEmployerShare is true when the national row cleared the
-     * size gate but one employer holds more than the cap allows.
-     */
-    salary: BenchmarkSummary & { nationalHeldByEmployerShare: boolean };
+    /** Advertised-pay medians from the one salary engine (each employer once, tiered). */
+    salary: BenchmarkSummary;
     disclosure: DisclosureCounts;
 }
 
@@ -136,27 +131,14 @@ async function countByState(now: Date): Promise<CountGroup[]> {
     );
 }
 
-async function loadSalarySummary(now: Date): Promise<HiringReportSnapshot['salary']> {
-    // Same shape as loadBenchmarkSummary in EmployerBenchmarkWidget.tsx, but
-    // scoped to the report's active-inventory filter so the pay table and
-    // the posting counts describe the same population.
-    const rows = await prisma.job.findMany({
-        where: {
-            ...activeIndexableJobWhere(now),
-            salaryIsEstimated: false,
-            state: { not: null },
-            normalizedMinSalary: { not: null },
-            normalizedMaxSalary: { not: null },
-        },
-        select: {
-            state: true,
-            employer: true,
-            normalizedMinSalary: true,
-            normalizedMaxSalary: true,
-        },
-    });
-    const { national, states, nationalHeld } = summarizeCappedBenchmarks(rows);
-    return { national, states, nationalHeldByEmployerShare: nationalHeld !== null };
+/**
+ * The report's pay table: the one salary pool (activeIndexableJobWhere
+ * composed inside fetchNpAnalyticsRows, so it is the report's own inventory
+ * filter too) through the one engine. States from rows with a state; the
+ * national row over every row, exactly as /salary-guide computes it.
+ */
+async function loadSalarySummary(): Promise<HiringReportSnapshot['salary']> {
+    return summarizeBenchmarkPool(await fetchNpAnalyticsRows());
 }
 
 async function aggregateHiringReportSnapshot(): Promise<HiringReportSnapshot> {
@@ -180,7 +162,7 @@ async function aggregateHiringReportSnapshot(): Promise<HiringReportSnapshot> {
         prisma.job.count({ where: { ...where, isRemote: true } }),
         prisma.job.count({ where: { ...where, isHybrid: true, isRemote: false } }),
         prisma.job.count({ where: { ...where, newGradFriendly: true } }),
-        loadSalarySummary(now),
+        loadSalarySummary(),
         prisma.job.count({
             where: {
                 ...where,

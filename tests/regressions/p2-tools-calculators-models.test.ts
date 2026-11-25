@@ -38,8 +38,8 @@ import {
 import { billableHours, computeTakeHome, type TakeHomeInputs } from '@/components/tools/take-home-model';
 import { colAdjusted, compareCities, equivalentSalary } from '@/components/tools/col-model';
 import {
+  BENCHMARK_FULL_MIN_EMPLOYERS,
   BENCHMARK_MIN_EMPLOYERS,
-  BENCHMARK_MIN_POSTINGS,
   classifyOffer,
   summarizeBenchmarks,
   type BenchmarkInputRow,
@@ -400,70 +400,96 @@ describe('public salary benchmark', () => {
     normalizedMaxSalary: max,
   });
 
-  /** n postings spread across `employers` distinct employers. */
+  /** n postings spread across `employers` distinct employers, all at one salary. */
   const rows = (state: string, n: number, employers: number, salary = 130_000): BenchmarkInputRow[] =>
     Array.from({ length: n }, (_, i) => row(state, `Employer ${i % employers}`, salary, salary));
 
-  it('suppresses a state below the posting threshold', () => {
-    const { states } = summarizeBenchmarks(rows('Texas', BENCHMARK_MIN_POSTINGS - 1, BENCHMARK_MIN_EMPLOYERS));
-    expect(states).toHaveLength(0);
+  /** One posting per employer, employer i at base + i * step. */
+  const spread = (state: string, employers: number, base = 100_000, step = 5_000): BenchmarkInputRow[] =>
+    Array.from({ length: employers }, (_, i) => row(state, `Employer ${i}`, base + i * step, base + i * step));
+
+  it('the tiers count employers: a median at 5, the 25th to 75th percentile range at 10', () => {
+    expect(BENCHMARK_MIN_EMPLOYERS).toBe(5);
+    expect(BENCHMARK_FULL_MIN_EMPLOYERS).toBe(10);
   });
 
-  it('suppresses a state whose postings all come from too few employers', () => {
-    // Plenty of postings, but they would expose one organisation's pay scale.
+  it('suppresses a state below the median tier, however many postings it has', () => {
+    // Forty postings from four employers is four data points, not forty.
     const { states } = summarizeBenchmarks(rows('Texas', 40, BENCHMARK_MIN_EMPLOYERS - 1));
     expect(states).toHaveLength(0);
   });
 
-  it('publishes a state that clears both thresholds', () => {
-    const { states } = summarizeBenchmarks(rows('Texas', BENCHMARK_MIN_POSTINGS, BENCHMARK_MIN_EMPLOYERS));
-    expect(states).toHaveLength(1);
-    expect(states[0].scope).toBe('Texas');
-    expect(states[0].postings).toBe(BENCHMARK_MIN_POSTINGS);
-    expect(states[0].employers).toBe(BENCHMARK_MIN_EMPLOYERS);
+  it('publishes a median with no quartiles from 5 to 9 employers', () => {
+    for (const n of [BENCHMARK_MIN_EMPLOYERS, BENCHMARK_FULL_MIN_EMPLOYERS - 1]) {
+      const { states } = summarizeBenchmarks(spread('Texas', n));
+      expect(states).toHaveLength(1);
+      expect(states[0]).toMatchObject({ scope: 'Texas', tier: 'median', employers: n, postings: n, p25: null, p75: null });
+      expect(states[0].median).toBeGreaterThan(0);
+    }
   });
 
-  it('computes median and quartiles over posting midpoints', () => {
+  it('publishes the 25th and 75th percentiles at 10 or more employers', () => {
+    const { states } = summarizeBenchmarks(spread('Ohio', BENCHMARK_FULL_MIN_EMPLOYERS));
+    // Ten employers at 100k to 145k in 5k steps: interpolated percentiles,
+    // on the $500 display grid.
+    expect(states[0]).toMatchObject({ tier: 'full', employers: 10, median: 122_500, p25: 111_500, p75: 134_000 });
+  });
+
+  it('counts each employer once, at the median of the distinct ranges it advertises', () => {
+    // One employer posting the same 200k range 30 times used to be 30 of 34
+    // data points and set the median. Counted once, it is 1 of 5.
     const input: BenchmarkInputRow[] = [
-      row('Ohio', 'A', 100_000, 100_000),
-      row('Ohio', 'B', 110_000, 110_000),
-      row('Ohio', 'C', 120_000, 120_000),
-      row('Ohio', 'A', 130_000, 130_000),
-      row('Ohio', 'B', 140_000, 140_000),
+      ...Array.from({ length: 30 }, () => row('Ohio', 'Big Employer', 200_000, 200_000)),
+      row('Ohio', 'B', 100_000, 100_000),
+      row('Ohio', 'C', 110_000, 110_000),
+      row('Ohio', 'D', 120_000, 120_000),
+      row('Ohio', 'E', 130_000, 130_000),
     ];
     const { states } = summarizeBenchmarks(input);
-    expect(states[0].median).toBe(120_000);
-    expect(states[0].p25).toBe(110_000);
-    expect(states[0].p75).toBe(130_000);
+    expect(states[0]).toMatchObject({ employers: 5, postings: 34, median: 120_000 });
+
+    // An employer with two distinct ranges counts once, at their median.
+    const twoRanges = summarizeBenchmarks([
+      row('Iowa', 'A', 100_000, 100_000),
+      row('Iowa', 'A', 140_000, 140_000),
+      row('Iowa', 'A', 140_000, 140_000),
+      ...spread('Iowa', 4, 150_000).map((r, i) => ({ ...r, employer: `Other ${i}` })),
+    ]).states[0];
+    expect(twoRanges.employers).toBe(5);
+    // A sits at 120k (the median of its two distinct ranges, the repeat
+    // ignored), below the four others at 150k to 165k.
+    expect(twoRanges.median).toBe(155_000);
   });
 
   it('uses the midpoint of a posted range, not its floor or ceiling', () => {
-    const input: BenchmarkInputRow[] = Array.from({ length: 5 }, (_, i) =>
-      row('Ohio', `Employer ${i % BENCHMARK_MIN_EMPLOYERS}`, 100_000, 200_000),
+    const input: BenchmarkInputRow[] = Array.from({ length: BENCHMARK_MIN_EMPLOYERS }, (_, i) =>
+      row('Ohio', `Employer ${i}`, 100_000, 200_000),
     );
     const { states } = summarizeBenchmarks(input);
     expect(states[0].median).toBe(150_000);
-    expect(states[0].p25).toBe(150_000);
-    expect(states[0].p75).toBe(150_000);
   });
 
   it('never returns anything employer-identifying', () => {
-    const { national, states } = summarizeBenchmarks(rows('Texas', 20, 5));
+    const { national, states } = summarizeBenchmarks(spread('Texas', 12));
     const serialized = JSON.stringify({ national, states });
     expect(serialized).not.toContain('Employer 0');
     expect(Object.keys(states[0]).sort()).toEqual(
-      ['employers', 'median', 'p25', 'p75', 'postings', 'scope'].sort(),
+      ['employers', 'median', 'p25', 'p75', 'postings', 'scope', 'tier'].sort(),
     );
   });
 
-  it('drops rows with no state, no employer, or no pay', () => {
-    const { national } = summarizeBenchmarks([
-      ...rows('Texas', BENCHMARK_MIN_POSTINGS, BENCHMARK_MIN_EMPLOYERS),
-      { state: null, employer: 'A', normalizedMinSalary: 200_000, normalizedMaxSalary: 200_000 },
+  it('drops rows with no state or no pay; a posting naming no employer is an employer of its own', () => {
+    const { states, national } = summarizeBenchmarks([
+      ...spread('Texas', BENCHMARK_MIN_EMPLOYERS - 1),
+      // Unnamed: one more employer, never one big anonymous employer.
       { state: 'Texas', employer: null, normalizedMinSalary: 200_000, normalizedMaxSalary: 200_000 },
-      { state: 'Texas', employer: 'A', normalizedMinSalary: null, normalizedMaxSalary: null },
+      // No state: outside both the state rows and this pooled national row.
+      { state: null, employer: 'Elsewhere', normalizedMinSalary: 200_000, normalizedMaxSalary: 200_000 },
+      // No pay: missing data, not a data point.
+      { state: 'Texas', employer: 'No Pay', normalizedMinSalary: null, normalizedMaxSalary: null },
     ]);
-    expect(national?.postings).toBe(BENCHMARK_MIN_POSTINGS);
+    expect(states[0]).toMatchObject({ scope: 'Texas', employers: BENCHMARK_MIN_EMPLOYERS, postings: BENCHMARK_MIN_EMPLOYERS });
+    expect(national).toMatchObject({ employers: BENCHMARK_MIN_EMPLOYERS, postings: BENCHMARK_MIN_EMPLOYERS });
   });
 
   it('returns no national row when the pool itself is too thin', () => {
@@ -471,17 +497,17 @@ describe('public salary benchmark', () => {
     expect(national).toBeNull();
   });
 
-  it('classifies an offer against the published quartiles', () => {
-    const { states } = summarizeBenchmarks([
-      row('Ohio', 'A', 100_000, 100_000),
-      row('Ohio', 'B', 110_000, 110_000),
-      row('Ohio', 'C', 120_000, 120_000),
-      row('Ohio', 'A', 130_000, 130_000),
-      row('Ohio', 'B', 140_000, 140_000),
-    ]);
-    expect(classifyOffer(90_000, states[0])).toBe('below');
-    expect(classifyOffer(120_000, states[0])).toBe('competitive');
-    expect(classifyOffer(200_000, states[0])).toBe('above');
+  it('classifies an offer against the quartiles at the full tier, and not at all below it', () => {
+    const full = summarizeBenchmarks(spread('Ohio', BENCHMARK_FULL_MIN_EMPLOYERS)).states[0];
+    expect(classifyOffer(90_000, full)).toBe('below');
+    expect(classifyOffer(122_500, full)).toBe('competitive');
+    expect(classifyOffer(200_000, full)).toBe('above');
+
+    // A median-tier row has no range to grade an offer on.
+    const medianOnly = summarizeBenchmarks(spread('Ohio', BENCHMARK_MIN_EMPLOYERS)).states[0];
+    expect(medianOnly.tier).toBe('median');
+    expect(classifyOffer(90_000, medianOnly)).toBeNull();
+    expect(classifyOffer(200_000, medianOnly)).toBeNull();
   });
 });
 

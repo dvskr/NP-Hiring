@@ -67,11 +67,7 @@ import {
 } from './state-practice-authority';
 import { STAT_SOURCES, type StatSource } from './stats-sources';
 import { getNeighboringStates } from './pseo/neighboring-states';
-import {
-    BENCHMARK_MIN_EMPLOYERS,
-    BENCHMARK_MIN_POSTINGS,
-} from '../components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from './salary-guide-policy';
+import { BENCHMARK_MIN_EMPLOYERS } from '../components/tools/benchmark-model';
 import {
     LICENSE_GUIDE_FACTS,
     isLicenseGuideIndexable,
@@ -956,12 +952,22 @@ export function buildLicenseGuideFaq(
 }
 
 /**
+ * The posted-pay publishing rule for a state, in the salary engine's terms
+ * (lib/salary-report/stats.ts): a median once BENCHMARK_MIN_EMPLOYERS
+ * employers disclose pay, each counted once. Static copy, so it states the
+ * rule and never a figure.
+ */
+function statePayRuleSentence(s: LicenseGuideState): string {
+    return `${brand.name} publishes a ${s.name} median of posted pay once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay on ${s.name} postings, each employer counted once however many postings it has.`;
+}
+
+/**
  * Data-free pay answer (spec4 B2): the cited BLS median plus the publishing
- * gate. It never states a state figure, because the static markdown (and
- * the faq_json synced from it) cannot know whether the gate is met.
+ * rule. It never states a state figure, because the static markdown (and
+ * the faq_json synced from it) cannot know whether the rule is met.
  */
 function payFaqAnswer(s: LicenseGuideState): string {
-    return `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The ${s.name} job market snapshot on this page reports the current ${s.code} figure whenever that gate is met.`;
+    return `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. ${statePayRuleSentence(s)} The ${s.name} job market snapshot on this page reports the current ${s.code} figure whenever that rule is met.`;
 }
 
 function buildMarkdown(s: LicenseGuideState, facts: LicenseGuideFactsTable): string {
@@ -1008,7 +1014,7 @@ ${renewalParagraph(s, factRows.length > 0)}
 
 ## What ${NP}s earn in ${s.name}
 
-The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2035.formatted} (${STAT_SOURCES.blsGrowth2035.source}). ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them. The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
+The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2035.formatted} (${STAT_SOURCES.blsGrowth2035.source}). ${statePayRuleSentence(s)} The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
 
 ## Frequently asked questions
 

@@ -328,13 +328,18 @@ function formatK(value: number): string {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * PUBLISHED-AGGREGATE SAFETY (review P9 #2c / #2d)
+ * PUBLISHED-AGGREGATE SAFETY (review P9 #2c / #2d, salary build 2026-11)
  *
  * Every posting-derived salary figure that reaches a public surface
- * (salary-guide hub, 51 state pages, calculator base) must be computed
- * over THIS pool and gated by components/tools/benchmark-model.ts
- * (n ≥ 5 postings, ≥ 3 distinct employers, median/p25/p75 — the one
- * surface the live review found built right). The old aggregates ran
+ * (salary-guide hub, 51 state pages, specialty pages, reports, tools) is
+ * computed over THIS pool and summarized by the one engine
+ * (lib/salary-report/stats.ts through components/tools/benchmark-model.ts):
+ * each employer counts once, a median at 5 or more employers, quartiles at
+ * 10 or more. lib/salary-analytics.ts composes it with
+ * activeIndexableJobWhere() (the dead-link health check and
+ * GLOBAL_EXCLUSIONS every listing surface applies); that composition lives
+ * there because this module is also imported by client components, and the
+ * listing predicate pulls the Prisma runtime in. The old aggregates ran
  * mean-of-min/max over every published row: 37.5% of the salaried pool
  * was psychiatrist/PA/podiatrist/CNM pay, hourly locum rows annualized
  * to $728k, and 11 states published an "average" of exactly one posting.
@@ -353,19 +358,36 @@ export const CONTRACT_CADENCE_PERIODS = [
 ] as const;
 
 /**
- * Prisma predicate for the analytics-eligible salary pool: published,
- * non-expired, non-estimated, confidence at or above the analytics
- * threshold, annual-cadence, with a normalized salary present.
- *
- * PROFESSION SCOPING IS NOT IN THIS PREDICATE — no professionClass column
- * exists yet (quarantine package owns that migration). Callers MUST also
- * apply `isNpEligibleTitle` over the fetched rows (deterministic title
- * heuristic) until the column lands, and label figures accordingly.
+ * The role a posted-pay figure describes. Nurse practitioners are the
+ * board's figure everywhere; nurse anesthetists and nurse midwives have
+ * their own BLS occupations (29-1151, 29-1161) and are reported only on
+ * their own specialty pages, never inside an NP figure. CNS postings belong
+ * to neither and enter no figure.
  */
-export function npSalaryAnalyticsWhere(now: Date = new Date()): Prisma.JobWhereInput {
+export type SalaryRoleScope = 'np' | 'aprn_crna' | 'aprn_midwife';
+
+/** The classifier's ProfessionClass for each scope (prisma/schema.prisma). */
+export const SALARY_SCOPE_PROFESSION_CLASS: Readonly<Record<SalaryRoleScope, string>> = {
+  np: 'np_eligible',
+  aprn_crna: 'aprn_crna',
+  aprn_midwife: 'aprn_midwife',
+};
+
+/**
+ * Prisma predicate for the analytics-eligible salary pool: non-expired,
+ * non-estimated, confidence at or above the analytics threshold,
+ * annual-cadence, with BOTH normalized bounds (a single figure has no range
+ * and does not count, the engine's rule), and the scope's profession class
+ * or a NULL class that the title screen judges over the fetched rows
+ * (isInSalaryRoleScope). lib/salary-analytics.ts ANDs this with
+ * activeIndexableJobWhere(), which carries isPublished, the dead-link health
+ * check and GLOBAL_EXCLUSIONS.
+ */
+export function npSalaryAnalyticsWhere(now: Date = new Date(), scope: SalaryRoleScope = 'np'): Prisma.JobWhereInput {
   return {
     isPublished: true,
     normalizedMinSalary: { not: null },
+    normalizedMaxSalary: { not: null },
     salaryIsEstimated: false,
     salaryConfidence: { gte: SALARY_ANALYTICS_MIN_CONFIDENCE },
     AND: [
@@ -374,26 +396,35 @@ export function npSalaryAnalyticsWhere(now: Date = new Date()): Prisma.JobWhereI
       // notIn alone would drop NULL-period legacy rows (SQL NOT IN + NULL);
       // those are annual-cadence rows from before period storage existed.
       { OR: [{ salaryPeriod: null }, { salaryPeriod: { notIn: [...CONTRACT_CADENCE_PERIODS] } }] },
+      // The role: the classifier's verdict, or an unclassified row whose
+      // title the screen below judges in memory.
+      { OR: [{ professionClass: SALARY_SCOPE_PROFESSION_CLASS[scope] as Prisma.JobWhereInput['professionClass'] }, { professionClass: null }] },
     ],
   };
 }
 
 /**
- * INTERIM profession gate (deterministic, title-only) until the
- * quarantine package's `professionClass` column + backfill land.
+ * Title screen for rows the profession classifier has not reached
+ * (professionClass NULL); a classified row is judged by its class alone.
  *
- * A title is NP-eligible when it carries an NP/APRN credential token and
- * no non-NP provider veto. The veto wins on dual-role titles
- * ("Psychiatrist/PMHNP") — conservative by design for ANALYTICS: better
- * to drop a genuine NP row from an average than to average psychiatrist
- * pay into "NP salary" again. This heuristic gates aggregates only; it
- * never unpublishes a listing.
+ * A title is NP-eligible when it carries an NP credential token, no non-NP
+ * provider veto and no other APRN role token. The veto wins on dual-role
+ * titles ("Psychiatrist/PMHNP", "CRNA/NP"): conservative by design for
+ * ANALYTICS, because a CRNA posting (BLS median $236,590) pulls an NP median
+ * up exactly as psychiatrist pay did. This heuristic gates aggregates only;
+ * it never unpublishes a listing.
  */
 const NP_TITLE_POSITIVE_RE =
-  /\b(nurse\s+practitioner|np|aprn|arnp|pmhnp|fnp|agnp|agacnp|agpcnp|whnp|pnp|nnp|acnp|acnpc|enp|dnp|crna|cnm|cns|nurse\s+midwife|nurse\s+anesthetist|clinical\s+nurse\s+specialist)\b/i;
+  /\b(nurse\s+practitioner|np|aprn|arnp|pmhnp|fnp|agnp|agacnp|agpcnp|whnp|pnp|nnp|acnp|acnpc|enp|dnp)\b/i;
 
 const NP_TITLE_VETO_RE =
   /\b(psychiatrist|physician|psychologist|podiatrist|podiatric|dpm|dentist|dds|dmd|optometrist|chiropractor|physician\s+assistant|physician\s+associate|pa-c|rn\s+only|medical\s+director)\b|\(pa\)/i;
+
+/** The other APRN roles: never inside an NP figure, and each scope's own positive token. */
+const CRNA_TITLE_RE = /\b(crna|nurse\s+anesthetists?)\b/i;
+const MIDWIFE_TITLE_RE = /\b(cnm|nurse[\s-]+midwi(?:fe|ves|fery))\b/i;
+const CNS_TITLE_RE = /\b(cns|clinical\s+nurse\s+specialists?)\b/i;
+const APRN_OTHER_ROLE_RE = new RegExp(`${CRNA_TITLE_RE.source}|${MIDWIFE_TITLE_RE.source}|${CNS_TITLE_RE.source}`, 'i');
 
 /**
  * MD/DO are vetoed ONLY in credential context — never as bare tokens.
@@ -436,14 +467,35 @@ export function isNpEligibleTitle(title: string | null | undefined): boolean {
   if (!title) return false;
   if (NP_TITLE_VETO_RE.test(title)) return false;
   if (NP_TITLE_MD_DO_CREDENTIAL_RE.test(title)) return false;
+  if (APRN_OTHER_ROLE_RE.test(title)) return false;
   return NP_TITLE_POSITIVE_RE.test(title);
 }
 
-/** Row shape the aggregate pages fetch — matches benchmark-model's input. */
+/** The title screen for an unclassified row in one of the two APRN scopes. */
+function isAprnRoleTitle(title: string | null | undefined, scope: Exclude<SalaryRoleScope, 'np'>): boolean {
+  if (!title) return false;
+  if (NP_TITLE_VETO_RE.test(title) || NP_TITLE_MD_DO_CREDENTIAL_RE.test(title)) return false;
+  return (scope === 'aprn_crna' ? CRNA_TITLE_RE : MIDWIFE_TITLE_RE).test(title);
+}
+
+/**
+ * True when a fetched row belongs in the scope's figure: its profession
+ * class when the classifier set one, else the title screen.
+ */
+export function isInSalaryRoleScope(
+  row: { title: string | null; professionClass?: string | null },
+  scope: SalaryRoleScope = 'np',
+): boolean {
+  if (row.professionClass != null) return row.professionClass === SALARY_SCOPE_PROFESSION_CLASS[scope];
+  return scope === 'np' ? isNpEligibleTitle(row.title) : isAprnRoleTitle(row.title, scope);
+}
+
+/** Row shape the aggregate pages fetch: benchmark-model's input plus the screen's columns. */
 export interface NpSalaryAnalyticsRow {
   state: string | null;
   employer: string | null;
   title: string | null;
+  professionClass?: string | null;
   normalizedMinSalary: number | null;
   normalizedMaxSalary: number | null;
 }
@@ -453,13 +505,17 @@ export const NP_SALARY_ANALYTICS_SELECT = {
   state: true,
   employer: true,
   title: true,
+  professionClass: true,
   normalizedMinSalary: true,
   normalizedMaxSalary: true,
 } as const;
 
-/** Apply the interim profession gate over fetched rows. */
-export function filterNpEligibleRows<T extends { title: string | null }>(rows: readonly T[]): T[] {
-  return rows.filter((row) => isNpEligibleTitle(row.title));
+/** Keep the fetched rows that belong in the scope's figure (isInSalaryRoleScope). */
+export function filterSalaryScopeRows<T extends { title: string | null; professionClass?: string | null }>(
+  rows: readonly T[],
+  scope: SalaryRoleScope = 'np',
+): T[] {
+  return rows.filter((row) => isInSalaryRoleScope(row, scope));
 }
 
 /**

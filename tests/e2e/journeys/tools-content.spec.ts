@@ -619,11 +619,12 @@ test.describe('/tools/licensure-checker', () => {
         await expect(page.getByText('Set by the Texas board of nursing')).toBeVisible();
         await expect(page.getByText(/\d+\s*(?:-|to)\s*\d+ weeks/)).toHaveCount(0);
         await expect(page.locator('a[href="/jobs/state/texas"]').first()).toBeVisible();
-        // Texas clears the n ≥ 5 / 3-employer gate today: the salary card must be a true median with its sample.
-        await expect(page.getByText('Median Salary in Texas')).toBeVisible();
-        await expect(page.getByText('Salaried Postings')).toBeVisible();
+        // Texas clears the median tier today (5 or more employers that disclose
+        // pay, each counted once): the salary card must be a true median with its n.
+        await expect(page.getByText('Median Posted Pay in Texas')).toBeVisible();
+        await expect(page.getByText('Employers disclosing pay')).toBeVisible();
         const sample = Number(
-            (await page.getByText('Salaried Postings').locator('xpath=preceding-sibling::div[1]').innerText()).replace(/,/g, ''),
+            (await page.getByText('Employers disclosing pay').locator('xpath=preceding-sibling::div[1]').innerText()).replace(/,/g, ''),
         );
         expect(sample).toBeGreaterThanOrEqual(5);
     });
@@ -668,11 +669,11 @@ test.describe('/tools/licensure-checker', () => {
         // Wyoming is below the publishing gate on every database this suite has seen.
         await page.locator('#lic-state').selectOption('Wyoming');
         await expect(page.getByRole('heading', { name: 'Wyoming Licensure' })).toBeVisible();
-        const card = page.getByText('Median Salary in Wyoming');
+        const card = page.getByText('Median Posted Pay in Wyoming');
         if ((await card.count()) > 0) {
-            // If it ever clears the gate, the sample shown must actually clear it.
+            // If it ever clears the median tier, the employers shown must actually clear it.
             const sample = Number(
-                (await page.getByText('Salaried Postings').locator('xpath=preceding-sibling::div[1]').innerText()).replace(/,/g, ''),
+                (await page.getByText('Employers disclosing pay').locator('xpath=preceding-sibling::div[1]').innerText()).replace(/,/g, ''),
             );
             expect(sample).toBeGreaterThanOrEqual(5);
         }
@@ -800,7 +801,8 @@ test.describe('/tools/salary-benchmark', () => {
         const median = firstUsd(await headline.innerText());
         expect(median).toBeGreaterThanOrEqual(p25);
         expect(median).toBeLessThanOrEqual(p75);
-        await expect(page.getByText(/from [\d,]+ published .* postings that disclose pay, across [\d,]+ employers/)).toBeVisible();
+        // The n is employers, each counted once; postings are context.
+        await expect(page.getByText(/across [\d,]+ employers that disclose pay on [\d,]+ published .* postings/)).toBeVisible();
 
         const offer = page.locator('#benchmark-offer');
         await offer.fill(String(p25 - 10_000));
@@ -837,9 +839,11 @@ test.describe('/tools/salary-benchmark', () => {
         await expect(page.getByText('Median posted salary · all states')).toBeVisible();
     });
 
-    test('minimum-sample gate is stated on the page (5 postings from 3 employers)', async ({ page }) => {
+    test('the engine tiers are stated on the page (a median at 5 employers, the middle half at 10)', async ({ page }) => {
         await gotoOk(page, PATH);
-        await expect(page.getByText(/at least 5 salaried postings from at least 3 distinct employers/).first()).toBeVisible();
+        await expect(page.getByText(/median is published once at least 5 employers disclose pay/).first()).toBeVisible();
+        await expect(page.getByText(/once at least 10 do/).first()).toBeVisible();
+        await expect(page.getByText(/no single employer/)).toHaveCount(0);
         await expect(page.getByText(/Aggregates only/)).toBeVisible();
         // Every state the picker offers must clear the gate it states; nothing below it is selectable.
         const options = await page.locator('#benchmark-state option').evaluateAll((els) =>
@@ -907,8 +911,10 @@ test.describe('/tools/salary-benchmark', () => {
         const published = await page.locator('#benchmark-state option').evaluateAll((els) => els.map((e) => (e as HTMLOptionElement).value).filter(Boolean));
         const contradictions = published.filter((s) => smallStates.includes(s));
         expect(contradictions, 'states published by the benchmark tool but gated out of /salary-guide').toEqual([]);
-        const toolLine = await page.getByText(/from [\d,]+ published .* postings that disclose pay/).innerText();
-        const toolSample = Number(toolLine.match(/from ([\d,]+) published/)![1].replace(/,/g, ''));
+        // The widget line: "across N employers that disclose pay on M published ... postings".
+        // M (postings) is compared with the guide's posting count, like with like.
+        const toolLine = await page.getByText(/employers that disclose pay on [\d,]+ published/).innerText();
+        const toolSample = Number(toolLine.match(/disclose pay on ([\d,]+) published/)![1].replace(/,/g, ''));
         expect(toolSample, 'benchmark national sample vs salary-guide national sample').toBe(nationalSample);
     });
 });

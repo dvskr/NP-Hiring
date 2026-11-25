@@ -21,6 +21,7 @@ import {
 // L-05: a related city that is a curated metro links its guide, not the
 // city form that only redirects there.
 import { localJobsPath } from '@/lib/city-link-path';
+import { ogCitySalaryParams } from '@/app/api/og/city/salary-label';
 // CQ-02: a stored city value that is not a town is never counted or linked.
 import { isTallyCity } from '@/lib/pseo/city-tally';
 import JobCard from '@/components/JobCard';
@@ -445,21 +446,20 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
         // since P3 #8). Only params it reads are passed:
         //   city     headline second line ("in {city}").
         //   jobs     "Open Positions" tile.
-        //   salary   "Salary Range" tile; omitted entirely below the
-        //            benchmark gate, so the card drops the tile instead of
-        //            showing a fabricated band (same omit-or-cite rule the
-        //            page body follows). The band is the gated middle half.
+        //   salary   the salary tile; omitted entirely below the median
+        //            tier, so the card drops the tile instead of showing a
+        //            fabricated band (same omit-or-cite rule the page body
+        //            follows). The gated middle half at the full tier, the
+        //            median under the "Median Posted Pay" label (with
+        //            `label`) at the median tier, which has no quartiles.
         //   category deliberately NOT passed: this is the all-specialty hub.
         //   shortage deliberately NOT passed: the only data behind that badge
         //            is the donor behavioral-health shortage flag, gated to
         //            the one category that designation describes.
-        const ogSalary = facts.benchmark
-            ? `${formatK(facts.benchmark.p25)} to ${formatK(facts.benchmark.p75)}`
-            : '';
         const ogParams = new URLSearchParams({
             city: `${displayName}, ${stateCode}`,
             jobs: String(facts.total),
-            ...(ogSalary && { salary: ogSalary }),
+            ...ogCitySalaryParams(facts.benchmark, formatK),
         });
         const ogImageUrl = `/api/og/city?${ogParams.toString()}`;
 
@@ -560,17 +560,20 @@ const bandHeadingStyle = {
 
 /**
  * CITY-C5: one paragraph, two branches, the national reference in both;
- * the gated middle half as a divided list, and the two pay resources.
+ * the gated figures as a divided list (the middle half only at the full
+ * tier, the median alone at the median tier), and the two pay resources.
  */
 function CityPayCard({ city, facts, stateName, stateSlug }: { city: string; facts: ListingFacts; stateName: string; stateSlug: string }) {
     const row = facts.benchmark;
-    const percentiles = row
-        ? [
-            { label: '25th percentile', value: formatK(row.p25) },
-            { label: 'Median', value: formatK(row.median) },
-            { label: '75th percentile', value: formatK(row.p75) },
-        ]
-        : [];
+    const percentiles = !row
+        ? []
+        : row.p25 !== null && row.p75 !== null
+            ? [
+                { label: '25th percentile', value: formatK(row.p25) },
+                { label: 'Median', value: formatK(row.median) },
+                { label: '75th percentile', value: formatK(row.p75) },
+            ]
+            : [{ label: 'Median', value: formatK(row.median) }];
     const resources = [
         { href: `/salary-guide/${stateSlug}`, label: `${stateName} salary guide` },
         { href: '/tools/salary-benchmark', label: 'Salary benchmark tool' },

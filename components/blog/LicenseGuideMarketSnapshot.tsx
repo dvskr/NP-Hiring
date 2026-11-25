@@ -31,10 +31,9 @@ import type { CSSProperties, ReactNode } from 'react';
 import { brand } from '@/config/brand';
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import { localJobsPath } from '@/lib/city-link-path';
-import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
 import { nlcTableLabel } from '@/lib/blog-license-guides';
-import { pluralize } from '@/lib/display-text';
+import { formatCount, pluralize } from '@/lib/display-text';
 import type { CityCount, EmployerFact, ListingFacts } from '@/lib/pseo/listing-facts';
 import { NLC_VERIFIED_LABEL, type PracticeEnvironment } from '@/lib/pseo/practice-environment';
 import {
@@ -189,15 +188,18 @@ function employerNode(employer: EmployerFact): ReactNode {
   return <span key={label}>{label}</span>;
 }
 
-/** Median sentence from the gated figure, or the publishing-gate sentence. */
+/**
+ * Median sentence from the gated figure, or the publishing-rule sentence.
+ * The n is employers, each counted once (the salary engine's rule), so a
+ * figure never reads as if forty postings from one employer were forty data
+ * points. The quartiles are not part of this sentence, so a median-tier
+ * figure (p25 and p75 null) reads the same as a full-tier one.
+ */
 export function buildSnapshotPaySentence(stateName: string, salary: GatedSalary): string {
   if (salary.gatePassed && salary.median !== null) {
-    return `Median posted pay in ${stateName}: ${formatDollars(salary.median)} across ${salary.postings} postings with disclosed pay from ${salary.employers} employers.`;
+    return `Median posted pay in ${stateName}: ${formatDollars(salary.median)} across ${formatCount(salary.employers, 'employer')} that disclose pay.`;
   }
-  // CQ-15: the gate also withholds a median when one employer holds more
-  // than the cap, so the sentence states the whole rule instead of claiming
-  // that too few postings disclose pay.
-  return `A ${stateName} median appears here once there are at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`;
+  return `A ${stateName} median appears here once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once however many postings it has.`;
 }
 
 function Paragraph({ children }: { children: ReactNode }) {

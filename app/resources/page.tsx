@@ -265,7 +265,8 @@ export default async function ResourcesPage() {
       medianSalary: s.median,
       p25: s.p25,
       p75: s.p75,
-      jobCount: s.postings,
+      // The engine's n: employers behind the median, each counted once.
+      employers: s.employers,
     }))
     .sort((a, b) => b.medianSalary - a.medianSalary);
 

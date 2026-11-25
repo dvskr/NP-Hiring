@@ -251,24 +251,40 @@ describe('cost-of-living comparator (P2 #5)', () => {
     expect(clientComponent).not.toMatch(/import \{[^}]*\} from '\.\/city-picker-data'/);
   });
 
-  it('excludes inferred-pay rows from the aggregation (via the gated analytics pool)', () => {
-    // P9 #2c/#2d: the tool now aggregates through npSalaryAnalyticsWhere
-    // (which carries salaryIsEstimated: false plus the confidence, expiry,
-    // and cadence gates) + the NP-title filter + benchmark medians, instead
-    // of its own inline predicate over every published row.
-    const src = read(routeFile('/tools/cost-of-living-comparison'));
-    expect(src).toContain('npSalaryAnalyticsWhere');
-    expect(src).toContain('filterNpEligibleRows');
-    // CQ-15: the state and city medians sit under the employer-share cap, and
-    // the page states that rule wherever it states the gate.
-    expect(src).toContain('summarizeCappedBenchmarks');
-    expect(readCode(routeFile('/tools/cost-of-living-comparison'))).not.toMatch(/\bsummarizeBenchmarks\(/);
-    expect(src.match(/no single employer contributing more than \$\{MAX_EMPLOYER_SHARE_PERCENT\}%|none contributing more than \$\{MAX_EMPLOYER_SHARE_PERCENT\}%/g) ?? []).toHaveLength(2);
-    // readCode: the page's doc comment DISCUSSES the removed `_avg` call —
+  it('excludes inferred-pay rows from the aggregation (via the shared salary pool)', () => {
+    // P9 #2c/#2d: the tool aggregates over salaryPoolWhere('np') (the
+    // listing predicate AND npSalaryAnalyticsWhere, which carries
+    // salaryIsEstimated: false plus the confidence, expiry, and cadence
+    // gates), the profession screen, and the alias-merged employer identity,
+    // instead of its own inline predicate over every published row.
+    const code = readCode(routeFile('/tools/cost-of-living-comparison'));
+    expect(code).toContain("salaryPoolWhere('np')");
+    expect(code).toContain("filterSalaryScopeRows(rows, 'np')");
+    expect(code).toContain('salaryEmployerIdentity(row.employer)');
+    // The state and city medians are the engine's, with each employer once.
+    expect(code).toMatch(/summarizeBenchmarks\(npRows\)\.states/);
+    expect(code).toMatch(/summarizeBenchmarks\(cityKeyedRows\)\.states/);
+    expect(code).not.toMatch(/summarizeCapped|salary-guide-gate|filterNpEligibleRows|MAX_EMPLOYER_SHARE_PERCENT|BENCHMARK_MIN_POSTINGS/);
+    // The sample each column reports is the engine's n: employers, not postings.
+    expect(code).toMatch(/sample: row\.employers/);
+    expect(code).not.toMatch(/sample: row\.postings/);
+    // readCode: the page's doc comment DISCUSSES the removed `_avg` call;
     // only code may not contain one.
-    expect(readCode(routeFile('/tools/cost-of-living-comparison'))).not.toContain('_avg');
+    expect(code).not.toContain('_avg');
     const utils = read('lib/salary-utils.ts');
     expect(utils).toContain('salaryIsEstimated: false');
+  });
+
+  it('states the engine rule wherever it states the gate, and never the retired cap', () => {
+    const src = read(routeFile('/tools/cost-of-living-comparison'));
+    // The FAQ and the assumptions panel both name the employer floor.
+    expect(src.match(/at least \$\{BENCHMARK_MIN_EMPLOYERS\} employers disclose/g) ?? []).toHaveLength(2);
+    expect(src).toContain('${ONE_EMPLOYER_NOTE}');
+    expect(src).not.toMatch(/no single employer|none contributing more than/i);
+    // The comparator labels each column's basis with its n in employers.
+    const comparator = readCode('components/tools/CostOfLivingComparator.tsx');
+    expect(comparator).toMatch(/median across \$\{employers\} that disclose pay/);
+    expect(comparator).not.toMatch(/postings with pay|with pay\)/);
   });
 
   it('handles an aggregation failure without taking the route down', () => {
@@ -492,23 +508,36 @@ describe('employer salary benchmark (P2 #17)', () => {
   it('aggregates on the server and passes only summarized rows to the client', () => {
     const widget = read('components/tools/EmployerBenchmarkWidget.tsx');
     expect(widget).not.toContain("'use client'");
-    // P10: the widget aggregates the salary guide's gated analytics pool
+    // P10: the widget aggregates the salary guide's analytics pool
     // (npSalaryAnalyticsWhere carries salaryIsEstimated: false) rather than a
-    // private query, so the two surfaces cannot publish different gates.
-    // CQ-15: under the same employer-share cap as /salary-guide, so the
-    // widget can never publish a state median the guide withholds.
-    expect(widget).toContain('summarizeCappedBenchmarkPool');
-    expect(widget).not.toMatch(/\bsummarizeBenchmarkPool\(/);
-    expect(widget).toContain('fetchNpAnalyticsRows');
+    // private query, and summarizes it with the same engine, so the two
+    // surfaces cannot publish different rules.
+    const widgetCode = readCode('components/tools/EmployerBenchmarkWidget.tsx');
+    expect(widgetCode).toContain('summarizeBenchmarkPool(await fetchNpAnalyticsRows())');
+    expect(widgetCode).not.toMatch(/summarizeCapped|salary-guide-gate/);
     expect(read('lib/salary-utils.ts')).toContain('salaryIsEstimated: false');
 
     const picker = read('components/tools/EmployerBenchmarkPicker.tsx');
     expect(picker).toContain("'use client'");
     expect(picker).not.toContain('prisma');
-    // The picker states the cap from the import-free policy module only.
-    expect(picker).toContain('MAX_EMPLOYER_SHARE_PERCENT');
-    expect(picker).not.toContain("from '@/lib/salary-guide-gate'");
+    // The picker states the engine rule from pure modules only: never
+    // lib/salary-analytics, which pulls Prisma into the client bundle.
+    expect(readCode('components/tools/EmployerBenchmarkPicker.tsx')).not.toMatch(/salary-analytics|salary-guide-gate|salary-guide-policy|MAX_EMPLOYER_SHARE_PERCENT/);
     expect(picker).not.toMatch(/identifiable|can be\s+identified/);
+  });
+
+  it('the picker prints quartiles and a standing only when the row has them', () => {
+    const picker = readCode('components/tools/EmployerBenchmarkPicker.tsx');
+    // Every quartile it formats comes from the narrowed range, never a
+    // nullable row field.
+    expect(picker).not.toMatch(/formatUsd\(row\.p25\)|formatUsd\(row\.p75\)/);
+    expect(picker).toContain('row.p25 !== null && row.p75 !== null');
+    // A median-tier row with an offer shows no standing and names the rule.
+    expect(picker).toMatch(/!standing && offerValue !== null && !range/);
+    expect(picker).toMatch(/appears once at least \{BENCHMARK_FULL_MIN_EMPLOYERS\} employers/);
+    // n is employers; the cap copy is gone.
+    expect(picker).toMatch(/across \{employerCount\(row\.employers\)\} that disclose pay/);
+    expect(picker).not.toMatch(/no single employer/i);
   });
 
   it('is placed on /for-employers as well as its own route', () => {
@@ -517,14 +546,16 @@ describe('employer salary benchmark (P2 #17)', () => {
     expect(employers).toContain('/tools/salary-benchmark');
   });
 
-  it('publishes the suppression thresholds on the page', () => {
+  it('publishes the engine thresholds on the page', () => {
     const src = read(routeFile('/tools/salary-benchmark'));
-    expect(src).toContain('BENCHMARK_MIN_POSTINGS');
-    expect(src).toContain('BENCHMARK_MIN_EMPLOYERS');
-    // CQ-15: the cap is stated with the gate, and the page no longer
-    // promises what two counts alone could not back.
-    expect(src).toContain("import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';");
-    expect(src.match(/no single employer contributing more than \$\{MAX_EMPLOYER_SHARE_PERCENT\}% of them/g) ?? []).toHaveLength(2);
+    // The FAQ and the assumptions panel state both tiers from the constants.
+    expect(src.match(/median is published once at least \$\{BENCHMARK_MIN_EMPLOYERS\} employers disclose pay/g) ?? []).toHaveLength(2);
+    expect(src.match(/once at least \$\{BENCHMARK_FULL_MIN_EMPLOYERS\} do/g) ?? []).toHaveLength(2);
+    expect(src).toContain('${ONE_EMPLOYER_NOTE}');
+    // The retired employer-share cap is gone, and the page still does not
+    // promise what the counts alone could not back.
+    expect(readCode(routeFile('/tools/salary-benchmark'))).not.toMatch(/MAX_EMPLOYER_SHARE_PERCENT|BENCHMARK_MIN_POSTINGS|salary-guide-policy/);
+    expect(src).not.toMatch(/no single employer|employer-share cap/i);
     expect(src).not.toContain('read out of an aggregate');
   });
 });

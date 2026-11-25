@@ -46,7 +46,7 @@ vi.mock('@/lib/pseo/listing-facts', async (importOriginal) => {
 
 import { GET } from '@/app/api/og/city/route';
 import { OG_CACHE_HEADERS, OG_SIZE } from '@/app/api/og/og-theme';
-import { OG_CITY_SALARY_LABELS, resolveOgCitySalaryLabel } from '@/app/api/og/city/salary-label';
+import { OG_CITY_SALARY_LABELS, ogCitySalaryParams, resolveOgCitySalaryLabel } from '@/app/api/og/city/salary-label';
 import { generateMetadata as metroMetadata } from '@/app/jobs/metro/[slug]/page';
 import { getListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import type { BenchmarkRow } from '@/components/tools/benchmark-model';
@@ -116,6 +116,35 @@ describe('resolveOgCitySalaryLabel: an allow-list, not free text', () => {
     });
 });
 
+describe('ogCitySalaryParams: the tile follows the salary engine tier', () => {
+    const k = (dollars: number): string => `$${Math.round(dollars / 1000)}K`;
+    const FULL: BenchmarkRow = { scope: 'Austin', tier: 'full', median: 128_000, p25: 115_000, p75: 142_000, postings: 16, employers: 12 };
+    const MEDIAN_ONLY: BenchmarkRow = { scope: 'Austin', tier: 'median', median: 128_000, p25: null, p75: null, postings: 9, employers: 6 };
+
+    it('sends the middle half under the default range label at the full tier, as before', () => {
+        expect(ogCitySalaryParams(FULL, k)).toEqual({ salary: '$115K to $142K' });
+    });
+
+    it('sends the median under the median label at the median tier, which has no quartiles', () => {
+        expect(ogCitySalaryParams(MEDIAN_ONLY, k)).toEqual({ salary: '$128K', label: MEDIAN });
+    });
+
+    it('sends nothing without a row, and never a null, NaN or $0 figure', () => {
+        expect(ogCitySalaryParams(null, k)).toEqual({});
+        for (const row of [FULL, MEDIAN_ONLY]) {
+            expect(Object.values(ogCitySalaryParams(row, k)).join(' ')).not.toMatch(/null|NaN|\$0K/);
+        }
+    });
+
+    it('the city and category-city pages build their card URL with it, never from raw quartiles', () => {
+        for (const rel of ['app/jobs/city/[slug]/page.tsx', 'lib/pseo/category-city-template.tsx']) {
+            const src = fs.readFileSync(path.join(process.cwd(), rel), 'utf8');
+            expect(src, rel).toContain('...ogCitySalaryParams(facts.benchmark, formatK),');
+            expect(src, rel).not.toMatch(/salary: `\$\{formatK\(facts\.benchmark\.p25\)\}/);
+        }
+    });
+});
+
 describe('/api/og/city salary tile label', () => {
     it('prints "Salary Range" when no label is sent, as every caller got before', async () => {
         const html = await renderCard(cardQuery({ city: 'Austin, TX', jobs: '12', salary: '$118K' }));
@@ -153,7 +182,8 @@ describe('/api/og/city salary tile label', () => {
 
 describe('the metro guide asks for the median label', () => {
     const BOSTON = 'boston-ma';
-    const benchmark: BenchmarkRow = { scope: 'Boston', median: 131_000, p25: 112_000, p75: 150_000, postings: 12, employers: 5 };
+    // Five employers: the engine's median tier, so the quartiles are null.
+    const benchmark: BenchmarkRow = { scope: 'Boston', tier: 'median', median: 131_000, p25: null, p75: null, postings: 12, employers: 5 };
     const facts = (row: BenchmarkRow | null): ListingFacts =>
         ({ total: 40, distinctPostings: 38, recency: { last30: 9 }, benchmark: row }) as unknown as ListingFacts;
 

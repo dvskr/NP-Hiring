@@ -51,6 +51,7 @@ import {
     specialtyNounPlural,
 } from '@/app/salary-guide/specialty/specialty-content';
 import { OCCUPATION_WAGES } from '@/lib/salary-guide-occupation-wages';
+import { salaryRoleScopeOf } from '@/lib/salary-guide-specialty';
 import { TEMPLATE_REFERENCE_NICHE_TERMS } from './brand-leak-scan';
 
 const ROOT = process.cwd();
@@ -182,7 +183,7 @@ describe('P1 #7 — derived ranges trace to the cited BLS median', () => {
 
 describe('P1 #7 / P9 #2c+#2d — live figures are gated medians, never means or $0', () => {
     it('hasReportedRange rejects spreads that would render "$X – $0"', () => {
-        const base = { medianSalary: 140000, jobCount: 9, gatePassed: true };
+        const base = { medianSalary: 140000, jobCount: 9, employers: 6, gatePassed: true };
         expect(hasReportedRange({ ...base, minSalary: 98000, maxSalary: 210000 })).toBe(true);
         expect(hasReportedRange({ ...base, minSalary: 98000, maxSalary: 0 })).toBe(false);
         expect(hasReportedRange({ ...base, minSalary: 0, maxSalary: 0 })).toBe(false);
@@ -193,7 +194,7 @@ describe('P1 #7 / P9 #2c+#2d — live figures are gated medians, never means or 
         // 40 postings but below the benchmark gate (e.g. too few employers).
         const faqs = buildSpecialtyFaqs(
             fp,
-            { medianSalary: 0, minSalary: 0, maxSalary: 0, jobCount: 40, gatePassed: false },
+            { medianSalary: 0, minSalary: 0, maxSalary: 0, jobCount: 40, employers: 0, gatePassed: false },
             [],
         );
         expect(faqs[0].a).not.toMatch(/\$0\b/);
@@ -201,21 +202,21 @@ describe('P1 #7 / P9 #2c+#2d — live figures are gated medians, never means or 
         // A gate that passed with an unusable figure still renders nothing.
         const zeroMedian = buildSpecialtyFaqs(
             fp,
-            { medianSalary: 0, minSalary: 0, maxSalary: 0, jobCount: 9, gatePassed: true },
+            { medianSalary: 0, minSalary: 0, maxSalary: 0, jobCount: 9, employers: 6, gatePassed: true },
             [],
         );
         expect(zeroMedian[0].a).not.toMatch(/\$0\b/);
         // …and drops just the spread when only the upper bound is missing.
         const noMax = buildSpecialtyFaqs(
             fp,
-            { medianSalary: 140000, minSalary: 98000, maxSalary: 0, jobCount: 9, gatePassed: true },
+            { medianSalary: 140000, minSalary: 98000, maxSalary: 0, jobCount: 9, employers: 6, gatePassed: true },
             [],
         );
         expect(noMax[0].a).toContain(formatSalary(140000));
         expect(noMax[0].a).not.toContain('range');
         expect(noMax[0].a).not.toMatch(/\$0\b/);
         // The live clause states a MEDIAN — never "the average is".
-        expect(noMax[0].a).toContain('the median is');
+        expect(noMax[0].a).toContain('the median posted pay is');
         expect(noMax[0].a).not.toContain('the average is');
     });
 
@@ -223,17 +224,23 @@ describe('P1 #7 / P9 #2c+#2d — live figures are gated medians, never means or 
         const src = read('app/salary-guide/specialty/[specialty]/page.tsx');
         // The loaders moved to lib/salary-guide-specialty.ts (CQ-09) so the
         // page and the sitemap share one verdict; the pipeline is pinned
-        // there: hygiene pool + NP-title gate (fetchNpAnalyticsRows, which
-        // runs npSalaryAnalyticsWhere then filterNpEligibleRows) + the
-        // benchmark policy under the employer-share cap.
+        // there: the one salary pool in the page's role scope
+        // (fetchSalaryAnalyticsRows: activeIndexableJobWhere AND
+        // npSalaryAnalyticsWhere, then the role screen) + the one engine.
         const lib = read('lib/salary-guide-specialty.ts');
         expect(src).toContain("from '@/lib/salary-guide-specialty'");
-        expect(lib).toContain("import { fetchNpAnalyticsRows } from '@/lib/salary-analytics'");
-        expect(lib).toContain('summarizeCappedPool(npRows)');
-        expect(lib).toContain('summarizeCappedBenchmarks(npRows).states');
-        expect(read('lib/salary-analytics.ts')).toContain('where: { AND: [npSalaryAnalyticsWhere(), extra] }');
-        expect(src).toContain('BENCHMARK_MIN_POSTINGS');
+        expect(lib).toContain("import { fetchSalaryAnalyticsRows } from '@/lib/salary-analytics'");
+        expect(lib).toContain('summarizePool(npRows)');
+        expect(lib).toContain('summarizeBenchmarks(npRows).states');
+        expect(read('lib/salary-analytics.ts')).toContain('where: { AND: [salaryPoolWhere(scope), extra] }');
         expect(src).toContain('BENCHMARK_MIN_EMPLOYERS');
+        // CRNA and CNM pay is reported only on its own page, from its own
+        // APRN scope; every NP specialty reads the NP scope (no CRNA, CNM, CNS).
+        expect(salaryRoleScopeOf('anesthesia')).toBe('aprn_crna');
+        expect(salaryRoleScopeOf('midwifery')).toBe('aprn_midwife');
+        for (const page of SALARY_SPECIALTY_PAGES.filter((p) => p.isNicheRole)) {
+            expect(salaryRoleScopeOf(page.slug), page.slug).toBe('np');
+        }
         expect(src).toContain('live.gatePassed');
         expect(src).toContain('hasReportedRange(live)');
         // No mean-of-min/max aggregate remains on the page or its loaders.
@@ -250,11 +257,11 @@ describe('P1 #7 / P9 #2c+#2d — live figures are gated medians, never means or 
 });
 
 describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', () => {
-    const live = { medianSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17, gatePassed: true };
+    const live = { medianSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17, employers: 11, gatePassed: true };
     const topStates = [
-        { state: 'California', stateCode: 'CA', slug: 'california', medianSalary: 165000, jobCount: 6 },
-        { state: 'Washington', stateCode: 'WA', slug: 'washington', medianSalary: 158000, jobCount: 5 },
-        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', medianSalary: 151000, jobCount: 5 },
+        { state: 'California', stateCode: 'CA', slug: 'california', medianSalary: 165000, jobCount: 6, employers: 6 },
+        { state: 'Washington', stateCode: 'WA', slug: 'washington', medianSalary: 158000, jobCount: 5, employers: 5 },
+        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', medianSalary: 151000, jobCount: 5, employers: 5 },
     ];
 
     it('renders substantive FAQs even with ZERO live inventory (no soft-404 shell)', () => {
@@ -277,7 +284,7 @@ describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', (
         const fp = getSpecialtySalaryPage('family-practice')!;
         const withLive = buildSpecialtyFaqs(fp, live, []);
         expect(withLive[0].a).toContain(formatSalary(live.medianSalary));
-        expect(withLive[0].a).toContain(String(live.jobCount));
+        expect(withLive[0].a).toContain(`${live.employers} employers`);
 
         const belowGate = buildSpecialtyFaqs(fp, { ...live, gatePassed: false }, []);
         expect(belowGate[0].a).not.toContain(formatSalary(live.medianSalary));
@@ -320,11 +327,11 @@ describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', (
 describe('P1 #7 — credential truth: CRNAs and CNMs are never rendered as the niche role', () => {
     /** APRN roles that are NOT the board's niche role. */
     const NON_NICHE_SLUGS = ['anesthesia', 'midwifery'] as const;
-    const live = { medianSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17, gatePassed: true };
+    const live = { medianSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17, employers: 11, gatePassed: true };
     const topStates = [
-        { state: 'California', stateCode: 'CA', slug: 'california', medianSalary: 165000, jobCount: 6 },
-        { state: 'Washington', stateCode: 'WA', slug: 'washington', medianSalary: 158000, jobCount: 5 },
-        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', medianSalary: 151000, jobCount: 5 },
+        { state: 'California', stateCode: 'CA', slug: 'california', medianSalary: 165000, jobCount: 6, employers: 6 },
+        { state: 'Washington', stateCode: 'WA', slug: 'washington', medianSalary: 158000, jobCount: 5, employers: 5 },
+        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', medianSalary: 151000, jobCount: 5, employers: 5 },
     ];
 
     it('the config flags them non-niche and forces them to carry a credential', () => {
@@ -468,7 +475,6 @@ describe('P1 #7 — wiring: hub links, sitemap entries, page plumbing', () => {
         expect(src).toContain('generateStaticParams');
         // Live sections must gate on the benchmark publishing policy —
         // never render $0 shells or below-gate figures (P9 #2d).
-        expect(src).toContain('BENCHMARK_MIN_POSTINGS');
         expect(src).toContain('BENCHMARK_MIN_EMPLOYERS');
         // No fabricated freshness (B54): Article schema must not stamp dates.
         expect(src).not.toContain('dateModified');

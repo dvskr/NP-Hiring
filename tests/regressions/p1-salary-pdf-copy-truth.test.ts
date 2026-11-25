@@ -146,7 +146,7 @@ describe('P1 #4 follow-up — the hub page’s flag-gated surfaces are truthful'
         // Anchor updated for the P9 #2c/#2d rebuild: the note now describes
         // the gated-median table (still flag-independent, still true of the
         // live table).
-        const noteStart = hubSrc.indexOf('<strong>Note:</strong> Each figure is the <strong>median</strong>');
+        const noteStart = hubSrc.indexOf('<strong>Note:</strong> Each figure is the <strong>median posted pay</strong>');
         expect(noteStart).toBeGreaterThan(-1);
         const note = hubSrc.slice(noteStart, noteStart + 800);
         expect(note).not.toContain('SALARY_GUIDE_PDF_AVAILABLE');

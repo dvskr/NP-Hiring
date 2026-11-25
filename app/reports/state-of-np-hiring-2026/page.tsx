@@ -10,8 +10,11 @@
  *     constants, ever.
  *   - Sample gates from lib/reports/report-model.ts decide what publishes:
  *     below-threshold sections render a "sample too small" note, never a
- *     padded number. The advertised-pay table reuses the public benchmark
- *     widget's min-postings / min-distinct-employers gates verbatim.
+ *     padded number. The advertised-pay table is the salary engine's
+ *     (lib/salary-report/stats.ts through components/tools/benchmark-model.ts):
+ *     each employer counts once, a median at BENCHMARK_MIN_EMPLOYERS
+ *     employers, the 25th to 75th percentile range at
+ *     BENCHMARK_FULL_MIN_EMPLOYERS, and the copy interpolates both.
  *   - National context renders ONLY from lib/stats-sources.ts entries with
  *     their citations — the same objects /press and /salary-guide cite.
  *   - The Methodology section states the basis, the as-of timestamp from
@@ -50,10 +53,10 @@ import {
     REPORT_MIN_GROUP_COUNT,
 } from '@/lib/reports/report-model';
 import {
-    BENCHMARK_MIN_POSTINGS,
+    BENCHMARK_FULL_MIN_EMPLOYERS,
     BENCHMARK_MIN_EMPLOYERS,
+    type BenchmarkRow,
 } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
 
 /** Live aggregates refresh hourly — same cadence as /press. */
 export const revalidate = 3600;
@@ -114,6 +117,16 @@ const formatDay = (iso: string): string =>
     new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 const money = (n: number): string => `$${n.toLocaleString('en-US')}`;
 
+/**
+ * A pay row's 25th to 75th percentile range, or the reason it is absent. The
+ * engine publishes quartiles only at the full tier, so a median-tier row has
+ * null p25 and p75 and must never print as "$null" or "$0".
+ */
+function quartileRangeCell(row: BenchmarkRow): string {
+    if (row.p25 === null || row.p75 === null) return `Under ${BENCHMARK_FULL_MIN_EMPLOYERS} employers`;
+    return `${money(row.p25)} to ${money(row.p75)}`;
+}
+
 interface SectionProps {
     icon: React.ReactNode;
     title: string;
@@ -146,28 +159,6 @@ function Section({ icon, title, id, children }: SectionProps) {
                 <div style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.7 }}>{children}</div>
             </div>
         </section>
-    );
-}
-
-/**
- * The employer-share cap hold (indexing audit CQ-15): the national pay row
- * cleared the size gate, but one employer holds more than the cap allows.
- * It says so plainly, so "sample too small" never labels a cap hold.
- */
-function EmployerShareHoldNote() {
-    return (
-        <p
-            style={{
-                ...clayCard,
-                padding: '14px 18px',
-                marginTop: '10px',
-                fontSize: '13.5px',
-                color: MUTED_TEXT,
-            }}
-        >
-            Not published: one employer accounts for more than {MAX_EMPLOYER_SHARE_PERCENT}% of the
-            postings that state pay.
-        </p>
     );
 }
 
@@ -524,10 +515,11 @@ export default async function StateOfHiring2026Page() {
                     <Section icon={<Wallet size={20} />} title={LIVE_SECTION_TITLES.pay} id="pay">
                         <p>
                             What employers advertise, from postings that state a pay range. Estimated
-                            pay is excluded, and a state appears only with at least{' '}
-                            {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
-                            {BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer contributing more
-                            than {MAX_EMPLOYER_SHARE_PERCENT}% of them (the same gates as our{' '}
+                            pay is excluded, and each employer counts once, at the middle of the ranges
+                            it advertises, however many postings it has. A state appears with its median
+                            once at least {BENCHMARK_MIN_EMPLOYERS} employers disclose pay there, and
+                            with its 25th to 75th percentile range once at least{' '}
+                            {BENCHMARK_FULL_MIN_EMPLOYERS} do (the same rules as our{' '}
                             <Link href="/tools/salary-benchmark" style={linkStyle}>
                                 salary benchmark tool
                             </Link>
@@ -545,17 +537,19 @@ export default async function StateOfHiring2026Page() {
                                             paddingTop: '10px',
                                         }}
                                     >
-                                        Midpoints of employer-advertised annual ranges on {brand.name}.
-                                        p25 and p75 are the 25th and 75th percentiles of those midpoints.
+                                        Median posted pay: the middle of employer-advertised annual ranges on{' '}
+                                        {brand.name}, each employer counted once. Employers is the sample size;
+                                        postings are shown for context. The 25th to 75th percentile range
+                                        appears once at least {BENCHMARK_FULL_MIN_EMPLOYERS} employers in a
+                                        scope disclose pay.
                                     </caption>
                                     <thead>
                                         <tr style={{ textAlign: 'left', color: MUTED_TEXT, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                                             <th scope="col" style={{ padding: '8px 8px 8px 0', fontWeight: 600 }}>Scope</th>
                                             <th scope="col" style={{ padding: '8px', fontWeight: 600 }}>Median</th>
-                                            <th scope="col" style={{ padding: '8px', fontWeight: 600 }}>p25</th>
-                                            <th scope="col" style={{ padding: '8px', fontWeight: 600 }}>p75</th>
-                                            <th scope="col" style={{ padding: '8px', fontWeight: 600 }}>Postings</th>
+                                            <th scope="col" style={{ padding: '8px', fontWeight: 600 }}>25th to 75th percentile</th>
                                             <th scope="col" style={{ padding: '8px', fontWeight: 600 }}>Employers</th>
+                                            <th scope="col" style={{ padding: '8px', fontWeight: 600 }}>Postings</th>
                                         </tr>
                                     </thead>
                                     <tbody style={{ color: '#1A2E35' }}>
@@ -565,17 +559,14 @@ export default async function StateOfHiring2026Page() {
                                                     {row.scope}
                                                 </th>
                                                 <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>{money(row.median)}</td>
-                                                <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>{money(row.p25)}</td>
-                                                <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>{money(row.p75)}</td>
-                                                <td style={{ padding: '10px 8px' }}>{row.postings.toLocaleString('en-US')}</td>
+                                                <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>{quartileRangeCell(row)}</td>
                                                 <td style={{ padding: '10px 8px' }}>{row.employers.toLocaleString('en-US')}</td>
+                                                <td style={{ padding: '10px 8px' }}>{row.postings.toLocaleString('en-US')}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        ) : snapshot.salary.nationalHeldByEmployerShare ? (
-                            <EmployerShareHoldNote />
                         ) : (
                             <SampleTooSmallNote what="an advertised-pay distribution" />
                         )}
@@ -642,23 +633,22 @@ export default async function StateOfHiring2026Page() {
                         <li>
                             <strong>This is not a national census.</strong> It describes one job
                             board&apos;s inventory. Postings that were never listed here are invisible
-                            to it, and employers who list many roles here weigh more than those who
-                            do not.
+                            to it, and in the posting counts, employers who list many roles here weigh
+                            more than those who do not. Pay figures count each employer once.
                         </li>
                         <li>
-                            <strong>Not a wage survey.</strong> Pay figures are midpoints of
+                            <strong>Not a wage survey.</strong> Pay figures are medians of
                             employer-advertised ranges, which skew toward employers willing to
                             advertise pay at all. Estimated pay is excluded.
                         </li>
                         <li>
                             <strong>Minimum samples.</strong> Percentages appear only over at least{' '}
                             {REPORT_MIN_SHARE_SAMPLE} postings. A distribution row shows on its own only
-                            with at least {REPORT_MIN_GROUP_COUNT} postings. Pay rows need at least{' '}
-                            {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
-                            {BENCHMARK_MIN_EMPLOYERS} distinct employers, with no single employer above{' '}
-                            {MAX_EMPLOYER_SHARE_PERCENT}% of them. Below a minimum the section says
-                            &quot;sample too small&quot;, and a state where one employer exceeds that share is
-                            left out of the pay table.
+                            with at least {REPORT_MIN_GROUP_COUNT} postings. A pay row needs at least{' '}
+                            {BENCHMARK_MIN_EMPLOYERS} employers that disclose pay for a median, each
+                            employer counted once, and at least {BENCHMARK_FULL_MIN_EMPLOYERS} for the
+                            25th to 75th percentile range. Below a minimum the section says &quot;sample
+                            too small&quot;, and a state below it is left out of the pay table.
                         </li>
                         <li>
                             <strong>National context is republished, not produced.</strong> Those

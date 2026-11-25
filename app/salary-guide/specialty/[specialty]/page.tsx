@@ -14,13 +14,13 @@
  *     anesthetists and nurse midwives are APRNs, not the niche role, and
  *     this template must not say otherwise in visible copy or in JSON-LD.
  *   - Live sections (board median, top-paying states, experience bands)
- *     are GATED MEDIANS (review P9 #2c/#2d): computed over the
- *     npSalaryAnalyticsWhere pool (published, non-expired, non-estimated,
- *     confidence of 0.8 or more, annual cadence) scoped to NP-eligible
- *     titles, and published only under the benchmark widget's policy, a
- *     true median at n of BENCHMARK_MIN_POSTINGS or more from
- *     BENCHMARK_MIN_EMPLOYERS or more employers. Below the gate the
- *     section is omitted, never a mean and never fabricated.
+ *     are GATED MEDIANS (review P9 #2c/#2d): computed over the one salary
+ *     pool (live postings, non-estimated, confidence of 0.8 or more, annual
+ *     cadence, both bounds) in the page's role scope (NP, or the page's own
+ *     APRN role for anesthesia and midwifery), through the one engine: each
+ *     employer counted once, a median at BENCHMARK_MIN_EMPLOYERS or more
+ *     employers. Below the tier the section is omitted, never a mean and
+ *     never fabricated.
  *   - FAQPage JSON-LD and the visible accordion render from ONE array
  *     (B48), escaped with the repo's \u003c pattern.
  *
@@ -117,16 +117,12 @@ import {
     specialtyNounPlural,
     type SpecialtyTitleClaims,
 } from '../specialty-content';
-// P9 #2c/#2d: every live figure runs the gated analytics pool
-// (fetchNpAnalyticsRows: npSalaryAnalyticsWhere, then filterNpEligibleRows)
-// through the benchmark widget's publishing policy plus the CQ-15
-// employer-share cap, the same pipeline as the salary-guide hub and state
-// pages. The loaders and the index verdict live in one module, which the
-// sitemap reads too.
-import {
-    BENCHMARK_MIN_POSTINGS,
-    BENCHMARK_MIN_EMPLOYERS,
-} from '@/components/tools/benchmark-model';
+// P9 #2c/#2d: every live figure runs the one salary pool
+// (fetchSalaryAnalyticsRows in the page's role scope) through the one
+// engine, the same pipeline as the salary-guide hub and state pages. The
+// loaders and the index verdict live in one module, which the sitemap
+// reads too.
+import { BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
 import {
     getSalarySpecialtyIndexBasis,
     getSpecialtyExperienceBands,
@@ -134,7 +130,6 @@ import {
     getSpecialtyTopPayingStates,
     specialtyTagWhere,
 } from '@/lib/salary-guide-specialty';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-gate';
 import {
     Award,
     ArrowRight,
@@ -313,9 +308,8 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
     ]);
 
     // P9 #2d: a figure renders ONLY when the benchmark publishing gate
-    // passed (n of BENCHMARK_MIN_POSTINGS or more from
-    // BENCHMARK_MIN_EMPLOYERS or more employers over the NP-eligible
-    // analytics pool, with no employer above the CQ-15 share cap). Below
+    // passed (BENCHMARK_MIN_EMPLOYERS or more employers over the page's
+    // salary pool, each employer counted once). Below
     // it: omit, never fabricate.
     const hasLive = live.gatePassed && live.medianSalary > 0;
     const hasTopStates = topStates.length >= MIN_TOP_STATES;
@@ -380,7 +374,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
             ? `${brand.name} estimates ${page.label.toLowerCase()} pay at ${formatSalary(range.min)} to ${formatSalary(range.max)}, an editorial estimate rather than survey data.`
             : null,
         hasLive
-            ? `The median of ${formatCount(live.jobCount, 'posting')} with disclosed pay on ${brand.name} is ${formatSalary(live.medianSalary)}.`
+            ? `The median posted pay across ${formatCount(live.employers, 'employer')} that disclose pay on ${brand.name} is ${formatSalary(live.medianSalary)}.`
             : null,
     ].filter((part): part is string => part !== null).join(' ');
 
@@ -409,7 +403,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 icon: Award,
                 label: `Median on ${brand.name}`,
                 value: formatSalary(live.medianSalary),
-                sub: `Median of ${formatCount(live.jobCount, 'posting')} with disclosed pay`,
+                sub: `Median across ${formatCount(live.employers, 'employer')} that disclose pay, each counted once`,
             }]
             : []),
         ...(hasLive && hasReportedRange(live)
@@ -571,7 +565,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                     omits dates too). */}
                 <SalaryProvenance
                     cited={[cited]}
-                    live={hasLive ? { count: live.jobCount, minimum: BENCHMARK_MIN_POSTINGS } : undefined}
+                    live={hasLive ? { count: live.employers, minimum: BENCHMARK_MIN_EMPLOYERS, noun: 'employers that disclose pay in live postings' } : undefined}
                     style={{ margin: '16px 0 0' }}
                 />
             </section>
@@ -667,15 +661,15 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 <Band
                     eyebrow="Pay by state"
                     title={<>Top-Paying States for {nounPlural}</>}
-                    lede={`Medians over active postings with disclosed, non-estimated salary on ${brand.name}, published only for states with at least ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers, none contributing more than ${MAX_EMPLOYER_SHARE_PERCENT}% of them.`}
+                    lede={`Median posted pay across the employers that disclose non-estimated annual pay in active postings on ${brand.name}, each employer counted once, published only for states where at least ${BENCHMARK_MIN_EMPLOYERS} employers do.`}
                 >
                     <ClayTable
                         caption={`Ranked by each state's median over ${brand.name} postings that disclose annual pay, not by posting volume.`}
-                        columns={['State', { label: 'Posted median', numeric: true }, { label: 'Postings', numeric: true }, 'Open roles']}
+                        columns={['State', { label: 'Posted median', numeric: true }, { label: 'Employers', numeric: true }, 'Open roles']}
                         rows={topStates.map((s) => [
                             <Link key="guide" href={`/salary-guide/${s.slug}`} style={clayLink}>{s.state}</Link>,
                             formatK(s.medianSalary),
-                            s.jobCount.toLocaleString('en-US'),
+                            s.employers.toLocaleString('en-US'),
                             <Link
                                 key="jobs"
                                 href={stateEligible ? `/jobs/${page.slug}/${s.slug}` : `/jobs/state/${s.slug}`}
@@ -693,15 +687,15 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 <Band
                     eyebrow="Pay by experience"
                     title="What experience changes about the pay"
-                    lede={`Medians across live ${page.label.toLowerCase()} postings with disclosed salary on this board, grouped by the experience each posting asks for and published only when a bucket clears the ${BENCHMARK_MIN_POSTINGS} posting, ${BENCHMARK_MIN_EMPLOYERS} employer minimum with no employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of it. Buckets overlap.`}
+                    lede={`Medians across live ${page.label.toLowerCase()} postings with disclosed salary on this board, grouped by the experience each posting asks for and published only when at least ${BENCHMARK_MIN_EMPLOYERS} employers in a bucket disclose pay, each counted once. Buckets overlap.`}
                 >
                     <ClayTable
                         caption={`Medians per experience bucket over ${brand.name} postings that disclose annual pay.`}
-                        columns={['Bucket', { label: 'Posted median', numeric: true }, { label: 'Postings', numeric: true }]}
+                        columns={['Bucket', { label: 'Posted median', numeric: true }, { label: 'Employers', numeric: true }]}
                         rows={experienceBands.map((band) => [
                             band.label,
                             formatK(band.medianSalary),
-                            band.jobCount.toLocaleString('en-US'),
+                            band.employers.toLocaleString('en-US'),
                         ])}
                     />
                 </Band>
@@ -800,7 +794,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                     <p style={{ fontSize: '12px', color: CLAY_MUTED, margin: 0, lineHeight: 1.7 }}>
                         <strong>Data sources:</strong> {cited.source}
                         {hasLive && (
-                            <>, plus {formatCount(live.jobCount, `active ${page.label.toLowerCase()} posting`)} with disclosed salary on {brand.name}</>
+                            <>, plus the advertised pay of {formatCount(live.employers, 'employer')} in active {page.label.toLowerCase()} postings on {brand.name}</>
                         )}
                         {page.premium && <>, plus the specialty premium published in the {brand.name} salary guide, applied to that median as an editorial estimate</>}
                         .

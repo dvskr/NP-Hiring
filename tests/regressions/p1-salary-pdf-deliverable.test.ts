@@ -92,11 +92,16 @@ describe('P1 #4 — generator figures trace to sanctioned sources only', () => {
         expect(src).not.toContain('132300');
     });
 
-    it('live posting counts use the hub page’s disclosed-salary filter, so they agree', () => {
+    it('live posting counts are exact counts on the generator’s own stated basis', () => {
+        // The PDF counts postings with any disclosed salary; it prints no pay
+        // figure. Since the 2026-11 salary build the hub's figures come from
+        // the one salary pool and engine (fetchNpAnalyticsRows), which is
+        // narrower on purpose, so the two no longer share a query and the PDF
+        // must describe its counts on its own terms.
         const hub = read(HUB_PAGE);
         const disclosedSalaryWhere = 'isPublished: true, normalizedMinSalary: { not: null }';
         expect(src).toContain(disclosedSalaryWhere);
-        expect(hub).toContain(disclosedSalaryWhere);
+        expect(hub).toContain('await fetchNpAnalyticsRows()');
     });
 
     it('prints only exact COUNTS from postings — never a derived per-state wage', () => {

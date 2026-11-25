@@ -69,8 +69,7 @@ import {
 } from '@/config/niche/content-map';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
-import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
 import { emptyListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import { summarizeGatedSalary, type GatedSalary } from '@/lib/salary-analytics';
 import { getAllMdxPosts, getMdxPost, parseMdxFrontmatter } from '@/lib/blog-mdx-posts';
@@ -317,7 +316,10 @@ describe('truth rules', () => {
             const payFaq = post.faq_json!.find((f) => f.name.startsWith('How much'))!;
             expect(payFaq, `${state.name}: pay FAQ missing`).toBeTruthy();
             expect(payFaq.text).toContain(STAT_SOURCES.averageSalary.formatted);
-            expect(payFaq.text).toContain(`at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers`);
+            // The engine rule: a median once enough EMPLOYERS disclose pay,
+            // each counted once; never the retired employer-share cap.
+            expect(payFaq.text).toContain(`once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay on ${state.name} postings, each employer counted once`);
+            expect(payFaq.text).not.toMatch(/no single employer|\d+%/);
             expect(payFaq.text).not.toMatch(/averages?|ranges/i);
             // A cited fact quotes its board verbatim ("The Board reports an
             // average of 1.55 calendar days" is a processing time, not pay),
@@ -875,10 +877,13 @@ describe('LIC-L3: market snapshot (components/blog/LicenseGuideMarketSnapshot.ts
     const NOW = new Date('2026-09-17T00:00:00.000Z');
     const facts = (overrides: Partial<ListingFacts> = {}): ListingFacts => ({ ...emptyListingFacts(NOW), ...overrides });
     const BELOW_GATE: GatedSalary = summarizeGatedSalary([]);
-    const GATED: GatedSalary = {
-        postings: 6, employers: 3, gatePassed: true,
-        median: 130000, p25: 120000, p75: 140000, medianK: 130, p25K: 120, p75K: 140,
-    };
+    /** One posting per employer at the given annual pay, through the real engine. */
+    const gated = (pays: readonly number[]): GatedSalary =>
+        summarizeGatedSalary(pays.map((pay, i) => ({
+            state: 'Texas', employer: `Employer ${i}`, normalizedMinSalary: pay, normalizedMaxSalary: pay,
+        })));
+    // Six employers: the median tier (a median, no quartiles), median $130,000.
+    const GATED: GatedSalary = gated([120_000, 125_000, 130_000, 130_000, 135_000, 140_000]);
     const render = (props: Partial<LicenseGuideMarketSnapshotProps> = {}): string =>
         renderToStaticMarkup(React.createElement(LicenseGuideMarketSnapshot, {
             stateName: 'Texas', stateCode: 'TX', stateSlug: 'texas',
@@ -899,8 +904,11 @@ describe('LIC-L3: market snapshot (components/blog/LicenseGuideMarketSnapshot.ts
         expect(hrefs(html)).toContain('/jobs/state/texas');
         expect(hrefs(html)).not.toContain('/salary-guide/texas');
         expect(html).not.toContain('$');
-        // Names the whole gate, the CQ-15 employer-share cap included.
-        expect(html).toContain(`at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers, with no single employer above ${MAX_EMPLOYER_SHARE_PERCENT}% of them`);
+        // Names the engine rule: employers, each counted once, and no cap.
+        expect(html).toContain(`A Texas median appears here once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay, each counted once however many postings it has.`);
+        expect(html).not.toMatch(/no single employer/i);
+        // The sentence itself carries no share (the markup's CSS has widths in %).
+        expect(buildSnapshotPaySentence('Texas', BELOW_GATE)).not.toMatch(/\d+%/);
         // Clay stat pills split the figure and the label into two spans.
         expect(html).toMatch(/>4<\/span><span[^>]*>open roles</);
         expect(html).toMatch(/>2<\/span><span[^>]*>employers</);
@@ -914,12 +922,29 @@ describe('LIC-L3: market snapshot (components/blog/LicenseGuideMarketSnapshot.ts
     it('the median prints only from a gate-passed salary, and the salary guide link only when that page indexes', () => {
         const live = facts({ total: 8, distinctEmployers: 3 });
         const indexed = render({ facts: live, salary: GATED, salaryGuideIndexable: true });
-        expect(indexed).toContain('$130,000');
-        expect(indexed).toContain('across 6 postings with disclosed pay from 3 employers');
+        expect(GATED.tier).toBe('median');
+        expect(indexed).toContain('Median posted pay in Texas: $130,000 across 6 employers that disclose pay.');
         expect(hrefs(indexed)).toContain('/salary-guide/texas');
         const unindexed = render({ facts: live, salary: GATED, salaryGuideIndexable: false });
         expect(hrefs(unindexed)).not.toContain('/salary-guide/texas');
         expect(buildSnapshotPaySentence('Texas', BELOW_GATE)).not.toContain('$');
+    });
+
+    it('the n is employers, each counted once, and no tier prints a null or a zero', () => {
+        // One employer posting the same range forty times is one employer.
+        const crowded = summarizeGatedSalary([
+            ...Array.from({ length: 40 }, () => ({ state: 'Texas', employer: 'Big Employer', normalizedMinSalary: 200_000, normalizedMaxSalary: 200_000 })),
+            ...[120_000, 125_000, 130_000, 135_000].map((pay, i) => ({ state: 'Texas', employer: `Employer ${i}`, normalizedMinSalary: pay, normalizedMaxSalary: pay })),
+        ]);
+        expect(buildSnapshotPaySentence('Texas', crowded)).toBe('Median posted pay in Texas: $130,000 across 5 employers that disclose pay.');
+        // Four employers is below the median tier, however many postings.
+        expect(buildSnapshotPaySentence('Texas', gated([120_000, 125_000, 130_000, 135_000]))).not.toContain('$');
+        const full = gated(Array.from({ length: 12 }, (_, i) => 120_000 + i * 2_000));
+        expect(full.tier).toBe('full');
+        for (const salary of [BELOW_GATE, GATED, full]) {
+            const sentence = buildSnapshotPaySentence('Texas', salary);
+            expect(sentence).not.toMatch(/null|NaN|\$0\b|undefined/);
+        }
     });
 
     it('cities link only when the city page renders (3 or more jobs) and the slug round-trips', () => {

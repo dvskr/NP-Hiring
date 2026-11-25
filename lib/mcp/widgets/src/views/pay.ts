@@ -7,7 +7,9 @@ import { alertBox, chip, header, link } from './common';
 /**
  * A range strip per segment: the band is the middle half of advertised pay
  * (25th to 75th percentile), the bar is the median. Every row shares one
- * axis so segments compare at a glance, and every row states its n.
+ * axis so segments compare at a glance, and every row states its n: the
+ * employers behind the figure, each counted once. A row below 10 employers
+ * has no quartiles, so it draws the median alone.
  */
 
 function axisBounds(rows: PaySummary[]): { min: number; max: number } {
@@ -31,7 +33,7 @@ function strip(row: PaySummary, bounds: { min: number; max: number }): SafeHtml 
       : '';
   const range = row.p25 !== null && row.p75 !== null ? `${moneyK(row.p25)} to ${moneyK(row.p75)}` : 'Median only';
   return html`<div>
-  <div class="pm-pay-label"><strong>${row.label}</strong><span>${range} · ${plural(row.n, 'posting', 'postings')}</span></div>
+  <div class="pm-pay-label"><strong>${row.label}</strong><span>${range} · ${plural(row.n, 'employer', 'employers')}</span></div>
   <div class="pm-track" role="img" aria-label="${`${row.label}: median ${moneyK(row.median)}${row.p25 !== null && row.p75 !== null ? `, middle half ${moneyK(row.p25)} to ${moneyK(row.p75)}` : ''}`}">
     ${band}
     <div class="pm-median" style="left:${median.toFixed(2)}%"></div>
@@ -55,7 +57,7 @@ export function renderPay(data: PayViewData): SafeHtml {
   ${rows.length > 0
     ? html`<div class="pm-pay-rows">${rows.map((r) => strip(r, bounds))}</div>
 <div class="pm-axis"><span>${moneyK(bounds.min)}</span><span>${moneyK((bounds.min + bounds.max) / 2)}</span><span>${moneyK(bounds.max)}</span></div>`
-    : html`<p class="pm-sub">Not enough postings publish pay to chart yet.</p>`}
+    : html`<p class="pm-sub">Not enough employers disclose pay to chart yet.</p>`}
   ${when(data.topStates.length > 0, () =>
     html`<div class="pm-section"><h3>Highest state medians</h3><div class="pm-chips">${data.topStates.map((s) =>
       chip(`${s.label} ${moneyK(s.median)}`),

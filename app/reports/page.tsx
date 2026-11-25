@@ -8,7 +8,8 @@
  *
  * TRUTH RULES: the hub types no figure of its own. The publishing floors
  * in the methods block are interpolated from the constants the queries
- * gate on (lib/reports/report-model.ts, components/tools/benchmark-model.ts),
+ * gate on (lib/reports/report-model.ts, and the salary engine's employer
+ * tiers through components/tools/benchmark-model.ts),
  * so the prose cannot describe a floor the code stopped using; and the one
  * live line comes from the same cache()d `loadHiringReportSnapshot` the
  * annual report renders from, so the hub and the report can never print
@@ -27,8 +28,7 @@ import {
     TREND_MIN_MONTHS,
     TREND_MIN_MONTH_SAMPLE,
 } from '@/lib/reports/report-model';
-import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
-import { MAX_EMPLOYER_SHARE_PERCENT } from '@/lib/salary-guide-policy';
+import { BENCHMARK_FULL_MIN_EMPLOYERS, BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
 import { loadHiringReportSnapshot } from '@/lib/reports/queries';
 import { formatCount } from '@/lib/display-text';
 
@@ -245,11 +245,11 @@ export default async function ReportsHubPage() {
                         single remainder line. A month joins the
                         pay disclosure trend only at {TREND_MIN_MONTH_SAMPLE} or more postings added that
                         month, and a trend is drawn only once{' '}
-                        {formatCount(TREND_MIN_MONTHS, 'such month')} exist. A pay figure is published only
-                        from {BENCHMARK_MIN_POSTINGS} or more postings with employer stated pay across{' '}
-                        {BENCHMARK_MIN_EMPLOYERS} or more employers, with no single employer contributing
-                        more than {MAX_EMPLOYER_SHARE_PERCENT}% of them, and pay we estimated rather than the
-                        employer stated is excluded from that sample.
+                        {formatCount(TREND_MIN_MONTHS, 'such month')} exist. A pay figure is a median of
+                        advertised pay, published once at least {BENCHMARK_MIN_EMPLOYERS} employers disclose
+                        pay, each employer counted once at the middle of the ranges it advertises, and the
+                        25th to 75th percentile range appears once at least {BENCHMARK_FULL_MIN_EMPLOYERS}{' '}
+                        do. Pay we estimated rather than the employer stated is excluded from that sample.
                     </p>
                     <p style={{ fontSize: '13.5px', color: MUTED_TEXT, lineHeight: 1.75, margin: '0 0 10px 0' }}>
                         Where a sample is below its floor, the report says so in place of the number. The

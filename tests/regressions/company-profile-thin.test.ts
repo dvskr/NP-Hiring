@@ -36,8 +36,8 @@ import {
     MIN_JOBS_FOR_LINK_LIST_ROW,
     shouldIndexCompanyProfile,
 } from '@/lib/pseo/render-gate';
-import { BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
 import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
+import { readCode } from '../helpers/source';
 import { buildCompanyFaqs } from '@/lib/pseo/listing-narrative';
 import {
     COMPANY_CITY_LINK_MIN_JOBS,
@@ -82,8 +82,8 @@ function row(overrides: Partial<CompanyProfileRow> = {}): CompanyProfileRow {
 /* ── 1. The index gate ───────────────────────────────────────────────────── */
 
 describe('C-IDX — a profile is indexable only at the company floor', () => {
-    it('the floor is the same 5 every other "enough postings to say something" gate uses', () => {
-        expect(MIN_ACTIVE_JOBS_FOR_COMPANY_INDEX).toBe(BENCHMARK_MIN_POSTINGS);
+    it('the floor is 5 active jobs', () => {
+        expect(MIN_ACTIVE_JOBS_FOR_COMPANY_INDEX).toBe(5);
     });
 
     it('1 to 4 active jobs is noindex, 5 and up is index', () => {
@@ -249,10 +249,15 @@ describe('the company 410 gate counts what the profile counts', () => {
 
 /* ── 4. CO-B6: the pay floor ─────────────────────────────────────────────── */
 
-describe('CO-B6 — an employer median waits for the same sample everything else does', () => {
-    it('the snapshot floor is BENCHMARK_MIN_POSTINGS, not a page literal', () => {
-        expect(page).toContain('const SALARY_SNAPSHOT_MIN_SAMPLE = BENCHMARK_MIN_POSTINGS');
-        expect(page).not.toMatch(/SALARY_SNAPSHOT_MIN_SAMPLE = \d/);
+describe('CO-B6: an employer median waits for the profile\'s own 5-posting floor', () => {
+    it('the snapshot floor is the page\'s own 5 postings, not the market engine\'s employer tiers', () => {
+        // A company profile is one employer's own postings. The engine's tiers
+        // count EMPLOYERS, each once, so routed through them a profile could
+        // never publish a figure; the page keeps its own posting floor.
+        const code = readCode(PROFILE_PAGE);
+        expect(code).toMatch(/const SALARY_SNAPSHOT_MIN_SAMPLE = 5;/);
+        expect(code).toMatch(/if \(salaried\.length < SALARY_SNAPSHOT_MIN_SAMPLE\) return null;/);
+        expect(code).not.toMatch(/benchmark-model|salary-report\/stats/);
     });
 
     it('below the floor the block renders the count sentence and no figure', () => {

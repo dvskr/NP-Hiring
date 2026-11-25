@@ -175,16 +175,16 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
         // SAL-B7 (thin-spec-4): the line used to render at `minimum: 1`, so
         // 31 of 43 pages printed "Based on 3 active postings with disclosed
         // salary" while publishing no figure at all. It now renders ONLY
-        // when the benchmark gate passed, and quotes the same constant the
-        // figure is gated by, with the same n the median is computed from.
-        expect(src).toContain(
-            'live={salaryData.gatePassed ? { count: salaryData.postings, minimum: BENCHMARK_MIN_POSTINGS } : undefined}',
-        );
+        // when the median tier is reached, and quotes the salary engine's
+        // employer floor (each employer counted once), never the retired
+        // posting floor.
+        const code = stripComments(src);
+        expect(code).toMatch(/live=\{salaryData\.gatePassed \? \{[^}]*minimum: BENCHMARK_MIN_EMPLOYERS[^}]*\} : undefined\}/);
+        expect(code).not.toContain('BENCHMARK_MIN_POSTINGS');
         expect(src).not.toContain('minimum: 1 }');
         // B54: this page has no editorial review literal, so it must not
         // pass one — and must still omit Article dates entirely (comments
         // documenting that rule don't count as published code).
-        const code = stripComments(src);
         expect(code).not.toContain('reviewedOn=');
         expect(code).not.toContain('dateModified');
     });
@@ -197,7 +197,8 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
         // NP-eligible analytics row, gated or not).
         expect(code).not.toContain('salaryData.jobCount');
         expect(code).toContain('salaryData.gatePassed');
-        expect(code).toContain('salaryData.postings');
+        // The engine's n is employers; postings may still be quoted as context.
+        expect(code).toMatch(/salaryData\.(employers|postings)/);
     });
 
     it('the specialty detail template gates its live basis on the benchmark policy', () => {
@@ -208,12 +209,12 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
         // a CRNA or CNM page, still a StatSource with source and vintage.
         expect(src).toContain('const cited = citedMedian(page);');
         expect(src).toContain('cited={[cited]}');
-        // P9 #2d: the published-figure gate is the benchmark widget's
-        // n ≥ BENCHMARK_MIN_POSTINGS policy, so the provenance minimum
-        // quotes the same constant the figures are gated by.
-        expect(src).toContain(
-            'live={hasLive ? { count: live.jobCount, minimum: BENCHMARK_MIN_POSTINGS } : undefined}',
-        );
+        // P9 #2d: the published-figure gate is the salary engine's employer
+        // floor, so the provenance minimum quotes the same constant the
+        // figures are gated by, and never the retired posting floor.
+        const code = stripComments(src);
+        expect(code).toMatch(/live=\{\w+ \? \{[^}]*minimum: BENCHMARK_MIN_EMPLOYERS[^}]*\} : undefined\}/);
+        expect(code).not.toContain('BENCHMARK_MIN_POSTINGS');
     });
 
     it('the specialty index cites the benchmark median’s source + vintage', () => {

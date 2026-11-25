@@ -64,6 +64,11 @@ interface PayBar { label: string; dollars: number }
  * gradient), or below the gate the disclosed-count sentence carrying the
  * BLS cite from lib/stats-sources.ts inline, linked to its source. No
  * benchmark and no disclosed pay renders nothing: there is no figure to show.
+ *
+ * The bars need the quartiles, which the salary engine publishes only at its
+ * full tier (10 or more employers). A median-tier row (5 to 9 employers) has
+ * null p25 and p75, so it renders the paragraph alone: a lone median bar
+ * scaled to itself would chart nothing.
  */
 export default function PostedPay({
   variant,
@@ -79,14 +84,14 @@ export default function PostedPay({
   const sentence = postedPaySentence(variant, facts);
   if (!sentence) return null;
   const row = facts.benchmark;
-  const bars: PayBar[] = row
+  const bars: PayBar[] = row && row.p25 !== null && row.p75 !== null
     ? [
         { label: '25th percentile', dollars: row.p25 },
         { label: 'Median', dollars: row.median },
         { label: '75th percentile', dollars: row.p75 },
       ]
     : [];
-  const scale = row && row.p75 > 0 ? row.p75 : null;
+  const scale = row && row.p75 !== null && row.p75 > 0 && bars.length > 0 ? row.p75 : null;
   const guideHref = linkHref(salaryGuide);
   return (
     <ClayCard

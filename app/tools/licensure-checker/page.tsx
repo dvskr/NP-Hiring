@@ -43,6 +43,7 @@ import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } fro
 import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { getAllPublishedSlugs } from '@/lib/blog';
 import { getGatedStateBenchmarks } from '@/lib/salary-analytics';
+import { BENCHMARK_FULL_MIN_EMPLOYERS, BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
 import { logger } from '@/lib/logger';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -83,17 +84,19 @@ interface StateGuideRef {
 }
 
 /**
- * P9 #2c/#2d: gated benchmark row (true median + quartiles over the
- * NP-eligible analytics pool) — matches LicensureChecker's StateSalary
- * shape. Only states past the n ≥ 5 / 3-employer publishing gate appear;
- * the checker omits the salary card for the rest.
+ * P9 #2c/#2d: gated benchmark row (the salary engine's median over the NP
+ * analytics pool, each employer counted once), matching LicensureChecker's
+ * StateSalary shape. Only states where at least BENCHMARK_MIN_EMPLOYERS
+ * employers disclose pay appear; the checker omits the salary card for the
+ * rest. The quartiles are null below BENCHMARK_FULL_MIN_EMPLOYERS.
  */
 interface StateSalaryRow {
   state: string;
   medianSalary: number;
-  p25: number;
-  p75: number;
-  jobCount: number;
+  p25: number | null;
+  p75: number | null;
+  /** Employers behind the median, each counted once: the sample size. */
+  employers: number;
 }
 
 interface CheckerData {
@@ -162,7 +165,7 @@ async function loadCheckerData(): Promise<CheckerData> {
         medianSalary: row.median,
         p25: row.p25,
         p75: row.p75,
-        jobCount: row.postings,
+        employers: row.employers,
       }))
       .sort((a, b) => b.medianSalary - a.medianSalary);
 
@@ -319,7 +322,7 @@ export default async function LicensureCheckerToolPage() {
               `Practice-authority tiers (full, reduced, restricted) come from the AANP state practice environment. ${STAT_SOURCES.fullPracticeStates.formatted} grant full practice authority as of ${STAT_SOURCES.fullPracticeStates.asOf}.`,
               'The planner states the Nurse Licensure Compact rules, which are stable: a multistate RN license is issued only by a compact member state acting as your primary state of residence, and it covers the RN layer only.',
               'APRN licensure is treated as state-by-state in every case. The compact covers the RN layer only.',
-              `Salary figures in the checker are true medians over live ${brand.niche.short}-eligible postings with disclosed, non-estimated salary, shown only for states with at least 5 postings from 3+ employers, refreshed daily.`,
+              `Salary figures in the checker are medians of posted pay on live ${brand.niche.short}-eligible postings with disclosed, non-estimated salary, each employer counted once however many postings it has. A state shows a median once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay there, and its middle half once at least ${BENCHMARK_FULL_MIN_EMPLOYERS} do. Figures refresh daily.`,
               'For processing time, fees, and renewal terms, the checker names who sets each one rather than estimating it.',
             ]}
             exclusions={[
