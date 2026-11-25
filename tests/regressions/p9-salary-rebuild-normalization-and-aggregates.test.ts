@@ -312,10 +312,15 @@ describe('P9 #2d — publishing gate and median', () => {
 
   it('salary-guide surfaces run the gated pipeline and dropped the ranked-badge/mean presentation', () => {
     const hub = read('app/salary-guide/page.tsx');
-    // Salary build 2026-11: the hub reads the one pool and the one engine,
-    // the same calls /reports makes (tests/regressions/salary-one-engine-parity.test.ts).
-    expect(hub).toContain('await fetchNpAnalyticsRows()');
-    expect(hub).toContain('summarizeBenchmarkPool(npRows)');
+    // Salary build 2026-11: the hub reads the NP Pay Report snapshot, which
+    // is the one pool through the one engine (the national and state rows
+    // from one fetchNpAnalyticsRows, every scope through summarizeScope),
+    // so the hub and /reports/np-pay print the same figures.
+    expect(hub).toContain('loadNpPaySnapshot()');
+    const report = read('lib/reports/np-pay.ts');
+    expect(report).toContain('fetchNpAnalyticsRows()');
+    expect(report).toContain("summarizeScope('National', rows)");
+    expect(report).not.toContain('_avg');
     expect(hub).toContain('BENCHMARK_MIN_EMPLOYERS');
     // Gold top-3 medal treatment is gone…
     expect(hub).not.toContain('rgba(251,191,36');

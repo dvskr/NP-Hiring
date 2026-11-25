@@ -86,8 +86,13 @@ describe('P10 a11y-cookie: colour contrast on the axe-flagged nodes', () => {
         expect(src).not.toMatch(/#8A7A72/i);
         expect(src).not.toMatch(/#F59E0B|#8B5CF6|#3B82F6|#EF4444/i);
         // Stat pill labels lost their 0.7 opacity; provenance on pink too.
+        // Salary build 2026-11: the pink state-table provenance went with
+        // the old table, so every provenance line left must sit in the AA
+        // slate (#64748B, checked against #FAFAFA below) or the AA pink.
         expect(src).toContain("<span style={{ fontSize: '12px', color: s.color, fontWeight: 500 }}>{s.label}</span>");
-        expect(src).toContain("style={{ fontSize: '11px', color: '#831843', marginTop: '6px' }}");
+        const provenanceColours = [...src.matchAll(/<SalaryProvenance[\s\S]*?color: '(#[0-9A-Fa-f]{6})'/g)].map((m) => m[1]);
+        expect(provenanceColours.length).toBeGreaterThan(0);
+        for (const colour of provenanceColours) expect(['#64748B', '#831843']).toContain(colour);
         const pills: [string, string][] = [['#065F46', '#D4F5E9'], ['#3730A3', '#E0E7FF'], ['#92400E', '#FEF3C7'], ['#7C2D12', '#FFE0D3']];
         for (const [fg, bg] of pills) expect(contrast(fg, bg), `${fg} on ${bg}`).toBeGreaterThanOrEqual(AA);
         for (const fg of ['#7C3AED', '#2563EB', '#B45309', '#DC2626']) {

@@ -31,6 +31,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availability';
+import { BLS_STATE_WAGES, stateSlugOf } from '@/lib/salary-guide-bls-states';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -84,17 +85,25 @@ describe('P0 #6 — salary-guide email funnel is honest and brand-tokenized', ()
 });
 
 describe('P0 #20 — the hub links its own 51 state children', () => {
+    // Salary build 2026-11: the state table is the BLS table, one row per
+    // state and DC, and each row carries its slug from
+    // lib/salary-guide-bls-states.ts (stateSlugOf).
     it('state names link to /salary-guide/<state>', () => {
         const src = read('app/salary-guide/page.tsx');
-        expect(src).toContain('href={`/salary-guide/${state.slug}`}');
+        expect(src).toContain('href={`/salary-guide/${row.slug}`}');
+        expect(Object.keys(BLS_STATE_WAGES)).toHaveLength(51);
     });
 
     it('hub slug derivation matches the [state] route (lowercase, hyphenated)', () => {
-        const hubSrc = read('app/salary-guide/page.tsx');
+        const blsSrc = read('lib/salary-guide-bls-states.ts');
         const stateSrc = read('app/salary-guide/[state]/page.tsx');
         const derivation = ".toLowerCase().replace(/\\s+/g, '-')";
-        expect(hubSrc).toContain(derivation);
+        expect(blsSrc).toContain(derivation);
         expect(stateSrc).toContain(derivation);
+        for (const row of Object.values(BLS_STATE_WAGES)) {
+            expect(row.slug).toBe(row.state.toLowerCase().replace(/\s+/g, '-'));
+        }
+        expect(stateSlugOf('District of Columbia')).toBe('district-of-columbia');
     });
 });
 

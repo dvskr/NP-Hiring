@@ -143,14 +143,16 @@ describe('P1 #4 follow-up — the hub page’s flag-gated surfaces are truthful'
     it('the state-table note no longer branches on the PDF flag', () => {
         // The flag flip is what made the false branch visible. The note
         // describes the live table, which is true regardless of the flag.
-        // Anchor updated for the P9 #2c/#2d rebuild: the note now describes
-        // the gated-median table (still flag-independent, still true of the
-        // live table).
-        const noteStart = hubSrc.indexOf('<strong>Note:</strong> Each figure is the <strong>median posted pay</strong>');
-        expect(noteStart).toBeGreaterThan(-1);
-        const note = hubSrc.slice(noteStart, noteStart + 800);
-        expect(note).not.toContain('SALARY_GUIDE_PDF_AVAILABLE');
-        expect(note).toContain('Each state name links to a detailed page');
+        // Anchor updated for the salary build 2026-11: the gated-median table
+        // and its note became the BLS state table with a live column. The
+        // whole section is pinned now: flag-independent, sourced to BLS, and
+        // linking each state with open roles to its salary page.
+        const start = hubSrc.indexOf('<section id="salary-by-state"');
+        expect(start).toBeGreaterThan(-1);
+        const section = hubSrc.slice(start, hubSrc.indexOf('</section>', start));
+        expect(section).not.toContain('SALARY_GUIDE_PDF_AVAILABLE');
+        expect(section).toContain('BLS_STATE_SOURCE_URL');
+        expect(section).toContain('href={`/salary-guide/${row.slug}`}');
     });
 
     it('the download card attributes only sources the PDF actually cites', () => {

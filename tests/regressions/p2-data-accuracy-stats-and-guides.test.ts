@@ -41,6 +41,7 @@ import path from 'node:path';
 import { STAT_SOURCES, SALARY_BANDS, type StatSource } from '@/lib/stats-sources';
 import { salaryConfig } from '@/config/niche/salary';
 import { getStatesByAuthority } from '@/lib/state-practice-authority';
+import { buildHubFaqs } from '@/lib/salary-guide-hub-faq';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -145,24 +146,27 @@ describe('P2 #10 — SALARY_BANDS is the single source for published pay ranges'
  * three cannot hide behind an entry that only tolerates a comment.
  * ────────────────────────────────────────────────────────────────────────*/
 const UNMIGRATED_SALARY_BAND_SURFACES: readonly string[] = [
-    'app/salary-guide/page.tsx',
     'app/salary-guide/specialty/specialty-content.ts',
     'lib/blog-formatter.ts',
     'lib/pseo/category-landing-content.ts',
-    'scripts/generate-salary-pdf.ts',
 ];
 
-/** The length after the OG city route left the list. The ratchet may only shrink from here. */
-const SALARY_BAND_DEBT_CEILING = 5;
+/**
+ * The length after the salary guide hub and its PDF generator left the list
+ * (salary build 2026-11: their estimate tables were replaced by BLS wages
+ * and engine medians). The ratchet may only shrink from here.
+ */
+const SALARY_BAND_DEBT_CEILING = 3;
 
 /** Left the ratchet on 2026-10-01; see the header above. */
 const OG_CITY_ROUTE = 'app/api/og/city/route.tsx';
 
 /**
  * The listed surfaces that type a band in code or copy, which is what a
- * reader sees. The rest of the list matches only inside a comment.
+ * reader sees. Since the hub and the PDF left the list, none do: the three
+ * left match only inside a comment.
  */
-const BAND_PUBLISHING_SURFACES: readonly string[] = [SALARY_HUB, SALARY_PDF];
+const BAND_PUBLISHING_SURFACES: readonly string[] = [];
 
 /**
  * Files the scan flags but which publish nothing: lib/stats-sources.ts
@@ -267,7 +271,7 @@ describe('P2 #10 — the band migration is pinned as debt, not claimed as done',
         expect(SCAN_EXEMPT).not.toContain(OG_CITY_ROUTE);
     });
 
-    it('two listed surfaces publish a band, and the other three only quote one in a comment', () => {
+    it('no listed surface publishes a band any more; the three left only quote one in a comment', () => {
         // With comments stripped, the matcher still sees a band typed in
         // code and no longer sees one that sits in a comment.
         expect(typesSalaryBand(stripComments("const range = '$120K to $165K';"))).toBe(true);
@@ -769,118 +773,69 @@ describe('P2 #22 — the salary hub and its PDF drop the fabricated FPA premium'
         // /resources/private-practice-guide now MODELS ownership income at
         // $177K-$225K gross / $133K-$192K net; the hub FAQ was still
         // asserting an uncited "$180,000-$300,000+" for the same thing.
-        const faqAnswer = hubRaw
-            .split('\n')
-            .find((l) => l.includes('q: `How can I increase my'));
-        expect(faqAnswer, 'the "increase my salary" FAQ must exist').toBeTruthy();
-        expect(faqAnswer).not.toContain('$180,000-$300,000');
-        expect(faqAnswer).not.toContain('12-15%');
+        // Salary build 2026-11: the FAQ moved to lib/salary-guide-hub-faq.ts.
+        const faq = buildHubFaqs(null).find((f) => f.q.startsWith('How can I increase my'));
+        expect(faq, 'the "increase my salary" FAQ must exist').toBeTruthy();
+        expect(faq?.a).not.toContain('$180,000-$300,000');
+        expect(faq?.a).not.toContain('12-15%');
     });
 });
 
 /* ─────────────────────────────────────────────────────────────────────────
- * REVIEW FOLLOW-UP — /salary-guide must not look partially audited.
+ * SALARY BUILD 2026-11: /salary-guide and its PDF carry no uncited figure.
  * ─────────────────────────────────────────────────────────────────────────
- * The first pass deleted the fabricated "+12-15%" FPA premium from the hub
- * FAQ and left four figures of identical provenance beside it: "+10-25%"
- * for specialization IN THE SAME SENTENCE, "20-50% more" for travel, and
- * the "$95,000-$115,000" / "$150,000-$180,000+" pair. Removing one
- * invention and leaving its neighbours is worse than leaving all of them,
- * because the page then reads as audited.
- *
- * Why they are not simply all deleted: the tables and factor cards are
- * pinned BYTE-IDENTICAL to scripts/generate-salary-pdf.ts by the
- * pre-existing P1 parity guard, and their annual bands are already
- * enumerated as known debt by UNMIGRATED_SALARY_BAND_SURFACES above.
- * The consistent end state enforced here is instead:
- *   1. No FAQ answer — the surface FAQPage JSON-LD emits and search engines
- *      extract standalone — states an uncited figure as fact.
- *   2. Everything that remains is labelled in place, on the page AND in the
- *      PDF, by SALARY_FIGURE_PROVENANCE.
+ * The review follow-up left the experience, setting and specialty premium
+ * tables and the factor-card figures in place, labelled as editorial
+ * estimates (SALARY_FIGURE_PROVENANCE), because they were pinned to the
+ * PDF. The salary build replaced them on both surfaces at once: BLS wages
+ * for every state, and engine medians from live postings with their
+ * employer counts. The end state pinned here:
+ *   1. No FAQ answer types a pay figure or a premium: every figure is
+ *      interpolated from BLS or the snapshot (lib/salary-guide-hub-faq.ts).
+ *   2. The estimate tables and their label are gone from the hub and the PDF.
  * ────────────────────────────────────────────────────────────────────────*/
-describe('P2 #22 (follow-up) — every uncited figure on /salary-guide is labelled', () => {
-    const hubRaw = read(SALARY_HUB);
-    const pdfRaw = read(SALARY_PDF);
-    const hub = stripComments(hubRaw);
-    const pdf = stripComments(pdfRaw);
+describe('salary build 2026-11: /salary-guide and its PDF carry no uncited figure', () => {
+    const hub = stripComments(read(SALARY_HUB));
+    const pdf = stripComments(read(SALARY_PDF));
+    const faqSource = stripComments(read('lib/salary-guide-hub-faq.ts'));
 
-    /** The `faqData` entries only — what JSON-LD emits. */
-    const faqAnswers = hubRaw
-        .split('\n')
-        .filter((l) => /^\s*\{ q: `/.test(l))
-        .join('\n');
-
-    it('the FAQ block was actually found (guards the parser above)', () => {
-        expect(faqAnswers).toContain('How much do');
-        expect(faqAnswers.split('\n').length).toBeGreaterThanOrEqual(5);
+    it('the hub renders its FAQ from the one builder, for the accordion and the JSON-LD', () => {
+        expect(hub).toContain('buildHubFaqs(snapshot)');
+        expect(hub).toContain('mainEntity: faqs.map(');
+        expect(hub).toContain('{faqs.map(({ q, a }) => (');
     });
 
-    it('no FAQ answer states an uncited premium percentage as fact', () => {
-        // Every one of these sat in a faqData answer alongside the "+12-15%"
-        // that was deleted.
-        expect(faqAnswers, 'specialization premium still asserted in an FAQ').not.toContain('+10-25%');
-        expect(faqAnswers, 'travel premium still asserted in an FAQ').not.toContain('20-50% more');
-        expect(faqAnswers).not.toContain('12-15%');
+    it('no FAQ answer types a pay figure or a premium: every figure is interpolated', () => {
+        // The one typed amount is the $200,000 threshold the question names.
+        const typed = faqSource.match(/\$\d[\d,]*/g) ?? [];
+        expect(typed.filter((t) => t !== '$200,000')).toEqual([]);
+        expect(faqSource).not.toMatch(/\+\d{1,2}-\d{1,2}%|\d{1,2}-\d{1,2}% (more|higher)/);
     });
 
-    /**
-     * The general rule, applied to every answer rather than a chosen few —
-     * fixing three of the four uncited ranges in `faqData` would be the same
-     * defect this describe block exists to correct. An answer may name a
-     * dollar range only if it also says whose estimate it is.
-     */
-    it('EVERY FAQ answer naming a dollar range attributes it in the same answer', () => {
-        const salaryRange = /\$\d{2,3},\d{3}(?:\s*(?:-|–|—|\s+to\s+)\s*\$?\d{2,3},\d{3})?/;
-        const offenders = faqAnswers
-            .split('\n')
-            .filter((l) => salaryRange.test(l))
-            // The cited BLS median is interpolated, never typed, so any
-            // literal range in an answer is by definition uncited.
-            .filter((l) => !/own (?:editorial )?estimates?/.test(l));
-        expect(
-            offenders.map((l) => l.trim().slice(0, 90)),
-            'FAQ answers state a dollar range without saying whose estimate it is',
-        ).toEqual([]);
-    });
-
-    it('the travel FAQ hands the comparison to the page that computes it', () => {
-        const answer = faqAnswers.split('\n').find((l) => l.includes('How much do travel'));
-        expect(answer, 'the travel FAQ must exist').toBeTruthy();
-        expect(answer).toContain('1099 vs W2');
-    });
-
-    it('the provenance label exists in both the hub and the PDF generator', () => {
-        expect(hub).toContain('const SALARY_FIGURE_PROVENANCE');
-        expect(pdf).toContain('const SALARY_FIGURE_PROVENANCE');
-        // The invariant fragments both copies share, so neither can be
-        // softened into meaninglessness without failing here.
-        for (const [label, src] of [['hub', hub], ['pdf', pdf]] as const) {
-            expect(src, `${label} provenance label lost its claim`).toContain(
-                "own editorial estimate, compiled from the roles posted",
-            );
-            expect(src, `${label} provenance label lost its warning`).toContain(
-                'Treat them as a starting point for negotiation, not as survey data.',
-            );
+    it('no answer names an editorial estimate or a typed range', () => {
+        for (const { q, a } of buildHubFaqs(null)) {
+            expect(a, q).not.toMatch(/own (editorial )?estimate/);
+            expect(a, q).not.toMatch(/\$\d{2,3},\d{3}\s*to\s*\$\d{2,3},\d{3}/);
         }
     });
 
-    it('the hub RENDERS the label — twice, next to where the figures appear', () => {
-        // Once under the Quick Answer (which prints three ranges beside a
-        // cited median) and once above the breakdown tables and factor
-        // cards. Declaring the constant without rendering it would be the
-        // same failure mode as the deleted citedValue() helper.
-        const renders = hub.match(/\{SALARY_FIGURE_PROVENANCE\}/g) ?? [];
-        expect(renders.length, 'label declared but not rendered on the hub').toBeGreaterThanOrEqual(2);
+    it('the estimate tables and their label are gone from both surfaces', () => {
+        for (const [label, src] of [['hub', hub], ['pdf', pdf]] as const) {
+            for (const retired of ['experienceData', 'settingData', 'specialtyData', 'SALARY_FIGURE_PROVENANCE']) {
+                expect(src, `${label}: ${retired}`).not.toContain(retired);
+            }
+        }
     });
 
-    it('the PDF prints the label too — it is the surface that gets cited for years', () => {
-        const printed = pdf.match(/\$\{escapeHtml\(SALARY_FIGURE_PROVENANCE\)\}/g) ?? [];
-        expect(printed.length, 'label declared but not printed into the PDF').toBeGreaterThanOrEqual(2);
+    it('the travel FAQ hands the comparison to the page that computes it', () => {
+        const travel = buildHubFaqs(null).find((f) => f.q.startsWith('How much do travel'));
+        expect(travel, 'the travel FAQ must exist').toBeTruthy();
+        expect(travel?.a).toContain('1099 vs W-2');
     });
 
     it('the PDF no longer cites the hub page as the source of the hub page numbers', () => {
         // The old methodology line said the ranges "reflect the published
-        // market bands on <domain>/salary-guide" — a pointer at the page
+        // market bands on <domain>/salary-guide": a pointer at the page
         // printing the same numbers, which reads as a citation and is not.
         expect(pdf).not.toContain('ranges reflect the published');
     });

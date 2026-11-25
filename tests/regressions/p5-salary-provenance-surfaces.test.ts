@@ -157,16 +157,28 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
         expect(src).toContain("import SalaryProvenance from '@/components/SalaryProvenance'");
         // The percentile figures in the hero cite the same OEWS release (HANDOFFS 181).
         expect(src).toContain('cited={[NATIONAL_SALARY, NATIONAL_P10, NATIONAL_P90]}');
-        expect(src).toContain('live={{ count: overallStats.jobsWithSalary, minimum: 1 }}');
+        // Salary build 2026-11: the live basis is the engine's employer
+        // count at the engine's floor, never a posting count at minimum 1.
+        const code = stripComments(src);
+        expect(code).toMatch(/live=\{nationalPublished \? \{ count: nationalPublished\.employers[^}]*minimum: BENCHMARK_MIN_EMPLOYERS[^}]*\} : undefined\}/);
+        expect(code).not.toContain('minimum: 1 }');
         // The review date is the SAME literal the Article dateModified uses,
         // so the visible stamp and the schema cannot disagree.
         expect(src).toContain('reviewedOn={LAST_REVIEWED_DATE}');
     });
 
-    it('the hub also states the state table’s own snapshot basis', () => {
-        const src = read(HUB);
-        const renders = src.match(/<SalaryProvenance/g) ?? [];
-        expect(renders.length).toBeGreaterThanOrEqual(2);
+    it('the hub also states the state table’s own basis', () => {
+        // The state table is the BLS table: its caption names the survey
+        // and links the BLS file, and the live column prints the employer
+        // count beside every median it shows, or the floor it missed.
+        const code = stripComments(read(HUB));
+        const start = code.indexOf('<section id="salary-by-state"');
+        expect(start).toBeGreaterThan(-1);
+        const table = code.slice(start, code.indexOf('</section>', start));
+        expect(table).toContain('Source: {BLS_STATE_SOURCE_LABEL}');
+        expect(table).toContain('href={BLS_STATE_SOURCE_URL}');
+        expect(table).toContain('{live.employers} employers');
+        expect(table).toContain('`Fewer than ${BENCHMARK_MIN_EMPLOYERS} employers`');
     });
 
     it('the state template ([state] → 51 pages) states its live basis, no fake date', () => {

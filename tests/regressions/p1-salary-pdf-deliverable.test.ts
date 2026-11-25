@@ -101,7 +101,7 @@ describe('P1 #4 — generator figures trace to sanctioned sources only', () => {
         const hub = read(HUB_PAGE);
         const disclosedSalaryWhere = 'isPublished: true, normalizedMinSalary: { not: null }';
         expect(src).toContain(disclosedSalaryWhere);
-        expect(hub).toContain('await fetchNpAnalyticsRows()');
+        expect(hub).toContain('loadNpPaySnapshot()');
     });
 
     it('prints only exact COUNTS from postings — never a derived per-state wage', () => {
@@ -151,36 +151,24 @@ describe('P1 #4 — generator copy mirrors the published /salary-guide page (dri
     // byte-identical in both files. Editing the page without syncing the
     // generator (and regenerating the PDF) fails here on purpose.
     const mirroredLiterals = [
-        // Experience bands
-        "{ exp: 'New Grad (0-1 yr)', range: '$95,000 to $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` }",
-        "{ exp: 'Early Career (1-3 yrs)', range: '$110,000 to $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` }",
-        "{ exp: 'Mid-Career (3-7 yrs)', range: '$125,000 to $150,000', roles: `Senior ${brand.niche.short}, Team Lead` }",
-        "{ exp: 'Experienced (7-15 yrs)', range: '$150,000 to $180,000', roles: 'Clinical Director, Supervisor' }",
-        "{ exp: 'Expert (15+ yrs)', range: '$180,000 to $250,000+', roles: 'Director, Consultant, Private Practice' }",
-        // Setting ranges
-        "setting: 'Private Practice (Owner)', range: '$180,000 to $300,000+', notes: 'Highest earning potential, requires business skills'",
-        "setting: 'Travel / Locum Tenens', range: '$150,000 to $250,000', notes: 'Includes housing, travel, higher hourly rates'",
-        "setting: 'Telehealth / Remote', range: '$130,000 to $180,000', notes: 'Growing rapidly, flexible schedules'",
-        "setting: 'Outpatient Clinic', range: '$120,000 to $160,000', notes: 'Most common setting, steady patient load'",
-        "setting: 'Hospital / Inpatient', range: '$115,000 to $150,000', notes: 'Often includes shift differentials, benefits'",
-        "setting: 'Community Health (FQHC)', range: '$100,000 to $130,000', notes: 'May qualify for loan forgiveness programs'",
-        // Specialty premiums — prefix only (no closing brace): the hub rows
-        // additionally carry a `slug` link field (P1 #7) the PDF omits.
-        "specialty: 'Acute Care / Hospitalist', premium: '+10-20%', notes: 'AGACNP certification, hospital demand'",
-        "specialty: 'Psychiatric-Mental Health', premium: '+10-20%', notes: 'PMHNP-BC certification, provider shortage'",
-        "specialty: 'Emergency / Urgent Care', premium: '+10-20%', notes: 'Dynamic environment, flexible scheduling'",
-        "specialty: 'Dermatology / Aesthetics', premium: '+10-25%', notes: 'Procedure-driven, cash-pay revenue'",
-        "specialty: 'Gerontology / Palliative', premium: '+5-10%', notes: 'Growing aging population'",
-        "specialty: 'Private Practice (Owner)', premium: '+20-40%', notes: 'Higher risk, no benefits'",
-        "specialty: 'Rural / Underserved', premium: '+10-15%', notes: 'Often includes loan repayment'",
-        // Negotiation factor-card copy
-        "desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.'",
-        "desc: `Entry-level ${brand.niche.short}s start around $95-115k. With 5+ years experience, salaries can reach $150-180k or more.`",
-        "desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.'",
-        "desc: `1099 contractors and travel ${brand.niche.short}s often earn 20-50% more than W2 employees, though without traditional benefits.`",
-        "desc: 'Subspecialties like acute care, emergency, psychiatric-mental health, or dermatology can command premium pay (+10-25%).'",
-        "desc: `${brand.niche.short}s who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).`",
+        // Factor-card copy. Salary build 2026-11: the cards are guidance with
+        // no figure of their own, and the experience, setting and specialty
+        // premium tables are gone from both files (pinned below).
+        "desc: 'Pay differs widely by state. The BLS table on the salary guide lists the median annual wage for every state and DC, from the highest paying to the lowest.'",
+        "desc: 'The salary guide compares advertised pay for new-grad friendly roles with roles asking for several years of experience, from live postings, each employer counted once.'",
+        "desc: 'Hospitals, clinics, telehealth companies and private practices pay differently. Compare advertised pay by specialty and work mode on the salary guide before weighing an offer.'",
+        "desc: `Contract and travel ${brand.niche.short} work is quoted as an hourly or weekly rate without benefits, so it does not compare with a salary as quoted. The 1099 vs W-2 comparison works out the rate that matches a salaried package.`",
+        "desc: 'Advertised pay differs by specialty. The salary guide lists the median for each specialty where enough employers disclose pay, with each specialty guide linked.'",
+        "desc: `Ask for the employer’s range first, anchor on your state’s BLS median and the advertised median for comparable roles, then negotiate the whole package: CME, PTO, malpractice tail and productivity terms.`",
     ];
+
+    it('the editorial estimate tables and their label are gone from the hub and the PDF', () => {
+        for (const [label, src] of [['hub', hubSrc], ['generator', generatorSrc]] as const) {
+            for (const retired of ['experienceData', 'settingData', 'specialtyData', 'SALARY_FIGURE_PROVENANCE', "premium: '+", "range: '$"]) {
+                expect(src, `${label} still carries ${retired}`).not.toContain(retired);
+            }
+        }
+    });
 
     for (const literal of mirroredLiterals) {
         it(`mirrors: ${literal.slice(0, 60)}…`, () => {
@@ -215,7 +203,7 @@ describe('P1 #4 — generator copy mirrors the published /salary-guide page (dri
 
     it('the replacement FPA copy is mirrored between the hub and the PDF', () => {
         const replacement =
-            'Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state.';
+            'Practice authority is a legal classification, not a pay scale. It decides which kinds of practice and contract work are open to you in that state.';
         expect(hubSrc).toContain(replacement);
         expect(generatorSrc).toContain(replacement);
         for (const bullet of [

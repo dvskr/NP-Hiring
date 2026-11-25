@@ -86,11 +86,14 @@ describe('P3 #12 — the llms editorial claim does not outrun /editorial-policy'
             'the city template is clean again: re-point this pin, do not widen the llms claim',
         ).not.toMatch(/TODO\(content\)[\s\S]{0,400}?estimates/);
 
-        const guide = read('app/salary-guide/page.tsx');
-        expect(guide, 'salary-guide ranges are no longer flagged as estimates: revisit the llms wording')
-            .toMatch(/own editorial estimate, compiled from the roles posted here/);
-        expect(guide, 'the unsourced experience bands no longer render in FAQ copy')
-            .toMatch(/own editorial estimates from the roles posted here/);
+        // Salary build 2026-11: the hub dropped its labelled estimate tables
+        // for BLS wages and engine medians, so it no longer carries the
+        // evidence. The specialty pages still publish a labelled editorial
+        // premium, which keeps the narrow claim the true one.
+        expect(
+            read('app/salary-guide/page.tsx'),
+            'the hub carries no labelled estimate any more: keep the evidence pin on a surface that does',
+        ).not.toMatch(/own editorial estimates?(, compiled)? from the roles posted here/);
         expect(
             read('app/salary-guide/specialty/specialty-content.ts'),
             'the specialty premium band is no longer flagged as an estimate',

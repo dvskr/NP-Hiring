@@ -443,12 +443,16 @@ describe('P1 #7 — niche-copy ratchet: new files carry zero reference-niche lit
 });
 
 describe('P1 #7 — wiring: hub links, sitemap entries, page plumbing', () => {
-    it('the hub premium table links into the specialty silo from the shared config', () => {
+    it('the hub links into the specialty silo from the shared config', () => {
         const src = read('app/salary-guide/page.tsx');
         expect(src).toContain("from '@/app/salary-guide/specialty/specialty-config'");
         expect(src).toContain('/salary-guide/specialty/');
-        // The psych row's slug comes from the registry constant, not a literal.
-        expect(src).toContain('slug: PSYCH_SPECIALTY_SLUG');
+        // Salary build 2026-11: the premium table is gone; the hub's links
+        // map the config array itself, so every page in it (the psych entry
+        // keyed by PSYCH_SPECIALTY_SLUG included) is linked and none typed.
+        expect(src).toContain('{SALARY_SPECIALTY_PAGES.map(p => (');
+        expect(src).toContain('href={`/salary-guide/specialty/${p.slug}`}');
+        expect(src).not.toMatch(/href=["'`]\/salary-guide\/specialty\/[a-z]/);
         // …and the index hub itself is reachable from the national guide.
         expect(src).toContain('href="/salary-guide/specialty"');
     });

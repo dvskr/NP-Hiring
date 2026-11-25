@@ -2,7 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import Link from 'next/link';
-import { ArrowUpRight, ArrowRight, DollarSign, Calendar, Briefcase, Star, TrendingUp, HelpCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, DollarSign, TrendingUp, HelpCircle, Ruler, Star } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import SalaryGuideForm from '@/components/SalaryGuideForm';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
@@ -14,31 +14,29 @@ import SalaryProvenance from '@/components/SalaryProvenance';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 // Report links derive from the edition config, so next year's edition and
 // any retitle reach this page without a hand-typed path or title.
-import { CURRENT_STATE_OF_HIRING_EDITION, PAY_TRANSPARENCY_REPORT } from '@/lib/reports/editions';
+import { PAY_TRANSPARENCY_REPORT } from '@/lib/reports/editions';
 import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availability';
-// P1 #7: by-specialty salary pages — the premium table below links each
-// covered specialty to its /salary-guide/specialty/<slug> deep-dive. The
-// psych slug comes from the registry constant so the reference-niche term
-// stays confined there (niche-copy debt ratchet).
-import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
+// P1 #7: by-specialty salary pages, linked from the measured specialty
+// table and the chips under it (config-driven: one array feeds the chips,
+// the index hub and the sitemap).
 import { SALARY_SPECIALTY_PAGES } from '@/app/salary-guide/specialty/specialty-config';
 // Review P9 #2c/#2d, salary build 2026-11: every posted-pay figure on this
-// page runs the one salary pool (fetchNpAnalyticsRows: live NP postings,
-// no CRNA, CNM or CNS) through the one engine (each employer counted once,
-// a median at 5 or more employers, quartiles at 10 or more), the same
-// figures /reports and the state pages print.
-import {
-  BENCHMARK_FULL_MIN_EMPLOYERS,
-  BENCHMARK_MIN_EMPLOYERS,
-  summarizeBenchmarkPool,
-} from '@/components/tools/benchmark-model';
-import { fetchNpAnalyticsRows } from '@/lib/salary-analytics';
-import { ONE_EMPLOYER_NOTE } from '@/lib/salary-report/stats';
+// page reads the NP Pay Report snapshot, the one salary pool (live NP
+// postings, no CRNA, CNM or CNS) through the one engine (each employer
+// counted once, a median at 5 or more employers, quartiles at 10 or more),
+// the same figures /reports/np-pay and the state pages print.
+import { BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
+import { loadNpPaySnapshot } from '@/lib/reports/np-pay';
+import { NP_PAY_REPORT_PATH, usd, type NpPaySnapshot } from '@/lib/reports/np-pay-model';
+import { MAX_RANGE_RATIO, ONE_EMPLOYER_NOTE, salaryAsOfLabel, SALARY_SANITY_MAX, SALARY_SANITY_MIN, TIER_RULE_NOTE } from '@/lib/salary-report/stats';
+import { buildHubFaqs } from '@/lib/salary-guide-hub-faq';
+import AdvertisedPaySection from './advertised-pay-section';
 import { formatStatVintage } from '@/components/SalaryProvenance';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 // The BLS OEWS May 2025 state wages: the all-state table, the highest and
 // lowest paying states and the state FAQ answer all read this one module.
 import {
+  BLS_NATIONAL,
   BLS_OEWS_REFERENCE_PERIOD,
   BLS_STATE_SOURCE_LABEL,
   BLS_STATE_SOURCE_URL,
@@ -105,15 +103,6 @@ const BLS_STATES_BY_MEDIAN = blsStatesByMedianDesc();
 const TOP_PAYING_STATES = topStatesByMedian(5);
 const LOWEST_PAYING_STATES = bottomStatesByMedian(5);
 
-/** The highest paying state answer, from the three highest BLS state medians. */
-function highestPayingStateAnswer(): string {
-  const [first, second, third] = TOP_PAYING_STATES;
-  if (!first || !second || !third) {
-    return `The BLS ${BLS_OEWS_REFERENCE_PERIOD} survey publishes a median annual wage for ${brand.niche.descriptor}s in each state, and the national median was ${NATIONAL_SALARY.formatted}.`;
-  }
-  return `In the BLS ${BLS_OEWS_REFERENCE_PERIOD} survey, ${first.state} had the highest median annual wage for ${brand.niche.descriptor}s at ${formatBlsDollars(first.annualMedian)}, followed by ${second.state} (${formatBlsDollars(second.annualMedian)}) and ${third.state} (${formatBlsDollars(third.annualMedian)}). The national median was ${NATIONAL_SALARY.formatted}.`;
-}
-const HIGHEST_PAYING_STATE_ANSWER = highestPayingStateAnswer();
 
 // Enable ISR with daily revalidation
 export const revalidate = 86400;
@@ -149,84 +138,24 @@ const STATE_CODES: Record<string, string> = {
   'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC',
 };
 
-interface StateSalary {
-  state: string;
-  stateCode: string;
-  /** Median posted pay for the state: the engine's median tier, never a mean. */
-  medianSalary: number;
-  /** 25th / 75th percentile, null below the full tier (fewer than 10 employers). */
-  p25: number | null;
-  p75: number | null;
-  /** Postings behind the figure; context only, never the sample size. */
-  jobCount: number;
-  /** The sample size: employers behind the figure, each counted once. */
-  employers: number;
-  slug: string;
-}
-
-/** A state with NP postings in the pool but below the median tier. */
-interface SmallSampleState {
-  state: string;
-  stateCode: string;
-  jobCount: number;
-  slug: string;
-}
-
-const stateSlug = (name: string) => name.toLowerCase().replace(/\s+/g, '-');
-
 /**
- * One fetch feeds every posting-derived figure on this page:
- *   - pool     = fetchNpAnalyticsRows (live NP postings with a non-estimated
- *                annual pay range, confidence 0.8 or more; no CRNA, CNM or
- *                CNS postings), the pool /reports and the state pages read.
- *   - figures  = the engine through summarizeBenchmarkPool: each employer
- *                counted once, a median at 5 or more employers, quartiles
- *                at 10 or more; the national row over every pool row.
- * States below the median tier are listed WITHOUT a figure, never as a
- * ranked row.
+ * Every posted-pay figure on this page reads ONE snapshot: the NP Pay Report's
+ * (lib/reports/np-pay.ts), the one salary pool (live NP postings with a
+ * non-estimated annual pay range; no CRNA, CNM or CNS postings) through the
+ * one engine (each employer counted once; a median at 5 or more employers,
+ * quartiles at 10 or more). /reports/np-pay prints the same figures, so the
+ * two pages cannot disagree. Null only during a build with no database: the
+ * page then renders its BLS figures alone.
  */
-async function getSalaryAnalytics() {
-  const npRows = await fetchNpAnalyticsRows();
-  const { national, states } = summarizeBenchmarkPool(npRows);
-
-  const gatedStates: StateSalary[] = states
-    .map((s) => ({
-      state: s.scope,
-      stateCode: STATE_CODES[s.scope] || '',
-      medianSalary: s.median,
-      p25: s.p25,
-      p75: s.p75,
-      jobCount: s.postings,
-      employers: s.employers,
-      slug: stateSlug(s.scope),
-    }))
-    .sort((a, b) => b.medianSalary - a.medianSalary);
-
-  const listedNames = new Set(gatedStates.map((s) => s.state));
-  const countsByState = new Map<string, number>();
-  for (const row of npRows) {
-    if (row.state) countsByState.set(row.state, (countsByState.get(row.state) ?? 0) + 1);
-  }
-  const smallSampleStates: SmallSampleState[] = [...countsByState.entries()]
-    .filter(([name]) => !listedNames.has(name))
-    .map(([name, count]) => ({
-      state: name,
-      stateCode: STATE_CODES[name] || '',
-      jobCount: count,
-      slug: stateSlug(name),
-    }))
-    .sort((a, b) => a.state.localeCompare(b.state));
-
-  return {
-    stateSalaries: gatedStates,
-    smallSampleStates,
-    national,
-    overallStats: {
-      // Size of the pool: postings with a usable annual pay range. Context
-      // for the page; each figure's own n is its employer count.
-      jobsWithSalary: npRows.length,
-    },
-  };
+function calculatorStates(snapshot: NpPaySnapshot | null) {
+  return (snapshot?.states ?? [])
+    .filter((row) => row.median !== null && row.employers !== null)
+    .map((row) => ({
+      state: row.scope,
+      stateCode: STATE_CODES[row.scope] || '',
+      medianSalary: row.median as number,
+      employers: row.employers as number,
+    }));
 }
 
 /**
@@ -293,73 +222,22 @@ const clayCard: React.CSSProperties = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
- * PROVENANCE OF EVERY NON-CITED NUMBER ON THIS PAGE
+ * EVERY FIGURE ON THIS PAGE IS MEASURED (salary build 2026-11)
  * ═══════════════════════════════════════════════════════════════════════
- * Review finding (P2 #22 follow-up, second pass): the first pass deleted a
- * fabricated "+12-15% Full Practice Authority premium" from the FAQ and the
- * FPA card and left four figures of exactly the same kind sitting beside it
- * — "+10-25%" for specialization in the SAME SENTENCE, "20-50% more" for
- * travel/locum, "$95,000-$115,000" for new grads, "$150,000-$180,000+" for
- * experienced NPs. Removing one invention and leaving its neighbours is
- * worse than leaving all of them, because a reader (and a crawler) reads
- * the page as audited when it is not.
- *
- * WHY THEY ARE NOT ALL SIMPLY DELETED: the experience/setting/specialty
- * tables and the factor cards are pinned BYTE-IDENTICAL to
- * scripts/generate-salary-pdf.ts by a pre-existing P1 parity guard
- * (tests/regressions/p1-salary-pdf-deliverable.test.ts, 24 mirrored
- * literals), their annual bands are already enumerated as known debt in the
- * P2 #10 ratchet (UNMIGRATED_SALARY_BAND_SURFACES lists this file and the
- * generator), and rewriting the page's whole content model belongs to the
- * package that owns /salary-guide — not to a follow-up on a resources-page
- * data-accuracy fix.
- *
- * WHAT IS DONE INSTEAD, so the treatment is consistent rather than partial:
- *   1. No FAQ answer states an uncited figure as fact. FAQ answers are what
- *      FAQPage JSON-LD emits and what search engines extract standalone, so
- *      they are the surface where an unlabelled estimate does real damage.
- *   2. Every remaining range and premium is labelled in place, on the page
- *      and in the PDF, by SALARY_FIGURE_PROVENANCE below.
- *   3. The label is pinned by tests/regressions/p2-data-accuracy-stats-and-guides.ts
- *      so it cannot be dropped while the figures stay.
- * The honest end state is: exactly one number on this page is a cited
- * source (STAT_SOURCES.npMedianWageBls); every other one says so.
+ * The experience, setting and specialty premium tables and the figures in
+ * the factor cards were uncited editorial estimates, labelled as such while
+ * they stood. They are gone, from
+ * this page and from scripts/generate-salary-pdf.ts alike. In their place:
+ *   - BLS OEWS May 2025 wages for every state and DC
+ *     (lib/salary-guide-bls-states.ts), each with its source and vintage;
+ *   - advertised pay on live postings by state, specialty, work mode,
+ *     employment type and experience, from the one salary engine through the
+ *     NP Pay Report snapshot (lib/reports/np-pay.ts): each employer counted
+ *     once, a median at 5 or more employers, quartiles at 10 or more.
+ * The factor cards stay as guidance with no figure of their own. The FAQ
+ * (lib/salary-guide-hub-faq.ts) answers from those same figures.
  * ═══════════════════════════════════════════════════════════════════════ */
-// 2026-10: the cited set grew from the median alone to the median plus the
-// 10th and 90th percentiles (same OEWS release), and the state table's
-// figures are computed posting medians, so the label names both measured
-// families before it labels everything else as an estimate.
-const SALARY_FIGURE_PROVENANCE = `The BLS median and percentiles, and the posted-pay medians in the state table, are measured figures. Every other salary range and percentage premium on this page is ${brand.name}'s own editorial estimate, compiled from the roles posted here. Treat them as a starting point for negotiation, not as survey data.`;
-
-/* ═══ Experience / Setting / Specialty data ═══ */
-const experienceData = [
-  { exp: 'New Grad (0-1 yr)', range: '$95,000 to $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
-  { exp: 'Early Career (1-3 yrs)', range: '$110,000 to $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
-  { exp: 'Mid-Career (3-7 yrs)', range: '$125,000 to $150,000', roles: `Senior ${brand.niche.short}, Team Lead` },
-  { exp: 'Experienced (7-15 yrs)', range: '$150,000 to $180,000', roles: 'Clinical Director, Supervisor' },
-  { exp: 'Expert (15+ yrs)', range: '$180,000 to $250,000+', roles: 'Director, Consultant, Private Practice' },
-];
-
-const settingData = [
-  { setting: 'Private Practice (Owner)', range: '$180,000 to $300,000+', notes: 'Highest earning potential, requires business skills', color: '#BE185D' },
-  { setting: 'Travel / Locum Tenens', range: '$150,000 to $250,000', notes: 'Includes housing, travel, higher hourly rates', color: '#7C3AED' },
-  { setting: 'Telehealth / Remote', range: '$130,000 to $180,000', notes: 'Growing rapidly, flexible schedules', color: '#2563EB' },
-  { setting: 'Outpatient Clinic', range: '$120,000 to $160,000', notes: 'Most common setting, steady patient load', color: '#B45309' },
-  { setting: 'Hospital / Inpatient', range: '$115,000 to $150,000', notes: 'Often includes shift differentials, benefits', color: '#DC2626' },
-  { setting: 'Community Health (FQHC)', range: '$100,000 to $130,000', notes: 'May qualify for loan forgiveness programs', color: '#6B7280' },
-];
-
-// `slug` links a row to its by-specialty deep-dive page (P1 #7); rows
-// without a matching specialty page (settings/geography rows) stay plain.
-const specialtyData: { specialty: string; premium: string; notes: string; slug?: string }[] = [
-  { specialty: 'Acute Care / Hospitalist', premium: '+10-20%', notes: 'AGACNP certification, hospital demand', slug: 'acute-care' },
-  { specialty: 'Psychiatric-Mental Health', premium: '+10-20%', notes: 'PMHNP-BC certification, provider shortage', slug: PSYCH_SPECIALTY_SLUG },
-  { specialty: 'Emergency / Urgent Care', premium: '+10-20%', notes: 'Dynamic environment, flexible scheduling', slug: 'emergency' },
-  { specialty: 'Dermatology / Aesthetics', premium: '+10-25%', notes: 'Procedure-driven, cash-pay revenue', slug: 'dermatology' },
-  { specialty: 'Gerontology / Palliative', premium: '+5-10%', notes: 'Growing aging population', slug: 'adult-gerontology' },
-  { specialty: 'Private Practice (Owner)', premium: '+20-40%', notes: 'Higher risk, no benefits' },
-  { specialty: 'Rural / Underserved', premium: '+10-15%', notes: 'Often includes loan repayment' },
-];
+const HUB_FIGURES_NOTE = `Every figure on this page is either a BLS survey estimate, shown with its source and vintage, or a median of the pay employers advertise in live postings on ${brand.name}, shown with the number of employers behind it.`;
 
 /**
  * Exact-DPR srcSet over the ladder files generated by
@@ -375,75 +253,36 @@ function ladderSrcSet(img: string, widths: number[]): string {
 const FACTOR_LADDER = [48, 60, 72, 84, 96];
 
 const factorCards = [
-  { img: '/images/salary-guide/factor-location.webp', title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
-  { img: '/images/salary-guide/factor-experience.webp', title: 'Experience Level', desc: `Entry-level ${brand.niche.short}s start around $95-115k. With 5+ years experience, salaries can reach $150-180k or more.` },
-  { img: '/images/salary-guide/factor-setting.webp', title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
-  { img: '/images/salary-guide/factor-employment.webp', title: 'Employment Type', desc: `1099 contractors and travel ${brand.niche.short}s often earn 20-50% more than W2 employees, though without traditional benefits.` },
-  { img: '/images/salary-guide/factor-specialty.webp', title: 'Specialization', desc: 'Subspecialties like acute care, emergency, psychiatric-mental health, or dermatology can command premium pay (+10-25%).' },
-  { img: '/images/salary-guide/factor-negotiate.webp', title: 'Negotiation', desc: `${brand.niche.short}s who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).` },
-];
-
-const faqData = [
-  // Review follow-up: the "$95,000-$115,000" / "$150,000-$180,000+" pair is
-  // the same class of uncited figure as the "+12-15%" FPA premium the first
-  // pass deleted. It is not deleted here (it mirrors the experience table,
-  // which the P1 PDF parity guard pins byte-identically) — it is attributed,
-  // so the answer no longer presents it alongside a cited BLS median as
-  // though both carry the same weight. See SALARY_FIGURE_PROVENANCE above.
-  // 2026-10 (SEO/AEO release): the answer now leads with the cited median
-  // and both percentiles, interpolated from STAT_SOURCES; the question lost
-  // its hand-typed year (the data's own vintage is in the answer), and the
-  // estimate ranges read "to" (house style) and stay attributed.
-  { q: `How much do ${brand.niche.descriptor}s make?`, a: `The median annual wage for ${brand.niche.descriptor}s was ${NATIONAL_SALARY.formatted} in ${NATIONAL_SALARY_VINTAGE}, according to federal wage data (${NATIONAL_SALARY.source}). The 10th percentile wage was ${NATIONAL_P10.formatted} and the 90th percentile wage was ${NATIONAL_P90.formatted}. State medians range from ${formatBlsDollars(LOWEST_PAYING_STATES[0].annualMedian)} in ${LOWEST_PAYING_STATES[0].state} to ${formatBlsDollars(TOP_PAYING_STATES[0].annualMedian)} in ${TOP_PAYING_STATES[0].state} in the same survey, and individual offers move with setting, specialty and location.` },
-  // 2026-11 (salary build): written from the BLS state rows, so the states
-  // and figures follow the generated module. The hand-typed list of five
-  // states and the uncited cost-of-living claim it carried are gone.
-  { q: `Which state pays ${brand.niche.short}s the most?`, a: HIGHEST_PAYING_STATE_ANSWER },
-  // SECOND PASS: attributed for the same reason as the two answers above.
-  // It is the fourth uncited range in this array; leaving it bare while
-  // labelling its neighbours would repeat the exact defect this pass exists
-  // to fix. No FAQ answer in faqData may state a figure as fact unless it
-  // is a cited STAT_SOURCES entry.
-  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Broadly comparable. Telehealth pay is not systematically lower, and in-person roles vary more by setting and acuity than telehealth does. The $120,000 to $170,000 range we see for telehealth roles, and the $180,000+ some national platforms pay experienced ${brand.niche.short}s with multi-state licenses, are ${brand.name}'s own estimates from the roles posted here rather than survey figures. Telehealth also trades differently on flexibility, licensure cost across states, and patient volume expectations, so compare specific offers rather than the ranges.` },
-  // P2 #22 follow-up: this answer previously asserted a "+12-15%" Full
-  // Practice Authority premium and a "$180,000-$300,000+" private-practice
-  // ownership range. Neither has a source anywhere in this repo, the FPA
-  // premium was already removed from /resources/fpa-guide as fabricated,
-  // and the ownership range contradicted the computed model now published
-  // on /resources/private-practice-guide. Both are replaced with the
-  // mechanism, plus a pointer at the page that actually models it.
-  //
-  // SECOND PASS: the same sentence still carried "(+10-25% premium)" for
-  // specialization — an equally uncited figure left standing next to the
-  // one that was deleted. The parenthetical is gone from the answer; the
-  // table it came from is still on the page and is now labelled.
-  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include specializing in high-demand areas such as acute care, emergency, or psychiatric-mental health; practicing where the rules of your state open independent contract, telehealth, and practice-ownership work to you (a Full Practice classification alone does not settle it, because several of those states first require a transition period); modelling private practice against your own visit volume and overhead rather than a headline range; working in rural or underserved areas for loan repayment incentives; and always negotiating total compensation. The specialty premiums shown on this page are our own estimates from posted roles, so treat them as a hypothesis to test against real offers rather than a number to expect.' },
-  // SECOND PASS: "typically earn 20-50% more than permanent positions" and
-  // "$150,000 to $250,000+" were both uncited. A locum rate is also not
-  // comparable to a salary without pricing the benefits, malpractice, and
-  // unpaid downtime the permanent job absorbs — /resources/1099-vs-w2 works
-  // that arithmetic, so the answer points there instead of asserting a gap.
-  { q: `How much do travel ${brand.niche.short}s make?`, a: `Travel and locum tenens work is quoted as an hourly or weekly rate plus stipends rather than a salary, so it is not directly comparable to a permanent offer: the rate has to cover the health coverage, malpractice, retirement, and unpaid downtime a permanent job absorbs. The $150,000 to $250,000 figure in the setting table on this page is ${brand.name}'s own estimate from posted travel and locum roles, not a survey figure. To see what a contract rate actually has to clear to match a salaried package, work through the 1099 vs W2 comparison, which computes the break-even instead of assuming one.` },
+  { img: '/images/salary-guide/factor-location.webp', title: 'Geographic Location', desc: 'Pay differs widely by state. The BLS table on the salary guide lists the median annual wage for every state and DC, from the highest paying to the lowest.' },
+  { img: '/images/salary-guide/factor-experience.webp', title: 'Experience Level', desc: 'The salary guide compares advertised pay for new-grad friendly roles with roles asking for several years of experience, from live postings, each employer counted once.' },
+  { img: '/images/salary-guide/factor-setting.webp', title: 'Practice Setting', desc: 'Hospitals, clinics, telehealth companies and private practices pay differently. Compare advertised pay by specialty and work mode on the salary guide before weighing an offer.' },
+  { img: '/images/salary-guide/factor-employment.webp', title: 'Employment Type', desc: `Contract and travel ${brand.niche.short} work is quoted as an hourly or weekly rate without benefits, so it does not compare with a salary as quoted. The 1099 vs W-2 comparison works out the rate that matches a salaried package.` },
+  { img: '/images/salary-guide/factor-specialty.webp', title: 'Specialization', desc: 'Advertised pay differs by specialty. The salary guide lists the median for each specialty where enough employers disclose pay, with each specialty guide linked.' },
+  { img: '/images/salary-guide/factor-negotiate.webp', title: 'Negotiation', desc: `Ask for the employer’s range first, anchor on your state’s BLS median and the advertised median for comparable roles, then negotiate the whole package: CME, PTO, malpractice tail and productivity terms.` },
 ];
 
 export default async function SalaryGuidePage() {
-  const [
-    { stateSalaries, smallSampleStates, national, overallStats },
-    activeJobsByState,
-  ] = await Promise.all([getSalaryAnalytics(), getActiveJobsByState()]);
+  const [snapshot, activeJobsByState] = await Promise.all([loadNpPaySnapshot(), getActiveJobsByState()]);
+  const national = snapshot?.national ?? null;
+  const nationalPublished = national && national.median !== null && national.employers !== null ? national : null;
+  const liveByState = new Map((snapshot?.states ?? []).map((row) => [row.scope, row]));
+  // The day the live figures describe, formatted on the server.
+  const asOfLabel = snapshot ? salaryAsOfLabel(new Date(snapshot.asOf)) : null;
 
-  // Calculator base: the gated national median of NP-eligible postings
-  // when it exists; otherwise fall back to the cited BLS OEWS national
-  // median — never an ungated posting mean.
-  const calculatorNational = national
-    ? { base: national.median, basis: 'postings' as const, employers: national.employers }
+  // Calculator base: the national median advertised pay when the engine
+  // publishes one; otherwise the cited BLS OEWS national median, never an
+  // ungated posting mean.
+  const calculatorNational = nationalPublished
+    ? { base: nationalPublished.median as number, basis: 'postings' as const, employers: nationalPublished.employers as number }
     : { base: Number(NATIONAL_SALARY.value), basis: 'bls' as const };
 
-  // FAQ Schema — generated from visible faqData so schema + content stay in sync
+  // ONE array feeds the visible FAQ and the FAQPage JSON-LD, and every answer
+  // comes from a cited figure or the snapshot (lib/salary-guide-hub-faq.ts).
+  const faqs = buildHubFaqs(snapshot);
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: faqData.map(faq => ({
+    mainEntity: faqs.map(faq => ({
       '@type': 'Question' as const,
       name: faq.q,
       acceptedAnswer: { '@type': 'Answer' as const, text: faq.a },
@@ -455,7 +294,7 @@ export default async function SalaryGuidePage() {
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": GUIDE_NAME,
-    "description": `${brand.niche.long} salary data: the BLS ${NATIONAL_SALARY_VINTAGE} median and 10th and 90th percentiles, posted pay by state, experience levels, specialty premiums, and practice settings. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
+    "description": `${brand.niche.long} salary data: the BLS ${NATIONAL_SALARY_VINTAGE} median wage and its 10th and 90th percentiles, the BLS median for every state and DC, and the pay employers advertise on live postings by state, specialty, work mode and experience, each employer counted once. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
     "image": SALARY_GUIDE_OG_IMAGE,
     // No datePublished: the literal "2026-01-01" predated the repository
     // itself (first commit 2026-07-02), and no record fixes the day this
@@ -475,8 +314,6 @@ export default async function SalaryGuidePage() {
   const sanitizeJson = (obj: object): string => {
     return JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
   };
-
-  const fmt = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
 
   return (
     <>
@@ -515,6 +352,11 @@ export default async function SalaryGuidePage() {
             <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
               National median <strong>{NATIONAL_SALARY.formatted}</strong> per year (BLS OEWS, {NATIONAL_SALARY_VINTAGE}).
             </p>
+            {/* The trust line: the real review date (a literal, never render
+                time) and the day the live figures describe. */}
+            <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: '10px auto 0' }}>
+              Reviewed {REVIEWED_LABEL}.{asOfLabel ? ` Live advertised pay recomputed daily, as of ${asOfLabel}.` : ''}
+            </p>
             {/* CQ-12: the visible authorship line, matching the Article
                 JSON-LD below (the editorial team until a named author or
                 reviewer is configured in brand.editorial). */}
@@ -534,7 +376,7 @@ export default async function SalaryGuidePage() {
             {/* Calculator (8 cols on desktop, full row on mobile) */}
             <div className="sal-hero-calc" style={{ minWidth: 0 }}>
               <SalaryCalculator
-                stateSalaries={stateSalaries.map(s => ({ state: s.state, stateCode: s.stateCode, medianSalary: s.medianSalary, employers: s.employers }))}
+                stateSalaries={calculatorStates(snapshot)}
                 national={calculatorNational}
               />
             </div>
@@ -575,7 +417,7 @@ export default async function SalaryGuidePage() {
                   ...clayCard, padding: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                   border: '1.5px solid rgba(190,24,93,0.12)',
                 }}>
-                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>📄 Download Free PDF Guide</h3>
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Download the Free PDF Guide</h3>
                   <SalaryGuideForm />
                   {/* Must list only what the delivered PDF's Methodology
                       section actually cites (scripts/generate-salary-pdf.ts →
@@ -609,10 +451,10 @@ export default async function SalaryGuidePage() {
                       now carries ONLY cited figures: the OEWS median and the
                       10th and 90th percentiles, all read from STAT_SOURCES,
                       named as a median and percentiles (never an average),
-                      and linked to the BLS source. The three editorial
-                      ranges it used to print ("$95,000-$115,000" and so on)
-                      live in the labelled experience and setting tables
-                      below. The PDF's Quick Answer card
+                      and linked to the BLS source. The editorial ranges it
+                      used to print are gone from the page (salary build
+                      2026-11), replaced by the BLS state table and the
+                      advertised pay sections below. The PDF's Quick Answer card
                       (scripts/generate-salary-pdf.ts) prints the same three
                       figures since the 2026-10-13 regeneration, and
                       tests/regressions/p1-salary-pdf-deliverable.test.ts
@@ -628,29 +470,29 @@ export default async function SalaryGuidePage() {
                     is <strong>{NATIONAL_P90.formatted}</strong>.
                   </p>
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '10px 0 0' }}>
-                    For the pay employers are posting now, see the posted-pay medians by state below and{' '}
-                    <Link href={CURRENT_STATE_OF_HIRING_EDITION.path} style={{ color: '#BE185D', fontWeight: 600 }}>
-                      {CURRENT_STATE_OF_HIRING_EDITION.title}
+                    State medians run from {formatBlsDollars(LOWEST_PAYING_STATES[0].annualMedian)} in {LOWEST_PAYING_STATES[0].state} to{' '}
+                    {formatBlsDollars(TOP_PAYING_STATES[0].annualMedian)} in {TOP_PAYING_STATES[0].state} in the same survey: see{' '}
+                    <a href="#salary-by-state" style={{ color: '#BE185D', fontWeight: 600 }}>the table for every state</a>.
+                    For the pay employers advertise now, the same table carries the live median for each state, and the{' '}
+                    <Link href={NP_PAY_REPORT_PATH} style={{ color: '#BE185D', fontWeight: 600 }}>
+                      NP Pay Report
                     </Link>
-                    , which covers advertised pay on {brand.name}. Our{' '}
+                    {' '}covers advertised pay on {brand.name} in full. Our{' '}
                     <Link href={PAY_TRANSPARENCY_REPORT.path} style={{ color: '#BE185D', fontWeight: 600 }}>
                       pay transparency report
                     </Link>
-                    {' '}shows how many of those postings disclose a pay range.
+                    {' '}shows how many postings disclose a pay range.
                   </p>
-                  {/* The label separates the measured figures above from the
-                      editorial estimates further down the page. */}
                   <p style={{ fontSize: '12px', color: '#6B5B53', lineHeight: 1.6, margin: '10px 0 0' }}>
-                    {SALARY_FIGURE_PROVENANCE}
+                    {HUB_FIGURES_NOTE}
                   </p>
-                  {/* A4 (teardown parity): the Vivian/Indeed-style
-                      date-stamp, assembled honestly — cited vintage from
-                      STAT_SOURCES, snapshot basis from the aggregate that
-                      already ran, review date a literal (never render
-                      time; P0 #23). */}
+                  {/* A4 (teardown parity): the date-stamp, assembled honestly:
+                      cited vintage from STAT_SOURCES, the live basis in
+                      employers from the snapshot that already ran, the
+                      review date a literal (never render time; P0 #23). */}
                   <SalaryProvenance
                     cited={[NATIONAL_SALARY, NATIONAL_P10, NATIONAL_P90]}
-                    live={{ count: overallStats.jobsWithSalary, minimum: 1 }}
+                    live={nationalPublished ? { count: nationalPublished.employers as number, minimum: BENCHMARK_MIN_EMPLOYERS, noun: 'employers that disclose pay in live postings' } : undefined}
                     reviewedOn={LAST_REVIEWED_DATE}
                     style={{ fontSize: '11px', color: '#64748B', marginTop: '6px' }}
                   />
@@ -664,10 +506,11 @@ export default async function SalaryGuidePage() {
                   { value: NATIONAL_SALARY.formatted, label: 'National Median (BLS)', color: '#BE185D' },
                   { value: NATIONAL_P90.formatted, label: '90th Percentile Wage (BLS)', color: '#BE185D' },
                   { value: NP_GROWTH.formatted, label: 'Job Growth by 2035', color: '#B45309' },
-                  // The posted-pay sample is counted in employers, each once.
-                  national
-                    ? { value: national.employers.toLocaleString('en-US'), label: 'Employers Disclosing Pay', color: '#B45309' }
-                    : { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings With Pay', color: '#B45309' },
+                  // The posted-pay sample is counted in employers, each once;
+                  // without live data the tile shows the BLS employment count.
+                  nationalPublished
+                    ? { value: (nationalPublished.employers as number).toLocaleString('en-US'), label: 'Employers Disclosing Pay', color: '#B45309' }
+                    : { value: formatBlsCount(BLS_NATIONAL.np.employment), label: 'NPs Employed (BLS)', color: '#B45309' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
@@ -706,7 +549,8 @@ export default async function SalaryGuidePage() {
             {brand.niche.long} Salary by State (BLS, {BLS_OEWS_REFERENCE_PERIOD})
           </h2>
           <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.65, textAlign: 'center', maxWidth: '720px', margin: '0 auto 28px' }}>
-            Median annual wage for {brand.niche.descriptor}s in each state and DC, from the BLS Occupational Employment and Wage Statistics survey ({BLS_OEWS_REFERENCE_PERIOD}). These are survey estimates of wages paid, sorted from the highest state median to the lowest.
+            Median annual wage for {brand.niche.descriptor}s in each state and DC, from the BLS Occupational Employment and Wage Statistics survey ({BLS_OEWS_REFERENCE_PERIOD}), sorted from the highest state median to the lowest.
+            {snapshot ? ` Where at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay in live postings, the live column shows the median advertised pay, each employer counted once.` : ''}
           </p>
 
           <div className="emp-compare-table" style={{ ...clayCard, padding: 0, overflowX: 'auto' }}>
@@ -723,12 +567,14 @@ export default async function SalaryGuidePage() {
                   <th scope="col" className="sal-bls-optional" style={blsHeadCell}>Median hourly wage</th>
                   <th scope="col" className="sal-bls-optional" style={blsHeadCell}>10th to 90th percentile</th>
                   <th scope="col" className="sal-bls-optional" style={blsHeadCell}>{brand.niche.short} employment</th>
+                  {snapshot && <th scope="col" style={blsHeadCell}>Live advertised median</th>}
                   <th scope="col" style={blsHeadCell}>Open jobs</th>
                 </tr>
               </thead>
               <tbody>
                 {BLS_TABLE_ROWS.map((row, i) => {
                   const jobs = activeJobsByState.get(row.state) ?? 0;
+                  const live = liveByState.get(row.state);
                   return (
                     <tr key={row.state} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
                       <th scope="row" style={{ ...blsCell, textAlign: 'left', paddingLeft: '20px', fontWeight: 600, color: '#1A2E35' }}>
@@ -746,6 +592,16 @@ export default async function SalaryGuidePage() {
                           : `${formatBlsDollars(row.annualP10)}; ${formatBlsDollars(row.annualP90)}`}
                       </td>
                       <td className="sal-bls-optional" style={{ ...blsCell, color: '#5A4A42' }}>{formatBlsCount(row.employment)}</td>
+                      {snapshot && (
+                        <td style={{ ...blsCell, color: '#5A4A42', fontSize: '12px' }}>
+                          {live && live.median !== null && live.employers !== null ? (
+                            <>
+                              <span style={{ fontWeight: 700, color: '#1A2E35', fontSize: '13px' }}>{usd(live.median)}</span>
+                              <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>{live.employers} employers</span>
+                            </>
+                          ) : `Fewer than ${BENCHMARK_MIN_EMPLOYERS} employers`}
+                        </td>
+                      )}
                       <td style={blsCell}>
                         {jobs > 0 ? (
                           <Link href={`/jobs/state/${row.slug}`} style={{ fontSize: '12px', color: '#BE185D', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
@@ -785,297 +641,86 @@ export default async function SalaryGuidePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 3: STATE SALARY TABLE (slate bg)
+          SECTION 3: ADVERTISED PAY ON LIVE POSTINGS (cream bg)
+          The measured breakdowns that replaced the editorial estimate
+          tables (experience, setting, specialty premiums): the NP Pay
+          Report snapshot, rows at the engine's median tier only.
           ═══════════════════════════════════════════════════════════════ */}
-      {stateSalaries.length > 0 && (
-        <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-              Salary by Location
-            </p>
-            <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
-              {brand.niche.short} Salary by State
-            </h2>
-
-            {/* Note */}
-            <div style={{
-              ...clayCard, maxWidth: '680px', margin: '0 auto 28px', padding: '14px 20px',
-              background: '#FDF2F8', border: '1px solid #FBCFE8',
-            }}>
-              <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.5 }}>
-                {/* Not flag-gated: this table IS the state-by-state source.
-                    The PDF deliberately freezes no state wage snapshot (it
-                    would overstate typical pay — see the note above
-                    fetchLiveInventory in scripts/generate-salary-pdf.ts), so
-                    the download must never be advertised as the place to get
-                    state data. Traffic flows the other way: the PDF points
-                    readers here. */}
-                <strong>Note:</strong> Each figure is the <strong>median posted pay</strong> across the employers that disclose a non-estimated annual pay range in that state&apos;s live {brand.niche.short} postings, recomputed daily. {ONE_EMPLOYER_NOTE} A state appears with a figure once at least {BENCHMARK_MIN_EMPLOYERS} employers disclose pay, and with its 25th to 75th percentile range once at least {BENCHMARK_FULL_MIN_EMPLOYERS} do; other states are listed separately without a figure.
-                {' '}Each state name links to a detailed page with pay by setting and top employers.
-              </p>
-              {/* A4: the table's own snapshot basis — the same national
-                  disclosed-salary count the aggregate above computed. No
-                  review date here: the table is live data, not editorial
-                  copy (B54 — live-data freshness is the query's own basis). */}
-              <SalaryProvenance
-                live={{ count: overallStats.jobsWithSalary, minimum: 1 }}
-                style={{ fontSize: '11px', color: '#831843', marginTop: '6px' }}
-              />
-            </div>
-
-            {/* Table of the states at the median tier */}
-            {stateSalaries.length > 0 && (
-            <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
-              <table role="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
-                <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
-                    <th style={{ width: '35%', padding: '14px 20px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>State</th>
-                    <th style={{ width: '20%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Median</th>
-                    <th className="sal-range-col" style={{ width: '25%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>P25 to P75</th>
-                    <th style={{ width: '10%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Sample</th>
-                    <th style={{ width: '10%', padding: '14px 16px', textAlign: 'right', borderBottom: '2px solid rgba(0,0,0,0.06)' }}><span style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Review P9 #2d: no gold top-3 badges or highlight rows —
-                      the ranked-with-medals treatment was the maximally
-                      confident presentation of a contaminated number. Rows
-                      here already reached the median tier (5 or more employers). */}
-                  {stateSalaries.map((state, i) => (
-                    <tr key={state.state} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                      <td style={{ padding: '12px 20px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div>
-                            {/* Audit P0 #20: the hub must link its own 51
-                                state children — same slug derivation as
-                                app/salary-guide/[state]/page.tsx. */}
-                            <Link href={`/salary-guide/${state.slug}`} className="sal-state-link" style={{ fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
-                              {state.state}
-                            </Link>
-                            <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '6px' }}>{state.stateCode}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontWeight: 700, color: '#1A2E35' }}>
-                        ${fmt(state.medianSalary)}
-                      </td>
-                      <td className="sal-range-col" style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B' }}>
-                        {state.p25 !== null && state.p75 !== null
-                          ? `$${fmt(state.p25)} to $${fmt(state.p75)}`
-                          : `At ${BENCHMARK_FULL_MIN_EMPLOYERS} or more employers`}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B', whiteSpace: 'nowrap' }}>
-                        {state.employers} employers
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                        <Link href={`/jobs/state/${state.slug}`} style={{ fontSize: '12px', color: '#BE185D', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                          Jobs <ArrowUpRight size={12} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            )}
-
-            {/* Review P9 #2d: states with postings but below the publishing
-                gate are named WITHOUT a figure — the honest replacement for
-                the n=1 "averages" this table used to rank. */}
-            {smallSampleStates.length > 0 && (
-              <div style={{ ...clayCard, marginTop: '20px', padding: '18px 24px' }}>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
-                  States where fewer than {BENCHMARK_MIN_EMPLOYERS} employers disclose pay
-                </p>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 10px', lineHeight: 1.5 }}>
-                  These states have live postings with pay ranges, but from fewer than {BENCHMARK_MIN_EMPLOYERS} employers, so no posted median is published yet. Each state page carries its BLS wage figures. The number beside a state counts its postings with a pay range:
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
-                  {smallSampleStates.map((s) => (
-                    <Link key={s.state} href={`/salary-guide/${s.slug}`} className="sal-state-link" style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
-                      {s.state} <span style={{ color: '#64748B', fontWeight: 500 }}>({s.jobCount})</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          </div>
-        </section>
-      )}
+      {snapshot && asOfLabel && <AdvertisedPaySection snapshot={snapshot} asOfLabel={asOfLabel} />}
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 4: SALARY BREAKDOWN BENTO (cream bg)
+          SECTION 4: SPECIALTY GUIDES AND PRACTICE AUTHORITY (white bg)
           ═══════════════════════════════════════════════════════════════ */}
-      <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            Salary Breakdown
-          </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
-            What Impacts Your Earnings
-          </h2>
-          {/* Review follow-up: this section renders every uncited figure on
-              the page at once — the experience bands, the setting bands, the
-              specialty premium column, and the factor cards. Labelling it
-              once here is what keeps the treatment consistent with the
-              fabricated FPA premium that was deleted; see
-              SALARY_FIGURE_PROVENANCE. */}
-          <p style={{ fontSize: '12.5px', color: '#7A6A62', lineHeight: 1.6, textAlign: 'center', maxWidth: '640px', margin: '0 auto 36px' }}>
-            {SALARY_FIGURE_PROVENANCE}
-          </p>
+      <section style={{ background: '#FFFFFF', padding: '64px 20px' }}>
+        <div className="sal-bento" style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
 
-          <div className="sal-bento" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
-
-            {/* Experience Level (8 cols) */}
-            <div className="sal-bento-exp emp-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden' }}>
-              <div style={{ padding: '24px 28px 8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Calendar size={22} />
-                </div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>By Experience Level</h3>
+          {/* Specialty guides (6 cols): config-driven, one array feeds these
+              chips, the specialty index hub and the sitemap (P1 #7). */}
+          <div className="sal-bento-spec emp-bento-card" style={{ ...clayCard, gridColumn: 'span 6', padding: '24px 22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Star size={22} />
               </div>
-              <div style={{ padding: '0 0 0' }}>
-                <table className="emp-compare-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ padding: '12px 28px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '1px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Experience</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '1px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Salary Range</th>
-                      <th className="sal-roles-col" style={{ padding: '12px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '1px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Typical Roles</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {experienceData.map((item, i) => (
-                      <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                        <td style={{ padding: '12px 28px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{item.exp}</td>
-                        <td style={{ padding: '12px 24px', textAlign: 'right', fontWeight: 700, color: '#BE185D', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{item.range}</td>
-                        <td className="sal-roles-col" style={{ padding: '12px 24px', color: '#64748B', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px' }}>{item.roles}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Guides by Specialty</h3>
             </div>
-
-            {/* Practice Setting (4 cols) */}
-            <div className="sal-bento-setting emp-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '24px 22px', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Briefcase size={22} />
-                </div>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>By Setting</h3>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {settingData.map((item, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '10px 14px', borderRadius: '12px',
-                    background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)',
-                  }}>
-                    <div>
-                      <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35' }}>{item.setting}</div>
-                      <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px' }}>{item.notes}</div>
-                    </div>
-                    <span style={{ fontSize: '11.5px', fontWeight: 700, color: item.color, whiteSpace: 'nowrap', marginLeft: '8px' }}>{item.range}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Specialty Premiums (6 cols) */}
-            <div className="sal-bento-spec emp-bento-card" style={{ ...clayCard, gridColumn: 'span 6', padding: '0', overflow: 'hidden' }}>
-              <div style={{ padding: '24px 28px 8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Star size={22} />
-                </div>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Specialty Premiums</h3>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                <tbody>
-                  {specialtyData.map((item, i) => (
-                    <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                      <td style={{ padding: '10px 28px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                        {/* P1 #7: covered specialties link to their deep-dive salary page */}
-                        {item.slug ? (
-                          <Link href={`/salary-guide/specialty/${item.slug}`} className="sal-state-link" style={{ color: '#1A2E35', textDecoration: 'none' }}>
-                            {item.specialty}
-                          </Link>
-                        ) : (
-                          item.specialty
-                        )}
-                      </td>
-                      <td style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 700, color: '#BE185D', borderBottom: '1px solid rgba(0,0,0,0.04)', whiteSpace: 'nowrap' }}>{item.premium}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {/* P1 #7: full by-specialty guides (config-driven — one array
-                  feeds these chips, the index hub, and the sitemap). */}
-              <div style={{ padding: '14px 28px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 10px' }}>
-                <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748B' }}>Full salary guides:</span>
-                {SALARY_SPECIALTY_PAGES.map(p => (
-                  <Link key={p.slug} href={`/salary-guide/specialty/${p.slug}`} className="sal-state-link" style={{ fontSize: '11.5px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
-                    {p.credential ?? p.label}
-                  </Link>
-                ))}
-                <Link href="/salary-guide/specialty" className="sal-state-link" style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E3A5F', textDecoration: 'none' }}>
-                  Compare all →
+            <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 14px' }}>
+              Each specialty guide carries the BLS context for the role, the open roles and, where at least {BENCHMARK_MIN_EMPLOYERS} employers disclose pay, the median advertised pay for that specialty.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 10px' }}>
+              {SALARY_SPECIALTY_PAGES.map(p => (
+                <Link key={p.slug} href={`/salary-guide/specialty/${p.slug}`} className="sal-state-link" style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
+                  {p.credential ?? p.label}
                 </Link>
-              </div>
+              ))}
+              <Link href="/salary-guide/specialty" className="sal-state-link" style={{ fontSize: '12px', fontWeight: 700, color: '#1E3A5F', textDecoration: 'none' }}>
+                Compare all specialties
+              </Link>
             </div>
-
-            {/* FPA Impact (6 cols) */}
-            <div className="sal-bento-fpa emp-bento-card" style={{
-              ...clayCard, gridColumn: 'span 6', padding: '24px 22px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <TrendingUp size={22} />
-                </div>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Full Practice Authority</h3>
-              </div>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 16px' }}>
-                {/* P2 #22 follow-up: the "+12-15% more on average" premium
-                    that used to close this sentence was fabricated — it is
-                    cited to nothing here or in lib/stats-sources.ts, and it
-                    was already deleted from /resources/fpa-guide for that
-                    reason. What replaces it is what practice authority
-                    actually controls, which is readable off
-                    lib/state-practice-authority.ts. scripts/generate-salary-pdf.ts
-                    mirrors this block and must be edited with it. */}
-                <strong>{FPA_STATES.formatted}</strong> grant FPA ({FPA_STATES.source}). Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#BE185D', margin: '0 0 8px' }}>✓ Full Practice Authority</h4>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
-                    {/* The panels describe the TIERS, so each carries the
-                        within-tier caveat the verified per-state details
-                        demand: "Full clinical independence", "Collaborating
-                        physician required first" and "Physician oversight
-                        where restricted" were false for the transition
-                        states, for Wisconsin's dentist collaborator and the
-                        routes out of an agreement, and for Virginia, South
-                        Carolina and Michigan. The PDF mirrors these lines. */}
-                    <li style={{ marginBottom: '3px' }}>• Own and bill under your own practice</li>
-                    <li style={{ marginBottom: '3px' }}>• Independent 1099 and telehealth work</li>
-                    <li>• Several states first require a transition period</li>
-                  </ul>
-                </div>
-                <div style={{ padding: '14px 16px', borderRadius: '14px', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', margin: '0 0 8px' }}>Restricted / Reduced</h4>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
-                    <li style={{ marginBottom: '3px' }}>• Most require an agreement, supervision or delegation first</li>
-                    <li style={{ marginBottom: '3px' }}>• That agreement is usually a paid one</li>
-                    <li>• Several offer a route out after a set amount of experience</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
           </div>
+
+          {/* FPA Impact (6 cols) */}
+          <div className="sal-bento-fpa emp-bento-card" style={{
+            ...clayCard, gridColumn: 'span 6', padding: '24px 22px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <TrendingUp size={22} />
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Full Practice Authority</h3>
+            </div>
+            <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 16px' }}>
+              {/* P2 #22 follow-up: no FPA pay premium is claimed here; none is
+                  cited anywhere. What practice authority controls is
+                  readable off lib/state-practice-authority.ts.
+                  scripts/generate-salary-pdf.ts mirrors this block and must
+                  be edited with it. */}
+              <strong>{FPA_STATES.formatted}</strong> grant FPA ({FPA_STATES.source}). Practice authority is a legal classification, not a pay scale. It decides which kinds of practice and contract work are open to you in that state.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#BE185D', margin: '0 0 8px' }}>✓ Full Practice Authority</h4>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
+                  {/* The panels describe the TIERS, so each carries the
+                      within-tier caveat the verified per-state details
+                      demand. The PDF mirrors these lines. */}
+                  <li style={{ marginBottom: '3px' }}>• Own and bill under your own practice</li>
+                  <li style={{ marginBottom: '3px' }}>• Independent 1099 and telehealth work</li>
+                  <li>• Several states first require a transition period</li>
+                </ul>
+              </div>
+              <div style={{ padding: '14px 16px', borderRadius: '14px', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', margin: '0 0 8px' }}>Restricted / Reduced</h4>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
+                  <li style={{ marginBottom: '3px' }}>• Most require an agreement, supervision or delegation first</li>
+                  <li style={{ marginBottom: '3px' }}>• That agreement is usually a paid one</li>
+                  <li>• Several offer a route out after a set amount of experience</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
         </div>
-      </div>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 5: MARKET DEMAND (slate bg)
@@ -1156,7 +801,7 @@ export default async function SalaryGuidePage() {
             Frequently Asked Questions
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {faqData.map(({ q, a }) => (
+            {faqs.map(({ q, a }) => (
               <details key={q} style={{ ...clayCard, padding: 0, overflow: 'hidden' }}>
                 <summary style={{
                   padding: '18px 24px', cursor: 'pointer',
@@ -1176,28 +821,48 @@ export default async function SalaryGuidePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 8: CITATION + CTA (slate bg)
+          SECTION 8: METHODOLOGY, CITATION + CTA (slate bg)
+          The methodology states the pool, the exclusions, the counting
+          rule, the tiers, the rounding, the BLS series and what the figures
+          are not; the citation block sits under it.
           ═══════════════════════════════════════════════════════════════ */}
-      <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
+      <section id="methodology" style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          {/* Citation */}
-          <div style={{ ...clayCard, padding: '24px 28px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 14px' }}>📋 Cite This Page</h3>
-            <CopyCitation citation={`${brand.name}. "${GUIDE_NAME}." ${brand.name}, last reviewed ${REVIEWED_LABEL}, ${brand.domain}/salary-guide.`} />
-            <p style={{ fontSize: '11px', color: '#64748B', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
-          </div>
-
-          {/* Data Sources */}
-          <div style={{ ...clayCard, padding: '16px 24px', background: 'rgba(0,0,0,0.02)', marginBottom: '24px', textAlign: 'center' }}>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+          <div style={{ ...clayCard, padding: '28px 32px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Ruler size={20} />
+              </div>
+              <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>Methodology</h2>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13.5px', color: '#5A4A42', lineHeight: 1.7 }}>
+              <li><strong>BLS figures.</strong> {BLS_STATE_SOURCE_LABEL}: the national median and percentiles and the state estimates (<a href={BLS_STATE_SOURCE_URL} rel="noopener noreferrer" style={{ color: '#BE185D' }}>BLS state file</a>, <a href={NATIONAL_SALARY.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D' }}>national data</a>). They are survey estimates of wages paid in jobs people hold, published once a year.</li>
+              <li><strong>Advertised pay.</strong> Live {brand.niche.short} postings on {brand.name} that state an annual pay range: published, not expired and passing the dead-link check. Left out: pay the employer did not state, hourly, daily or weekly rates, parsing confidence below 0.8, a single figure with no range, a midpoint outside {usd(SALARY_SANITY_MIN)} to {usd(SALARY_SANITY_MAX)}, a range wider than {MAX_RANGE_RATIO} to 1, and roles that are not {brand.niche.short} roles, including CRNA, CNM and CNS postings.</li>
+              <li><strong>Counting.</strong> {ONE_EMPLOYER_NOTE} {TIER_RULE_NOTE}</li>
+              <li><strong>Rounding.</strong> Advertised figures round to the nearest $500 and are recomputed daily{asOfLabel ? `, last on ${asOfLabel}` : ''}.</li>
+              <li><strong>What the figures are not.</strong> Advertised pay is what employers post, not what anyone is paid, and this board&apos;s postings are not a census or a survey. The full breakdown, with a CSV, is in the <Link href={NP_PAY_REPORT_PATH} style={{ color: '#BE185D', fontWeight: 600 }}>NP Pay Report</Link>.</li>
+            </ul>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '14px 0 0', lineHeight: 1.6 }}>
               {/* Each source links its STAT_SOURCES sourceUrl, so the main
                   content cites the primary source behind every figure. */}
-              <strong>Data Sources & Methodology:</strong>{' '}
-              <a href={NATIONAL_SALARY.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>Bureau of Labor Statistics (BLS OEWS, {NATIONAL_SALARY_VINTAGE})</a>,{' '}
+              <strong>Other sources:</strong>{' '}
               <a href={NP_GROWTH.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>BLS Employment Projections</a>,{' '}
-              <a href={SHORTAGE_POP.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>HRSA</a>,{' '}
-              <a href={FPA_STATES.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>AANP</a>, and analysis of {overallStats.jobsWithSalary.toLocaleString('en-US')} active {brand.niche.short} job postings with disclosed salary on this board. Job posting data updates daily. Page last reviewed {REVIEWED_LABEL}.
+              <a href={SHORTAGE_POP.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>HRSA</a> and{' '}
+              <a href={FPA_STATES.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>AANP</a>. Page last reviewed {REVIEWED_LABEL}.
             </p>
+            <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: '12px 0 0', lineHeight: 1.6 }}>
+              Related guides:{' '}
+              <Link href="/resources/what-is-a-nurse-practitioner" style={{ color: '#BE185D', fontWeight: 600 }}>What is a nurse practitioner</Link>,{' '}
+              <Link href="/resources/np-vs-pa" style={{ color: '#BE185D', fontWeight: 600 }}>NP vs PA</Link> and{' '}
+              <Link href="/resources/1099-vs-w2" style={{ color: '#BE185D', fontWeight: 600 }}>1099 vs W-2</Link>.
+            </p>
+          </div>
+
+          {/* Citation, under the methodology it rests on */}
+          <div style={{ ...clayCard, padding: '24px 28px', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 14px' }}>Cite This Page</h3>
+            <CopyCitation citation={`${brand.name}. "${GUIDE_NAME}." ${brand.name}, last reviewed ${REVIEWED_LABEL}, ${brand.domain}/salary-guide.`} />
+            <p style={{ fontSize: '11px', color: '#64748B', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
           </div>
 
           {/* CTA */}
@@ -1263,6 +928,7 @@ export default async function SalaryGuidePage() {
           .sal-hero-calc { grid-column: span 8; }
           .sal-hero-sidebar { grid-column: span 4; }
           .sal-rank-grid { grid-template-columns: 1fr 1fr; }
+          .sal-pay-grid { grid-template-columns: 1fr 1fr; }
         }
         @media (max-width: 768px) {
           .sal-bls-optional { display: none; }

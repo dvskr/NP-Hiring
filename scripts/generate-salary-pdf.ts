@@ -99,48 +99,23 @@ const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90;
 // then regenerate. The p1-salary-pdf drift test asserts both files carry
 // identical literals.
 //
-// P2 #22 follow-up (second pass): "survived the P0 fabrication sweep" is
-// NOT the same as "is sourced". Every range and premium in the three tables
-// and the factor cards below is an uncited editorial estimate. A PDF is the
-// worse of the two surfaces for that, because it gets saved and cited for
-// years with no way to correct it in place — so the label below is printed
-// in the document itself, mirroring app/salary-guide/page.tsx verbatim.
-const SALARY_FIGURE_PROVENANCE = `Every salary range and percentage premium in this guide other than the cited national median is ${brand.name}'s own editorial estimate, compiled from the roles posted on ${brand.domain}. Treat them as a starting point for negotiation, not as survey data.`;
-
-const experienceData = [
-    { exp: 'New Grad (0-1 yr)', range: '$95,000 to $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
-    { exp: 'Early Career (1-3 yrs)', range: '$110,000 to $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
-    { exp: 'Mid-Career (3-7 yrs)', range: '$125,000 to $150,000', roles: `Senior ${brand.niche.short}, Team Lead` },
-    { exp: 'Experienced (7-15 yrs)', range: '$150,000 to $180,000', roles: 'Clinical Director, Supervisor' },
-    { exp: 'Expert (15+ yrs)', range: '$180,000 to $250,000+', roles: 'Director, Consultant, Private Practice' },
-];
-
-const settingData = [
-    { setting: 'Private Practice (Owner)', range: '$180,000 to $300,000+', notes: 'Highest earning potential, requires business skills' },
-    { setting: 'Travel / Locum Tenens', range: '$150,000 to $250,000', notes: 'Includes housing, travel, higher hourly rates' },
-    { setting: 'Telehealth / Remote', range: '$130,000 to $180,000', notes: 'Growing rapidly, flexible schedules' },
-    { setting: 'Outpatient Clinic', range: '$120,000 to $160,000', notes: 'Most common setting, steady patient load' },
-    { setting: 'Hospital / Inpatient', range: '$115,000 to $150,000', notes: 'Often includes shift differentials, benefits' },
-    { setting: 'Community Health (FQHC)', range: '$100,000 to $130,000', notes: 'May qualify for loan forgiveness programs' },
-];
-
-const specialtyData = [
-    { specialty: 'Acute Care / Hospitalist', premium: '+10-20%', notes: 'AGACNP certification, hospital demand' },
-    { specialty: 'Psychiatric-Mental Health', premium: '+10-20%', notes: 'PMHNP-BC certification, provider shortage' },
-    { specialty: 'Emergency / Urgent Care', premium: '+10-20%', notes: 'Dynamic environment, flexible scheduling' },
-    { specialty: 'Dermatology / Aesthetics', premium: '+10-25%', notes: 'Procedure-driven, cash-pay revenue' },
-    { specialty: 'Gerontology / Palliative', premium: '+5-10%', notes: 'Growing aging population' },
-    { specialty: 'Private Practice (Owner)', premium: '+20-40%', notes: 'Higher risk, no benefits' },
-    { specialty: 'Rural / Underserved', premium: '+10-15%', notes: 'Often includes loan repayment' },
-];
+// Salary build 2026-11: the experience, setting and specialty premium
+// tables and the figures in the factor cards were uncited editorial
+// estimates, and both the hub and this PDF dropped them. The hub now
+// publishes measured pay instead (BLS wages for every state, and advertised
+// medians by specialty, work mode and experience from live postings). The
+// PDF does not freeze those live medians, for the same reason it freezes
+// no posted state table (see below), so it points readers to the hub.
+// The factor cards now carry no figure at all.
+const PDF_FIGURES_NOTE = `Every figure in this guide is a cited statistic with its source and vintage, an exact count of live postings on ${brand.domain}, or one of this board's salary validation bands, labelled as such.`;
 
 const factorCards = [
-    { img: 'factor-location', title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
-    { img: 'factor-experience', title: 'Experience Level', desc: `Entry-level ${brand.niche.short}s start around $95-115k. With 5+ years experience, salaries can reach $150-180k or more.` },
-    { img: 'factor-setting', title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
-    { img: 'factor-employment', title: 'Employment Type', desc: `1099 contractors and travel ${brand.niche.short}s often earn 20-50% more than W2 employees, though without traditional benefits.` },
-    { img: 'factor-specialty', title: 'Specialization', desc: 'Subspecialties like acute care, emergency, psychiatric-mental health, or dermatology can command premium pay (+10-25%).' },
-    { img: 'factor-negotiate', title: 'Negotiation', desc: `${brand.niche.short}s who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).` },
+    { img: 'factor-location', title: 'Geographic Location', desc: 'Pay differs widely by state. The BLS table on the salary guide lists the median annual wage for every state and DC, from the highest paying to the lowest.' },
+    { img: 'factor-experience', title: 'Experience Level', desc: 'The salary guide compares advertised pay for new-grad friendly roles with roles asking for several years of experience, from live postings, each employer counted once.' },
+    { img: 'factor-setting', title: 'Practice Setting', desc: 'Hospitals, clinics, telehealth companies and private practices pay differently. Compare advertised pay by specialty and work mode on the salary guide before weighing an offer.' },
+    { img: 'factor-employment', title: 'Employment Type', desc: `Contract and travel ${brand.niche.short} work is quoted as an hourly or weekly rate without benefits, so it does not compare with a salary as quoted. The 1099 vs W-2 comparison works out the rate that matches a salaried package.` },
+    { img: 'factor-specialty', title: 'Specialization', desc: 'Advertised pay differs by specialty. The salary guide lists the median for each specialty where enough employers disclose pay, with each specialty guide linked.' },
+    { img: 'factor-negotiate', title: 'Negotiation', desc: `Ask for the employer’s range first, anchor on your state’s BLS median and the advertised median for comparable roles, then negotiate the whole package: CME, PTO, malpractice tail and productivity terms.` },
 ];
 
 /**
@@ -304,9 +279,9 @@ function buildPayByLocationSection(live: LiveInventory | null): string {
         numbers outside the outer bounds are rejected as data-entry errors, and numbers outside the middle band are
         flagged for a human to look at. They are set deliberately wide so that legitimate edge cases are not thrown
         away, which means they describe what this board will <em>accept</em>, not what a typical
-        ${brand.niche.short} earns. For a measured wage figure, use the federal benchmark above
-        (<strong>${NATIONAL_SALARY.formatted}</strong>, ${escapeHtml(NATIONAL_SALARY.source)}); for market ranges, use
-        the experience, setting and specialty tables in the next section.</p>
+        ${brand.niche.short} is paid. For a measured wage figure, use the federal benchmark above
+        (<strong>${NATIONAL_SALARY.formatted}</strong>, ${escapeHtml(NATIONAL_SALARY.source)}); for advertised pay by
+        specialty, work mode and experience, use the live tables on ${brand.domain}/salary-guide.</p>
       <table class="data-table">
         <thead><tr><th>Band</th><th class="num">Range</th><th>How the board uses it</th></tr></thead>
         <tbody>
@@ -474,7 +449,7 @@ function buildHtml(live: LiveInventory | null): string {
       (${escapeHtml(NATIONAL_SALARY.source)}). Half of ${brand.niche.short} wages sit above the median and half below.
       The 10th percentile wage is <strong>${NATIONAL_P10.formatted}</strong>, and the 90th percentile wage
       is <strong>${NATIONAL_P90.formatted}</strong>.</p>
-    <p class="fine">${escapeHtml(SALARY_FIGURE_PROVENANCE)}</p>
+    <p class="fine">${escapeHtml(PDF_FIGURES_NOTE)}</p>
   </div>
 
   <div class="card">
@@ -482,7 +457,7 @@ function buildHtml(live: LiveInventory | null): string {
     <p>Every national figure in this guide traces to a named public source; every posting-derived figure
       traces to live listings on ${brand.name}. ${postingsLine}</p>
     <ul class="sources">${methodologySources}</ul>
-    <p class="fine" style="margin-top:6px;">${escapeHtml(SALARY_FIGURE_PROVENANCE)} Individual offers vary by
+    <p class="fine" style="margin-top:6px;">${escapeHtml(PDF_FIGURES_NOTE)} Individual offers vary by
       employer, location, credentials, and experience.</p>
   </div>
 
@@ -490,37 +465,16 @@ function buildHtml(live: LiveInventory | null): string {
 
   <section class="page-break">
     <p class="kicker">Salary Breakdown</p>
-    <h2>What Impacts Your Earnings</h2>
-    <p class="fine">${escapeHtml(SALARY_FIGURE_PROVENANCE)}</p>
-
-    <h3 style="font-size:13px;margin-bottom:6px;">By Experience Level</h3>
-    <table class="data-table" style="margin-bottom:14px;">
-      <thead><tr><th>Experience</th><th class="num">Salary Range</th><th>Typical Roles</th></tr></thead>
-      <tbody>
-        ${experienceData.map((e) => `<tr><td>${e.exp}</td><td class="num accent">${e.range}</td><td class="notes">${e.roles}</td></tr>`).join('')}
-      </tbody>
-    </table>
-
-    <h3 style="font-size:13px;margin-bottom:6px;">By Practice Setting</h3>
-    <table class="data-table" style="margin-bottom:14px;">
-      <thead><tr><th>Setting</th><th class="num">Salary Range</th><th>Notes</th></tr></thead>
-      <tbody>
-        ${settingData.map((s) => `<tr><td>${s.setting}</td><td class="num accent">${s.range}</td><td class="notes">${s.notes}</td></tr>`).join('')}
-      </tbody>
-    </table>
-
-    <h3 style="font-size:13px;margin-bottom:6px;">Specialty Premiums</h3>
-    <table class="data-table" style="margin-bottom:14px;">
-      <thead><tr><th>Specialty</th><th class="num">Premium vs. Baseline</th><th>Notes</th></tr></thead>
-      <tbody>
-        ${specialtyData.map((s) => `<tr><td>${s.specialty}</td><td class="num accent">${s.premium}</td><td class="notes">${s.notes}</td></tr>`).join('')}
-      </tbody>
-    </table>
+    <h2>What Moves the Figures</h2>
+    <p>Advertised pay by specialty, work mode, employment type and experience changes with the postings live each
+      day, so this guide does not freeze it. The salary guide at ${brand.domain}/salary-guide recomputes those medians
+      daily from live postings, each employer counted once, and publishes a row only where enough employers disclose
+      pay. The same page lists the BLS median annual wage for every state and DC.</p>
 
     <div class="card">
       <h3>Full Practice Authority</h3>
       <p><strong>${FPA_STATES.formatted}</strong> grant FPA (${escapeHtml(FPA_STATES.source)}).
-        Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state.</p>
+        Practice authority is a legal classification, not a pay scale. It decides which kinds of practice and contract work are open to you in that state.</p>
       <div class="fpa-grid">
         <div class="fpa-panel yes">
           <h4>&#10003; Full Practice Authority</h4>
