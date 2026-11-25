@@ -139,6 +139,17 @@ beforeEach(() => {
     vi.mocked(prisma.emailLead.findUnique).mockResolvedValue(null as never);
 });
 
+describe('GET /api/dashboard: profile views', () => {
+    it('counts unlocks by the Supabase id the unlock routes write, not the profile id', async () => {
+        vi.mocked(prisma.profileView.count).mockImplementation((async (args: { where: { candidateId: string } }) =>
+            (args.where.candidateId === USER_ID ? 3 : 0)) as never);
+        const res = await dashboard(new Request('http://localhost:3000/api/dashboard'));
+        const body = await res.json();
+        expect(prisma.profileView.count).toHaveBeenCalledWith({ where: { candidateId: USER_ID } });
+        expect(body.stats.profileViews).toBe(3);
+    });
+});
+
 describe('GET /api/dashboard: recent applications carry only the candidate side of the row', () => {
     it('never returns the employer notes or the AI assessment', async () => {
         const { status, applications } = await load();

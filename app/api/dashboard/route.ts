@@ -166,17 +166,18 @@ export async function GET(request: Request) {
                     : Promise.resolve(null),
             ])
 
-        // EmployerMessage.recipientId and ProfileView.candidateId both reference
-        // UserProfile.id (a cuid), NOT the Supabase auth UUID (user.id). These two
-        // counts therefore have to run AFTER the profile resolves — querying them
-        // with user.id silently returned 0 for every candidate.
+        // EmployerMessage.recipientId references UserProfile.id (a cuid), so the
+        // unread count runs after the profile resolves. ProfileView.candidateId
+        // is different: the unlock routes write the candidate's Supabase id (the
+        // id employers see in search), so profile views count by user.id.
+        // Counting them by profile.id matched nothing and showed 0 to everyone.
         const [unreadMessages, profileViews] = profile
             ? await Promise.all([
                 prisma.employerMessage.count({
                     where: { recipientId: profile.id, readAt: null },
                 }),
                 prisma.profileView.count({
-                    where: { candidateId: profile.id },
+                    where: { candidateId: user.id },
                 }),
             ])
             : [0, 0]
