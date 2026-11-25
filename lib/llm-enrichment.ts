@@ -94,7 +94,7 @@ export async function extractWithLLM(
         const truncated = description.substring(0, 2500);
 
         const response = await openai.chat.completions.create({
-            model: 'gpt-5-mini',
+            model: 'gpt-6.1-terra',
             response_format: { type: 'json_object' },
             messages: [
                 { role: 'system', content: SYSTEM_PROMPT },

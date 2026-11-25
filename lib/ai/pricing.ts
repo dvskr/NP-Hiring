@@ -30,6 +30,10 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     'gpt-5-nano':  { provider: 'openai',    input: 0.05, cachedInput: 0.005, output: 0.40 },
     'gpt-5-mini':  { provider: 'openai',    input: 0.25, cachedInput: 0.025, output: 2.00 },
     'gpt-5':       { provider: 'openai',    input: 1.25, cachedInput: 0.125, output: 10.00 },
+    // GPT-6 replacements for gpt-5-mini / gpt-5-nano, which OpenAI shuts down
+    // on 2026-12-11. Rates from OpenAI's model pages (Standard tier).
+    'gpt-6-luna':    { provider: 'openai',  input: 0.10, cachedInput: 0.01,  output: 0.50 },
+    'gpt-6.1-terra': { provider: 'openai',  input: 1.00, cachedInput: 0.05,  output: 5.00 },
     'gpt-5.4':     { provider: 'openai',    input: 3.00, cachedInput: 0.30,  output: 15.00 },
     // Reserved for hero SEO content / premium-only tasks. Opt in via
     // `priority: 'premium'` — the registry routes accordingly.

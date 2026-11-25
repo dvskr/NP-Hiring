@@ -76,7 +76,7 @@ const CREATIVE_LIKE: Pick<TaskConfig, 'temperature' | 'maxOutputTokens' | 'timeo
 export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
     // ── PHASE 0 — wired ───────────────────────────────────────────────────
     candidate_scoring: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'json',
         cacheTtlSeconds: 86_400,
@@ -84,7 +84,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
         rateLimit: { limit: 200, windowSeconds: 3600 },
     },
     resume_parsing: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'json',
         cacheTtlSeconds: 7 * 86_400,
@@ -121,7 +121,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
 
     // ── PHASE 1 — wires up in Sprint 1.x ──────────────────────────────────
     talent_search_rerank: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'json',
         cacheTtlSeconds: 600, // 10 min — searches repeat fast within a session.
@@ -157,7 +157,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
 
     // ── PHASE 2 — wires up in Sprint 2.x ──────────────────────────────────
     application_coach: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'json',
         cacheTtlSeconds: 3_600,
@@ -178,7 +178,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
     // three — prompts embed candidate profile context (PII-adjacent), and
     // the gateway cacheKey contract forbids PII in cache keys anyway.
     autofill_classify: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'json',
         cacheTtlSeconds: 0,
@@ -191,7 +191,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
         rateLimit: { limit: 60, windowSeconds: 3600 },
     },
     autofill_answer: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'text',
         cacheTtlSeconds: 0,
@@ -204,7 +204,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
         rateLimit: { limit: 60, windowSeconds: 3600 },
     },
     autofill_resume_extract: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'json',
         cacheTtlSeconds: 0,
@@ -229,7 +229,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
         rateLimit: { limit: 20, windowSeconds: 3600 },
     },
     bias_audit: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'json',
         cacheTtlSeconds: 86_400,
@@ -247,8 +247,8 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
 
     // ── PHASE 4 — wires up in Sprint 4.x ──────────────────────────────────
     spam_fraud_detection: {
-        primary:   { provider: 'openai', model: 'gpt-5-nano' },
-        fallbacks: [{ provider: 'openai', model: 'gpt-5-mini' }],
+        primary:   { provider: 'openai', model: 'gpt-6-luna' },
+        fallbacks: [{ provider: 'openai', model: 'gpt-6.1-terra' }],
         outputMode: 'json',
         cacheTtlSeconds: 86_400,
         temperature: 0,
@@ -257,7 +257,7 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
         rateLimit: { limit: 1_000, windowSeconds: 3600 },
     },
     support_bot: {
-        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        primary:   { provider: 'openai',    model: 'gpt-6.1-terra' },
         fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
         outputMode: 'text',
         cacheTtlSeconds: 0, // Conversational — no caching across sessions.
