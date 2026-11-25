@@ -1,5 +1,8 @@
 import { prisma } from './prisma';
 import { contentChangeStamp } from './job-content-change';
+// What counts as a tag. Shared with looksLikeHtml, so a body this cleaner
+// leaves as text is never read as markup downstream.
+import { HTML_TAG_PATTERN } from './jd-blocks';
 
 // Helper to escape regex special characters
 function escapeRegExp(string: string) {
@@ -54,8 +57,26 @@ export function cleanDescription(rawDescription: string): string {
   cleaned = cleaned.replace(/<\/h[1-6]>/gi, '\n\n');
   cleaned = cleaned.replace(/<h[1-6][^>]*>/gi, '\n\n');
 
-  // 5. Remove all remaining HTML tags
-  cleaned = cleaned.replace(/<[^>]*>/g, '');
+  // 5. Remove all remaining HTML tags, comments and doctypes. Decoding runs
+  // first because Greenhouse sends entity-escaped HTML, so a decoded "<20
+  // patients" or "&lt;$150k" is text: the old /<[^>]*>/ deleted everything
+  // between such a sign and the next ">" (the sister board's INGEST-11, ported 2026-11-25).
+  // Repeated until nothing changes, so "<<b>script>" cannot reassemble a tag.
+  const tagRe = new RegExp(HTML_TAG_PATTERN, 'gi');
+  let previous: string;
+  do {
+    previous = cleaned;
+    cleaned = cleaned
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<![a-z[][^<>]*>/gi, '')
+      .replace(tagRe, '');
+  } while (cleaned !== previous);
+
+  // Greenhouse escapes its HTML once more, so an ampersand arrives as
+  // "&amp;amp;" and step 2 leaves "&amp;", which the page printed literally
+  // ("Progress &amp; Safety"). Tags are gone by now, so this cannot rebuild
+  // markup.
+  cleaned = cleaned.replace(/&amp;/g, '&');
 
   // 6. Section Header Cleaning (Boilerplate removal)
   // Remove Adzuna Preview Boilerplate
@@ -137,7 +158,10 @@ export async function cleanAllJobDescriptions(): Promise<{
   for (const job of jobs) {
     try {
       // Check if description has HTML tags
-      const hasHtml = /<[^>]+>/.test(job.description || '') || /<[^>]+>/.test(job.descriptionSummary || '');
+      // Same tag test as cleanDescription, so a clean "<20 patients" is not
+      // re-cleaned every run.
+      const tagRe = new RegExp(HTML_TAG_PATTERN, 'i');
+      const hasHtml = tagRe.test(job.description || '') || tagRe.test(job.descriptionSummary || '');
 
       if (!hasHtml) {
         skipped++;

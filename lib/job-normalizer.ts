@@ -8,6 +8,7 @@ import {
 import { parseLocation, detectNonUsWorkSite } from './location-parser';
 import { formatDisplaySalary } from './salary-display';
 import { cleanDescription } from './description-cleaner';
+import { structureDescription } from './description-structure';
 import { findCanonicalName } from './company-normalizer';
 import { classifyJobTags } from './pseo/category-tagger';
 import { interpretJobTypeValue, resolveJobType as resolveJobTypeFromSources } from './job-type-detection';
@@ -1097,7 +1098,10 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
     }
 
     // Clean the description with proper formatting
-    const fullDescription = cleanDescription(description);
+    // Break any wall of text the source sent as one block into headings,
+    // paragraphs and bullets (lib/description-structure.ts: line breaks only,
+    // never a word changed).
+    const fullDescription = structureDescription(cleanDescription(description));
 
     // Gate 4: missing description. Empty / boilerplate-only descriptions
     // hurt SEO + LLM enrichment + user trust. The threshold is intentionally

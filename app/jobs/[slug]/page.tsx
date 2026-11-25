@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { cache, Suspense } from 'react';
 import Image from 'next/image';
 import { formatSalary, slugify, getJobFreshness, getExpiryStatus, expandInlineBullets, splitAtSectionMarkers } from '@/lib/utils';
+import { looksLikeHtml } from '@/lib/jd-blocks';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
 import StickyApplyBar from './StickyApplyBar';
@@ -1142,7 +1143,7 @@ export default async function JobPage({ params }: JobPageProps) {
 
                 <div className="prose prose-gray max-w-none">
                   {/* Check if description contains HTML tags (from Quill editor) */}
-                  {/<[a-z][\s\S]*>/i.test(job.description) ? (
+                  {looksLikeHtml(job.description) ? (
                     <div
                       className="job-description-html"
                       style={{ color: 'var(--text-secondary)' }}
