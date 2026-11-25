@@ -129,6 +129,10 @@ export default function AvatarUpload({
               width={128}
               height={128}
               className="w-full h-full object-cover"
+              // The photo arrives as a one-hour signed link (lib/avatar-url.ts).
+              // Through the optimizer it would stay cached at a /_next/image
+              // address for a year, so it is served as is.
+              unoptimized
             quality={90} />
           ) : (
             <div className="w-full h-full bg-pink-100 flex items-center justify-center">

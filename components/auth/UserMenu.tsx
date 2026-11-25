@@ -80,6 +80,9 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
             width={32}
             height={32}
             className="w-8 h-8 rounded-full object-cover"
+            // A one-hour signed link (lib/avatar-url.ts): not through the
+            // optimizer, whose cache would keep it for a year.
+            unoptimized
           quality={90} />
         ) : (
           <div style={{

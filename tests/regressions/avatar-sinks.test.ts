@@ -11,6 +11,8 @@
  * cannot send the stored URL unnoticed, and a route that answers with a whole
  * profile row signs the photo in it.
  */
+import { readFileSync } from 'node:fs';
+import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readCode, sourceFilesUnder } from '../helpers/source';
 
@@ -88,5 +90,35 @@ describe('the settings page never writes a served photo back', () => {
     it('sends avatarUrl only as the null that removes the photo', () => {
         const sent = [...code.matchAll(/JSON\.stringify\(\{[^}]*\bavatarUrl\b[^}]*\}\)/g)].map((m) => m[0].replace(/\s+/g, ' '));
         expect(sent).toEqual(['JSON.stringify({ avatarUrl: null })']);
+    });
+});
+
+describe('a signed photo link never goes through the image optimizer', () => {
+    // The optimizer keeps each image it fetches at a /_next/image address for
+    // minimumCacheTTL, a year. A signed link expires in an hour on purpose, so
+    // a photo served that way must not outlive it there.
+
+    it('next.config.ts lets the optimizer fetch public storage objects only', () => {
+        // Read raw: the '/**' in a pattern would open a block comment for readCode.
+        const config = readFileSync(path.join(__dirname, '../../next.config.ts'), 'utf8');
+        const patterns = [...config.matchAll(/pathname:\s*'(\/storage[^']*)'/g)].map((m) => m[1]);
+        expect(patterns.length).toBeGreaterThan(0);
+        for (const pattern of patterns) expect(pattern).toBe('/storage/v1/object/public/**');
+    });
+
+    it('serves every remote next/image in a component that shows a profile photo unoptimized', () => {
+        const photoComponents = sourceFilesUnder(['app', 'components'])
+            .filter((file) => file.endsWith('.tsx'))
+            .map((file) => ({ file, code: readCode(file) }))
+            .filter(({ code }) => /from 'next\/image'/.test(code) && /avatarUrl|photoUrl/i.test(code));
+        // Guards the guard: the header menu and the upload preview show the photo today.
+        expect(photoComponents.map(({ file }) => file)).toEqual(
+            expect.arrayContaining(['components/auth/AvatarUpload.tsx', 'components/auth/UserMenu.tsx']));
+        const optimized = photoComponents.flatMap(({ file, code }) =>
+            [...code.matchAll(/<Image\b[\s\S]*?\/>/g)]
+                .map((m) => m[0])
+                .filter((tag) => !/\bsrc="\//.test(tag) && !/\bunoptimized\b/.test(tag))
+                .map(() => file));
+        expect(optimized).toEqual([]);
     });
 });
