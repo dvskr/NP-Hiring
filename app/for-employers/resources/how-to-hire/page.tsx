@@ -78,7 +78,7 @@ const TYPICAL_BAND = `$${Math.round(salaryConfig.normalizer.typical.min / 1000)}
 const MARKET_STATS = [
   {
     label: `Median annual ${brand.niche.short} wage`,
-    stat: STAT_SOURCES.averageSalary,
+    stat: STAT_SOURCES.npMedianWageBls,
   },
   {
     label: `Projected ${brand.niche.short} employment growth (2025 to 2035)`,
@@ -187,7 +187,7 @@ const FAQS = [
   },
   {
     q: `How do I benchmark ${brand.niche.short} salary for my role?`,
-    a: `Start from the national median annual wage of ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), then adjust for your state, setting, and specialty, since pay differs meaningfully across all three. The ${brand.name} salary guide breaks down live compensation data by state so you can anchor your posted range to what candidates in your market actually see.`,
+    a: `Start from the national median annual wage of ${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source}), then adjust for your state, setting, and specialty, since pay differs meaningfully across all three. The ${brand.name} salary guide breaks down live compensation data by state so you can anchor your posted range to what candidates in your market actually see.`,
   },
   {
     // Only the cited projection is stated. "Among the fastest of any
@@ -336,7 +336,7 @@ export default function HowToHireGuidePage() {
               <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Benchmarking the Salary</h2>
             </div>
             <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-              The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). {TYPICAL_BAND} is a typical W-2 comparison band, but pay varies meaningfully by state, setting, and specialty. Anchoring to a national number alone will leave your range uncompetitive in some markets and overpriced in others.
+              The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.npMedianWageBls.formatted} ({STAT_SOURCES.npMedianWageBls.source}). {TYPICAL_BAND} is a typical W-2 comparison band, but pay varies meaningfully by state, setting, and specialty. Anchoring to a national number alone will leave your range uncompetitive in some markets and overpriced in others.
             </p>
             <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
               Use the live salary guide to see disclosed-pay data for your state before setting the range, and post the range in the job description. A transparent range settles pay expectations before either side invests in interviews.

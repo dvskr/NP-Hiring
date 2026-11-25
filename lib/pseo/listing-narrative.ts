@@ -133,12 +133,12 @@ function countList(items: ReadonlyArray<{ label: string; count: number } | Named
   return joinWithAnd(items.slice(0, limit).map(formatCountLabel));
 }
 
-const BLS_REFERENCE = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source})`;
+const BLS_REFERENCE = `${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source})`;
 /** "May 2024" from the entry's own asOf, so the short cite can never drift from the long one. */
-const BLS_AS_OF_LABEL = new Date(`${STAT_SOURCES.averageSalary.asOf}-01T00:00:00Z`)
+const BLS_AS_OF_LABEL = new Date(`${STAT_SOURCES.npMedianWageBls.asOf}-01T00:00:00Z`)
   .toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 /** Short inline cite for metadata, where the full source string would never fit the budget. */
-const BLS_SHORT_REFERENCE = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source.split(',')[0]}, ${BLS_AS_OF_LABEL})`;
+const BLS_SHORT_REFERENCE = `${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source.split(',')[0]}, ${BLS_AS_OF_LABEL})`;
 /** BLS sentence for category-state S4. */
 export const NATIONAL_MEDIAN_SENTENCE = `Nationally, the median annual wage for ${NP_PROSE_PLURAL} is ${BLS_REFERENCE}.`;
 /** BLS reference sentence for city C5 and category-city K3. */

@@ -80,7 +80,7 @@ export async function getTopStatesByJobCount(): Promise<StateJobCount[]> {
  * (CO, CT, MA, MD, ME, MN, NE, NV, NY, SD, VT) and for the routes out of an
  * agreement in several Reduced and Restricted states.
  *
- * Pay answers quote one figure, STAT_SOURCES.averageSalary, and call it the
+ * Pay answers quote one figure, STAT_SOURCES.npMedianWageBls, and call it the
  * median it is. The array used to carry hand-typed pay bands (new graduate,
  * experienced, remote, private practice owner, and a physician comparison),
  * a patients-per-day range and an NHSC award amount, none with a source.
@@ -101,7 +101,7 @@ export async function getTopStatesByJobCount(): Promise<StateJobCount[]> {
  */
 export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[] {
     const fpa = STAT_SOURCES.fullPracticeStates;
-    const salary = STAT_SOURCES.averageSalary;
+    const salary = STAT_SOURCES.npMedianWageBls;
 
     const demandFaq: FAQItem[] =
         topStates.length >= MIN_STATES_FOR_DEMAND_FAQ

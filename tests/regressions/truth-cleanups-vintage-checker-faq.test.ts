@@ -23,7 +23,7 @@
  *      experienced, remote), called the BLS median an "average", and gave a
  *      patients-per-day range, an NHSC award amount and training lengths in
  *      years (whose parts did not add up to the stated total), all unsourced.
- *      The only pay figure left is STAT_SOURCES.averageSalary, labelled median.
+ *      The only pay figure left is STAT_SOURCES.npMedianWageBls, labelled median.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -150,7 +150,7 @@ describe('licensure checker: no tier-keyed or unsourced figures', () => {
 
 describe('homepage FAQ: the only pay figure is the cited BLS median', () => {
     const faqs = buildHomepageFaqs([]);
-    const median = STAT_SOURCES.averageSalary;
+    const median = STAT_SOURCES.npMedianWageBls;
     const byQuestion = (cue: string) => {
         const faq = faqs.find((f) => f.question.includes(cue));
         expect(faq, cue).toBeDefined();

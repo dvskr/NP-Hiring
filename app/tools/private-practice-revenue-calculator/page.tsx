@@ -108,7 +108,7 @@ const EXCLUSIONS: readonly string[] = [
 const FAQS = [
   {
     q: `How much can an ${brand.niche.short} private practice make?`,
-    a: `It is a volume-times-collections calculation, which is exactly why a headline number is the wrong thing to look for. Enter your own visits per week, what you actually collect per visit, and your overhead share, and the tool works it through. Then read the sensitivity table: at typical inputs, being 10% out on either volume or reimbursement moves the answer by tens of thousands of dollars a year, so the real answer is a range whose width depends on how well you know your own numbers. For comparison, the national median annual wage for employed ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer.`,
+    a: `It is a volume-times-collections calculation, which is exactly why a headline number is the wrong thing to look for. Enter your own visits per week, what you actually collect per visit, and your overhead share, and the tool works it through. Then read the sensitivity table: at typical inputs, being 10% out on either volume or reimbursement moves the answer by tens of thousands of dollars a year, so the real answer is a range whose width depends on how well you know your own numbers. For comparison, the national median annual wage for employed ${brand.niche.descriptor}s is ${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer.`,
   },
   {
     q: 'Why does this ask for collections instead of what I charge?',
@@ -217,7 +217,7 @@ export default async function PrivatePracticeRevenueCalculatorPage() {
             sources={[
               { label: `${brand.name} private practice guide: the model these defaults come from`, url: PRACTICE_GUIDE_PATH },
               { label: '1099 vs W-2 calculator: the tax this figure is calculated before', url: '/tools/1099-vs-w2-calculator' },
-              { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },
+              { label: STAT_SOURCES.npMedianWageBls.source, url: STAT_SOURCES.npMedianWageBls.sourceUrl },
             ]}
           />
         </div>

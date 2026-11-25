@@ -173,7 +173,7 @@ export function isCategoryFaqSlug(slug: string): slug is CategorySlug {
 const NP = brand.niche.short;
 
 /** "$129,210 (BLS OEWS, ...)": the cited all-NP median. */
-const NP_MEDIAN_CITED = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source})`;
+const NP_MEDIAN_CITED = `${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source})`;
 
 /** "27 states + DC": AANP Full Practice Authority count. */
 const FPA_STATES = STAT_SOURCES.fullPracticeStates.formatted;

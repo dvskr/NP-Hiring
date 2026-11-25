@@ -203,7 +203,7 @@ describe('P1 #18: guide truth rules', () => {
     const src = read(HOW_TO_HIRE);
     expect(src).toContain("from '@/lib/stats-sources'");
     expect(src).toContain("from '@/config/niche/salary'");
-    expect(src).toContain('STAT_SOURCES.averageSalary');
+    expect(src).toContain('STAT_SOURCES.npMedianWageBls');
     expect(src).toContain('salaryConfig.normalizer.typical');
     // No literal dollar figures typed into the page source — every
     // rendered number must flow through the imports above.

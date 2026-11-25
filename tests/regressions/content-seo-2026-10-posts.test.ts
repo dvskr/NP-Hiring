@@ -63,7 +63,7 @@ const EN_DASH = '–';
 
 /** The AANP map every full practice count must link (STAT_SOURCES, not retyped). */
 const FPA_URL = STAT_SOURCES.fullPracticeStates.sourceUrl;
-const MEDIAN = STAT_SOURCES.averageSalary.formatted;
+const MEDIAN = STAT_SOURCES.npMedianWageBls.formatted;
 const GROWTH = STAT_SOURCES.blsGrowth2035.formatted;
 
 /**
@@ -72,7 +72,7 @@ const GROWTH = STAT_SOURCES.blsGrowth2035.formatted;
  * their source and vintage.
  */
 const CANONICAL_DOLLARS = new Set<string>([
-    STAT_SOURCES.averageSalary.formatted,
+    STAT_SOURCES.npMedianWageBls.formatted,
     STAT_SOURCES.salaryPercentile10.formatted,
     STAT_SOURCES.salaryPercentile90.formatted,
 ]);

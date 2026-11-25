@@ -70,18 +70,18 @@ const LAST_REVIEWED_DATE = '2026-10-06';
 // contradicted the cited figure; a drift test
 // (tests/regressions/aeo-content-citation-stats.test.ts) now blocks
 // re-hardcoding a national salary here.
-const NATIONAL_SALARY = STAT_SOURCES.averageSalary; // '$132,300' (BLS OEWS May 2025 median)
+const NATIONAL_SALARY = STAT_SOURCES.npMedianWageBls; // '$132,300' (BLS OEWS May 2025 median)
 const NATIONAL_SALARY_K = Math.round(Number(NATIONAL_SALARY.value) / 1000); // 132
 // "May 2025" from the entry's own asOf, so the inline cite follows a
 // vintage refresh of lib/stats-sources.ts instead of going stale.
 const NATIONAL_SALARY_VINTAGE = formatStatVintage(NATIONAL_SALARY.asOf);
 // The percentile pills cite the same OEWS release (HANDOFFS 181): nothing
-// here is typed by hand. Rounded toward the claim ("under" rounds up,
-// "over" rounds down), so the compact $K figure stays true.
+// here is typed by hand. The labels name the percentile itself ("10th
+// percentile wage"), so the compact $K figure rounds to the nearest $1,000.
 const NATIONAL_P10 = STAT_SOURCES.salaryPercentile10; // '$101,340' (BLS OEWS May 2025)
 const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90; // '$174,420' (BLS OEWS May 2025)
-const P10_UNDER_K = Math.ceil(Number(NATIONAL_P10.value) / 1000); // 102
-const P90_OVER_K = Math.floor(Number(NATIONAL_P90.value) / 1000); // 174
+const P10_K = Math.round(Number(NATIONAL_P10.value) / 1000); // 101
+const P90_K = Math.round(Number(NATIONAL_P90.value) / 1000); // 174
 const NP_GROWTH = STAT_SOURCES.blsGrowth2035; // '41%'
 const FPA_STATES = STAT_SOURCES.fullPracticeStates; // '27 states + DC' (AANP)
 const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation; // '100 million+' (HRSA, primary care)
@@ -130,7 +130,7 @@ const SALARY_GUIDE_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponen
 // and percentiles (never an average), and reads every figure and its
 // vintage from STAT_SOURCES. Title is 60 characters rendered; the
 // description 120 to 160.
-const META_DESCRIPTION = `What ${brand.niche.descriptor}s earn: the BLS ${NATIONAL_SALARY_VINTAGE} median is ${NATIONAL_SALARY.formatted}, with 10th and 90th percentiles of ${NATIONAL_P10.formatted} and ${NATIONAL_P90.formatted}, plus posted pay by state.`;
+const META_DESCRIPTION = `${brand.niche.descriptor.charAt(0).toUpperCase()}${brand.niche.descriptor.slice(1)} salary: the BLS ${NATIONAL_SALARY_VINTAGE} median wage is ${NATIONAL_SALARY.formatted}, with 10th and 90th percentile wages of ${NATIONAL_P10.formatted} and ${NATIONAL_P90.formatted}, plus pay by state.`;
 
 // State codes mapping
 const STATE_CODES: Record<string, string> = {
@@ -323,7 +323,7 @@ const clayCard: React.CSSProperties = {
  *   3. The label is pinned by tests/regressions/p2-data-accuracy-stats-and-guides.ts
  *      so it cannot be dropped while the figures stay.
  * The honest end state is: exactly one number on this page is a cited
- * source (STAT_SOURCES.averageSalary); every other one says so.
+ * source (STAT_SOURCES.npMedianWageBls); every other one says so.
  * ═══════════════════════════════════════════════════════════════════════ */
 // 2026-10: the cited set grew from the median alone to the median plus the
 // 10th and 90th percentiles (same OEWS release), and the state table's
@@ -394,7 +394,7 @@ const faqData = [
   // and both percentiles, interpolated from STAT_SOURCES; the question lost
   // its hand-typed year (the data's own vintage is in the answer), and the
   // estimate ranges read "to" (house style) and stay attributed.
-  { q: `How much do ${brand.niche.descriptor}s make?`, a: `${brand.niche.long}s earned a median of ${NATIONAL_SALARY.formatted} a year in ${NATIONAL_SALARY_VINTAGE}, according to federal wage data (${NATIONAL_SALARY.source}). The lowest paid 10% earned less than ${NATIONAL_P10.formatted} and the highest paid 10% earned more than ${NATIONAL_P90.formatted}. The experience ranges on this page, about $95,000 to $115,000 for new graduates and $150,000 to $180,000 or more for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
+  { q: `How much do ${brand.niche.descriptor}s make?`, a: `The median annual wage for ${brand.niche.descriptor}s was ${NATIONAL_SALARY.formatted} in ${NATIONAL_SALARY_VINTAGE}, according to federal wage data (${NATIONAL_SALARY.source}). The 10th percentile wage was ${NATIONAL_P10.formatted} and the 90th percentile wage was ${NATIONAL_P90.formatted}. State medians range from ${formatBlsDollars(LOWEST_PAYING_STATES[0].annualMedian)} in ${LOWEST_PAYING_STATES[0].state} to ${formatBlsDollars(TOP_PAYING_STATES[0].annualMedian)} in ${TOP_PAYING_STATES[0].state} in the same survey, and individual offers move with setting, specialty and location.` },
   // 2026-11 (salary build): written from the BLS state rows, so the states
   // and figures follow the generated module. The hand-typed list of five
   // states and the uncited cost-of-living claim it carried are gone.
@@ -550,8 +550,8 @@ export default async function SalaryGuidePage() {
                 <h3 style={{ fontSize: '13px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Key Numbers</h3>
                 {[
                   { value: `$${NATIONAL_SALARY_K}K`, label: 'National Median', bg: '#D4F5E9', color: '#065F46' },
-                  { value: `$${P10_UNDER_K}K`, label: 'Lowest 10% earn under', bg: '#E0E7FF', color: '#3730A3' },
-                  { value: `$${P90_OVER_K}K`, label: 'Top 10% earn over', bg: '#FEF3C7', color: '#92400E' },
+                  { value: `$${P10_K}K`, label: '10th percentile wage', bg: '#E0E7FF', color: '#3730A3' },
+                  { value: `$${P90_K}K`, label: '90th percentile wage', bg: '#FEF3C7', color: '#92400E' },
                   { value: NP_GROWTH.formatted, label: 'Job Growth', bg: '#FFE0D3', color: '#7C2D12' },
                 ].map(s => (
                   <div key={s.label} className="sal-stat-pill" style={{
@@ -623,9 +623,9 @@ export default async function SalaryGuidePage() {
                     <a href={NATIONAL_SALARY.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', fontWeight: 600 }}>
                       Bureau of Labor Statistics wage survey for {NATIONAL_SALARY_VINTAGE}
                     </a>
-                    . Half of {brand.niche.short}s earn more and half earn less. The lowest paid 10% earn
-                    less than <strong>{NATIONAL_P10.formatted}</strong>, and the highest paid 10% earn more
-                    than <strong>{NATIONAL_P90.formatted}</strong>.
+                    . Half of {brand.niche.short} wages sit above the median and half below. The 10th percentile
+                    wage is <strong>{NATIONAL_P10.formatted}</strong>, and the 90th percentile wage
+                    is <strong>{NATIONAL_P90.formatted}</strong>.
                   </p>
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '10px 0 0' }}>
                     For the pay employers are posting now, see the posted-pay medians by state below and{' '}
@@ -662,9 +662,12 @@ export default async function SalaryGuidePage() {
               }} className="sal-quick-stats">
                 {[
                   { value: NATIONAL_SALARY.formatted, label: 'National Median (BLS)', color: '#BE185D' },
-                  { value: NATIONAL_P90.formatted, label: 'Top 10% earn over (BLS)', color: '#BE185D' },
+                  { value: NATIONAL_P90.formatted, label: '90th Percentile Wage (BLS)', color: '#BE185D' },
                   { value: NP_GROWTH.formatted, label: 'Job Growth by 2035', color: '#B45309' },
-                  { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings Analyzed', color: '#B45309' },
+                  // The posted-pay sample is counted in employers, each once.
+                  national
+                    ? { value: national.employers.toLocaleString('en-US'), label: 'Employers Disclosing Pay', color: '#B45309' }
+                    : { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings With Pay', color: '#B45309' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>

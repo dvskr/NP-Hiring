@@ -164,7 +164,7 @@ describe('P1 #4 follow-up — the hub page’s flag-gated surfaces are truthful'
         const generatorSrc = read(GENERATOR);
         // methodologySources renders exactly these four STAT_SOURCES entries.
         const cited = [
-            'STAT_SOURCES.averageSalary',      // BLS OEWS
+            'STAT_SOURCES.npMedianWageBls',      // BLS OEWS
             'STAT_SOURCES.blsGrowth2035',      // BLS Employment Projections
             'STAT_SOURCES.fullPracticeStates', // AANP
             'STAT_SOURCES.hrsaShortagePopulation', // HRSA

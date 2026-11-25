@@ -152,7 +152,7 @@ describe('truth rules', () => {
             // The retired May 2024 median may not linger once the entry moves on.
             expect(body, `${slug}: cites the retired May 2024 median`).not.toContain('$129,210');
             if (body.includes('$132,300')) {
-                expect(STAT_SOURCES.averageSalary.formatted).toBe('$132,300');
+                expect(STAT_SOURCES.npMedianWageBls.formatted).toBe('$132,300');
                 expect(body, `${slug}: median cited without BLS attribution`).toMatch(/BLS/);
                 expect(body, `${slug}: median cited without its vintage`).toContain('May 2025');
             }
@@ -193,7 +193,7 @@ describe('truth rules', () => {
      */
     it('every dollar figure traces to a repo source of truth', () => {
         const ALLOWED = new Map<string, string>([
-            [STAT_SOURCES.averageSalary.formatted, 'lib/stats-sources.ts — BLS OEWS median'],
+            [STAT_SOURCES.npMedianWageBls.formatted, 'lib/stats-sources.ts — BLS OEWS median'],
             ['$110K–$170K', 'config/niche/salary.ts — normalizer.typical'],
             ['$95K–$120K', 'app/jobs/new-grad + app/jobs/entry-level FAQ copy'],
             ['$60–$150+', 'config/niche/salary.ts header — locum NP hourly band'],

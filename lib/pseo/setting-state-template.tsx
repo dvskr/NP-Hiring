@@ -488,7 +488,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
   // line names it only then.
   const paySentence = postedPaySentence({ kind: 'category', slug: config.slug }, facts);
   const citesBls = paySentence !== null && facts.benchmark === null;
-  const extraSources = citesBls ? `; ${STAT_SOURCES.averageSalary.source}` : '';
+  const extraSources = citesBls ? `; ${STAT_SOURCES.npMedianWageBls.source}` : '';
 
   // CS-S9: ONE array feeds the visible accordion and the FAQPage JSON-LD
   // (CategoryFAQ builds both from customFaqs), so an entry that loses its

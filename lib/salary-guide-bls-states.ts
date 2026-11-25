@@ -9,7 +9,7 @@
  * module's header for the files, the filters and the checks). On 2026-11-25
  * the generator re-read all 102 state annual medians (51 NP, 51 PA) from the
  * BLS Public Data API and every one matched the file. The national NP row
- * equals STAT_SOURCES.averageSalary and its two percentiles, and the national
+ * equals STAT_SOURCES.npMedianWageBls and its two percentiles, and the national
  * PA row equals PA_MEDIAN_WAGE in the definition guides
  * (tests/unit/salary-guide-bls-states.test.ts holds both).
  *

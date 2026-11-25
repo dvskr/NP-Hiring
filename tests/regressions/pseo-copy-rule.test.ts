@@ -314,7 +314,7 @@ describe('pseo-copy-rule: the lint itself', () => {
         const clean = [
             '// cost of living, HPSA, added daily, $100 — all in a comment',
             "const a = `$${formatK(x)} median`;",
-            "const b = `${STAT_SOURCES.averageSalary.formatted} (cited)`;",
+            "const b = `${STAT_SOURCES.npMedianWageBls.formatted} (cited)`;",
             "const c = 'on average a page renders in under a second';",
             "const d = 'ranges read $ to $ with words, not digits';",
         ].join('\n');
@@ -347,7 +347,7 @@ describe('pseo-copy-rule: source literals', () => {
 
 // ─── 2. Rendered copy from the builders ─────────────────────────────────────
 
-const BLS_MEDIAN = STAT_SOURCES.averageSalary.formatted;
+const BLS_MEDIAN = STAT_SOURCES.npMedianWageBls.formatted;
 const GATED_MEDIAN = 123_456;
 const GATED_MEDIAN_TEXT = '$123,456';
 const SAMPLE_STATES = ['Texas', 'California', 'Massachusetts', 'District of Columbia', 'Florida'] as const;

@@ -100,7 +100,7 @@ const FULL: ListingFacts = {
   newGradFriendly: 2,
   salaryDisclosedCount: 7,
   salaryDisclosedEmployers: 3,
-  benchmark: { scope: 'Texas', median: 128_000, p25: 115_000, p75: 142_000, postings: 7, employers: 3 },
+  benchmark: { scope: 'Texas', tier: 'full', median: 128_000, p25: 115_000, p75: 142_000, postings: 20, employers: 12 },
   computedAt: NOW,
   sampled: false,
 };
@@ -431,10 +431,10 @@ describe('P1 #11: state hubs never fabricate a salary band', () => {
     const variant = { kind: 'location', scopeName: 'Delaware', scopeNoun: 'state' } as const;
     const belowGate = postedPaySentence(variant, { ...ONE_JOB, benchmark: null, salaryDisclosedCount: 1 });
     expect(belowGate).toBeTruthy();
-    expect(belowGate).toContain(STAT_SOURCES.averageSalary.formatted);
-    expect(belowGate).toContain(STAT_SOURCES.averageSalary.source);
+    expect(belowGate).toContain(STAT_SOURCES.npMedianWageBls.formatted);
+    expect(belowGate).toContain(STAT_SOURCES.npMedianWageBls.source);
     // The only dollar figure below the gate is the cited BLS median.
-    expect(belowGate!.match(DOLLARS)).toEqual([STAT_SOURCES.averageSalary.formatted]);
+    expect(belowGate!.match(DOLLARS)).toEqual([STAT_SOURCES.npMedianWageBls.formatted]);
     expect(belowGate).toContain('median');
     expect(belowGate).not.toMatch(/average/i);
     // No disclosed pay at all: the section is omitted, never padded.
@@ -443,7 +443,8 @@ describe('P1 #11: state hubs never fabricate a salary band', () => {
     const gated = postedPaySentence({ ...variant, scopeName: 'Texas' }, FULL);
     expect(gated).toContain('$128K');
     expect(gated).toContain('$115K to $142K');
-    expect(gated).toContain('7 postings from 3 employers');
+    // The sample is employers, each counted once (salary build 2026-11).
+    expect(gated).toContain('across 12 employers that list annual pay, each counted once');
     expect(gated).not.toMatch(DASHES);
   });
 
@@ -535,7 +536,7 @@ describe('HUB-meta and HUB-S10 builders over the hub fixtures', () => {
     expect(thin.map((f) => f.question)).not.toContain('Are remote NP roles available in Delaware?');
     // Below the gate the only dollar figure anywhere is the cited BLS median.
     const dollars = thin.map((f) => f.answer).join(' ').match(DOLLARS) ?? [];
-    expect(new Set(dollars)).toEqual(new Set([STAT_SOURCES.averageSalary.formatted]));
+    expect(new Set(dollars)).toEqual(new Set([STAT_SOURCES.npMedianWageBls.formatted]));
   });
 
   it('index gate: a full hub indexes, the Delaware shape renders noindex', () => {

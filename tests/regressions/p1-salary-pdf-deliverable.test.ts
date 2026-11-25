@@ -80,7 +80,7 @@ describe('P1 #4 — generator figures trace to sanctioned sources only', () => {
 
     it('national figures derive from lib/stats-sources.ts', () => {
         expect(src).toContain("from '@/lib/stats-sources'");
-        expect(src).toContain('STAT_SOURCES.averageSalary');
+        expect(src).toContain('STAT_SOURCES.npMedianWageBls');
         expect(src).toContain('STAT_SOURCES.blsGrowth2035');
         expect(src).toContain('STAT_SOURCES.fullPracticeStates');
         expect(src).toContain('STAT_SOURCES.hrsaShortagePopulation');
@@ -314,9 +314,15 @@ describe('The Quick Answer card prints the cited figures the hub prints', () => 
     });
 
     it('says the same thing as the hub about the two percentiles', () => {
-        for (const phrase of ['Half of ', 'The lowest paid 10% earn', 'the highest paid 10% earn more']) {
+        // Salary build 2026-11: the percentiles are named as wages, never as
+        // what nurse practitioners "earn", on the hub and in the PDF alike.
+        for (const phrase of ['Half of ', 'wages sit above the median and half below', 'The 10th percentile', 'the 90th percentile wage']) {
             expect(hubSrc, `hub: ${phrase}`).toContain(phrase);
             expect(card, `generator: ${phrase}`).toContain(phrase);
+        }
+        for (const retired of ['earn more and half earn less', 'lowest paid 10% earn', 'highest paid 10% earn']) {
+            expect(hubSrc, `hub: ${retired}`).not.toContain(retired);
+            expect(card, `generator: ${retired}`).not.toContain(retired);
         }
     });
 

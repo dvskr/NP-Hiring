@@ -704,7 +704,7 @@ describe('cost per hire — prices come from the pricing config', () => {
     expect(defaults.cpcTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
     expect(defaults.agencyTimeToFillDays).toBe(DEFAULT_TIME_TO_FILL_DAYS);
     // First-year base: the cited median, the only salary figure this board asserts.
-    expect(DEFAULT_FIRST_YEAR_BASE).toBe(Number(STAT_SOURCES.averageSalary.value));
+    expect(DEFAULT_FIRST_YEAR_BASE).toBe(Number(STAT_SOURCES.npMedianWageBls.value));
     expect(defaults.firstYearBase).toBe(DEFAULT_FIRST_YEAR_BASE);
     // No plan length any more: the Employer plan mode went with the plan.
     expect('planMonths' in defaults).toBe(false);

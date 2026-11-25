@@ -7,7 +7,7 @@
  * accordion and the FAQPage JSON-LD (B48: schema must match visible
  * content, so one array feeds both).
  *
- * Every dollar figure here is either (a) STAT_SOURCES.averageSalary
+ * Every dollar figure here is either (a) STAT_SOURCES.npMedianWageBls
  * (BLS-cited), (b) a computed premium range over that median (premiums
  * mirror the hub's published table — see specialty-config.ts), or (c) live
  * GATED MEDIANS (review P9 #2c/#2d: the one salary pool in the page's role
@@ -98,7 +98,7 @@ export function formatSalary(n: number): string {
 
 /** The cited all-NP median as a number (BLS OEWS via lib/stats-sources.ts). */
 export function nationalMedian(): number {
-    return Number(STAT_SOURCES.averageSalary.value);
+    return Number(STAT_SOURCES.npMedianWageBls.value);
 }
 
 /** True when a live aggregate has a renderable min–max spread (never "$X–$0"). */
@@ -173,7 +173,7 @@ export function specialtyNounPlural(page: SpecialtySalaryPage): string {
  * on a non-niche APRN page, which the all-<niche> median does not include.
  */
 export function citedMedian(page: SpecialtySalaryPage): StatSource {
-    return page.isNicheRole ? STAT_SOURCES.averageSalary : page.occupationWage;
+    return page.isNicheRole ? STAT_SOURCES.npMedianWageBls : page.occupationWage;
 }
 
 /**
@@ -190,7 +190,7 @@ export function medianSentenceParts(page: SpecialtySalaryPage): { lead: string; 
     if (page.isNicheRole) {
         return {
             lead: `The national median across all ${short}s is `,
-            tail: ` per year (${STAT_SOURCES.averageSalary.source}).`,
+            tail: ` per year (${STAT_SOURCES.npMedianWageBls.source}).`,
         };
     }
     return {

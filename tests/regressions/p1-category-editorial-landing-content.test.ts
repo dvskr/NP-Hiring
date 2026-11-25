@@ -83,7 +83,7 @@ describe('P1 #5 — category landing editorial content', () => {
         // a source here — see the "ingest constants are not market data"
         // block below.
         const allowed = new Set<string>([
-            STAT_SOURCES.averageSalary.formatted, // $132,300 (May 2025)
+            STAT_SOURCES.npMedianWageBls.formatted, // $132,300 (May 2025)
         ]);
 
         it('salary narratives contain only derived figures', () => {
@@ -109,10 +109,10 @@ describe('P1 #5 — category landing editorial content', () => {
         it('the cited BLS median appears in salary narratives (except CNS, which is not an NP role)', () => {
             for (const [slug, content] of Object.entries(CATEGORY_LANDING_CONTENT)) {
                 if (slug === 'clinical-nurse-specialist') {
-                    expect(content.salaryNarrative).not.toContain(STAT_SOURCES.averageSalary.formatted);
+                    expect(content.salaryNarrative).not.toContain(STAT_SOURCES.npMedianWageBls.formatted);
                 } else {
                     expect(content.salaryNarrative, `${slug} missing cited median`).toContain(
-                        STAT_SOURCES.averageSalary.formatted,
+                        STAT_SOURCES.npMedianWageBls.formatted,
                     );
                 }
             }

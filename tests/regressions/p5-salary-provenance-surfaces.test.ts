@@ -81,7 +81,7 @@ describe('A4 — formatStatVintage renders STAT_SOURCES asOf shapes without Date
 describe('A4 — buildProvenanceSentences claims exactly what its inputs support', () => {
     it('does not repeat a vintage the source string already names (OEWS)', () => {
         // Arrange: the OEWS entry's source ends in "May 2025" already.
-        const stat = STAT_SOURCES.averageSalary;
+        const stat = STAT_SOURCES.npMedianWageBls;
 
         // Act
         const [sentence] = buildProvenanceSentences({ cited: [stat] });
@@ -227,7 +227,7 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
 
     it('the calculator footnote names the BLS vintage from STAT_SOURCES metadata', () => {
         const src = read(CALCULATOR);
-        expect(src).toContain('formatStatVintage(STAT_SOURCES.averageSalary.asOf)');
+        expect(src).toContain('formatStatVintage(STAT_SOURCES.npMedianWageBls.asOf)');
         // The P0 #22 honesty phrasing stays intact.
         expect(src).toContain('live job postings on {brand.name}');
         expect(src).not.toContain('10,000+');

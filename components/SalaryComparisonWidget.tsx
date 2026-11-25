@@ -22,7 +22,7 @@ interface SalaryComparisonWidgetProps {
 }
 
 // National figure ($k) lives in config/niche/stats.ts — derived from the
-// cited BLS OEWS MEDIAN annual wage (STAT_SOURCES.averageSalary).
+// cited BLS OEWS MEDIAN annual wage (STAT_SOURCES.npMedianWageBls).
 const NATIONAL_MEDIAN_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K;
 
 // "Source: BLS OEWS, Nurse Practitioners (29-1171) — median annual wage,
@@ -31,7 +31,7 @@ const NATIONAL_MEDIAN_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K;
 // config/niche/stats.ts, so the stamp can never cite a different figure
 // than the card displays.
 const [NATIONAL_CITED_SENTENCE] = buildProvenanceSentences({
-    cited: [STAT_SOURCES.averageSalary],
+    cited: [STAT_SOURCES.npMedianWageBls],
 });
 
 export default function SalaryComparisonWidget({

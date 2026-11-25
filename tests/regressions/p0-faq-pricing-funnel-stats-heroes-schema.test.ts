@@ -33,7 +33,7 @@ describe('P0 #4 — /faq stats derive from lib/stats-sources.ts', () => {
 
     it('imports STAT_SOURCES and cites the salary + FPA entries', () => {
         expect(src).toContain("from '@/lib/stats-sources'");
-        expect(src).toContain('STAT_SOURCES.averageSalary');
+        expect(src).toContain('STAT_SOURCES.npMedianWageBls');
         expect(src).toContain('STAT_SOURCES.fullPracticeStates');
     });
 

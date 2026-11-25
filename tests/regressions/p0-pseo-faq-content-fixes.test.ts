@@ -121,7 +121,7 @@ describe('P0 #10 — FAQ builders for previously-unmapped category keys', () => 
                 const dollars = joinedAnswers(key).match(/\$[\d,]+/g) ?? [];
                 for (const d of dollars) {
                     expect(d, `${key}: unexpected dollar literal ${d}`).toBe(
-                        STAT_SOURCES.averageSalary.formatted,
+                        STAT_SOURCES.npMedianWageBls.formatted,
                     );
                 }
             }

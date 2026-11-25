@@ -1661,7 +1661,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     'U.S. Census Bureau (2020 population)',
     env ? SOP_SOURCE_LINE : null,
     env ? NLC_SOURCE_LINE : null,
-    receivesNpMedian(config.slug) ? STAT_SOURCES.averageSalary.source : null,
+    receivesNpMedian(config.slug) ? STAT_SOURCES.npMedianWageBls.source : null,
   ].filter((line): line is string => line !== null);
 
   // CC-K2, K3, K7: the bento cells.

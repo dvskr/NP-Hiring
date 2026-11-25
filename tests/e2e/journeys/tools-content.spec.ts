@@ -1108,7 +1108,7 @@ test.describe('/tools/private-practice-revenue-calculator', () => {
 
 /**
  * WORKED EXAMPLE — from cost-per-hire-model.ts with lib/config pricing on this
- * HEAD and STAT_SOURCES.averageSalary $132,300 (BLS OEWS, May 2025).
+ * HEAD and STAT_SOURCES.npMedianWageBls $132,300 (BLS OEWS, May 2025).
  *
  * Our side has the promo while it runs, and two ways to buy: per post and the
  * 5-post pack (the Employer plan was retired on 2026-10-24; the pack mode is

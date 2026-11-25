@@ -391,7 +391,7 @@ export default function FPAGuidePage() {
                 What Practice Authority Changes About Your Earning Options
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). What changes from state to state is the structure around that number:
+                Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.npMedianWageBls.formatted} ({STAT_SOURCES.npMedianWageBls.source}). What changes from state to state is the structure around that number:
               </p>
               <ul className="space-y-3 text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you need an agreement to practice on your own.</strong> That turns on your state&apos;s own rules, not only its tier. Many Full Practice states allow independent practice once you are licensed, but several first require a transition period of collaborative or supervised practice. Most Reduced and Restricted states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience.</span></li>

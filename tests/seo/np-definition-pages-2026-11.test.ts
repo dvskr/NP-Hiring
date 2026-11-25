@@ -444,7 +444,7 @@ describe('NP figures are read from lib/stats-sources.ts, never typed', () => {
                 ...actual,
                 STAT_SOURCES: {
                     ...stats,
-                    averageSalary: { ...stats.averageSalary, formatted: sentinels.median },
+                    npMedianWageBls: { ...stats.npMedianWageBls, formatted: sentinels.median },
                     salaryPercentile10: { ...stats.salaryPercentile10, formatted: sentinels.p10 },
                     salaryPercentile90: { ...stats.salaryPercentile90, formatted: sentinels.p90 },
                     blsGrowth2035: { ...stats.blsGrowth2035, formatted: sentinels.growth },
@@ -459,12 +459,12 @@ describe('NP figures are read from lib/stats-sources.ts, never typed', () => {
                 [
                     whatIs,
                     [sentinels.median, sentinels.p10, sentinels.p90, sentinels.growth, sentinels.fullPractice],
-                    [real.averageSalary.formatted, real.salaryPercentile10.formatted, real.salaryPercentile90.formatted, real.blsGrowth2035.formatted, real.fullPracticeStates.formatted],
+                    [real.npMedianWageBls.formatted, real.salaryPercentile10.formatted, real.salaryPercentile90.formatted, real.blsGrowth2035.formatted, real.fullPracticeStates.formatted],
                 ],
                 [
                     vsPa,
                     [sentinels.median, sentinels.growth, sentinels.fullPractice],
-                    [real.averageSalary.formatted, real.blsGrowth2035.formatted, real.fullPracticeStates.formatted],
+                    [real.npMedianWageBls.formatted, real.blsGrowth2035.formatted, real.fullPracticeStates.formatted],
                 ],
             ];
             for (const [guide, present, absent] of expectations) {
@@ -483,7 +483,7 @@ describe('NP figures are read from lib/stats-sources.ts, never typed', () => {
 
 describe('hand-verified figures share the stats-sources vintage', () => {
     it('PA pay is from the same OEWS release as the NP median', () => {
-        expect(PA_MEDIAN_WAGE.asOf).toBe(STAT_SOURCES.averageSalary.asOf);
+        expect(PA_MEDIAN_WAGE.asOf).toBe(STAT_SOURCES.npMedianWageBls.asOf);
     });
 
     it('employment counts are from the same projections table and cycle as the NP growth rate', () => {

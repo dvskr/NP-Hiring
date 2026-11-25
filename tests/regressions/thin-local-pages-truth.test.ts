@@ -48,11 +48,11 @@ const code = (): string => stripComments(read(CITY_TEMPLATE));
 
 /**
  * The one permitted occurrence of the string "average" in the template: the
- * BLS entry in lib/stats-sources.ts is keyed `averageSalary` for historical
+ * BLS entry in lib/stats-sources.ts is keyed `npMedianWageBls` for historical
  * reasons while the `source` string it renders says "median annual wage".
  * Anything else is a pay claim the gated helpers did not produce.
  */
-const ALLOWED_AVERAGE_READ = 'STAT_SOURCES.averageSalary.source';
+const ALLOWED_AVERAGE_READ = 'STAT_SOURCES.npMedianWageBls.source';
 
 /** En dash and em dash, built from code points so this file carries neither byte. */
 const DASHES = new RegExp(`[${String.fromCharCode(0x2013, 0x2014)}]`);
@@ -80,8 +80,8 @@ describe('the category x city template states no figure it cannot source', () =>
         expect(src.split(ALLOWED_AVERAGE_READ).join('').toLowerCase()).not.toContain('average');
         // The permitted read really is the BLS cite, and that cite says median.
         expect(src).toContain(ALLOWED_AVERAGE_READ);
-        expect(STAT_SOURCES.averageSalary.source).toContain('median annual wage');
-        expect(STAT_SOURCES.averageSalary.source.toLowerCase()).not.toContain('average');
+        expect(STAT_SOURCES.npMedianWageBls.source).toContain('median annual wage');
+        expect(STAT_SOURCES.npMedianWageBls.source.toLowerCase()).not.toContain('average');
     });
 
     it('computes no demand or page-quality score', () => {

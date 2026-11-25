@@ -10,7 +10,7 @@
  *
  * REFRESH RULE. These figures share a vintage with lib/stats-sources.ts:
  *   - PA pay comes from the same BLS OEWS release as
- *     STAT_SOURCES.averageSalary (May 2025), so the two medians compare like
+ *     STAT_SOURCES.npMedianWageBls (May 2025), so the two medians compare like
  *     for like. Read 2026-11-23 from the BLS public data API, series
  *     OEUN000000000000029107113 (national, all industries, annual median),
  *     and confirmed in BLS Employment Projections Table 1.3 and the
@@ -111,7 +111,7 @@ export const BLS_PROJECTIONS = {
 /**
  * Physician assistants (SOC 29-1071), national annual median wage, BLS
  * OEWS. `asOf` uses the STAT_SOURCES shape so the tests can hold it to the
- * same release as STAT_SOURCES.averageSalary.
+ * same release as STAT_SOURCES.npMedianWageBls.
  */
 export const PA_MEDIAN_WAGE = {
     value: '135880',

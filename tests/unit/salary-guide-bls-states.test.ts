@@ -109,10 +109,10 @@ describe('BLS state wages: no invented values', () => {
 
 describe('BLS state wages: agree with the figures already cited', () => {
     it('national 29-1171 equals STAT_SOURCES (median and both percentiles)', () => {
-        expect(String(BLS_NATIONAL.np.annualMedian.value)).toBe(STAT_SOURCES.averageSalary.value);
+        expect(String(BLS_NATIONAL.np.annualMedian.value)).toBe(STAT_SOURCES.npMedianWageBls.value);
         expect(String(BLS_NATIONAL.np.annualP10.value)).toBe(STAT_SOURCES.salaryPercentile10.value);
         expect(String(BLS_NATIONAL.np.annualP90.value)).toBe(STAT_SOURCES.salaryPercentile90.value);
-        expect(BLS_OEWS_AS_OF).toBe(STAT_SOURCES.averageSalary.asOf);
+        expect(BLS_OEWS_AS_OF).toBe(STAT_SOURCES.npMedianWageBls.asOf);
     });
 
     it('national 29-1071 equals the PA median the definition guides cite', () => {

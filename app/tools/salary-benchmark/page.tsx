@@ -66,7 +66,7 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: `What should I pay a ${brand.niche.descriptor}?`,
-    a: `Start from the median posted salary for your state in the tool above, then adjust for the things a median cannot see: setting, specialty, shift pattern, call burden, experience floor, and how quickly you need the seat filled. Where at least ${BENCHMARK_FULL_MIN_EMPLOYERS} employers disclose pay, the tool also shows the 25th to 75th percentile band, which is the practical decision range: below the 25th you are competing on something other than pay, and above the 75th you are buying speed. For national context, the BLS median annual wage for ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
+    a: `Start from the median posted salary for your state in the tool above, then adjust for the things a median cannot see: setting, specialty, shift pattern, call burden, experience floor, and how quickly you need the seat filled. Where at least ${BENCHMARK_FULL_MIN_EMPLOYERS} employers disclose pay, the tool also shows the 25th to 75th percentile band, which is the practical decision range: below the 25th you are competing on something other than pay, and above the 75th you are buying speed. For national context, the BLS median annual wage for ${brand.niche.descriptor}s is ${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source}).`,
   },
   {
     q: 'Where does this benchmark data come from?',
@@ -164,7 +164,7 @@ export default function SalaryBenchmarkPage() {
               `A state's median is published once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay there, and its 25th to 75th percentile range once at least ${BENCHMARK_FULL_MIN_EMPLOYERS} do.`,
               `The pool is the same one the salary guide publishes from: live ${brand.niche.descriptor} titles with an annual salary range the employer posted. Listings whose pay was inferred rather than posted, expired listings, hourly or contract rates, and roles that are not ${brand.niche.short} positions are excluded entirely.`,
               'Figures refresh hourly from live published listings on this board.',
-              `National context comes from ${STAT_SOURCES.averageSalary.source}: a median annual wage of ${STAT_SOURCES.averageSalary.formatted}.`,
+              `National context comes from ${STAT_SOURCES.npMedianWageBls.source}: a median annual wage of ${STAT_SOURCES.npMedianWageBls.formatted}.`,
             ]}
             exclusions={[
               'Accepted offers and negotiated outcomes. This is advertised pay, not signed pay.',
@@ -173,7 +173,7 @@ export default function SalaryBenchmarkPage() {
               'Specialty, setting, and experience segmentation. State-level medians pool an entire market. Use them as a starting anchor, not a final number.',
             ]}
             sources={[
-              { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },
+              { label: STAT_SOURCES.npMedianWageBls.source, url: STAT_SOURCES.npMedianWageBls.sourceUrl },
               { label: `${brand.name} salary guide: state pay from live postings`, url: '/salary-guide' },
               { label: `How to hire a ${brand.niche.long}`, url: '/for-employers/resources/how-to-hire' },
             ]}

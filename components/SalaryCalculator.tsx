@@ -273,7 +273,7 @@ export default function SalaryCalculator({ stateSalaries, national }: Props) {
             {result.basis === 'postings' ? (
               <>* Estimate based on the median posted pay across {result.basisCount ?? 'the'} employers that disclose pay in {result.stateName === 'National' ? '' : `${result.stateName} `}live job postings on {brand.name}, each employer counted once. </>
             ) : (
-              <>* Base: BLS OEWS national median wage ({formatStatVintage(STAT_SOURCES.averageSalary.asOf)} release). Too few disclosed-salary postings were available to use board data. </>
+              <>* Base: BLS OEWS national median wage ({formatStatVintage(STAT_SOURCES.npMedianWageBls.asOf)} release). Too few disclosed-salary postings were available to use board data. </>
             )}
             Experience, setting, and specialty multipliers are {brand.name}&apos;s editorial estimates, not survey data. Figures are rounded to the nearest $1,000; actual salaries vary by employer.
           </p>

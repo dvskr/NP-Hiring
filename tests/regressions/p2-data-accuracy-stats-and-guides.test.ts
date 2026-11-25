@@ -121,7 +121,7 @@ describe('P2 #10 — SALARY_BANDS is the single source for published pay ranges'
  *
  * 2026-09-26: components/HomepageFAQ.tsx left the list. Its hand-typed pay
  * bands (and every other unsourced pay figure in that FAQ) were cut, and its
- * pay answers now quote only STAT_SOURCES.averageSalary.
+ * pay answers now quote only STAT_SOURCES.npMedianWageBls.
  *
  * 2026-10-01 (backlog 2.10): app/api/og/city/route.tsx left the list. It
  * never printed a band of its own (it renders the `salary` string its callers
@@ -307,24 +307,24 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
     it('the OEWS vintage is the May 2025 release, and its note names where it was read', () => {
         // Bumped 2026-09-30 only after reading the May 2025 figure at BLS
         // (public data API series OEUN000000000000029117113), never guessed.
-        expect(STAT_SOURCES.averageSalary.asOf).toBe('2025-05');
-        expect(STAT_SOURCES.averageSalary.source).toContain('May 2025');
-        expect(STAT_SOURCES.averageSalary.value).toBe('132300');
-        expect(STAT_SOURCES.averageSalary.formatted).toBe('$132,300');
-        expect(STAT_SOURCES.averageSalary.range).toBe(STAT_SOURCES.averageSalary.formatted);
-        expect(STAT_SOURCES.averageSalary.vintageNote).toContain('OEUN000000000000029117113');
+        expect(STAT_SOURCES.npMedianWageBls.asOf).toBe('2025-05');
+        expect(STAT_SOURCES.npMedianWageBls.source).toContain('May 2025');
+        expect(STAT_SOURCES.npMedianWageBls.value).toBe('132300');
+        expect(STAT_SOURCES.npMedianWageBls.formatted).toBe('$132,300');
+        expect(STAT_SOURCES.npMedianWageBls.range).toBe(STAT_SOURCES.npMedianWageBls.formatted);
+        expect(STAT_SOURCES.npMedianWageBls.vintageNote).toContain('OEUN000000000000029117113');
     });
 
     it('the salary guide percentile figures are cited entries of the same OEWS release (HANDOFFS 181)', () => {
-        const { averageSalary, salaryPercentile10, salaryPercentile90 } = STAT_SOURCES;
+        const { npMedianWageBls, salaryPercentile10, salaryPercentile90 } = STAT_SOURCES;
         for (const stat of [salaryPercentile10, salaryPercentile90]) {
-            expect(stat.asOf).toBe(averageSalary.asOf);
-            expect(stat.sourceUrl).toBe(averageSalary.sourceUrl);
+            expect(stat.asOf).toBe(npMedianWageBls.asOf);
+            expect(stat.sourceUrl).toBe(npMedianWageBls.sourceUrl);
             expect(stat.source).toContain('29-1171');
             expect(stat.formatted).toBe(`$${Number(stat.value).toLocaleString('en-US')}`);
         }
-        expect(Number(salaryPercentile10.value)).toBeLessThan(Number(averageSalary.value));
-        expect(Number(salaryPercentile90.value)).toBeGreaterThan(Number(averageSalary.value));
+        expect(Number(salaryPercentile10.value)).toBeLessThan(Number(npMedianWageBls.value));
+        expect(Number(salaryPercentile90.value)).toBeGreaterThan(Number(npMedianWageBls.value));
         expect(salaryPercentile10.vintageNote).toContain('OEUN000000000000029117111');
         expect(salaryPercentile90.vintageNote).toContain('OEUN000000000000029117115');
 
@@ -332,8 +332,10 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
         const hub = read('app/salary-guide/page.tsx');
         expect(hub).toContain('const NATIONAL_P10 = STAT_SOURCES.salaryPercentile10;');
         expect(hub).toContain('const NATIONAL_P90 = STAT_SOURCES.salaryPercentile90;');
-        expect(hub).toContain("label: 'Lowest 10% earn under'");
-        expect(hub).toContain("label: 'Top 10% earn over'");
+        // Salary build 2026-11: the pills name the percentile, never what NPs "earn".
+        expect(hub).toContain("label: '10th percentile wage'");
+        expect(hub).toContain("label: '90th percentile wage'");
+        expect(hub).not.toMatch(/label: '[^']*\bearn/i);
         for (const literal of ["'$95K'", "'$165K+'", "'$165,000+'", "'Entry Level'", "'Top 10% Earn'"]) {
             expect(hub, literal).not.toContain(literal);
         }
@@ -341,7 +343,7 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
 
     it('every stat whose sourceUrl is a moving "current" link documents the drift', () => {
         // Review finding: blsGrowth2035 documented that its OOH link always
-        // shows the LATEST cycle, but averageSalary carried the identical
+        // shows the LATEST cycle, but npMedianWageBls carried the identical
         // hazard (bls.gov/oes/CURRENT/) with no mention of it — so the
         // citation can silently start naming a vintage the link no longer
         // shows.
@@ -352,8 +354,8 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
                 `${key} links a moving "current" URL and must document the drift`,
             ).toMatch(/drift|latest|repoint/i);
         }
-        // Guard the guard: averageSalary must actually be one of them.
-        expect(STAT_SOURCES.averageSalary.sourceUrl).toContain('/current/');
+        // Guard the guard: npMedianWageBls must actually be one of them.
+        expect(STAT_SOURCES.npMedianWageBls.sourceUrl).toContain('/current/');
     });
 
     it('the growth stat names its projection cycle wherever it renders', () => {
@@ -387,8 +389,8 @@ describe('P2 #10 — the isEstimate hedge is enforced in DATA, not in a helper n
     });
 
     it('a non-estimate is never hedged, so the flag stays meaningful', () => {
-        expect((STAT_SOURCES.averageSalary as StatSource).isEstimate).toBeUndefined();
-        expect(STAT_SOURCES.averageSalary.formatted).not.toMatch(/\+|~|approximately/);
+        expect((STAT_SOURCES.npMedianWageBls as StatSource).isEstimate).toBeUndefined();
+        expect(STAT_SOURCES.npMedianWageBls.formatted).not.toMatch(/\+|~|approximately/);
     });
 
     it('the surfaces that render these stats render `formatted`, inheriting the hedge', () => {

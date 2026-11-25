@@ -86,7 +86,7 @@ describe('F11 — homepage FAQ array carries no fabricated statistics', () => {
     const faqs = buildHomepageFaqs(LIVE_STATES);
     const salary = faqs.find((f) => f.question.includes('make'));
     const outlook = faqs.find((f) => f.question.includes('outlook'));
-    expect(salary?.answer).toContain(STAT_SOURCES.averageSalary.range);
+    expect(salary?.answer).toContain(STAT_SOURCES.npMedianWageBls.range);
     expect(outlook?.answer).toContain(STAT_SOURCES.blsGrowth2035.formatted);
   });
 });

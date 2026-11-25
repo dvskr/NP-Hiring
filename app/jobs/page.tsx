@@ -84,7 +84,7 @@ async function countJobsForMetadata(filters: RecruitmentFilterState): Promise<nu
 interface HubFaq { question: string; answer: string; }
 
 function buildJobsHubFaqs(totalJobs: number, categoryGroups: readonly HubCategoryGroup[]): HubFaq[] {
-  const median = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source})`;
+  const median = `${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source})`;
   return [
     {
       question: `How many ${brand.niche.descriptor} jobs are listed right now?`,
@@ -457,7 +457,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
               Salary transparency matters here: listings surface posted pay ranges wherever the employer provides
               them, and the <Link href="/salary-guide" style={{ color: '#BE185D', fontWeight: 600 }}>salary guide</Link> tracks
               state-by-state figures. Nationally, {brand.niche.descriptor}s earn a median annual wage of{' '}
-              {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}).
+              {STAT_SOURCES.npMedianWageBls.formatted} ({STAT_SOURCES.npMedianWageBls.source}).
             </p>
             <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: 0 }}>
               Where you practice shapes how you practice: {STAT_SOURCES.fullPracticeStates.formatted} grant Full

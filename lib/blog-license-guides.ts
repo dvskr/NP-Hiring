@@ -967,7 +967,7 @@ function statePayRuleSentence(s: LicenseGuideState): string {
  * the faq_json synced from it) cannot know whether the rule is met.
  */
 function payFaqAnswer(s: LicenseGuideState): string {
-    return `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. ${statePayRuleSentence(s)} The ${s.name} job market snapshot on this page reports the current ${s.code} figure whenever that rule is met.`;
+    return `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.npMedianWageBls)}. ${statePayRuleSentence(s)} The ${s.name} job market snapshot on this page reports the current ${s.code} figure whenever that rule is met.`;
 }
 
 function buildMarkdown(s: LicenseGuideState, facts: LicenseGuideFactsTable): string {
@@ -1014,7 +1014,7 @@ ${renewalParagraph(s, factRows.length > 0)}
 
 ## What ${NP}s earn in ${s.name}
 
-The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2035.formatted} (${STAT_SOURCES.blsGrowth2035.source}). ${statePayRuleSentence(s)} The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
+The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.npMedianWageBls)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2035.formatted} (${STAT_SOURCES.blsGrowth2035.source}). ${statePayRuleSentence(s)} The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
 
 ## Frequently asked questions
 

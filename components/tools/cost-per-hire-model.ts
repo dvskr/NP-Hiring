@@ -217,8 +217,8 @@ export const DEFAULT_APPLICANTS_PER_ROLE = FLAT_FEE_PRICING.candidateUnlocksPerP
 export const DEFAULT_TIME_TO_FILL_DAYS = FLAT_FEE_PRICING.durationDays;
 
 /** Default first-year base an agency fee is calculated against. */
-export const DEFAULT_FIRST_YEAR_BASE = Number(STAT_SOURCES.averageSalary.value);
-export const FIRST_YEAR_BASE_SOURCE = STAT_SOURCES.averageSalary.source;
+export const DEFAULT_FIRST_YEAR_BASE = Number(STAT_SOURCES.npMedianWageBls.value);
+export const FIRST_YEAR_BASE_SOURCE = STAT_SOURCES.npMedianWageBls.source;
 
 export interface CostPerHireInputs {
     /** Roles you plan to fill. */

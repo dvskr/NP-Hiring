@@ -516,7 +516,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 
 /* Presentation helpers (clay, the page's own vocabulary) */
 
-const BLS = STAT_SOURCES.averageSalary;
+const BLS = STAT_SOURCES.npMedianWageBls;
 
 /** The paragraph with its BLS cite (printed verbatim by the narrative) linked to the source page. */
 function withBlsLink(text: string) {

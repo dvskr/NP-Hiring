@@ -71,7 +71,7 @@ export function costPerHireAssumptions(phase: PricingPhase): readonly string[] {
     `A channel with nothing entered is reported as not comparable, never as zero. A zero in a cost column would read as free.`,
     `The applicant-volume default of ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} is the number of candidate unlocks a posting includes. It is a plan feature, not an expected response rate. Replace it with what your own postings draw.`,
     `Time-to-fill defaults to ${DEFAULT_TIME_TO_FILL_DAYS} days, the posting's run length rather than a market average, and the same default applies to all three channels. The vacancy overlay only affects the result once you enter a cost per day unfilled, which starts at zero.`,
-    `First-year base, the figure an agency contingency rate is applied to, starts at the cited national median of ${STAT_SOURCES.averageSalary.formatted} (${FIRST_YEAR_BASE_SOURCE}). Replace it with your budgeted base.`,
+    `First-year base, the figure an agency contingency rate is applied to, starts at the cited national median of ${STAT_SOURCES.npMedianWageBls.formatted} (${FIRST_YEAR_BASE_SOURCE}). Replace it with your budgeted base.`,
   ];
 }
 

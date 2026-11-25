@@ -100,7 +100,7 @@ describe('cited occupation wages (lib/salary-guide-occupation-wages.ts)', () => 
     });
 
     it('a niche page still leads with the all-niche BLS median', () => {
-        expect(citedMedian(getSpecialtySalaryPage('family-practice')!)).toBe(STAT_SOURCES.averageSalary);
+        expect(citedMedian(getSpecialtySalaryPage('family-practice')!)).toBe(STAT_SOURCES.npMedianWageBls);
     });
 });
 

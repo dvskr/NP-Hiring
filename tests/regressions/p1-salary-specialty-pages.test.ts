@@ -65,7 +65,7 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const codeOnly = (src: string): string =>
     src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
-const MEDIAN = Number(STAT_SOURCES.averageSalary.value);
+const MEDIAN = Number(STAT_SOURCES.npMedianWageBls.value);
 
 /** Every source file this package owns — scanned by the static guards. */
 const PACKAGE_FILES = [
@@ -392,7 +392,7 @@ describe('P1 #7 — credential truth: CRNAs and CNMs are never rendered as the n
             const sentence = medianSentence(page);
             expect(sentence).toContain(wage.formatted);
             expect(sentence).toContain(wage.source);
-            expect(sentence).not.toContain(STAT_SOURCES.averageSalary.formatted);
+            expect(sentence).not.toContain(STAT_SOURCES.npMedianWageBls.formatted);
             expect(sentence, slug).toMatch(/does not include them/);
             // The headline pay FAQ leads with that sentence and, with no
             // live inventory, quotes no other dollar figure at all.

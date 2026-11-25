@@ -133,7 +133,7 @@ describe('P1 #5: FAQ builders for the landing slugs', () => {
                 const dollars = joinedAnswers(key).match(/\$[\d,]+/g) ?? [];
                 for (const d of dollars) {
                     expect(d, `${key}: unexpected dollar literal ${d}`).toBe(
-                        STAT_SOURCES.averageSalary.formatted,
+                        STAT_SOURCES.npMedianWageBls.formatted,
                     );
                 }
             }
@@ -141,7 +141,7 @@ describe('P1 #5: FAQ builders for the landing slugs', () => {
 
         it('CNS answers never cite the NP-specific BLS median (different occupation)', () => {
             expect(joinedAnswers('clinical-nurse-specialist')).not.toContain(
-                STAT_SOURCES.averageSalary.formatted,
+                STAT_SOURCES.npMedianWageBls.formatted,
             );
         });
 
@@ -290,7 +290,7 @@ describe('P1 #17: /jobs hub editorial + citable FAQ', () => {
     });
 
     it('every figure derives from stats-sources or the live DB count', () => {
-        expect(src).toContain('STAT_SOURCES.averageSalary.formatted');
+        expect(src).toContain('STAT_SOURCES.npMedianWageBls.formatted');
         expect(src).toContain('STAT_SOURCES.blsGrowth2035');
         expect(src).toContain('STAT_SOURCES.fullPracticeStates');
         expect(src).toContain('totalJobs.toLocaleString()');

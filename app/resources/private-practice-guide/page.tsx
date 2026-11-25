@@ -260,7 +260,7 @@ export default async function PrivatePracticeGuidePage() {
     },
     {
       question: `How much can an ${brand.niche.short} private practice owner earn?`,
-      answer: `It is a volume-times-collections calculation, so model it rather than trusting a headline number. The table on this page works it through: at ${PRACTICE_SCENARIOS[1].visitsPerWeek.min} to ${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week over ${PRACTICE_MODEL.workingWeeksPerYear} working weeks, collecting about $${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit on an insurance panel, a full-time telehealth practice models ${HEADLINE_GROSS} of gross collections, and ${SCENARIO_ROWS[1].net} net after ${SCENARIO_ROWS[1].overhead} overhead. An office-based practice models the same gross with materially higher overhead, and a cash-pay panel models higher collections per visit at lower volume. Change any input (your real reimbursement rate, your no-show rate, your weeks worked) and the answer changes with it. The national median annual wage for employed ${brand.niche.descriptor}s, for comparison, is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`
+      answer: `It is a volume-times-collections calculation, so model it rather than trusting a headline number. The table on this page works it through: at ${PRACTICE_SCENARIOS[1].visitsPerWeek.min} to ${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week over ${PRACTICE_MODEL.workingWeeksPerYear} working weeks, collecting about $${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit on an insurance panel, a full-time telehealth practice models ${HEADLINE_GROSS} of gross collections, and ${SCENARIO_ROWS[1].net} net after ${SCENARIO_ROWS[1].overhead} overhead. An office-based practice models the same gross with materially higher overhead, and a cash-pay panel models higher collections per visit at lower volume. Change any input (your real reimbursement rate, your no-show rate, your weeks worked) and the answer changes with it. The national median annual wage for employed ${brand.niche.descriptor}s, for comparison, is ${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source}).`
     },
     {
       question: "How long does it take to build a full private practice caseload?",
@@ -472,7 +472,7 @@ export default async function PrivatePracticeGuidePage() {
                 </table>
               </div>
               <p className="text-xs mt-4" style={{ color: 'var(--text-tertiary)' }}>
-                For comparison, the national median annual wage for employed {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer. Our <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>salary guide</Link> computes state-level averages from live postings.
+                For comparison, the national median annual wage for employed {brand.niche.descriptor}s is {STAT_SOURCES.npMedianWageBls.formatted} ({STAT_SOURCES.npMedianWageBls.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer. Our <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>salary guide</Link> computes state-level averages from live postings.
               </p>
             </div>
           </div>

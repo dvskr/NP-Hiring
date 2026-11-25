@@ -219,7 +219,7 @@ describe('truth rules', () => {
         for (const { slug, body } of BODIES) {
             expect(body, `${slug}: cites the retired May 2024 median`).not.toContain('$129,210');
             if (body.includes('$132,300')) {
-                expect(STAT_SOURCES.averageSalary.formatted).toBe('$132,300');
+                expect(STAT_SOURCES.npMedianWageBls.formatted).toBe('$132,300');
                 expect(body, `${slug}: median cited without BLS attribution`).toMatch(/BLS/);
             }
             if (body.includes('27 states + DC')) {
@@ -255,7 +255,7 @@ describe('truth rules', () => {
      */
     it('every dollar figure traces to a repo source of truth', () => {
         const ALLOWED = new Map<string, string>([
-            [STAT_SOURCES.averageSalary.formatted, 'lib/stats-sources.ts — BLS OEWS median'],
+            [STAT_SOURCES.npMedianWageBls.formatted, 'lib/stats-sources.ts — BLS OEWS median'],
             [SALARY_BANDS.typicalW2Annual.formatted, 'lib/stats-sources.ts — SALARY_BANDS.typicalW2Annual'],
         ]);
         const patterns = [...ALLOWED.keys()].sort((a, b) => b.length - a.length);
@@ -280,7 +280,7 @@ describe('truth rules', () => {
      * and must never be presented as one … Every band therefore carries a
      * `basis` string, and surfaces should render it (or a short paraphrase
      * of it) next to the number" — and adds that where a page wants "what
-     * NPs actually earn", the honest answer is STAT_SOURCES.averageSalary,
+     * NPs actually earn", the honest answer is STAT_SOURCES.npMedianWageBls,
      * not a band.
      *
      * The provenance ratchet only proves the LITERAL traces to a constant,

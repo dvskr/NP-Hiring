@@ -4,7 +4,7 @@
 //
 // NP HIRING RE-SOURCING (2026-07-03): the PMHNP-era donor values were
 // replaced with NP-wide figures:
-//   - averageSalary: BLS OEWS May 2025, Nurse Practitioners (29-1171),
+//   - npMedianWageBls: BLS OEWS May 2025, Nurse Practitioners (29-1171),
 //     median annual wage $132,300 (refreshed 2026-09-30 from the May 2024
 //     $129,210, which had replaced the PMHNP-era $155,000).
 //     RESOLVED 2026-07-18 (citation-trust sweep B4/B51): the UI constants
@@ -48,7 +48,7 @@
 //   - The OEWS vintage was NOT bumped: no newer OEWS release exists in
 //     repo data (grep for "OEWS" — every hit derives from this entry),
 //     and inventing a vintage would be exactly the failure this file is
-//     supposed to prevent. `vintageNote` on averageSalary says so.
+//     supposed to prevent. `vintageNote` on npMedianWageBls says so.
 //   - SALARY_BANDS (below) was added because ~20 files were printing
 //     hand-typed salary RANGES that disagreed with each other.
 //
@@ -125,8 +125,14 @@ export interface StatSource {
 export const STATS_LAST_REVIEWED = '2026-10-06';
 
 export const STAT_SOURCES = {
-    /** Median annual NP salary, US-wide (BLS OEWS, all nurse practitioners). */
-    averageSalary: {
+    /**
+     * Median annual wage for nurse practitioners, US-wide (BLS OEWS, all
+     * nurse practitioners). Until 2026-11 this entry was keyed
+     * `averageSalary`: a median filed under "average", which invited copy to
+     * call it one. tests/seo/np-median-key-guard.test.ts keeps the old key
+     * out and holds every surface to "median".
+     */
+    npMedianWageBls: {
         value: '132300',
         formatted: '$132,300',
         // Single verifiable point figure (the OEWS median). Kept equal to
@@ -158,7 +164,7 @@ export const STAT_SOURCES = {
 
     /**
      * The 10th and 90th percentile annual wages for nurse practitioners, the
-     * same OEWS release and occupation as averageSalary. The salary guide's
+     * same OEWS release and occupation as npMedianWageBls. The salary guide's
      * "Lowest 10%" and "Top 10%" figures render from these, so a percentile
      * claim is never typed by hand (HANDOFFS 181). Refresh all three
      * together: a new OEWS vintage moves every percentile at once.
@@ -172,9 +178,9 @@ export const STAT_SOURCES = {
         vintageNote:
             'Read 2026-09-30 from the BLS public data API, series ' +
             'OEUN000000000000029117111 (national, all industries, annual 10th ' +
-            'percentile wage). Same LINK-DRIFT hazard as averageSalary: the ' +
+            'percentile wage). Same LINK-DRIFT hazard as npMedianWageBls: the ' +
             '/oes/current/ URL moves to the latest release each spring. Refresh ' +
-            'with averageSalary and salaryPercentile90, from the same release.',
+            'with npMedianWageBls and salaryPercentile90, from the same release.',
     },
 
     salaryPercentile90: {
@@ -186,9 +192,9 @@ export const STAT_SOURCES = {
         vintageNote:
             'Read 2026-09-30 from the BLS public data API, series ' +
             'OEUN000000000000029117115 (national, all industries, annual 90th ' +
-            'percentile wage). Same LINK-DRIFT hazard as averageSalary: the ' +
+            'percentile wage). Same LINK-DRIFT hazard as npMedianWageBls: the ' +
             '/oes/current/ URL moves to the latest release each spring. Refresh ' +
-            'with averageSalary and salaryPercentile10, from the same release.',
+            'with npMedianWageBls and salaryPercentile10, from the same release.',
     },
 
     /**
@@ -350,7 +356,7 @@ export const STAT_SOURCES = {
  * (or a short paraphrase of it) next to the number.
  *
  * Where a page wants "what NPs actually earn", the honest answer is
- * STAT_SOURCES.averageSalary (a cited government median) plus a pointer at
+ * STAT_SOURCES.npMedianWageBls (a cited government median) plus a pointer at
  * live postings — not a band.
  *
  * MIGRATION STATUS — READ BEFORE CITING THIS AS "DONE": exactly one

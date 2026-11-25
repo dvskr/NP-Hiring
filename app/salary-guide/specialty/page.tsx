@@ -41,7 +41,7 @@ import { BarChart3, Stethoscope } from 'lucide-react';
 
 export const revalidate = 86400; // ISR daily
 
-const median = STAT_SOURCES.averageSalary;
+const median = STAT_SOURCES.npMedianWageBls;
 
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Salary by Specialty`)}&type=page`;
 

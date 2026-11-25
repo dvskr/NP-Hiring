@@ -684,8 +684,8 @@ export default async function StateSalaryPage({ params }: PageProps) {
             : {
                 key: 'bls',
                 label: 'National median wage',
-                value: STAT_SOURCES.averageSalary.formatted,
-                sub: STAT_SOURCES.averageSalary.source,
+                value: STAT_SOURCES.npMedianWageBls.formatted,
+                sub: STAT_SOURCES.npMedianWageBls.source,
             },
     ];
 

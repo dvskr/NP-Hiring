@@ -7,7 +7,7 @@
  * widget was excluded without documentation). Pins:
  *
  *   1. The stamp's cited sentence comes from the shared pure helper
- *      (buildProvenanceSentences) fed STAT_SOURCES.averageSalary — source
+ *      (buildProvenanceSentences) fed STAT_SOURCES.npMedianWageBls — source
  *      + vintage from lib/stats-sources.ts metadata, never re-typed.
  *   2. The national figure the card displays still derives from
  *      config/niche/stats.ts (which itself derives from the same
@@ -41,7 +41,7 @@ describe('P6 #9 — the widget stamps its figures with real provenance', () => {
         expect(src).toMatch(/from '@\/lib\/stats-sources'/);
         expect(src).toMatch(/from '@\/components\/SalaryProvenance'/);
         expect(src).toContain('buildProvenanceSentences({');
-        expect(src).toContain('cited: [STAT_SOURCES.averageSalary]');
+        expect(src).toContain('cited: [STAT_SOURCES.npMedianWageBls]');
     });
 
     it('renders the provenance line with the shared testid', () => {
@@ -79,9 +79,9 @@ describe('P6 #9 — the widget stamps its figures with real provenance', () => {
         // Same behavior pin as the A4 suite: the OEWS source string already
         // names "May 2025", so the helper must not double-render it.
         const [sentence] = buildProvenanceSentences({
-            cited: [STAT_SOURCES.averageSalary],
+            cited: [STAT_SOURCES.npMedianWageBls],
         });
-        expect(sentence).toContain(STAT_SOURCES.averageSalary.source);
+        expect(sentence).toContain(STAT_SOURCES.npMedianWageBls.source);
         expect(sentence.startsWith('Source: ')).toBe(true);
     });
 
@@ -113,8 +113,10 @@ describe('P6 #9 hardening — job-page call site keeps the widget alive ($k unit
         // The read moved into the job page's daily place cache (2026-11-21).
         expect(pageSrc).toContain('getCachedStateSalaryMedianK(job.state, job.stateCode)');
         expect(read('app/jobs/[slug]/place-cache.ts')).toContain('getGatedMedianKForWhere({');
+        // Salary build 2026-11: whole $k through the engine's one rounding
+        // rule (the $500 display grid, then thousands), still $k, not dollars.
         const analytics = read('lib/salary-analytics.ts');
-        expect(analytics).toContain('Math.round(row.median / 1000)');
+        expect(analytics).toContain('return row ? displayThousands(row.median) : 0;');
     });
 
     it('the widget receives stateMedianSalaryK verbatim — no second /1000', () => {

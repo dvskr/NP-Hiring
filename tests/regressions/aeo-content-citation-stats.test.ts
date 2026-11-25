@@ -11,7 +11,7 @@
  *
  * The fix made lib/stats-sources.ts the single source of truth:
  *   - the UI constants in config/niche/stats.ts DERIVE from
- *     STAT_SOURCES.averageSalary;
+ *     STAT_SOURCES.npMedianWageBls;
  *   - app/salary-guide/page.tsx reads STAT_SOURCES for its national
  *     salary / growth / shortage / FPA claims;
  *   - fabricated donor-era figures (the 158k-to-165k salary trend row,
@@ -38,10 +38,10 @@ import {
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-const DERIVED_K = Math.round(Number(STAT_SOURCES.averageSalary.value) / 1000);
+const DERIVED_K = Math.round(Number(STAT_SOURCES.npMedianWageBls.value) / 1000);
 
 describe('B4 — UI salary constants derive from the cited BLS figure', () => {
-    it('NATIONAL_AVG_SALARY_K matches STAT_SOURCES.averageSalary', () => {
+    it('NATIONAL_AVG_SALARY_K matches STAT_SOURCES.npMedianWageBls', () => {
         expect(NATIONAL_AVG_SALARY_K).toBe(DERIVED_K);
     });
 
@@ -51,7 +51,7 @@ describe('B4 — UI salary constants derive from the cited BLS figure', () => {
     });
 
     it('the state-FAQ display string is the cited formatted value', () => {
-        expect(STATE_FAQ_NATIONAL_AVG_SALARY_TEXT).toBe(STAT_SOURCES.averageSalary.formatted);
+        expect(STATE_FAQ_NATIONAL_AVG_SALARY_TEXT).toBe(STAT_SOURCES.npMedianWageBls.formatted);
     });
 
     it('career-pulse pebbles quote only derived figures', () => {
@@ -81,7 +81,7 @@ describe('B51 — salary guide quotes the single cited figure', () => {
 
     it('imports STAT_SOURCES and derives its headline figures', () => {
         expect(src).toContain("from '@/lib/stats-sources'");
-        expect(src).toContain('STAT_SOURCES.averageSalary');
+        expect(src).toContain('STAT_SOURCES.npMedianWageBls');
         expect(src).toContain('STAT_SOURCES.fullPracticeStates');
         expect(src).toContain('STAT_SOURCES.hrsaShortagePopulation');
     });

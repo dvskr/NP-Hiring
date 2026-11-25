@@ -130,7 +130,7 @@ export default function EditorialPolicyPage() {
     // source of truth the rest of the site cites. Update protocol lives
     // in that file; this table follows automatically.
     const dataSourceRows = [
-        { label: `Median ${brand.niche.short} salary`, stat: STAT_SOURCES.averageSalary },
+        { label: `Median ${brand.niche.short} salary`, stat: STAT_SOURCES.npMedianWageBls },
         { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2035 },
         { label: 'Primary-care shortage population', stat: STAT_SOURCES.hrsaShortagePopulation },
         { label: 'Full Practice Authority states', stat: STAT_SOURCES.fullPracticeStates },

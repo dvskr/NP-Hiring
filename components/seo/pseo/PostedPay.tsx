@@ -24,7 +24,7 @@ export function postedPaySentence(variant: PostedPayVariant, facts: PayFacts): s
   return buildHubPayParagraph({ scopeName: variant.scopeName, scopeNoun: variant.scopeNoun, facts });
 }
 
-const BLS = STAT_SOURCES.averageSalary;
+const BLS = STAT_SOURCES.npMedianWageBls;
 
 /**
  * The paragraph with its BLS cite (the narrative prints the phrase from

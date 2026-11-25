@@ -273,19 +273,19 @@ describe('pSEO sections: no dollar figure without a benchmark', () => {
     ];
     const figures = outputs.join('\n').match(DOLLARS) ?? [];
     expect(figures.length).toBeGreaterThan(0);
-    for (const figure of figures) expect(figure).toBe(STAT_SOURCES.averageSalary.formatted);
+    for (const figure of figures) expect(figure).toBe(STAT_SOURCES.npMedianWageBls.formatted);
   });
 
   it('PostedPay cites the BLS source inline below the gate, linked to its source page, and draws no bars', () => {
     for (const variant of [categoryPay, statePay]) {
       const out = html(h(PostedPay, { variant, facts: NO_BENCHMARK }));
-      expect(out).toContain(STAT_SOURCES.averageSalary.source);
-      expect(out).toContain(STAT_SOURCES.averageSalary.sourceUrl);
+      expect(out).toContain(STAT_SOURCES.npMedianWageBls.source);
+      expect(out).toContain(STAT_SOURCES.npMedianWageBls.sourceUrl);
       expect(out.match(/<a /g)).toHaveLength(1);
       expect(out).not.toContain('pseo-clay-bar');
     }
     const gated = html(h(PostedPay, { variant: categoryPay, facts: FULL }));
-    expect(gated).not.toContain(STAT_SOURCES.averageSalary.sourceUrl);
+    expect(gated).not.toContain(STAT_SOURCES.npMedianWageBls.sourceUrl);
   });
 
   it('PostedPay draws p25, median and p75 as flat accent bars on the oxblood track from the benchmark', () => {

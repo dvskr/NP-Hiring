@@ -9,7 +9,7 @@
  *
  * TRUTH RULES (audit B51 lineage — do not violate):
  *   - The national dollar anchors are cited BLS OEWS medians:
- *     STAT_SOURCES.averageSalary (lib/stats-sources.ts, all NPs) for the
+ *     STAT_SOURCES.npMedianWageBls (lib/stats-sources.ts, all NPs) for the
  *     niche roles, and the role's OWN occupation median
  *     (lib/salary-guide-occupation-wages.ts) for the two non-niche APRN
  *     roles, which the all-NP median does not include (indexing audit

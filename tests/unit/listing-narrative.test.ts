@@ -132,8 +132,8 @@ const NP = brand.niche.short;
 const NP_LONG = brand.niche.long;
 const NP_PROSE = brand.niche.descriptor;
 const BRAND = brand.name;
-const BLS = STAT_SOURCES.averageSalary.formatted;
-const BLS_SOURCE = STAT_SOURCES.averageSalary.source;
+const BLS = STAT_SOURCES.npMedianWageBls.formatted;
+const BLS_SOURCE = STAT_SOURCES.npMedianWageBls.source;
 const NOW = new Date('2026-09-16T12:00:00Z');
 const SEP_1 = new Date('2026-09-01T00:00:00Z');
 /** A full-tier row: 12 employers (each counted once) behind 20 postings. */

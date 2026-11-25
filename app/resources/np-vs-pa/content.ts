@@ -35,13 +35,13 @@ const NP_PROSE = brand.niche.descriptor;
 /** 'Nurse practitioner': the descriptor at the start of a sentence or a label. */
 const NP_SENTENCE = NP_PROSE.charAt(0).toUpperCase() + NP_PROSE.slice(1);
 
-const NP_MEDIAN = STAT_SOURCES.averageSalary.formatted;
-const PAY_VINTAGE = monthYear(STAT_SOURCES.averageSalary.asOf);
+const NP_MEDIAN = STAT_SOURCES.npMedianWageBls.formatted;
+const PAY_VINTAGE = monthYear(STAT_SOURCES.npMedianWageBls.asOf);
 const NP_GROWTH = STAT_SOURCES.blsGrowth2035.formatted;
 const FULL_PRACTICE = STAT_SOURCES.fullPracticeStates;
 const PA_MEDIAN = PA_MEDIAN_WAGE.formatted;
 /** The two medians' gap and which role leads, computed so the copy follows the figures. */
-const PAY_GAP = Number(PA_MEDIAN_WAGE.value) - Number(STAT_SOURCES.averageSalary.value);
+const PAY_GAP = Number(PA_MEDIAN_WAGE.value) - Number(STAT_SOURCES.npMedianWageBls.value);
 const MEDIAN_GAP = `$${Math.abs(PAY_GAP).toLocaleString('en-US')}`;
 const HIGHER_PAID = PAY_GAP >= 0 ? 'PAs' : `${NP}s`;
 const NP_JOBS = BLS_PROJECTIONS.nursePractitioners;
@@ -397,7 +397,7 @@ const SOURCES: readonly SourceLink[] = [
         url: STAT_SOURCES.blsGrowth2035.sourceUrl,
         note: 'NP and PA employment at the start and end of the projection period, projected growth, and the median wage for both occupations',
     },
-    { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl, note: 'the NP median wage' },
+    { label: STAT_SOURCES.npMedianWageBls.source, url: STAT_SOURCES.npMedianWageBls.sourceUrl, note: 'the NP median wage' },
     { ...PRIMARY_SOURCES.blsPaWageSeries, note: `the PA median wage for ${PAY_VINTAGE}, from the same survey as the NP median` },
     { ...PRIMARY_SOURCES.blsOohPa, note: 'PA education, program length, clinical training, licensing, supervision agreements and specialties' },
     { ...PRIMARY_SOURCES.blsOohNp, note: 'NP duties, education and licensure' },

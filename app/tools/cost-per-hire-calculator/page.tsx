@@ -190,7 +190,7 @@ export default function CostPerHireCalculatorPage() {
             sources={[
               { label: `${brand.name} pricing: the rates in the flat-fee column`, url: '/pricing' },
               { label: 'Posted-pay benchmark by state, from live listings', url: '/tools/salary-benchmark' },
-              { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },
+              { label: STAT_SOURCES.npMedianWageBls.source, url: STAT_SOURCES.npMedianWageBls.sourceUrl },
             ]}
           />
         </div>

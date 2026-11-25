@@ -32,7 +32,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 /* ══════════════════════════════════════════════════════════════════════
  * ── Derived national-average salary (single source of truth) ─────────
  *
- * All UI salary constants below derive from STAT_SOURCES.averageSalary
+ * All UI salary constants below derive from STAT_SOURCES.npMedianWageBls
  * (BLS OEWS, Nurse Practitioners 29-1171 — median annual wage, May 2025,
  * $132,300). The prior 126K-era hardcodes (an earlier OEWS vintage) were
  * reconciled 2026-07-18 (citation-trust sweep B4/B51): the homepage FAQ,
@@ -43,7 +43,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 
 /** National average NP salary in $K, derived from the cited BLS figure. */
 export const NATIONAL_AVG_SALARY_K = Math.round(
-    Number(STAT_SOURCES.averageSalary.value) / 1000
+    Number(STAT_SOURCES.npMedianWageBls.value) / 1000
 );
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -56,7 +56,7 @@ export const NATIONAL_AVG_SALARY_K = Math.round(
  * NP HIRING:
  *   - growth derives from STAT_SOURCES.blsGrowth2035 (BLS Employment
  *     Projections, NP-specific 2025–2035);
- *   - salary derives from STAT_SOURCES.averageSalary (BLS OEWS May 2025);
+ *   - salary derives from STAT_SOURCES.npMedianWageBls (BLS OEWS May 2025);
  *   - the former hardcoded 'openings on this board' count pebble was
  *     replaced with an evergreen cadence claim (citation-trust sweep
  *     B5). Hardcoded inventory counts go stale immediately — the board
@@ -181,7 +181,7 @@ export const SALARY_FILTER_BUCKETS: readonly SalaryFilterBucket[] = [
  * ±N% above/below the national average" comparison line, so changing it
  * silently changes every state-vs-national percentage.
  *
- * NP HIRING: derives from STAT_SOURCES.averageSalary (BLS OEWS May 2025
+ * NP HIRING: derives from STAT_SOURCES.npMedianWageBls (BLS OEWS May 2025
  * median, $132,300 → 132). Consistent by construction with
  * SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K, STATE_FAQ_NATIONAL_AVG_SALARY_TEXT,
  * and CAREER_PULSE_STATS.
@@ -213,11 +213,11 @@ export const SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K = NATIONAL_AVG_SALARY_K;
  * an exact display form — not a number to re-format — for the sentence
  * to reassemble byte-identically.
  *
- * NP HIRING: derives from STAT_SOURCES.averageSalary.formatted
+ * NP HIRING: derives from STAT_SOURCES.npMedianWageBls.formatted
  * ('$132,300' — BLS OEWS May 2025 median).
  * ══════════════════════════════════════════════════════════════════════ */
 
-export const STATE_FAQ_NATIONAL_AVG_SALARY_TEXT = STAT_SOURCES.averageSalary.formatted;
+export const STATE_FAQ_NATIONAL_AVG_SALARY_TEXT = STAT_SOURCES.npMedianWageBls.formatted;
 
 /* ══════════════════════════════════════════════════════════════════════
  * components/SalaryCalculator.tsx — multiplier tables for the "NP Salary

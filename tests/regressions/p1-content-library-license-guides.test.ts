@@ -196,7 +196,7 @@ describe('truth rules', () => {
             const dollars = outsideFacts(post.content, state).match(/\$[\d,.]+[KkMm+]*/g) ?? [];
             for (const d of dollars) {
                 expect(d, `${state.name}: uncited dollar figure ${d}`)
-                    .toBe(STAT_SOURCES.averageSalary.formatted);
+                    .toBe(STAT_SOURCES.npMedianWageBls.formatted);
             }
             // A figure inside the facts section sits in a row that names its
             // source and the date it was checked.
@@ -315,7 +315,7 @@ describe('truth rules', () => {
         for (const { state, post } of allPosts) {
             const payFaq = post.faq_json!.find((f) => f.name.startsWith('How much'))!;
             expect(payFaq, `${state.name}: pay FAQ missing`).toBeTruthy();
-            expect(payFaq.text).toContain(STAT_SOURCES.averageSalary.formatted);
+            expect(payFaq.text).toContain(STAT_SOURCES.npMedianWageBls.formatted);
             // The engine rule: a median once enough EMPLOYERS disclose pay,
             // each counted once; never the retired employer-share cap.
             expect(payFaq.text).toContain(`once at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay on ${state.name} postings, each employer counted once`);
@@ -1088,7 +1088,7 @@ describe('accuracy pass on the posts that printed hand-typed salary bands (T0-9,
         const { data, content } = parseMdxFrontmatter(read(`content/blog/${slug}.mdx`));
         return { slug, data, body: content, text: `${String(data.title)} ${String(data.description)} ${content}` };
     });
-    const MEDIAN = STAT_SOURCES.averageSalary.formatted;
+    const MEDIAN = STAT_SOURCES.npMedianWageBls.formatted;
     const GROWTH = STAT_SOURCES.blsGrowth2035.formatted;
 
     it('every post serves again: no takedown flag, and neither loader carries a draft mechanism', () => {

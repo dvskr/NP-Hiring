@@ -72,7 +72,7 @@ export interface CategoryLandingContent {
 // ─── Shared, citation-backed strings ────────────────────────────────────────
 
 /** "$129,210 (BLS OEWS, …)" — the cited all-NP median. */
-const NP_MEDIAN_CITED = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source})`;
+const NP_MEDIAN_CITED = `${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source})`;
 
 const COMPARE_LISTINGS = 'Compare posted salary ranges on individual listings for current, real-world figures.';
 

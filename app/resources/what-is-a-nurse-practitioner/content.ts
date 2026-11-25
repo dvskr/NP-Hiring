@@ -35,10 +35,10 @@ const NP_PROSE = brand.niche.descriptor;
 /** 'Nurse practitioner': the descriptor at the start of a sentence or a label. */
 const NP_SENTENCE = NP_PROSE.charAt(0).toUpperCase() + NP_PROSE.slice(1);
 
-const NP_MEDIAN = STAT_SOURCES.averageSalary.formatted;
+const NP_MEDIAN = STAT_SOURCES.npMedianWageBls.formatted;
 const NP_P10 = STAT_SOURCES.salaryPercentile10.formatted;
 const NP_P90 = STAT_SOURCES.salaryPercentile90.formatted;
-const PAY_VINTAGE = monthYear(STAT_SOURCES.averageSalary.asOf);
+const PAY_VINTAGE = monthYear(STAT_SOURCES.npMedianWageBls.asOf);
 const NP_GROWTH = STAT_SOURCES.blsGrowth2035.formatted;
 const FULL_PRACTICE = STAT_SOURCES.fullPracticeStates;
 const NP_JOBS = BLS_PROJECTIONS.nursePractitioners;
@@ -435,10 +435,10 @@ const PAY: GuideSection = {
             kind: 'stats',
             items: [
                 { value: NP_MEDIAN, label: 'Median annual wage' },
-                { value: NP_P10, label: 'Lowest 10% earn less than' },
-                { value: NP_P90, label: 'Top 10% earn more than' },
+                { value: NP_P10, label: '10th percentile wage' },
+                { value: NP_P90, label: '90th percentile wage' },
             ],
-            caption: [`${STAT_SOURCES.averageSalary.source}; the percentiles are from the same release.`],
+            caption: [`${STAT_SOURCES.npMedianWageBls.source}; the percentiles are from the same release.`],
         },
         {
             kind: 'paragraph',
@@ -639,7 +639,7 @@ const SOURCES: readonly SourceLink[] = [
         ...PRIMARY_SOURCES.blsOohNp,
         note: 'what nurse practitioners do, how they are educated and licensed, and where APRNs work',
     },
-    { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl, note: 'the NP median wage and its 10th and 90th percentiles' },
+    { label: STAT_SOURCES.npMedianWageBls.source, url: STAT_SOURCES.npMedianWageBls.sourceUrl, note: 'the NP median wage and its 10th and 90th percentiles' },
     {
         label: STAT_SOURCES.blsGrowth2035.source,
         url: STAT_SOURCES.blsGrowth2035.sourceUrl,

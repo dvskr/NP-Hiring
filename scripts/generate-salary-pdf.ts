@@ -71,7 +71,7 @@ const OUTPUT_PATH = path.join(
 );
 
 // ── Cited figures (all from lib/stats-sources.ts — never hardcoded) ─────
-const NATIONAL_SALARY = STAT_SOURCES.averageSalary;
+const NATIONAL_SALARY = STAT_SOURCES.npMedianWageBls;
 const NP_GROWTH = STAT_SOURCES.blsGrowth2035;
 // P2 #22 follow-up: the Full Practice Authority card in buildHtml() used to
 // assert a "+12-15%" FPA salary premium in its prose and again as a bullet.
@@ -471,9 +471,9 @@ function buildHtml(live: LiveInventory | null): string {
   <div class="card">
     <h3>Quick Answer: ${brand.niche.short} Salary in ${GUIDE_YEAR}</h3>
     <p>The median ${brand.niche.descriptor} salary is <strong>${NATIONAL_SALARY.formatted} per year</strong>
-      (${escapeHtml(NATIONAL_SALARY.source)}). Half of ${brand.niche.short}s earn more and half earn less.
-      The lowest paid 10% earn less than <strong>${NATIONAL_P10.formatted}</strong>, and the highest paid 10% earn more
-      than <strong>${NATIONAL_P90.formatted}</strong>.</p>
+      (${escapeHtml(NATIONAL_SALARY.source)}). Half of ${brand.niche.short} wages sit above the median and half below.
+      The 10th percentile wage is <strong>${NATIONAL_P10.formatted}</strong>, and the 90th percentile wage
+      is <strong>${NATIONAL_P90.formatted}</strong>.</p>
     <p class="fine">${escapeHtml(SALARY_FIGURE_PROVENANCE)}</p>
   </div>
 

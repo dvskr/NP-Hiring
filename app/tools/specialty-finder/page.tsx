@@ -76,7 +76,7 @@ const ASSUMPTIONS: readonly string[] = [
   `Scoring is a count, not a formula: one point per answered question whose option appears in that specialty's profile, divided by the questions you answered. Nothing is weighted. Each result card lists the dimensions it matched and the ones it did not.`,
   `The specialty profiles are editorial descriptions of how each specialty is usually practiced across ${DIMENSION_LIST}. They are not survey data, and individual roles vary widely. A hospital-based role in a normally clinic-based specialty is still a real job.`,
   `The ${SPECIALTY_PROFILES.length} specialties are the same categories the job listings are tagged with, so every result links to real openings.`,
-  `Where a premium band is shown it is the band already published in our salary guide, expressed as a percentage over the all-${brand.niche.short} median of ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}) and applied to that median as an estimate.`,
+  `Where a premium band is shown it is the band already published in our salary guide, expressed as a percentage over the all-${brand.niche.short} median of ${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source}) and applied to that median as an estimate.`,
   `Ties are broken by a fixed order (broadest specialties first), so the same answers always produce the same ranking.`,
   `Answers stay in your browser. Nothing is submitted, stored, or emailed.`,
 ];
@@ -195,7 +195,7 @@ export default function SpecialtyFinderPage() {
             sources={[
               { label: `${brand.name} specialty pay pages: premium bands and certification`, url: '/salary-guide/specialty' },
               { label: 'Practice authority and licensure by state', url: '/tools/licensure-checker' },
-              { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },
+              { label: STAT_SOURCES.npMedianWageBls.source, url: STAT_SOURCES.npMedianWageBls.sourceUrl },
             ]}
           />
         </div>

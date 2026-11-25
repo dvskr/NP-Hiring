@@ -200,7 +200,7 @@ export default async function PressPage() {
     const restrictedPracticeCount = getStatesByAuthority('restricted').length;
 
     const dataSourceRows = [
-        { label: `Median ${brand.niche.short} salary, United States`, stat: STAT_SOURCES.averageSalary },
+        { label: `Median ${brand.niche.short} salary, United States`, stat: STAT_SOURCES.npMedianWageBls },
         { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2035 },
         { label: 'Population in primary-care shortage areas', stat: STAT_SOURCES.hrsaShortagePopulation },
         { label: 'Full Practice Authority jurisdictions', stat: STAT_SOURCES.fullPracticeStates },
