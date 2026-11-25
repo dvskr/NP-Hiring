@@ -136,7 +136,10 @@ describe('NP Pay Report CSV', () => {
         expect(remote[col('tier')]).toBe('none');
         expect(remote[col('employers')]).toBe('');
         expect(remote[col('postings')]).toBe('');
-        expect(csv).not.toMatch(/,0,|,0\r\n/);
+        // Every cell of every row, in any column, quoted or not: a withheld figure is empty, never 0.
+        const zeros = rows.flatMap((r) => r.map((cell, i) => ({ cell, column: header[i], scope: r[col('scope')] })))
+            .filter((c) => c.cell === '0');
+        expect(zeros).toEqual([]);
     });
 
     it('fills BLS columns on national and state rows only, with the reference period', () => {

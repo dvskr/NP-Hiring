@@ -182,7 +182,7 @@ const FPA_STATES = STAT_SOURCES.fullPracticeStates.formatted;
 const NP_GROWTH_CITED = `${STAT_SOURCES.blsGrowth2035.formatted} (${STAT_SOURCES.blsGrowth2035.source})`;
 
 /** The cited BLS sentence every NP pay answer carries. */
-const NP_MEDIAN_SENTENCE = `Nationally, ${brand.niche.descriptor}s earn a median annual wage of ${NP_MEDIAN_CITED}.`;
+const NP_MEDIAN_SENTENCE = `Nationally, the median annual wage for ${brand.niche.descriptor}s is ${NP_MEDIAN_CITED}.`;
 
 /** "$123,456" from 123456, locale-pinned so the output never varies by host. */
 function formatDollars(dollars: number): string {

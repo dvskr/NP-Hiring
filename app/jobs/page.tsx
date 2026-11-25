@@ -93,7 +93,7 @@ function buildJobsHubFaqs(totalJobs: number, categoryGroups: readonly HubCategor
     {
       // House style: median, never average (the answer cites the BLS median).
       question: `What is the median ${brand.niche.descriptor} salary?`,
-      answer: `${brand.niche.long}s earn a median annual wage of ${median}. Actual pay varies with specialty, practice setting, experience, and state. Many listings include posted salary ranges, and the salary guide breaks pay down state by state.`,
+      answer: `The median annual wage for ${brand.niche.long}s is ${median}. Actual pay varies with specialty, practice setting, experience, and state. Many listings include posted salary ranges, and the salary guide breaks pay down state by state.`,
     },
     {
       question: `How fast is demand for ${brand.niche.descriptor}s growing?`,
@@ -456,7 +456,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
             <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: '0 0 14px' }}>
               Salary transparency matters here: listings surface posted pay ranges wherever the employer provides
               them, and the <Link href="/salary-guide" style={{ color: '#BE185D', fontWeight: 600 }}>salary guide</Link> tracks
-              state-by-state figures. Nationally, {brand.niche.descriptor}s earn a median annual wage of{' '}
+              state-by-state figures. Nationally, the median annual wage for {brand.niche.descriptor}s is{' '}
               {STAT_SOURCES.npMedianWageBls.formatted} ({STAT_SOURCES.npMedianWageBls.source}).
             </p>
             <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: 0 }}>

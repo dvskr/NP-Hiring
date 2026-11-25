@@ -191,7 +191,7 @@ export default function FAQPage() {
     },
     {
       question: `What is the ROI of an ${brand.niche.short} degree?`,
-      answer: `It depends on what your program costs and what you earn afterward. Graduate school costs vary by program, and ${brand.niche.short}s earn a median of ${STAT_SOURCES.npMedianWageBls.formatted} per year (${STAT_SOURCES.npMedianWageBls.source}, ${STAT_SOURCES.npMedianWageBls.asOf}). Compare that figure with your program's total cost, including any income you give up while studying, to estimate your own payback period.`
+      answer: `It depends on what your program costs and what you earn afterward. Graduate school costs vary by program, and the median annual wage for ${brand.niche.short}s is ${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURCES.npMedianWageBls.source}, ${STAT_SOURCES.npMedianWageBls.asOf}). Compare that figure with your program's total cost, including any income you give up while studying, to estimate your own payback period.`
     },
     {
       question: `What are good first ${brand.niche.short} jobs for new grads?`,
@@ -204,7 +204,7 @@ export default function FAQPage() {
       // "Median", never "average": the cited BLS figure is a median, and the
       // question feeds FAQPage JSON-LD, so the two must say the same thing.
       question: `What is the median salary of a ${brand.niche.descriptor} in the United States?`,
-      answer: `${brand.niche.short}s earn a median annual salary of ${STAT_SOURCES.npMedianWageBls.formatted} based on the ${STAT_SOURCES.npMedianWageBls.source} (${STAT_SOURCES.npMedianWageBls.asOf}). Individual pay depends on experience, specialty, setting, and state, so compare the national figure with the state-by-state data in our salary guide. Private practice and locum tenens earnings depend heavily on patient volume and overhead.`
+      answer: `The median annual wage for ${brand.niche.short}s is ${STAT_SOURCES.npMedianWageBls.formatted}, according to the ${STAT_SOURCES.npMedianWageBls.source} (${STAT_SOURCES.npMedianWageBls.asOf}). Individual pay depends on experience, specialty, setting, and state, so compare the national figure with the state-by-state data in our salary guide. Private practice and locum tenens earnings depend heavily on patient volume and overhead.`
     },
     {
       question: `Which states pay the highest salaries for ${brand.niche.short}s?`,

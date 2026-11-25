@@ -55,6 +55,13 @@ describe('the BLS national median is keyed and introduced as a median', () => {
         expect(offenders).toEqual([]);
     });
 
+    it('no source file says practitioners earn a median: a statement of the BLS figure names it a wage', () => {
+        // A question may still ask what NPs earn, since that is what people search; an answer says wage.
+        const pattern = /\bearns? a median\b/i;
+        const offenders = SOURCES.filter((rel) => pattern.test(code(rel)));
+        expect(offenders).toEqual([]);
+    });
+
     it('the salary calculator offers the national median, not an average', () => {
         const calculator = fs.readFileSync(path.join(ROOT, 'components/SalaryCalculator.tsx'), 'utf8');
         expect(calculator).toContain('National median');

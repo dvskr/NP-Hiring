@@ -76,7 +76,7 @@ const NP_MEDIAN_CITED = `${STAT_SOURCES.npMedianWageBls.formatted} (${STAT_SOURC
 
 const COMPARE_LISTINGS = 'Compare posted salary ranges on individual listings for current, real-world figures.';
 
-const MEDIAN_SENTENCE = `Nationally, nurse practitioners earn a median annual wage of ${NP_MEDIAN_CITED}.`;
+const MEDIAN_SENTENCE = `Nationally, the median annual wage for nurse practitioners is ${NP_MEDIAN_CITED}.`;
 
 // ─── Per-category content ───────────────────────────────────────────────────
 
