@@ -164,7 +164,9 @@ describe('withSignedAvatar: a whole profile row', () => {
     });
 
     it('leaves a row without the field as it is', async () => {
-        const row = { id: 'profile-1' };
+        // supabaseId keeps the row assignable to the helper's input type; the
+        // point is that avatarUrl is absent.
+        const row = { id: 'profile-1', supabaseId: OWNER };
         expect(await withSignedAvatar(row)).toBe(row);
         expect(h.createAdminClient).not.toHaveBeenCalled();
     });
