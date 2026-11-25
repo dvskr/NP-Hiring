@@ -32,7 +32,7 @@ const ALLOWED_IMAGE_TYPES = [
  * The extension an avatar key ends in, from its validated type. It came from
  * the client's file name, so a name like `a.png/../../<other uid>/x` put a
  * key outside the uploader's own folder, and a name with no dot gave a key
- * ending in the whole name. PMHNP Hiring made the same fix.
+ * ending in the whole name.
  */
 const IMAGE_EXTENSION_BY_TYPE: Readonly<Record<string, string>> = {
   'image/jpeg': 'jpg',

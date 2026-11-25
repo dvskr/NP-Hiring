@@ -72,9 +72,9 @@ export async function getUnlocksForPosting(employerJobId: string): Promise<numbe
  * Such a thread opened before 2026-11-25 has no posting on that message and
  * counts against none.
  *
- * Only threads the employer opened count, as on PMHNP Hiring. There the
- * initiator is participantA; NP stores a new thread's participants in sorted
- * order, so the sender of the thread's first message says who opened it. A
+ * Only threads the employer opened count. A thread's participants are stored
+ * in sorted order, not opener first, so the sender of the thread's first
+ * message says who opened it. A
  * candidate's question about a job (app/api/candidate/messages names the job)
  * used to count against the employer's own allowance.
  * tests/lib/inmail-attribution.test.ts
@@ -267,7 +267,7 @@ export async function canUnlockCandidate(
  * A thread that names a job (`jobId`) spends that posting's credit and no
  * other's. Checked against "any posting with room" while the thread was
  * counted under the named one, an exhausted posting kept sending for as long
- * as another posting had room, whose count never moved (PMHNP Hiring's fix).
+ * as another posting had room, whose count never moved.
  *
  * A thread that names no job spends the credit of the first active posting
  * in inMailSpendOrder that has credit left: the one that ends soonest. A
