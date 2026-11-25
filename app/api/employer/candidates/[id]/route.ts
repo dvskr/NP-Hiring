@@ -134,9 +134,10 @@ export async function GET(
                 reason: 'unlock_failed',
             }, { status: 503 })
         }
-    } else {
-        // An earlier unlock, or an admin: a view, not a charge, so a failed
-        // write only loses the viewedAt refresh.
+    } else if (!existingView) {
+        // An admin's first open: a view, not a charge. The row is what lets
+        // the admin message a pool candidate they opened
+        // (POST /api/employer/messages), so a failed write loses only that.
         try {
             await prisma.profileView.upsert({
                 where: {
@@ -145,7 +146,7 @@ export async function GET(
                         candidateId: id,
                     },
                 },
-                update: { viewedAt: new Date() },
+                update: {},
                 create: {
                     viewerId: user.id,
                     candidateId: id,
@@ -156,6 +157,11 @@ export async function GET(
             // Don't fail the request if view tracking fails
         }
     }
+    // A later open writes nothing. ProfileView.viewedAt is the time of the
+    // first unlock and the daily unlock cap counts by it
+    // (canUnlockCandidate), so a re-open that refreshed it counted against
+    // the cap as a new unlock. Every reader of viewedAt wants the first
+    // unlock. tests/api/employer-unlock-daily-cap.test.ts
 
     // Full access: an admin by role, an employer by the unlock row, which
     // every employer request that reaches this point holds.

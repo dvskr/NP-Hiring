@@ -180,11 +180,14 @@ describe('GET /api/employer/candidates/[id]: a later open, or an admin', () => {
         expect(status).toBe(200);
         expect(body).toMatchObject({ hasFullAccess: true, contactEmail: 'anna.fic@example.com' });
         expect(h.canUnlockCandidate).not.toHaveBeenCalled();
-        expect(views).toEqual([expect.objectContaining({ employerJobId: 'ej-active' })]);
+        // Nothing is written: viewedAt stays the first unlock, which the daily
+        // cap counts (tests/api/employer-unlock-daily-cap.test.ts).
+        expect(views).toEqual([expect.objectContaining({ employerJobId: 'ej-active', viewedAt: new Date('2026-11-01T00:00:00Z') })]);
+        expect(h.prisma.profileView.upsert).not.toHaveBeenCalled();
     });
 
-    it('still opens an unlocked candidate when the view refresh fails', async () => {
-        views = [{ id: 'view-1', viewerId: EMPLOYER.id, candidateId: CANDIDATE_ID, employerJobId: 'ej-active', viewedAt: new Date('2026-11-01T00:00:00Z') }];
+    it("still opens for an admin when the admin's view row cannot be written", async () => {
+        signIn('admin');
         writeFailure = 'lost';
 
         expect((await open()).body).toMatchObject({ hasFullAccess: true });

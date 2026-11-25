@@ -156,6 +156,9 @@ export async function canUnlockCandidate(
     // refuse if the employer has unlocked >= dailyUnlockCap unique candidates in
     // the last 24h. Bypasses the rest of the math when triggered so we don't
     // reveal posting-level state to abusers via error responses.
+    // viewedAt is the first unlock: no write moves it (lib/candidate-unlock.ts,
+    // GET /api/employer/candidates/[id]), so re-opening a candidate unlocked
+    // earlier is not counted as a new unlock. tests/api/employer-unlock-daily-cap.test.ts
     const dailyCap = config.dailyUnlockCap;
     if (Number.isFinite(dailyCap) && dailyCap > 0) {
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000);

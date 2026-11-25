@@ -13,7 +13,10 @@ import { logger } from '@/lib/logger';
  * write idempotent, so a concurrent first open lands on the same row and
  * spends nothing more. A failed write is read back, because a write can
  * commit and still fail on its way back.
- * tests/api/employer-candidate-unlock.test.ts
+ *
+ * A row already there is left as it is: its viewedAt is the first unlock,
+ * which the daily unlock cap counts (canUnlockCandidate in lib/tier-limits.ts).
+ * tests/api/employer-candidate-unlock.test.ts, tests/api/employer-unlock-daily-cap.test.ts
  */
 export async function recordCandidateUnlock(
     viewerId: string,
@@ -24,7 +27,7 @@ export async function recordCandidateUnlock(
     try {
         await prisma.profileView.upsert({
             where: key,
-            update: { viewedAt: new Date() },
+            update: {},
             create: { viewerId, candidateId, employerJobId },
         });
         return true;
