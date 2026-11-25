@@ -19,15 +19,17 @@ vi.mock('@/lib/salary-analytics', async (importOriginal) => {
 
 import { generateMetadata } from '@/app/salary-guide/[state]/page';
 import { emptyListingFacts, getListingFacts } from '@/lib/pseo/listing-facts';
-import { getGatedLocationSalary, type GatedSalaryDetail } from '@/lib/salary-analytics';
+import { getGatedLocationSalary, type GatedSalary } from '@/lib/salary-analytics';
 import { BLS_STATE_WAGES } from '@/lib/salary-guide-bls-states';
 
 /** The first import of the page pulls its whole component tree. */
 const IMPORT_TIMEOUT_MS = 60_000;
 
-const BELOW_GATE: GatedSalaryDetail = {
+// Two employers: below the count tier (3), so nothing is published.
+const BELOW_GATE: GatedSalary = {
     postings: 2,
     employers: 2,
+    tier: 'none',
     gatePassed: false,
     median: null,
     p25: null,
@@ -35,8 +37,6 @@ const BELOW_GATE: GatedSalaryDetail = {
     medianK: null,
     p25K: null,
     p75K: null,
-    topEmployerPostings: 1,
-    heldByEmployerShare: false,
 };
 
 async function metadataFor(slug: string, total: number) {
