@@ -627,8 +627,9 @@ export default function DashboardContent() {
     const completeness = calculateCompleteness(profile)
     // Distinct from completeness: a binary "appears in employer AI Match yet?"
     // signal that mirrors the embedder's actual gate. A profile can be 80%
-    // complete but still invisible to AI Match if headline+bio+specialties
-    // weren't filled — those are the embedding inputs, the rest aren't.
+    // complete but still invisible to AI Match if headline+specialties
+    // weren't filled — those are the embedding inputs, the rest aren't. The
+    // bio is not one (it is admin-only), so this never asks for it.
     const searchable = isProfileSearchable({
         headline: profile.headline,
         yearsExperience: profile.yearsExperience,
@@ -636,12 +637,10 @@ export default function DashboardContent() {
         licenseStates: profile.licenseStates,
         specialties: profile.specialties,
         skills: profile.skills,
-        bio: profile.bio,
     })
-    const fieldLabel = (f: 'headline' | 'specialties' | 'bio' | 'yearsExperience'): string => {
+    const fieldLabel = (f: 'headline' | 'specialties' | 'yearsExperience'): string => {
         if (f === 'headline') return 'a headline'
         if (f === 'specialties') return 'specialties'
-        if (f === 'bio') return 'a brief summary'
         return 'years of experience'
     }
 

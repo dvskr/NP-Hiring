@@ -10,6 +10,10 @@
  * reasons quote the fields sent to the model, without the viewer's tier.
  * Both reads also keep out deleted accounts (lib/candidate-pool.ts).
  *
+ * Since the owner's decision of 2026-11-25 the AI talent search refuses an
+ * employer without an active posting (tests/api/employer-talent-search.test.ts),
+ * so only the posting and admin tiers reach its filter and rerank cache.
+ *
  * The routes' real where clauses run against fixture rows.
  * All fixtures are fictional.
  */
@@ -151,13 +155,16 @@ async function talent(states?: string[]) {
 }
 
 describe('POST /api/employer/talent/search', () => {
-    it('drops the license state filter without a posting', async () => {
+    it('refuses an employer without a posting before any search or rerank', async () => {
         asViewer('employer', false);
-        await talent(['TX']);
-        expect(semanticCandidateSearch.mock.calls[0][1]).toMatchObject({ licenseStates: undefined });
+        const { status, body } = await talent(['TX']);
+        expect(status).toBe(403);
+        expect(body.reason).toBe('needs_active_posting');
+        expect(semanticCandidateSearch).not.toHaveBeenCalled();
+        expect(complete).not.toHaveBeenCalled();
     });
 
-    it('passes it with a posting', async () => {
+    it('passes the license state filter with a posting', async () => {
         asViewer('employer', true);
         await talent(['TX']);
         expect(semanticCandidateSearch.mock.calls[0][1]).toMatchObject({ licenseStates: ['TX'] });
@@ -179,12 +186,10 @@ describe('POST /api/employer/talent/search', () => {
             await talent();
             return complete.mock.calls[0][0].cacheKey as unknown[];
         };
-        const browse = await keyFor('employer', false);
         const posting = await keyFor('employer', true);
         const admin = await keyFor('admin', false);
-        expect(browse).toContain('browse');
         expect(posting).toContain('posting');
         expect(admin).toContain('admin');
-        expect(new Set([browse.join('|'), posting.join('|'), admin.join('|')]).size).toBe(3);
+        expect(posting.join('|')).not.toBe(admin.join('|'));
     });
 });

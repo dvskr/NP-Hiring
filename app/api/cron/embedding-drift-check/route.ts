@@ -55,13 +55,14 @@ export async function GET(req: Request): Promise<NextResponse> {
     try {
         return await withCronTracking('embedding-drift-check', async () => {
         // The embedder builds text from headline + yearsExperience +
-        // certifications + licenseStates + specialties + skills + bio
+        // certifications + licenseStates + specialties + skills
         // (lib/ai/vector-search.ts:buildCandidateEmbeddingText). We don't
         // re-implement that exactly in SQL — instead we approximate
         // "eligible" as "has at least one of the heavy fields populated."
         // A 1-char headline still gets rejected by the 20-char gate but
         // that's a much smaller class than profiles with literally
-        // nothing in them.
+        // nothing in them. The bio left the text on 2026-11-25, so it no
+        // longer makes a profile eligible.
         const [row] = await prisma.$queryRawUnsafe<DriftRow[]>(`
             WITH eligible AS (
                 SELECT up.supabase_id
@@ -72,7 +73,6 @@ export async function GET(req: Request): Promise<NextResponse> {
                   AND up.open_to_offers = true
                   AND (
                     LENGTH(COALESCE(up.headline, '')) +
-                    LENGTH(COALESCE(up.bio, '')) +
                     LENGTH(COALESCE(up.specialties, '')) +
                     LENGTH(COALESCE(up.certifications, '')) +
                     LENGTH(COALESCE(up.license_states, ''))

@@ -389,14 +389,14 @@ export async function PATCH(request: NextRequest) {
     // Auto-refresh the candidate embedding when any embedder-driving field
     // changed in this PATCH. Mirrors lib/ai/vector-search.ts:buildCandidate
     // EmbeddingText (headline / yearsExperience / certifications /
-    // licenseStates / specialties / bio — `skills` isn't editable here).
+    // licenseStates / specialties — `skills` isn't editable here, and the
+    // bio left the text on 2026-11-25).
     // The Inngest function throttles per supabaseId for 30s, so a user
     // typing across several fields produces a single embedding refresh.
     // .catch() on the dispatch so a queue outage never breaks the user-
     // facing PATCH; the existing manual backfill stays as the safety net.
     const embedderFieldChanged =
       headline !== undefined ||
-      bio !== undefined ||
       certifications !== undefined ||
       licenseStates !== undefined ||
       specialties !== undefined ||

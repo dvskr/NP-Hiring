@@ -276,6 +276,13 @@ export function buildJobEmbeddingText(job: {
  * race/gender/age/etc — those fields don't appear in the build either, but the
  * defensive note matters: the PII scanner in Sprint 0.4 will fail this if any
  * sensitive field name leaks in.
+ *
+ * SECURITY (owner, 2026-11-25): no bio. The bio is admin-only, and an
+ * employer's AI talent search ranks against this text, so a bio here let a
+ * query match words no employer can read. Changing the text changes every
+ * input hash, so a re-embed rewrites the affected rows; a profile too sparse
+ * without its bio loses its row (removeCandidateEmbedding).
+ * tests/lib/ai/vector-search.test.ts
  */
 export function buildCandidateEmbeddingText(candidate: {
     headline?: string | null;
@@ -284,7 +291,6 @@ export function buildCandidateEmbeddingText(candidate: {
     licenseStates?: string | null;
     specialties?: string | null;
     skills?: string[];
-    bio?: string | null;
 }): string {
     const parts: string[] = [];
     if (candidate.headline) parts.push(`Headline: ${candidate.headline}`);
@@ -293,9 +299,16 @@ export function buildCandidateEmbeddingText(candidate: {
     if (candidate.licenseStates) parts.push(`Licensed States: ${candidate.licenseStates}`);
     if (candidate.specialties) parts.push(`Specialties: ${candidate.specialties}`);
     if (candidate.skills?.length) parts.push(`Skills: ${candidate.skills.join(', ')}`);
-    if (candidate.bio) parts.push(`Bio: ${candidate.bio.slice(0, 1500)}`);
     return parts.join('\n');
 }
+
+/**
+ * The shortest candidate text worth embedding. Below it the profile has no
+ * row: the embedder skips it, and an old row is removed so the index never
+ * keeps text the profile no longer gives. lib/profile-searchable.ts mirrors
+ * the text and this gate for the candidate dashboard.
+ */
+export const CANDIDATE_EMBED_MIN_CHARS = 20;
 
 function sha256Hex(s: string): string {
     return createHash('sha256').update(s).digest('hex');
@@ -381,6 +394,18 @@ export async function upsertCandidateEmbedding(
 
     logger.info('Candidate embedding upserted', { supabaseId, model: result.model, costUsd: result.usage.costUsd });
     return { updated: true };
+}
+
+/**
+ * Remove a candidate's embedding, for a profile whose text has fallen under
+ * CANDIDATE_EMBED_MIN_CHARS. Without it the row kept the old text's vector,
+ * so a search still matched what the profile no longer gives. Returns whether
+ * a row was removed.
+ */
+export async function removeCandidateEmbedding(supabaseId: string): Promise<{ removed: boolean }> {
+    const { count } = await prisma.candidateEmbedding.deleteMany({ where: { supabaseId } });
+    if (count > 0) logger.info('Candidate embedding removed', { supabaseId });
+    return { removed: count > 0 };
 }
 
 /** Exposed for tests. */

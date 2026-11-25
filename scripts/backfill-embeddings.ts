@@ -42,6 +42,8 @@ import { prisma } from '@/lib/prisma';
 import {
     buildJobEmbeddingText,
     buildCandidateEmbeddingText,
+    CANDIDATE_EMBED_MIN_CHARS,
+    removeCandidateEmbedding,
     upsertJobEmbedding,
     upsertCandidateEmbedding,
 } from '@/lib/ai/vector-search';
@@ -99,8 +101,8 @@ async function backfillJobs(dryRun: boolean): Promise<{ processed: number; updat
     return { processed, updated, skipped };
 }
 
-async function backfillCandidates(dryRun: boolean): Promise<{ processed: number; updated: number; skipped: number }> {
-    let processed = 0, updated = 0, skipped = 0;
+async function backfillCandidates(dryRun: boolean): Promise<{ processed: number; updated: number; skipped: number; removed: number }> {
+    let processed = 0, updated = 0, skipped = 0, removed = 0;
     const PAGE = 100;
     let cursor: string | undefined;
 
@@ -116,7 +118,6 @@ async function backfillCandidates(dryRun: boolean): Promise<{ processed: number;
                 licenseStates: true,
                 specialties: true,
                 skills: true,
-                bio: true,
             },
             orderBy: { id: 'asc' },
             take: PAGE,
@@ -130,7 +131,18 @@ async function backfillCandidates(dryRun: boolean): Promise<{ processed: number;
                 ...profile,
                 yearsExperience: profile.yearsExperience ?? null,
             });
-            if (text.trim().length < 20) { skipped += 1; continue; }
+            if (text.trim().length < CANDIDATE_EMBED_MIN_CHARS) {
+                // Too sparse to embed. A row from older, longer text goes (the
+                // bio left the text on 2026-11-25), as the refresh worker does.
+                skipped += 1;
+                if (dryRun) continue;
+                try {
+                    if ((await removeCandidateEmbedding(profile.supabaseId)).removed) removed += 1;
+                } catch (err) {
+                    console.error(`[backfill] candidate ${profile.supabaseId} removal failed:`, err);
+                }
+                continue;
+            }
             if (dryRun) {
                 console.log(`[dry-run] candidate ${profile.supabaseId} — would embed ${text.length} chars`);
                 continue;
@@ -144,11 +156,11 @@ async function backfillCandidates(dryRun: boolean): Promise<{ processed: number;
         }
 
         cursor = batch[batch.length - 1].id;
-        console.log(`[backfill candidates] processed=${processed} updated=${updated} skipped=${skipped}`);
+        console.log(`[backfill candidates] processed=${processed} updated=${updated} skipped=${skipped} removed=${removed}`);
         if (batch.length < PAGE) break;
     }
 
-    return { processed, updated, skipped };
+    return { processed, updated, skipped, removed };
 }
 
 async function main(): Promise<void> {
@@ -164,7 +176,7 @@ async function main(): Promise<void> {
     if (doCandidates) {
         console.log('[backfill] === CANDIDATES ===');
         const result = await backfillCandidates(args.dryRun);
-        console.log(`[backfill candidates] DONE — processed=${result.processed} updated=${result.updated} skipped=${result.skipped}`);
+        console.log(`[backfill candidates] DONE — processed=${result.processed} updated=${result.updated} skipped=${result.skipped} removed=${result.removed}`);
     }
 }
 

@@ -5,6 +5,8 @@
  *   - Auth (401 for anon)
  *   - Role check (403 for non-employer)
  *   - Feature flag (404 when disabled)
+ *   - Active posting (403 needs_active_posting without one; admins pass),
+ *     the owner's decision of 2026-11-25
  *   - Body validation (400 on bad input)
  *   - Daily cost cap (429 when ≥10 reranks already used today)
  *
@@ -45,9 +47,10 @@ vi.mock('@/lib/prisma', () => ({
     },
 }));
 
+const activePostingsMock = vi.fn<(employerId: string) => Promise<Array<{ id: string }>>>();
 vi.mock('@/lib/tier-limits', () => ({
     getEmployerTier: async () => 'pro',
-    getEmployerActivePostings: async () => [{ id: 'job-1' }],
+    getEmployerActivePostings: (employerId: string) => activePostingsMock(employerId),
 }));
 
 import { POST } from '@/app/api/employer/talent/search/route';
@@ -65,6 +68,8 @@ beforeEach(() => {
     isFlagEnabledMock.mockReset();
     findUniqueMock.mockReset();
     aiCallLogCountMock.mockReset();
+    activePostingsMock.mockReset();
+    activePostingsMock.mockResolvedValue([{ id: 'job-1' }]);
 });
 
 describe('POST /api/employer/talent/search', () => {
@@ -87,6 +92,37 @@ describe('POST /api/employer/talent/search', () => {
         isFlagEnabledMock.mockResolvedValue(false);
         const res = await POST(makeRequest({ query: 'experienced PMHNP' }));
         expect(res.status).toBe(404);
+    });
+
+    it('refuses an employer without an active posting before the daily cap or any search', async () => {
+        mockUser = { id: 'u1' };
+        findUniqueMock.mockResolvedValue({ role: 'employer' });
+        isFlagEnabledMock.mockResolvedValue(true);
+        activePostingsMock.mockResolvedValue([]);
+
+        const res = await POST(makeRequest({ query: 'experienced nurse practitioner' }));
+
+        expect(res.status).toBe(403);
+        expect(await res.json()).toEqual({ error: 'AI search needs an active job posting.', reason: 'needs_active_posting' });
+        expect(activePostingsMock).toHaveBeenCalledWith('u1');
+        // The cap is counted only past the gate, so a refused call spends nothing.
+        expect(aiCallLogCountMock).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['an employer with an active posting', 'employer', [{ id: 'job-1' }]],
+        ['an admin without one', 'admin', []],
+    ])('lets %s through to the search', async (_label, role, postings) => {
+        mockUser = { id: 'u1' };
+        findUniqueMock.mockResolvedValue({ role });
+        isFlagEnabledMock.mockResolvedValue(true);
+        activePostingsMock.mockResolvedValue(postings);
+        aiCallLogCountMock.mockResolvedValue(0);
+
+        const res = await POST(makeRequest({ query: 'experienced nurse practitioner' }));
+
+        expect(res.status).not.toBe(403);
+        expect(aiCallLogCountMock).toHaveBeenCalledTimes(1);
     });
 
     it('returns 400 on a too-short query', async () => {

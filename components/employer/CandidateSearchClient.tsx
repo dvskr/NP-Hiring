@@ -81,9 +81,11 @@ interface SmartMatchState {
      * 'ready' = response with candidates.
      * 'limit_reached' = 429 daily cap; banner + upgrade CTA.
      * 'disabled' = 404 from the API (feature flag is off for this employer).
+     * 'needs_posting' = 403 needs_active_posting: AI search comes with an
+     *   active posting; the typed query runs as a keyword search instead.
      * 'unavailable' = transient error (network, 5xx); user should retry.
      */
-    status: 'idle' | 'loading' | 'ready' | 'limit_reached' | 'disabled' | 'unavailable';
+    status: 'idle' | 'loading' | 'ready' | 'limit_reached' | 'disabled' | 'needs_posting' | 'unavailable';
     /** Daily reranks remaining after the latest call. */
     usesRemaining: number | null;
     /** 429-message rendered as the limit banner. */
@@ -260,6 +262,15 @@ export default function CandidateSearchClient() {
                     // — limit only blocks AI rerank, not regular search.
                     // The user can type a name/specialty and get keyword
                     // results until midnight CT.
+                } else if (res.status === 403) {
+                    // AI search needs an active posting. Like the daily cap,
+                    // this falls through to keyword browse with the query.
+                    const data = await res.json().catch(() => ({}));
+                    setAiState({
+                        status: data.reason === 'needs_active_posting' ? 'needs_posting' : 'unavailable',
+                        usesRemaining: null,
+                        limitMessage: null,
+                    });
                 } else if (res.ok) {
                     const data = await res.json();
                     setBrowseError(null);
@@ -300,7 +311,8 @@ export default function CandidateSearchClient() {
         // When falling through because the daily AI cap is hit
         // (status='limit_reached'), we KEEP the query — the user is
         // still actively trying to search; they should be able to keep
-        // working with keyword search the rest of the day.
+        // working with keyword search the rest of the day. The same holds
+        // without an active posting (status='needs_posting').
         const fallingBackFromAiSilently = aiMode
             && query.trim().length >= 3
             && (aiState.status === 'disabled' || aiState.status === 'unavailable');
@@ -833,6 +845,15 @@ export default function CandidateSearchClient() {
                         fontSize: '12px', color: '#92400E',
                     }}>
                         AI search isn&rsquo;t enabled on your account yet. Contact support if you&rsquo;d like early access.
+                    </div>
+                )}
+                {aiMode && aiState.status === 'needs_posting' && (
+                    <div style={{
+                        ...cardRecessed, padding: '12px 16px', marginBottom: '16px',
+                        fontSize: '12px', color: '#92400E',
+                    }}>
+                        AI search needs an active job posting, so these are keyword results.{' '}
+                        <Link href="/post-job" style={{ color: '#BE185D', fontWeight: 600 }}>Post a job</Link>
                     </div>
                 )}
                 {aiMode && aiState.status === 'unavailable' && (

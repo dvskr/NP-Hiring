@@ -8,9 +8,11 @@
  *
  * Hard rules — match what /api/employer/candidates already enforces:
  *   - Auth: employer or admin role required.
- *   - Active-posting gate: non-admin without an active posting only sees
- *     `baseSelect` fields (same as filter-only browse). The query still runs;
- *     unlock-eligible metadata is just hidden.
+ *   - Active-posting gate (owner, 2026-11-25): an employer without an active
+ *     posting is refused, 403 `needs_active_posting`, before any search or
+ *     model call; the talent pool page falls back to keyword search. Admins
+ *     pass. An employer reaches the posting tier's fields, never the browse
+ *     tier's, so the tier branches below are belt and braces.
  *   - Privacy transform: last name → first initial unless admin.
  *   - Per-employer cost cap: 10 reranks/day (counted from `ai_call_log`).
  *
@@ -112,6 +114,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const enabled = await isAiFeatureEnabled('ai.employer.talent_search', tenant);
     if (!enabled) {
         return NextResponse.json({ error: 'Not enabled' }, { status: 404 });
+    }
+
+    // SECURITY (owner, 2026-11-25): AI talent search needs an active posting;
+    // an admin passes. Refused here, before the daily cap counts the request
+    // or any embedding, search or model call runs.
+    // tests/api/employer-talent-search.test.ts
+    if (!hasActivePosting) {
+        return NextResponse.json({
+            error: 'AI search needs an active job posting.',
+            reason: 'needs_active_posting',
+        }, { status: 403 });
     }
 
     let body: unknown;
