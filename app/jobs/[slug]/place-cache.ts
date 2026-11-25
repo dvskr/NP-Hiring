@@ -39,6 +39,8 @@ async function readCityJobCount(city: string, stateName: string, stateCode: stri
   return prisma.job.count({
     where: {
       ...PUBLISHED_LISTING_WHERE,
+      // Not a free copy of a live paid post (lib/paid-post-twins.ts).
+      shadowedByJobId: null,
       city: { equals: city, mode: 'insensitive' },
       OR: [{ state: stateName }, { stateCode }],
     },

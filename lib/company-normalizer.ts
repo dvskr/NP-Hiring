@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { mergeCompanyRecords, type MergeActor } from '@/lib/company-merge';
 
 // Company suffixes to remove during normalization. Legal-form suffixes
 // (Inc, LLC, Corp) are always safe to drop. Industry tags ("Health",
@@ -394,70 +395,23 @@ export async function linkAllJobsToCompanies(): Promise<{
 }
 
 /**
- * Merges two companies, keeping one and transferring all jobs from the other
+ * Merges two companies, keeping one and transferring its jobs and employer
+ * claims from the other (lib/company-merge.ts). Throws when the merge is
+ * refused, for example when the merged company holds the verified employer
+ * claim, so a script reports the pair instead of dropping the claim.
  */
 export async function mergeCompanies(
   keepId: string,
-  mergeId: string
+  mergeId: string,
+  actor: MergeActor = { actorType: 'system', actorId: null },
 ): Promise<void> {
   try {
-    if (!keepId || !mergeId) {
-      throw new Error('Both keepId and mergeId are required');
+    const outcome = await mergeCompanyRecords(keepId, mergeId, actor);
+    if (!outcome.ok) {
+      throw new Error(outcome.message);
     }
-
-    if (keepId === mergeId) {
-      throw new Error('Cannot merge a company with itself');
-    }
-
-    // Fetch both companies
-    const [keepCompany, mergeCompany] = await Promise.all([
-      prisma.company.findUnique({ where: { id: keepId } }),
-      prisma.company.findUnique({ where: { id: mergeId } }),
-    ]);
-
-    if (!keepCompany) {
-      throw new Error(`Company with ID ${keepId} not found`);
-    }
-
-    if (!mergeCompany) {
-      throw new Error(`Company with ID ${mergeId} not found`);
-    }
-
-    // Get count of jobs to transfer
-    const jobsToTransfer = await prisma.job.count({
-      where: { companyId: mergeId },
-    });
-
-    // Update all jobs from mergeCompany to keepCompany
-    await prisma.job.updateMany({
-      where: { companyId: mergeId },
-      data: { companyId: keepId },
-    });
-
-    // Add merged company name to keepCompany's aliases if not already present
-    const updatedAliases = [...new Set([
-      ...keepCompany.aliases,
-      mergeCompany.name,
-      mergeCompany.normalizedName,
-      ...mergeCompany.aliases,
-    ])];
-
-    // Update keepCompany with new aliases and job count
-    await prisma.company.update({
-      where: { id: keepId },
-      data: {
-        aliases: updatedAliases,
-        jobCount: keepCompany.jobCount + jobsToTransfer,
-      },
-    });
-
-    // Delete the merged company
-    await prisma.company.delete({
-      where: { id: mergeId },
-    });
-
     console.log(
-      `Successfully merged company ${mergeCompany.name} (${jobsToTransfer} jobs) into ${keepCompany.name}`
+      `Successfully merged company ${outcome.mergedName} (${outcome.jobsMoved} jobs, ${outcome.claimsMoved} claims) into ${outcome.keptName}`
     );
   } catch (error) {
     console.error('Error merging companies:', error);

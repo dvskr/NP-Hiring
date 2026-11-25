@@ -4,7 +4,10 @@ import webpush from 'web-push'
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
+import { logger } from '@/lib/logger';
 import { brand } from '@/config/brand';
+import { isOutboundPaused } from '@/lib/outbound-kill-switch';
+import { outboundPausedRun } from '@/lib/cron/outbound-pause';
 
 export const maxDuration = 120 // 2 minutes — push notifications to subscribers
 
@@ -20,16 +23,35 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
     )
 }
 
+const VAPID_MISSING_MESSAGE = 'VAPID keys not configured'
+
+/**
+ * Thrown inside the tracked run when the VAPID keys are missing, so the run
+ * is recorded as failed with that reason. Answered 500 as before, with no
+ * failure alert of its own: the batch dispatcher reports the 500.
+ */
+class VapidKeysMissingError extends Error {
+    constructor() {
+        super(VAPID_MISSING_MESSAGE)
+        this.name = 'VapidKeysMissingError'
+    }
+}
+
 export async function GET(request: NextRequest) {
     const authError = await verifyCronOrAdmin(request);
     if (authError) return authError;
 
-    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-        return NextResponse.json({ error: 'VAPID keys not configured' }, { status: 500 })
-    }
-
     try {
         return await withCronTracking('push-notifications', async () => {
+            // Emergency brake (lib/outbound-kill-switch.ts). Push notifications
+            // are not email, so sendAndLog never sees them: this check is their
+            // only brake. First in the tracked run, before the VAPID keys and
+            // the job query, so a pause costs nothing and is recorded as a run
+            // that sent nothing (lib/cron/outbound-pause.ts).
+            if (isOutboundPaused()) return outboundPausedRun()
+
+            if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) throw new VapidKeysMissingError()
+
             // Get top 3 new jobs from last 24 hours
             const oneDayAgo = new Date()
             oneDayAgo.setDate(oneDayAgo.getDate() - 1)
@@ -37,6 +59,8 @@ export async function GET(request: NextRequest) {
             const newJobs = await prisma.job.findMany({
                 where: {
                     isPublished: true,
+                    // Never a free copy of a live paid post (lib/paid-post-twins.ts).
+                    shadowedByJobId: null,
                     createdAt: { gt: oneDayAgo },
                     OR: [
                         { expiresAt: null },
@@ -115,8 +139,11 @@ export async function GET(request: NextRequest) {
             }
         })
     } catch (error) {
+        if (error instanceof VapidKeysMissingError) {
+            return NextResponse.json({ error: VAPID_MISSING_MESSAGE }, { status: 500 })
+        }
         await sendCronFailureAlert('push-notifications', error);
-        console.error('Push notification cron error:', error)
+        logger.error('Push notification cron error', error)
         return NextResponse.json({ error: 'Push notification failed' }, { status: 500 })
     }
 }

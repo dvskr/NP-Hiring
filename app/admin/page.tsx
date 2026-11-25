@@ -246,7 +246,7 @@ export default function AdminDashboard() {
           { icon: <Bell size={16} />, label: 'Active Alerts', value: s.activeAlerts, color: '#22C55E', note: `${s.dailyAlerts}d / ${s.weeklyAlerts}w` },
           { icon: <Target size={16} />, label: 'Employer Leads', value: s.totalEmployerLeads, color: '#A855F7' },
           { icon: <BarChart3 size={16} />, label: 'Employer Jobs', value: s.employerPostedJobs, color: '#EC4899' },
-          { icon: <FileCheck size={16} />, label: 'Apps (30d)', value: s.totalApplications, color: '#22C55E', note: `${s.apps24h} today` },
+          { icon: <FileCheck size={16} />, label: 'Apps (30d)', value: s.totalApplications, color: '#22C55E', note: `${s.apps24h} today (CT)` },
           { icon: <Zap size={16} />, label: 'Autofill', value: autofill.totalUsage, color: '#F97316', note: `${autofill.uniqueUsers} users` },
         ].map((c) => (
           <div key={c.label} style={{

@@ -55,6 +55,20 @@ describe('shouldOfferRenew', () => {
     it('offers nothing while the posting window still has time to run', () => {
         expect(shouldOfferRenew(row(), RUNNING)).toBe(false);
     });
+
+    it.each(RENEWABLE_STATUSES)("never offers Renew on a '%s' post an admin took down, ended or ending soon", (paymentStatus) => {
+        // Renewing it would buy days on a post that stays down: the renewal
+        // checkout answers 409 (lib/admin/job-hold.ts).
+        const held = { ...row({ paymentStatus, isPublished: false }), adminHoldAt: '2026-11-20T09:00:00.000Z' };
+
+        expect(shouldOfferRenew(held, ENDED)).toBe(false);
+        expect(shouldOfferRenew(held, ENDING_SOON)).toBe(false);
+    });
+
+    it('a row with no hold, or a cleared one, is offered Renew as before', () => {
+        expect(shouldOfferRenew({ ...row(), adminHoldAt: null }, ENDED)).toBe(true);
+        expect(shouldOfferRenew(row(), ENDED)).toBe(true);
+    });
 });
 
 describe('archiveRequestBody', () => {

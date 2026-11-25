@@ -317,6 +317,9 @@ export async function sendJobAlerts(): Promise<{
 
         const whereClause: Prisma.JobWhereInput = {
           isPublished: true,
+          // A free copy of a live paid post is not sent; the paid post is
+          // (lib/paid-post-twins.ts).
+          shadowedByJobId: null,
           createdAt: { gt: cutoff },
           AND: [
             {

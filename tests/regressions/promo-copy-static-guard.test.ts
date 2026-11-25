@@ -112,6 +112,18 @@ const TRUE_IN_BOTH_PHASES: readonly BothPhases[] = [
         within: 'OutreachTemplateUnavailableError',
         why: 'the refusal itself, in the past tense: "free posting ran through <date>"',
     },
+    {
+        file: 'app/admin/employers/EmployerTableParts.tsx',
+        within: 'PAYMENT_BADGE',
+        text: 'Free during the launch promo.',
+        why: 'admin-only hover text of the promo payment badge: it says how a post with that payment status was published, which stays true after the promo ends',
+    },
+    {
+        file: 'app/admin/employers/page.tsx',
+        within: 'BreakdownStrip',
+        text: 'Posts published free during the launch promo.',
+        why: 'admin-only hover text of the Promo Posts count: the posts it counts were published free during the promo, and stay so after it ends',
+    },
 ];
 
 /**

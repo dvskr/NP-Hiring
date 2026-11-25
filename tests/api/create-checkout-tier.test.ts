@@ -24,13 +24,17 @@
  *     (intent 'requires_action') cannot be paid twice;
  *   - the resume path serves only the posting's owner: its claimed account,
  *     or the contact email of an unclaimed legacy row, never the contact
- *     email of a row another account claimed (CHK-1).
+ *     email of a row another account claimed (CHK-1);
+ *   - the resume path refuses a posting an admin took down
+ *     (lib/admin/job-hold.ts) with 409 and the hold message, before Stripe
+ *     is asked anything and before the listing window or status moves.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { paidPostWhere } from '@/lib/pricing';
+import { ADMIN_HOLD_MESSAGE } from '@/lib/admin/job-hold';
 
 const sessionsCreate = vi.fn();
 const sessionsRetrieve = vi.fn();
@@ -306,6 +310,54 @@ describe('B78 resume path — re-prices from the persisted rung', () => {
         expect(res.status).toBe(409);
         expect(json.code).toBe('NOT_RESUMABLE');
         expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it.each(['pending', 'expired'])(
+        "refuses a '%s' posting an admin took down with the hold message, before Stripe or any write",
+        async (paymentStatus) => {
+            vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+                id: 'ej-9', jobId: 'job-9', paymentStatus, pricingTier: 'pro', userId: 'user-1',
+                contactEmail: 'x@y.example', dashboardToken: 'd', stripeCheckoutSessionId: 'cs_prev',
+                job: { id: 'job-9', title: 't', employer: 'e', location: 'l', archivedAt: null, adminHoldAt: new Date('2026-11-20T00:00:00Z') },
+            } as never);
+
+            const { res, json } = await post({ resumeJobId: 'job-9' });
+
+            expect(res.status).toBe(409);
+            expect(json).toMatchObject({ error: ADMIN_HOLD_MESSAGE, message: ADMIN_HOLD_MESSAGE, cause: 'admin_hold' });
+            expect(sessionsRetrieve).not.toHaveBeenCalled();
+            expect(sessionsExpire).not.toHaveBeenCalled();
+            expect(sessionsCreate).not.toHaveBeenCalled();
+            // Neither the listing window nor the payment status moves.
+            expect(prisma.job.update).not.toHaveBeenCalled();
+            expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        },
+    );
+
+    it('reads the hold with the posting, and still serves a posting with none', async () => {
+        pendingRow('pro');
+
+        const { res } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(200);
+        expect(vi.mocked(prisma.employerJob.findFirst).mock.calls[0][0]).toMatchObject({
+            include: { job: { select: expect.objectContaining({ adminHoldAt: true }) } },
+        });
+    });
+
+    it('tells a stranger nothing about a hold: ownership is checked first', async () => {
+        getUserMock.mockResolvedValue({ data: { user: { id: 'user-other', email: 'someone@else.example', email_confirmed_at: '2026-10-01T00:00:00Z' } }, error: null });
+        vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'user-other', role: 'employer', email: 'someone@else.example' } as never);
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+            id: 'ej-9', jobId: 'job-9', paymentStatus: 'pending', pricingTier: 'pro', userId: 'user-1',
+            contactEmail: 'x@y.example', dashboardToken: 'd',
+            job: { id: 'job-9', title: 't', employer: 'e', location: 'l', archivedAt: null, adminHoldAt: new Date() },
+        } as never);
+
+        const { res, json } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(403);
+        expect(json.cause).toBeUndefined();
     });
 });
 

@@ -66,7 +66,8 @@ describe('1. job detail: the profession quarantine is ruled in middleware', () =
     const code = mw.replace(/\r\n/g, '\n');
 
     it('the job gate selects the quarantine columns and 410s a failing row', () => {
-        expect(code).toContain('select=id,is_published,expires_at,health_consecutive_missing,${LISTING_GATE_SELECT}');
+        // The twin column (a copy of a paid post redirects to it, lib/paid-post-twin-edge.ts) rides in the same read.
+        expect(code).toContain('select=id,is_published,expires_at,health_consecutive_missing,${TWIN_MARK_COLUMN},${LISTING_GATE_SELECT}');
         expect(code).toMatch(/passesListingQuarantine\(row\) === false\)\s*\{\s*cacheLookupSet\(cacheKey, true, 'quarantined'\);\s*return quarantinedJob410\(\);/);
     });
 

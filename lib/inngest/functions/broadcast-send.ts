@@ -31,7 +31,9 @@ import {
     processBroadcastChunk,
     finalizeBroadcast,
     BROADCAST_CHUNK_SIZE,
+    BROADCAST_STALE_AFTER_MS,
 } from '@/lib/broadcast-sender';
+import { isOutboundPaused } from '@/lib/outbound-kill-switch';
 
 /**
  * Chunk-step budget per run. Inngest caps steps per run, so gigantic
@@ -40,8 +42,12 @@ import {
  */
 const MAX_CHUNKS_PER_RUN = 400;
 
-/** A 'sending' broadcast with no counter/status write for this long is stuck. */
-const STUCK_AFTER_MS = 30 * 60 * 1000;
+/**
+ * A 'sending' broadcast with no counter/status write for this long is stuck.
+ * Shared with the History tab's Resume, so the two never disagree about
+ * whether a sender may still be live.
+ */
+const STUCK_AFTER_MS = BROADCAST_STALE_AFTER_MS;
 
 export const broadcastSend = inngest.createFunction(
     {
@@ -57,6 +63,16 @@ export const broadcastSend = inngest.createFunction(
         const broadcastId = (event.data as { broadcastId?: unknown })?.broadcastId;
         if (!broadcastId || typeof broadcastId !== 'string') {
             throw new Error('admin/broadcast.requested event missing broadcastId');
+        }
+
+        // Emergency brake (lib/outbound-kill-switch.ts). Outside any step, so
+        // it is read again on every invocation and a pause stops a long
+        // broadcast at its next chunk. The recipients stay 'pending' and the
+        // stuck-broadcast sweep continues the broadcast once the pause is
+        // lifted.
+        if (isOutboundPaused()) {
+            logger.warn('[BroadcastSend] automated sending is paused, leaving the broadcast for later', { broadcastId });
+            return { broadcastId, paused: true };
         }
 
         const shouldRun = await step.run('mark-sending', async () => {
@@ -92,6 +108,12 @@ export const broadcastSend = inngest.createFunction(
             const chunk = await step.run(`send-chunk-${chunkIndex}`, () =>
                 processBroadcastChunk(broadcastId, BROADCAST_CHUNK_SIZE),
             );
+
+            if (chunk.paused) {
+                // Stopped by the brake before it read anyone: not finalized,
+                // so the sweep picks the broadcast up after the pause.
+                return { broadcastId, processed, sent, failed, skipped, paused: true };
+            }
 
             processed += chunk.processed;
             sent += chunk.sent;

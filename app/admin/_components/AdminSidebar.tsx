@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2, Package, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2, Package, BookOpen, Building, Share2, UserCheck } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -12,7 +12,18 @@ const navItems = [
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'SEO Health', href: '/admin/seo-health', icon: Search },
   { name: 'Users & Subscribers', href: '/admin/users', icon: Users },
+  // Every employer organization (accounts and posts that share an account or
+  // a business mail domain) with its payments, applicants and hiring progress.
+  { name: 'Employers', href: '/admin/employers', icon: Building },
+  // The only writer of UserProfile.verifiedEmployerOrgKeys: confirming an
+  // account is the employer it named gives its posts the Verified employer
+  // check and lets its paid post hide that employer's free copies. Not the
+  // same as Profile Claims below, which verifies a company profile claim.
+  { name: 'Verify Employers', href: '/admin/verify-employers', icon: UserCheck },
   { name: 'Employer Outreach', href: '/admin/outreach', icon: Target },
+  // Ready-to-paste social posts for every live paid post, with tracked links
+  // and the log of where each one went out.
+  { name: 'Social Kit', href: '/admin/social-kit', icon: Share2 },
   { name: 'PD Campaign', href: '/admin/pd-campaign', icon: GraduationCap },
   { name: 'Email Broadcasts', href: '/admin/email', icon: Mail },
   { name: 'DMARC', href: '/admin/dmarc', icon: ShieldCheck },

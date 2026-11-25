@@ -8,6 +8,7 @@ import { ExternalLink, Edit, RefreshCw, Mail, Loader2, Shield, Pause, Play, Rock
 import { config } from '@/lib/config';
 import { renewalSavingsLine } from '@/lib/renewal-offer';
 import { applyArchiveResult, archiveRequestBody, shouldOfferRenew } from '@/lib/employer-dashboard-rules';
+import { ADMIN_HOLD_MESSAGE } from '@/lib/admin/job-hold';
 import { useRerenderAtPromoEnd } from '@/lib/hooks/useRerenderAtPromoEnd';
 import { trackBeginCheckout } from '@/lib/analytics';
 import ApplicantsTab from '@/components/employer/ApplicantsTab';
@@ -32,6 +33,8 @@ interface Job {
     createdAt: string;
     expiresAt: string | null;
     archivedAt: string | null;
+    /** Set when an admin took the post down (lib/admin/job-hold.ts). The owner cannot resume or renew it. */
+    adminHoldAt?: string | null;
     editToken: string;
     paymentStatus: string;
     pricingTier: string;
@@ -195,6 +198,11 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
     }, [tabFromUrl]);
 
     const getStatusBadge = (job: Job) => {
+        // Taken down by an admin: neither paused nor expired, and only an
+        // admin puts it back (lib/admin/job-hold.ts).
+        if (!job.isPublished && job.adminHoldAt) {
+            return <span style={{ ...clayPill, background: '#FEE2E2', color: '#DC2626' }}>✕ Removed</span>;
+        }
         if (!job.isPublished) {
             // Distinguish "never paid" (pending checkout) from a paid job
             // that the employer manually paused. They look the same in
@@ -899,7 +907,10 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 // An archived post must be restored before it can go live again
                                                 // (toggle-publish answers 409 otherwise).
                                                 const isArchivedOff = !job.isPublished && !!job.archivedAt;
-                                                const blocked = expired || isUnpaid || isArchivedOff;
+                                                // A post an admin took down never goes back up from here
+                                                // (toggle-publish answers 403).
+                                                const isRemoved = !job.isPublished && !!job.adminHoldAt;
+                                                const blocked = expired || isUnpaid || isArchivedOff || isRemoved;
                                                 const disabled = blocked || togglingJobId === job.id;
                                                 // An archived row offers no Renew (shouldOfferRenew) and the
                                                 // renewal checkout answers 409 for it. When restoring an expired
@@ -907,7 +918,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 // wording below names Renew, which this row does not have.
                                                 const renewsOnceRestored = !!job.archivedAt && renewalPurchasable
                                                     && shouldOfferRenew({ paymentStatus: job.paymentStatus, archivedAt: null }, { expired, expiringSoon: false });
-                                                const blockTitle = renewsOnceRestored
+                                                const blockTitle = isRemoved
+                                                    ? ADMIN_HOLD_MESSAGE
+                                                    : renewsOnceRestored
                                                     ? 'This post is archived and has expired. Restore it before you renew it, or post a new listing.'
                                                     : expired
                                                         ? (renewalPurchasable
@@ -949,7 +962,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 sale (409 PROMO_ACTIVE), so an unpaid row is pointed at a
                                                 free new post instead of a checkout that cannot open. Once
                                                 the promo ends, the button shows only when paid posting is on. */}
-                                            {mounted && !job.isPublished && job.paymentStatus === 'pending' && !job.archivedAt && promoActive && (
+                                            {mounted && !job.isPublished && job.paymentStatus === 'pending' && !job.archivedAt && !job.adminHoldAt && promoActive && (
                                                 <Link
                                                     href="/post-job"
                                                     title={`Every post is free through ${config.promoEndsLabel}. Post this role again as a new listing to publish it.`}
@@ -964,7 +977,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                     <Rocket size={14} /> Post it free
                                                 </Link>
                                             )}
-                                            {mounted && !job.isPublished && job.paymentStatus === 'pending' && !job.archivedAt && !promoActive && renewalPurchasable && (
+                                            {mounted && !job.isPublished && job.paymentStatus === 'pending' && !job.archivedAt && !job.adminHoldAt && !promoActive && renewalPurchasable && (
                                                 <button
                                                     onClick={() => handleResumePayment(job)}
                                                     disabled={resumingJobId === job.id}
@@ -1024,8 +1037,20 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                             </button>
                                         </div>
 
-                                        {/* Pause-doesn't-extend hint — only when paused, not archived, not expired */}
-                                        {mounted && !job.isPublished && !job.archivedAt && !isExpired(job) && (
+                                        {/* Taken down by an admin: why the row offers no way back up */}
+                                        {mounted && !job.isPublished && !!job.adminHoldAt && (
+                                            <div style={{
+                                                display: 'flex', alignItems: 'flex-start', gap: '6px',
+                                                fontSize: '11px', color: '#B91C1C', margin: '10px 0 0',
+                                                lineHeight: 1.5,
+                                            }}>
+                                                <Info size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                                <span>{ADMIN_HOLD_MESSAGE}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Pause-doesn't-extend hint: only when paused, not archived, not expired, not taken down */}
+                                        {mounted && !job.isPublished && !job.archivedAt && !job.adminHoldAt && !isExpired(job) && (
                                             <div style={{
                                                 display: 'flex', alignItems: 'flex-start', gap: '6px',
                                                 fontSize: '11px', color: '#8A9BA6', margin: '10px 0 0',

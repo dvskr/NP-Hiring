@@ -260,7 +260,10 @@ export async function takeDownPackPosts(packId: string, status: 'refunded' | 'di
  * with none, and a renewed one is 'paid'); a pack post disputed through its
  * own renewal charge carries that charge and is left to the JobCharge path.
  * Each goes back to 'pack', and is republished while inside its run, not
- * archived and not paused by the employer.
+ * archived, not paused by the employer and not taken down by an admin
+ * (lib/admin/job-hold.ts). The read leaves out a takedown already made (it
+ * sets isManuallyUnpublished); the write carries adminHoldAt: null as well,
+ * so one landing between the read and the write keeps the post down.
  *
  * As in takeDownPackPosts, the listing is written first, matched on the
  * status the rows still hold ('disputed'), and the status flips last, so the
@@ -283,7 +286,7 @@ export async function restorePackPosts(
     // A revival: each post is public again, so its content counts as changed
     // now (sitemap lastmod, "Last updated"; indexing audit fixSoon 5).
     await db.job.updateMany({
-      where: { id: { in: republished }, archivedAt: null, employerJobs: { postPackId: packId, paymentStatus: 'disputed' } },
+      where: { id: { in: republished }, archivedAt: null, adminHoldAt: null, employerJobs: { postPackId: packId, paymentStatus: 'disputed' } },
       data: { isPublished: true, contentChangedAt: now },
     });
   }

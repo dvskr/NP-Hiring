@@ -52,7 +52,8 @@ export async function getTopStatesByJobCount(): Promise<StateJobCount[]> {
     try {
         const rows = await prisma.job.groupBy({
             by: ['state'],
-            where: { isPublished: true, state: { not: null } },
+            // Not a free copy of a live paid post (lib/paid-post-twins.ts).
+            where: { isPublished: true, shadowedByJobId: null, state: { not: null } },
             _count: { state: true },
             orderBy: { _count: { state: 'desc' } },
             take: TOP_STATES_LIMIT,

@@ -2,9 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { formatCT } from '@/lib/format-ct';
+import { adminFetch, type AdminFetchResult } from '@/lib/admin/admin-fetch';
+import AdminLoadError from '../_components/AdminLoadError';
+import UserVisibilityAction from './UserVisibilityAction';
+import { restoreProfileVisibility } from './restore-profile';
 import {
     Users, Mail, Bell, Shield, Briefcase, UserCheck, Building2,
-    Search, X, ChevronDown, Trash2,
+    Search, X, ChevronDown,
 } from 'lucide-react';
 
 /* ─── Types ─── */
@@ -69,6 +73,16 @@ function badge(text: string, color: 'green' | 'purple' | 'blue' | 'gray' | 'red'
 
 type TabType = 'users' | 'subscribers' | 'employers' | 'alerts';
 
+interface UsersPayload {
+    users?: UserProfile[]; emailLeads?: EmailLead[];
+    employerLeads?: EmployerLead[]; summary?: Summary;
+}
+
+/** The list read. It sets no state: the page applies its answer (applyUsers). */
+function requestUsers(): Promise<AdminFetchResult<UsersPayload>> {
+    return adminFetch<UsersPayload>('/api/admin/users');
+}
+
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [emailLeads, setEmailLeads] = useState<EmailLead[]>([]);
@@ -89,21 +103,33 @@ export default function AdminUsersPage() {
 
     // Action states
     const [actionMsg, setActionMsg] = useState<{ text: string; isError: boolean } | null>(null);
+    // A failed list load, kept until a load succeeds (actionMsg clears itself).
+    const [loadError, setLoadError] = useState<string | null>(null);
 
-    useEffect(() => { fetchData(); }, []);
+    // The list's answer. Only an answer sets state, never the effect itself; the first load
+    // starts with the spinner on (useState(true)) and a retry turns it on (retryLoad).
+    const applyUsers = (result: AdminFetchResult<UsersPayload>) => {
+        if (result.ok) {
+            setUsers(result.data.users ?? []);
+            setEmailLeads(result.data.emailLeads ?? []);
+            setEmployerLeads(result.data.employerLeads ?? []);
+            setSummary(result.data.summary ?? null);
+            setLoadError(null);
+        } else {
+            setLoadError(result.error);
+        }
+        setLoading(false);
+    };
 
-    const fetchData = async () => {
-        try {
-            const res = await fetch('/api/admin/users');
-            const data = await res.json();
-            if (data.success) {
-                setUsers(data.users);
-                setEmailLeads(data.emailLeads);
-                setEmployerLeads(data.employerLeads || []);
-                setSummary(data.summary);
-            }
-        } catch (err) { console.error('Error:', err); }
-        finally { setLoading(false); }
+    useEffect(() => {
+        let current = true;
+        void requestUsers().then((result) => { if (current) applyUsers(result); });
+        return () => { current = false; };
+    }, []);
+
+    const retryLoad = () => {
+        setLoading(true);
+        void requestUsers().then(applyUsers);
     };
 
     const showMsg = (text: string, isError: boolean) => {
@@ -112,38 +138,53 @@ export default function AdminUsersPage() {
     };
 
     const changeRole = async (userId: string, newRole: string) => {
-        try {
-            const res = await fetch(`/api/admin/users/${userId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: newRole }),
-            });
-            if (res.ok) {
-                setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-                showMsg(`Role updated to ${newRole}`, false);
-            }
-        } catch { showMsg('Failed to update role', true); }
+        const result = await adminFetch(`/api/admin/users/${userId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: newRole }),
+        });
+        // On failure the select keeps showing the role the server still has.
+        if (!result.ok) {
+            showMsg(`Could not change the role. ${result.error}`, true);
+            return;
+        }
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+        showMsg(`Role updated to ${newRole}`, false);
     };
 
     const deactivateUser = async (userId: string) => {
         if (!confirm('Deactivate this user? Their profile will be hidden.')) return;
-        try {
-            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
-            if (res.ok) {
-                setUsers(prev => prev.map(u => u.id === userId ? { ...u, profileVisible: false, openToOffers: false } : u));
-                showMsg('User deactivated', false);
-            }
-        } catch { showMsg('Failed to deactivate user', true); }
+        const result = await adminFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+        if (!result.ok) {
+            showMsg(`Could not deactivate the user. ${result.error}`, true);
+            return;
+        }
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, profileVisible: false, openToOffers: false } : u));
+        showMsg('User deactivated', false);
+    };
+
+    // The way back from a deactivation. It asks first, because a hidden
+    // profile may be the member's own privacy choice (restore-profile.ts).
+    const restoreUser = async (userId: string) => {
+        const outcome = await restoreProfileVisibility(userId, (message) => window.confirm(message));
+        if (outcome.status === 'cancelled') return;
+        if (outcome.status === 'failed') {
+            showMsg(`Could not restore the profile. ${outcome.error}`, true);
+            return;
+        }
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, profileVisible: true } : u));
+        showMsg('Profile restored. The member can turn "open to offers" back on themselves.', false);
     };
 
     const viewProfile = async (userId: string) => {
-        try {
-            setDetailLoading(true);
-            const res = await fetch(`/api/admin/users/${userId}`);
-            const data = await res.json();
-            if (data.success) setSelectedUser(data.user);
-        } catch { showMsg('Failed to load profile', true); }
-        finally { setDetailLoading(false); }
+        setDetailLoading(true);
+        const result = await adminFetch<{ user?: UserDetail }>(`/api/admin/users/${userId}`);
+        setDetailLoading(false);
+        if (!result.ok || !result.data.user) {
+            showMsg(`Could not open the profile. ${result.ok ? 'The answer had no profile in it.' : result.error}`, true);
+            return;
+        }
+        setSelectedUser(result.data.user);
     };
 
     // Filtered lists
@@ -201,6 +242,10 @@ export default function AdminUsersPage() {
                     backgroundColor: actionMsg.isError ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
                     color: actionMsg.isError ? '#F87171' : '#22C55E',
                 }}>{actionMsg.text}</div>
+            )}
+
+            {loadError && (
+                <AdminLoadError subject="The users list" message={loadError} onRetry={retryLoad} />
             )}
 
             {/* Summary Cards */}
@@ -304,10 +349,11 @@ export default function AdminUsersPage() {
                                         </td>
                                         <td style={td}>{formatCT(user.createdAt, 'date')}</td>
                                         <td style={{ ...td, textAlign: 'center' }}>
-                                            <button onClick={() => deactivateUser(user.id)} title="Deactivate user"
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#EF4444' }}>
-                                                <Trash2 size={14} />
-                                            </button>
+                                            <UserVisibilityAction
+                                                profileVisible={user.profileVisible}
+                                                onDeactivate={() => { void deactivateUser(user.id); }}
+                                                onRestore={() => { void restoreUser(user.id); }}
+                                            />
                                         </td>
                                     </tr>
                                 ))}

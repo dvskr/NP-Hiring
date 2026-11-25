@@ -320,6 +320,9 @@ async function getAiRecommendedJobs(userId: string, appliedJobIds: ReadonlyArray
             supabaseId: userId,
             batchId: latest.batchId,
             dismissedAt: null,
+            // The batch can predate a listing's mark as a free copy of a live
+            // paid post (lib/paid-post-twins.ts); the fallback below skips those too.
+            job: { shadowedByJobId: null },
             ...(appliedJobIds.length > 0 ? { jobId: { notIn: appliedJobIds as string[] } } : {}),
         },
         // The cron persists rows in tier-pinned display order via `rank`,
@@ -359,8 +362,9 @@ async function getRecommendedJobs(userId: string) {
         },
     })
 
-    // Build filter conditions based on user preferences
-    const where: Record<string, unknown> = { isPublished: true }
+    // Build filter conditions based on user preferences. Never a free copy of
+    // a live paid post (lib/paid-post-twins.ts).
+    const where: Record<string, unknown> = { isPublished: true, shadowedByJobId: null }
     const hasPrefs = profile?.preferredWorkMode || profile?.preferredJobType || profile?.licenseStates
 
     if (hasPrefs) {

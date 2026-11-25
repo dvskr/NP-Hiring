@@ -78,6 +78,7 @@ export async function fetchTopJobsForSocial(): Promise<SocialJob[]> {
       FROM jobs
       WHERE is_published = true
         AND is_featured = true
+        AND shadowed_by_job_id IS NULL -- not a free copy of a live paid post
         AND (expires_at IS NULL OR expires_at > NOW())
         AND slug IS NOT NULL
         AND created_at > NOW() - INTERVAL '30 days'
@@ -104,6 +105,7 @@ export async function fetchTopJobsForSocial(): Promise<SocialJob[]> {
       FROM jobs
       WHERE is_published = true
         AND is_featured = false
+        AND shadowed_by_job_id IS NULL -- not a free copy of a live paid post
         AND (expires_at IS NULL OR expires_at > NOW())
         AND slug IS NOT NULL
         AND created_at > NOW() - INTERVAL '48 hours'

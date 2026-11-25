@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { safeInternalPath } from '@/lib/auth/safe-redirect';
+import { loginErrorMessage } from '@/lib/auth/account-deletion-state';
 import { authSwitchHref, isApplyReturnPath } from '@/lib/apply-intent';
 import { Loader2, AlertCircle, Eye, EyeOff, ArrowRight, Mail, User, Building2 } from 'lucide-react';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -47,7 +48,10 @@ export default function LoginContent() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // A guard that turned this session away says why in ?error= (requireAdmin,
+  // for an account in its deletion window); without the message the bounce
+  // reads as a random sign-out.
+  const [error, setError] = useState<string | null>(() => loginErrorMessage(searchParams.get('error')));
   const [isUnconfirmed, setIsUnconfirmed] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');

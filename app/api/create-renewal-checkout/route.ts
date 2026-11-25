@@ -22,6 +22,8 @@
  * behaviour and falls through to Checkout. An archived post is blocked with
  * 409 too (a status refused above keeps its own message): a renewal
  * republishes, and the dashboard requires a restore before any republish.
+ * So is a post an admin took down (jobs.admin_hold_at, lib/admin/job-hold.ts):
+ * only an admin puts it back up, and the 409 says so with cause 'admin_hold'.
  * So is a post at its renewal cap (config.renewalCapDays after it was
  * created): a renewal there adds no full day, and the employer would pay
  * for an expiry that does not move.
@@ -64,6 +66,7 @@ import {
   type RenewalPaymentInFlightState,
 } from '@/lib/renewal-checkout-sessions';
 import { applyRenewalCheckout } from '@/app/api/webhooks/stripe/apply-renewal';
+import { ADMIN_HOLD_MESSAGE } from '@/lib/admin/job-hold';
 
 /**
  * Retry-After on a refusal. What blocks a new session is a Stripe hiccup, or
@@ -176,6 +179,8 @@ export async function POST(request: NextRequest) {
             // With expiresAt, what the renewal cap is computed from.
             createdAt: true,
             archivedAt: true,
+            // The takedown guard below.
+            adminHoldAt: true,
           },
         },
         // The row's 'new' charge, if it has one: what tells a post bought at
@@ -236,6 +241,16 @@ export async function POST(request: NextRequest) {
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
         { error: 'Employer plan posts are not renewed, and the Employer plan is retired. Post the role again as a new job.' },
+        { status: 409 }
+      );
+    }
+    // Taken down by an admin (lib/admin/job-hold.ts): only an admin puts it
+    // back, and a renewal must not be sold on a posting that stays down. The
+    // renewal webhook checks again inside its transaction, for a takedown
+    // that lands while this checkout is open.
+    if (employerJob.job.adminHoldAt) {
+      return NextResponse.json(
+        { error: ADMIN_HOLD_MESSAGE, cause: 'admin_hold' },
         { status: 409 }
       );
     }

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { formatCT } from '@/lib/format-ct';
+import { adminFetch, type AdminFetchResult } from '@/lib/admin/admin-fetch';
+import AdminLoadError from '../_components/AdminLoadError';
 import { BLOG_CATEGORIES } from '@/lib/blog-categories';
 import {
     FileText, Plus, Pencil, Trash2, Eye, Globe, GlobeLock,
@@ -39,10 +41,21 @@ const th: React.CSSProperties = { padding: '12px 16px', fontSize: '11px', fontWe
 const td: React.CSSProperties = { padding: '14px 16px', fontSize: '13px', color: '#6B7F8A', borderBottom: '1px solid #E8ECF0', whiteSpace: 'nowrap' };
 const inputStyle: React.CSSProperties = { padding: '10px 14px', borderRadius: '10px', fontSize: '13px', backgroundColor: '#F8FAF9', border: '1px solid rgba(255,255,255,0.5)', color: '#1A2E35', outline: 'none', width: '100%' };
 
+interface PostsPayload { posts?: BlogPost[] }
+
+/** The post list read. It sets no state: the page applies its answer (applyPosts). */
+function requestPosts(): Promise<AdminFetchResult<PostsPayload>> {
+    return adminFetch<PostsPayload>('/api/admin/blog');
+}
+
 export default function AdminBlogPage() {
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionMsg, setActionMsg] = useState<{ text: string; isError: boolean } | null>(null);
+    // A failed list load, kept until a load succeeds (actionMsg clears itself).
+    const [loadError, setLoadError] = useState<string | null>(null);
+    // Shown inside the editor: the page's own message sits under the modal.
+    const [editorError, setEditorError] = useState<string | null>(null);
 
     // Editor state
     const [editorOpen, setEditorOpen] = useState(false);
@@ -58,17 +71,28 @@ export default function AdminBlogPage() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [catFilter, setCatFilter] = useState('all');
 
-    useEffect(() => { fetchPosts(); }, []);
-
-    const fetchPosts = async () => {
-        try {
-            setLoading(true);
-            const res = await fetch('/api/admin/blog');
-            const data = await res.json();
-            if (data.success) setPosts(data.posts);
-        } catch { showMsg('Failed to load posts', true); }
-        finally { setLoading(false); }
+    // The post list's answer. Only an answer sets state, never the effect itself; the first
+    // load starts with the spinner on (useState(true)) and a reload turns it on (reloadPosts).
+    const applyPosts = (result: AdminFetchResult<PostsPayload>) => {
+        if (result.ok) {
+            setPosts(result.data.posts ?? []);
+            setLoadError(null);
+        } else {
+            setLoadError(result.error);
+        }
+        setLoading(false);
     };
+
+    const reloadPosts = () => {
+        setLoading(true);
+        void requestPosts().then(applyPosts);
+    };
+
+    useEffect(() => {
+        let current = true;
+        void requestPosts().then((result) => { if (current) applyPosts(result); });
+        return () => { current = false; };
+    }, []);
 
     const showMsg = (text: string, isError: boolean) => {
         setActionMsg({ text, isError });
@@ -77,35 +101,39 @@ export default function AdminBlogPage() {
 
     const openNew = () => {
         setEditingPost(null);
+        setEditorError(null);
         setForm({ title: '', content: '', category: 'job_seeker_attraction', status: 'draft', metaDescription: '', targetKeyword: '', imageUrl: '', reviewedAt: '', faqJson: '' });
         setEditorOpen(true);
     };
 
     const openEdit = async (post: BlogPost) => {
-        try {
-            const res = await fetch(`/api/admin/blog/${post.id}`);
-            const data = await res.json();
-            if (data.success) {
-                setEditingPost(data.post);
-                setForm({
-                    title: data.post.title || '',
-                    content: data.post.content || '',
-                    category: data.post.category || 'job_seeker_attraction',
-                    status: data.post.status || 'draft',
-                    metaDescription: data.post.metaDescription || '',
-                    targetKeyword: data.post.targetKeyword || '',
-                    imageUrl: data.post.imageUrl || '',
-                    reviewedAt: data.post.reviewedAt ? String(data.post.reviewedAt).slice(0, 10) : '',
-                    faqJson: data.post.faqJson ? JSON.stringify(data.post.faqJson, null, 2) : '',
-                });
-                setEditorOpen(true);
-            }
-        } catch { showMsg('Failed to load post', true); }
+        const result = await adminFetch<{ post?: BlogPost }>(`/api/admin/blog/${post.id}`);
+        const loaded = result.ok ? result.data.post : undefined;
+        if (!loaded) {
+            // Never open an empty editor over a failed load: saving from it
+            // would write blanks over the real post.
+            showMsg(`Could not open the post. ${result.ok ? 'The answer had no post in it.' : result.error}`, true);
+            return;
+        }
+        setEditingPost(loaded);
+        setEditorError(null);
+        setForm({
+            title: loaded.title || '',
+            content: loaded.content || '',
+            category: loaded.category || 'job_seeker_attraction',
+            status: loaded.status || 'draft',
+            metaDescription: loaded.metaDescription || '',
+            targetKeyword: loaded.targetKeyword || '',
+            imageUrl: loaded.imageUrl || '',
+            reviewedAt: loaded.reviewedAt ? String(loaded.reviewedAt).slice(0, 10) : '',
+            faqJson: loaded.faqJson ? JSON.stringify(loaded.faqJson, null, 2) : '',
+        });
+        setEditorOpen(true);
     };
 
     const savePost = async () => {
         if (!form.title || !form.content || !form.category) {
-            showMsg('Title, content, and category are required', true);
+            setEditorError('Title, content, and category are required');
             return;
         }
         // FAQ JSON is authored as text — validate the shape client-side so a
@@ -118,64 +146,64 @@ export default function AdminBlogPage() {
                     (q) => q && typeof q.name === 'string' && typeof q.text === 'string',
                 );
                 if (!valid) {
-                    showMsg('FAQ JSON must be an array of { "name", "text" } objects', true);
+                    setEditorError('FAQ JSON must be an array of { "name", "text" } objects');
                     return;
                 }
                 faqJson = parsed;
             } catch {
-                showMsg('FAQ JSON is not valid JSON', true);
+                setEditorError('FAQ JSON is not valid JSON');
                 return;
             }
         }
-        try {
-            setSaving(true);
-            const url = editingPost ? `/api/admin/blog/${editingPost.id}` : '/api/admin/blog';
-            const method = editingPost ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...form,
-                    faqJson,
-                    reviewedAt: form.reviewedAt || null,
-                }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                showMsg(editingPost ? 'Post updated' : 'Post created', false);
-                setEditorOpen(false);
-                fetchPosts();
-            } else {
-                showMsg(data.error || 'Failed to save', true);
-            }
-        } catch { showMsg('Failed to save', true); }
-        finally { setSaving(false); }
+        setSaving(true);
+        setEditorError(null);
+        const url = editingPost ? `/api/admin/blog/${editingPost.id}` : '/api/admin/blog';
+        const result = await adminFetch(url, {
+            method: editingPost ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...form,
+                faqJson,
+                reviewedAt: form.reviewedAt || null,
+            }),
+        });
+        setSaving(false);
+        if (!result.ok) {
+            // The editor stays open so the draft is not lost to a failed save.
+            setEditorError(`Could not save the post. ${result.error}`);
+            return;
+        }
+        showMsg(editingPost ? 'Post updated' : 'Post created', false);
+        setEditorOpen(false);
+        reloadPosts();
     };
 
     const toggleStatus = async (post: BlogPost) => {
         const newStatus = post.status === 'published' ? 'draft' : 'published';
-        try {
-            const res = await fetch(`/api/admin/blog/${post.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            if (res.ok) {
-                setPosts(prev => prev.map(p => p.id === post.id ? { ...p, status: newStatus } : p));
-                showMsg(newStatus === 'published' ? 'Published' : 'Unpublished', false);
-            }
-        } catch { showMsg('Failed to update status', true); }
+        const result = await adminFetch(`/api/admin/blog/${post.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus }),
+        });
+        if (!result.ok) {
+            // The row keeps its real status: showing the new one over a failed
+            // write is how a draft comes to look live.
+            showMsg(`Could not change the post status. ${result.error}`, true);
+            return;
+        }
+        setPosts(prev => prev.map(p => p.id === post.id ? { ...p, status: newStatus } : p));
+        showMsg(newStatus === 'published' ? 'Published' : 'Unpublished', false);
     };
 
     const deletePost = async (id: string) => {
         if (!confirm('Delete this blog post permanently?')) return;
-        try {
-            const res = await fetch(`/api/admin/blog/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                setPosts(prev => prev.filter(p => p.id !== id));
-                showMsg('Post deleted', false);
-            }
-        } catch { showMsg('Failed to delete', true); }
+        const result = await adminFetch(`/api/admin/blog/${id}`, { method: 'DELETE' });
+        if (!result.ok) {
+            showMsg(`Could not delete the post. ${result.error}`, true);
+            return;
+        }
+        setPosts(prev => prev.filter(p => p.id !== id));
+        showMsg('Post deleted', false);
     };
 
     const filteredPosts = posts.filter(p => {
@@ -209,6 +237,10 @@ export default function AdminBlogPage() {
                     backgroundColor: actionMsg.isError ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
                     color: actionMsg.isError ? '#F87171' : '#22C55E',
                 }}>{actionMsg.text}</div>
+            )}
+
+            {loadError && (
+                <AdminLoadError subject="The post list" message={loadError} onRetry={reloadPosts} />
             )}
 
             {/* Filters */}
@@ -272,7 +304,15 @@ export default function AdminBlogPage() {
                                                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#3B82F6' }}>
                                                     <Pencil size={14} />
                                                 </button>
-                                                <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" title="Preview"
+                                                {/* A draft has no public page: /blog/<slug> reads only
+                                                    published posts, so the live URL 404s until the post
+                                                    is published. Drafts go to the admin-only preview,
+                                                    in this tab; the live page opens in a new one. */}
+                                                <a
+                                                    href={post.status === 'published' ? `/blog/${post.slug}` : `/admin/blog/preview/${post.id}`}
+                                                    target={post.status === 'published' ? '_blank' : undefined}
+                                                    rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
+                                                    title={post.status === 'published' ? 'Open the live page' : 'Preview this draft'}
                                                     style={{ padding: 4, color: '#BE185D' }}>
                                                     <Eye size={14} />
                                                 </a>
@@ -321,6 +361,12 @@ export default function AdminBlogPage() {
                                 <div>
                                     <label style={{ ...muted, fontWeight: 600, display: 'block', marginBottom: 6 }}>Category *</label>
                                     <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                                        {/* A row that predates the taxonomy keeps its own id as an option.
+                                            Without it the select shows the first category while the form
+                                            still holds the legacy one, so the editor misreports the post. */}
+                                        {form.category && !CATEGORIES.some(c => c.value === form.category) && (
+                                            <option value={form.category}>{form.category} (legacy category)</option>
+                                        )}
                                         {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                                     </select>
                                 </div>
@@ -388,6 +434,12 @@ export default function AdminBlogPage() {
                                 />
                             </div>
                         </div>
+
+                        {editorError && (
+                            <p role="alert" style={{ marginTop: 16, padding: '10px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, backgroundColor: 'rgba(239,68,68,0.1)', color: '#B91C1C' }}>
+                                {editorError}
+                            </p>
+                        )}
 
                         <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
                             <button onClick={() => setEditorOpen(false)}

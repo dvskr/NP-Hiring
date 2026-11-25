@@ -272,7 +272,7 @@ export default function AnalyticsPage() {
                                 <div style={{ padding: '14px 16px', borderRadius: 10, backgroundColor: '#F8FAF9' }}>
                                     <div style={{ fontSize: 20, fontWeight: 800, color: '#F59E0B' }}>{s.newsletterOptIns}</div>
                                     <div style={muted}>Newsletter Opt-ins</div>
-                                    <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{s.totalSubscribers} total leads</div>
+                                    <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{s.totalSubscribers} on the mailing list</div>
                                 </div>
                                 <div style={{ padding: '14px 16px', borderRadius: 10, backgroundColor: '#F8FAF9' }}>
                                     <div style={{ fontSize: 20, fontWeight: 800, color: '#22C55E' }}>{s.activeAlerts}</div>
@@ -303,9 +303,9 @@ export default function AnalyticsPage() {
                     {/* Engagement Quick Stats */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" style={{ marginBottom: 24 }}>
                         {[
-                            { icon: <Eye size={18} />, label: 'Views (24h)', value: s.views24h, delta: `${s.views7d} / week`, color: '#3B82F6' },
-                            { icon: <MousePointerClick size={18} />, label: 'Clicks (24h)', value: s.clicks24h, delta: `${s.clicks7d} / week`, color: '#A855F7' },
-                            { icon: <FileCheck size={18} />, label: 'Applications (24h)', value: s.apps24h, delta: `${s.apps7d} / week`, color: '#22C55E' },
+                            { icon: <Eye size={18} />, label: 'Views today (CT)', value: s.views24h, delta: `${s.views7d} last 7 days`, color: '#3B82F6' },
+                            { icon: <MousePointerClick size={18} />, label: 'Clicks today (CT)', value: s.clicks24h, delta: `${s.clicks7d} last 7 days`, color: '#A855F7' },
+                            { icon: <FileCheck size={18} />, label: 'Applications today (CT)', value: s.apps24h, delta: `${s.apps7d} last 7 days`, color: '#22C55E' },
                             { icon: <Zap size={18} />, label: 'Autofill Uses', value: data.autofill?.totalUsage || 0, delta: `${data.autofill?.uniqueUsers || 0} users`, color: '#EC4899' },
                         ].map(c => (
                             <div key={c.label} style={{ ...card, padding: '20px 22px' }}>

@@ -68,6 +68,10 @@ async function activatePaid(row: { userId: string | null }): Promise<string> {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
         id: 'ej-1', jobId: 'job-1', contactEmail: SOMEONE_ELSES_EMAIL, dashboardToken: 'dash-1', quotaDomain: 'clinic.example', ...row,
     } as never);
+    // The claim and the publish count the rows they move; the job is read back after the publish.
+    vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
+    vi.mocked(prisma.job.updateMany).mockResolvedValue({ count: 1 } as never);
+    vi.mocked(prisma.job.findUnique).mockResolvedValue({ id: 'job-1', title: BODY.title, slug: null, adminHoldAt: null } as never);
     const { activatePaidJobCheckout } = await import('@/app/api/webhooks/stripe/activate-paid-job');
     const result = await activatePaidJobCheckout({} as Stripe, PAID_SESSION);
     return result.outcome;

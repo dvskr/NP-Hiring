@@ -44,7 +44,8 @@ async function readCompanyMatch(companyId: string | null, employerName: string):
 }
 
 async function readEmployerJobCount(employerName: string): Promise<number> {
-  return prisma.job.count({ where: { employer: employerName, ...PUBLISHED_LISTING_WHERE } });
+  // A free copy of a live paid post is that post's opening (lib/paid-post-twins.ts).
+  return prisma.job.count({ where: { employer: employerName, shadowedByJobId: null, ...PUBLISHED_LISTING_WHERE } });
 }
 
 interface CompanyKey {

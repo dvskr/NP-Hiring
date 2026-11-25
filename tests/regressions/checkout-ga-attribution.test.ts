@@ -185,8 +185,10 @@ function mockNewPostActivation(): void {
   vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
     id: 'ej-1', contactEmail: 'owner@clinic.example', dashboardToken: 'dash-1', quotaDomain: null,
   } as never);
-  vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
-  vi.mocked(prisma.job.update).mockResolvedValue({ id: 'job-1', title: 'T', slug: null } as never);
+  // The claim and the publish count the rows they move; the job is read back after the publish.
+  vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
+  vi.mocked(prisma.job.updateMany).mockResolvedValue({ count: 1 } as never);
+  vi.mocked(prisma.job.findUnique).mockResolvedValue({ id: 'job-1', title: 'T', slug: null, adminHoldAt: null } as never);
   vi.mocked(prisma.jobCharge.create).mockResolvedValue({} as never);
   vi.mocked(prisma.jobDraft.deleteMany).mockResolvedValue({ count: 0 } as never);
 }

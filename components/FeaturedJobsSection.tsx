@@ -113,6 +113,9 @@ export default async function FeaturedJobsSection() {
         const candidates = await prisma.job.findMany({
             where: {
                 isPublished: true,
+                // Never a free copy beside the paid post it duplicates
+                // (lib/paid-post-twins.ts).
+                shadowedByJobId: null,
                 OR: [
                     { originalPostedAt: { gte: threeDaysAgo } },
                     { originalPostedAt: null, createdAt: { gte: threeDaysAgo } },

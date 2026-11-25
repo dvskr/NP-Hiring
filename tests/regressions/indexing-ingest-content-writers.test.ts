@@ -166,13 +166,16 @@ describe('employer, admin and payment writers stamp contentChangedAt', () => {
 
     it('the first publish of a paid job stamps it', () => {
         const src = read('app/api/webhooks/stripe/activate-paid-job.ts');
-        expect(src).toContain('data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: new Date() },');
+        expect(src).toContain('data: { isPublished: true, contentChangedAt: new Date() },');
     });
 
     it('a chargeback-won re-publish stamps it', () => {
-        const src = read('app/api/webhooks/stripe/route.ts');
+        // The webhook hands a won chargeback to job-charge-refunds.ts (restoreWonPosting).
+        const src = read('app/api/webhooks/stripe/job-charge-refunds.ts');
         expect(src).toContain('data: { isPublished: true, contentChangedAt: new Date() } });');
-        expect(src).not.toContain('data: { isPublished: true } });');
+        for (const file of ['app/api/webhooks/stripe/route.ts', 'app/api/webhooks/stripe/job-charge-refunds.ts']) {
+            expect(read(file), file).not.toContain('data: { isPublished: true } });');
+        }
     });
 
     it('a paid renewal stamps it with the new expiry', () => {

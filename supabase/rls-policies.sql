@@ -272,6 +272,7 @@ ALTER TABLE processed_stripe_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_charges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employer_plans ENABLE ROW LEVEL SECURITY; -- also in migration 20260913000001_employer_plans_rls
 ALTER TABLE employer_post_packs ENABLE ROW LEVEL SECURITY; -- also in migration 20261025000000_add_employer_post_packs
+ALTER TABLE social_post_logs ENABLE ROW LEVEL SECURITY; -- also in migration 20261126000003_social_post_logs_rls
 ALTER TABLE jd_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_feedback ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_drafts ENABLE ROW LEVEL SECURITY;

@@ -34,7 +34,9 @@ describe('payments wiring', () => {
   it('stripe webhook has a dispute handler', () => {
     const src = read('app/api/webhooks/stripe/route.ts');
     expect(src).toContain("charge.dispute.created");
-    expect(src).toMatch(/paymentStatus:\s*'disputed'/);
+    // The posting is marked by the module the handler hands it to.
+    expect(src).toMatch(/applyLedgerDispute\(jobCharge, dispute, event\.id\)/);
+    expect(read('app/api/webhooks/stripe/job-charge-refunds.ts')).toMatch(/paymentStatus:\s*'disputed'/);
   });
 });
 

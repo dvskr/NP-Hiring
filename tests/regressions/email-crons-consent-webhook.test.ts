@@ -171,18 +171,21 @@ describe('B74 — broadcast custom audience hygiene and history-free test sends'
   it('custom audiences are normalized, validated, and deduped before use', () => {
     const s = src();
     expect(s).toContain('cleanCustomEmails');
-    // cleaning happens in the custom-audience branch before recipients are built
+    // cleaning happens in the custom-audience branch before recipients are
+    // built. The row is created through the claim transaction's client.
+    expect(s.indexOf('emailBroadcast.create(')).toBeGreaterThan(-1);
     expect(s.indexOf('cleanCustomEmails(customEmails')).toBeLessThan(
-      s.indexOf('prisma.emailBroadcast.create'),
+      s.indexOf('emailBroadcast.create('),
     );
   });
 
   it('test sends bypass EmailBroadcast history', () => {
     const s = src();
     expect(s).toMatch(/isTest === true/);
-    // the isTest early-return sits BEFORE the broadcast row is created
+    // the isTest early-return sits BEFORE the broadcast row is claimed
+    expect(s.indexOf('await claimBroadcast(')).toBeGreaterThan(-1);
     expect(s.indexOf('isTest === true')).toBeLessThan(
-      s.indexOf('prisma.emailBroadcast.create'),
+      s.indexOf('await claimBroadcast('),
     );
   });
 });

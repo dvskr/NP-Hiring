@@ -711,6 +711,9 @@ export function buildCategoryWhereClause(
   return {
     isPublished: true,
     ...extra,
+    // After `extra`, so no caller can drop it: a free copy of a confirmed
+    // employer's live paid post redirects to that post (lib/paid-post-twins.ts).
+    shadowedByJobId: null,
     AND: andConditions,
   };
 }
@@ -979,6 +982,9 @@ export function buildWhereClause(
 ): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isPublished: true,
+    // A free copy of a confirmed employer's live paid post redirects to that
+    // post, so search never lists it (lib/paid-post-twins.ts).
+    shadowedByJobId: null,
   };
   const now = new Date();
   const facets = buildFacetClauses(filters, now);

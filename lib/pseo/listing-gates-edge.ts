@@ -44,6 +44,14 @@ export interface ListingGateRow {
 /** Columns GLOBAL_EXCLUSIONS reads; the REST select must carry all of them. */
 export const LISTING_GATE_SELECT = 'title,employer,profession_class';
 
+/**
+ * Not a free copy of a live paid post (lib/paid-post-twins.ts), as a
+ * PostgREST filter. Every listing predicate hides marked copies
+ * (activeIndexableJobWhere and the canonical counts built on it), so a gate
+ * that rules on a listing page's rows drops them too.
+ */
+export const NOT_A_PAID_POST_COPY_REST_FILTER = 'shadowed_by_job_id=is.null';
+
 const QUARANTINE_COLUMNS: ReadonlySet<string> = new Set(['title', 'employer', 'professionClass']);
 
 /** PUBLISHED_LISTING_WHERE minus `isPublished` (the REST query filters that). */
@@ -140,7 +148,10 @@ export function cityGateLookup(slug: string, isMetroSlug: (s: string) => boolean
         const city = encodeURIComponent(parsed.cityName);
         // or=(state.eq."New York",state_code.eq.NY): quoted so spaces survive.
         const orClause = encodeURIComponent(`(state.eq."${parsed.stateName}",state_code.eq.${parsed.stateCode})`);
-        return { kind: 'hub', query: `${base}&city=ilike.${city}&or=${orClause}` };
+        // The hub counts canonicalBucketWhere, which hides paid-post copies;
+        // the ambiguous resolver below keeps every published row, as the
+        // page's resolveAmbiguousSlug does.
+        return { kind: 'hub', query: `${base}&${NOT_A_PAID_POST_COPY_REST_FILTER}&city=ilike.${city}&or=${orClause}` };
     }
     const city = encodeURIComponent(cityNameFromSlugPart(slug));
     return { kind: 'ambiguous', query: `${base}&city=ilike.${city}&state_code=not.is.null` };

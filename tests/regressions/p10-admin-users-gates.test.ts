@@ -4,7 +4,10 @@
  *  2. role change, deactivate and hard delete write AuditLog rows
  *  3. /api/admin/cron-list answers 401/403 JSON (never 500 NEXT_REDIRECT)
  *  4. unknown ids are 404 and wrong-typed flags are 400
- *  5. requireApiAdmin always rate limits; health, email and pipeline-flow pass the request
+ *  5. requireApiAdmin always rate limits (a per-IP guard before auth, then a per-admin
+ *     budget per route group); health, email and pipeline-flow pass the request
+ *  6. a user DELETE (deactivate or hard delete) is also charged to the admin's
+ *     high-impact budget, 10 a minute, and that limiter fails closed
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
@@ -17,9 +20,15 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 const rateLimitMock = vi.fn();
+const rateLimitSharedMock = vi.fn();
 vi.mock('@/lib/rate-limit', () => ({
     rateLimit: (...args: unknown[]) => rateLimitMock(...args),
-    RATE_LIMITS: { admin: { limit: 20, windowMs: 60_000 } },
+    rateLimitShared: (...args: unknown[]) => rateLimitSharedMock(...args),
+    RATE_LIMITS: {
+        admin: { limit: 60, windowSeconds: 60 },
+        adminIp: { limit: 120, windowSeconds: 60 },
+        adminHighImpact: { limit: 10, windowSeconds: 60 },
+    },
 }));
 
 vi.mock('@/lib/prisma', () => ({
@@ -48,7 +57,7 @@ vi.mock('@/lib/auth/protect', () => ({
 }));
 
 import { prisma } from '@/lib/prisma';
-import { requireApiAdmin } from '@/lib/auth/require-api-admin';
+import { limitHighImpactAdminAction, requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { PATCH, DELETE } from '@/app/api/admin/users/[id]/route';
 import { GET as cronListGET } from '@/app/api/admin/cron-list/route';
 
@@ -86,17 +95,40 @@ function p2025(): Error {
 beforeEach(() => {
     vi.clearAllMocks();
     rateLimitMock.mockResolvedValue(null);
+    rateLimitSharedMock.mockResolvedValue(null);
     logAuditMock.mockResolvedValue(undefined);
     signInAsAdmin();
 });
 
 describe('requireApiAdmin', () => {
-    it('always applies the admin rate limit and returns its 429', async () => {
+    it('charges the per-IP guard before the session is read and returns its 429', async () => {
         const limited = NextResponse.json({ error: 'Too many requests' }, { status: 429 });
         rateLimitMock.mockResolvedValueOnce(limited);
         const res = await requireApiAdmin(req('/api/admin/health', 'GET'));
-        expect(rateLimitMock).toHaveBeenCalledWith(expect.any(Request), 'admin', expect.anything());
+        expect(rateLimitMock).toHaveBeenCalledWith(expect.any(Request), 'admin-ip', { limit: 120, windowSeconds: 60 });
         expect(res?.status).toBe(429);
+        expect(getUserMock).not.toHaveBeenCalled();
+        expect(rateLimitSharedMock).not.toHaveBeenCalled();
+    });
+
+    it('charges the per-admin budget for the route group once the admin is known, and returns its 429', async () => {
+        const limited = NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+        rateLimitSharedMock.mockResolvedValueOnce(limited);
+        const res = await requireApiAdmin(req('/api/admin/users/clx0000000000000000fic1', 'GET'));
+        expect(rateLimitSharedMock).toHaveBeenCalledWith(
+            `admin:/api/admin/users/:id:${ADMIN_SUPABASE}`,
+            { limit: 60, windowSeconds: 60 },
+        );
+        expect(res?.status).toBe(429);
+    });
+
+    it('never charges the per-admin budget for a caller that is not an admin', async () => {
+        getUserMock.mockResolvedValueOnce({ data: { user: null }, error: null });
+        expect((await requireApiAdmin(req('/x', 'GET')))?.status).toBe(401);
+        getUserMock.mockResolvedValueOnce({ data: { user: { id: 'seeker' } }, error: null });
+        findUnique.mockResolvedValueOnce({ id: 'p', role: 'job_seeker', deletedAt: null });
+        expect((await requireApiAdmin(req('/x', 'GET')))?.status).toBe(403);
+        expect(rateLimitSharedMock).not.toHaveBeenCalled();
     });
 
     it('answers 401 anonymous and 403 non-admin', async () => {
@@ -120,14 +152,18 @@ describe('requireApiAdmin', () => {
             'app/api/admin/email/audience/route.ts',
             'app/api/admin/email/history/route.ts',
             'app/api/admin/email/preview/route.ts',
+            'app/api/admin/email/resume/route.ts',
             'app/api/admin/email/send/route.ts',
             'app/api/admin/email/templates/route.ts',
             'app/api/admin/email/test/route.ts',
         ];
         for (const f of files) {
             const src = readFileSync(path.join(process.cwd(), f), 'utf-8');
-            expect(src, f).toMatch(/requireApiAdmin\((req|request)\)/);
+            // requireApiAdminActor(req) is the same gate (it also returns the
+            // admin's id, which the broadcast send needs for its audit entry).
+            expect(src, f).toMatch(/requireApiAdmin(?:Actor)?\((req|request)\)/);
             expect(src, f).not.toContain('requireApiAdmin()');
+            expect(src, f).not.toContain('requireApiAdminActor()');
         }
     });
 });
@@ -228,5 +264,50 @@ describe('DELETE /api/admin/users/:id', () => {
         const res = await DELETE(req('/api/admin/users/missing', 'DELETE'), ctx('missing'));
         expect(res.status).toBe(404);
         expect(logAuditMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('the high-impact budget on DELETE /api/admin/users/:id', () => {
+    const HIGH_IMPACT_KEY = `admin-high-impact:users-delete:${ADMIN_SUPABASE}`;
+
+    it('charges a deactivate to the admin, at 10 a minute', async () => {
+        update.mockResolvedValueOnce({});
+        expect((await DELETE(req(`/api/admin/users/${TARGET}`, 'DELETE'), ctx(TARGET))).status).toBe(200);
+
+        expect(rateLimitSharedMock).toHaveBeenCalledWith(HIGH_IMPACT_KEY, { limit: 10, windowSeconds: 60 });
+    });
+
+    it('charges a hard delete the same way', async () => {
+        del.mockResolvedValueOnce({});
+        expect((await DELETE(req(`/api/admin/users/${TARGET}?hard=true`, 'DELETE'), ctx(TARGET))).status).toBe(200);
+
+        expect(rateLimitSharedMock).toHaveBeenCalledWith(HIGH_IMPACT_KEY, { limit: 10, windowSeconds: 60 });
+    });
+
+    it('answers its 429 and writes, deletes and records nothing', async () => {
+        rateLimitSharedMock.mockImplementation(async (key: string) =>
+            key === HIGH_IMPACT_KEY ? NextResponse.json({ error: 'Too many requests' }, { status: 429 }) : null);
+
+        const res = await DELETE(req(`/api/admin/users/${TARGET}?hard=true`, 'DELETE'), ctx(TARGET));
+
+        expect(res.status).toBe(429);
+        expect(del).not.toHaveBeenCalled();
+        expect(update).not.toHaveBeenCalled();
+        expect(logAuditMock).not.toHaveBeenCalled();
+    });
+
+    it('is not charged by a PATCH', async () => {
+        update.mockResolvedValueOnce({ id: TARGET, role: 'employer', openToOffers: false, profileVisible: true });
+        await PATCH(req(`/api/admin/users/${TARGET}`, 'PATCH', { openToOffers: false }), ctx(TARGET));
+
+        expect(rateLimitSharedMock.mock.calls.map((call) => call[0])).not.toContain(HIGH_IMPACT_KEY);
+    });
+
+    it('fails closed with 500 when the limiter itself throws', async () => {
+        rateLimitSharedMock.mockRejectedValueOnce(new Error('limiter down'));
+
+        const res = await limitHighImpactAdminAction('users-delete', { profileId: ADMIN_PROFILE, supabaseId: ADMIN_SUPABASE });
+
+        expect(res?.status).toBe(500);
     });
 });

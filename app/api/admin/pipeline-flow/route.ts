@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { ALL_SOURCES, type JobSource } from '@/lib/ingestion-service';
+import { DISABLED_SOURCES } from '@/config/cron-schedule';
 
 export interface SourceFunnel {
     source: string;
@@ -39,6 +40,8 @@ interface PipelineFlowResponse {
     recentRuns: CronRunRow[];
     topRejectionReasons: Array<{ reason: string; n: number }>;
     activeSources: string[];
+    /** Registry sources this board deliberately does not schedule. */
+    unscheduledSources: string[];
 }
 
 function summarize(rows: Array<{
@@ -149,6 +152,10 @@ export async function GET(request: Request) {
             })),
             topRejectionReasons: rejectionRows.map((r) => ({ reason: r.rejection_reason, n: Number(r.n) })),
             activeSources: ALL_SOURCES as JobSource[],
+            // The admin pipeline page lists every registry source and flags
+            // the silent ones; a source this board never schedules is not
+            // silent, so the page needs to tell the two apart.
+            unscheduledSources: [...DISABLED_SOURCES],
         });
     } catch (e) {
         console.error('[admin/pipeline-flow]', e);

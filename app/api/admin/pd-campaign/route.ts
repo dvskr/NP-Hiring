@@ -2,8 +2,8 @@
  * PATCH /api/admin/pd-campaign
  *
  * Updates a single ProgramDirectorLead's outreach_status from the admin
- * dashboard at /admin/pd-campaign. Auth: gated by requireAdmin() (same
- * as the page itself).
+ * dashboard at /admin/pd-campaign. Auth: requireApiAdmin, which answers a
+ * JSON 401, 403 or 429 and applies the admin rate limits.
  *
  * Body:
  *   {
@@ -14,7 +14,7 @@
  */
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/auth/protect'
+import { requireApiAdmin } from '@/lib/auth/require-api-admin'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -48,7 +48,11 @@ const BODY_SCHEMA = z
   )
 
 export async function PATCH(req: Request): Promise<NextResponse> {
-  await requireAdmin()
+  // The API guard, not the page-style requireAdmin(): this endpoint is called
+  // by fetch() from the dashboard, so a refusal must be JSON the caller can
+  // read rather than a thrown redirect, and the console's rate limits apply.
+  const authError = await requireApiAdmin(req)
+  if (authError) return authError
 
   let parsed: z.infer<typeof BODY_SCHEMA>
   try {

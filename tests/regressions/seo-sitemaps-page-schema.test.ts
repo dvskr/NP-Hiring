@@ -48,7 +48,8 @@ describe('B31 — page mirrors the middleware expired predicate', () => {
   });
 
   it('classifies a dead-link job (at DEAD_LINK_MISS_THRESHOLD) as closed, like the middleware 410 (CS-06)', () => {
-    expect(page).toContain("import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';");
+    // The threshold comes from the shared module, never a local copy (other names may share the import).
+    expect(page).toMatch(/import \{[^}]*\bDEAD_LINK_MISS_THRESHOLD\b[^}]*\} from '@\/lib\/active-job-filter';/);
     expect(page).toMatch(/select: \{[^}]*healthConsecutiveMissing: true/);
     expect(page).toContain('const deadLink = anyJob.healthConsecutiveMissing >= DEAD_LINK_MISS_THRESHOLD;');
   });

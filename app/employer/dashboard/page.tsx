@@ -67,6 +67,9 @@ export default async function EmployerDashboardPage() {
         createdAt: record.job.createdAt.toISOString(),
         expiresAt: record.job.expiresAt ? record.job.expiresAt.toISOString() : null,
         archivedAt: record.job.archivedAt ? record.job.archivedAt.toISOString() : null,
+        // Taken down by an admin (lib/admin/job-hold.ts): the row says so and
+        // offers no way back up.
+        adminHoldAt: record.job.adminHoldAt ? record.job.adminHoldAt.toISOString() : null,
         editToken: record.editToken,
         paymentStatus: record.paymentStatus,
         pricingTier: record.pricingTier || 'pro',

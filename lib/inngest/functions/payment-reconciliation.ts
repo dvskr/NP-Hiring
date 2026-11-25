@@ -82,6 +82,12 @@ const ABANDON_AFTER_MS = 24 * 60 * 60 * 1000;    // Stripe checkout sessions har
 const RENEWAL_LOOKBACK_MS = RENEWAL_SETTLEMENT_LOOKBACK_MS;
 /** Appended to a recovered payment's alert line when the post is archived and so not live. */
 const LEFT_ARCHIVED_NOTE = ' (left archived: employer must restore)';
+/**
+ * A recovered payment for a post an admin took down (lib/admin/job-hold.ts):
+ * claimed and ledgered, but the post stays down, so the line must not read
+ * as a plain activation. The operator refunds it or lifts the hold.
+ */
+const LEFT_HELD_NOTE = ' (left down under an admin hold: refund it or lift the hold)';
 const MAX_ROWS_PER_SWEEP = 100;
 const MAX_RENEWALS_PER_SWEEP = 100;
 const MAX_PACKS_PER_SWEEP = 100;
@@ -111,6 +117,7 @@ interface RecoveredEntry {
     sessionId: string;
     activation: string;
     leftArchived?: true;
+    leftHeld?: true;
 }
 
 interface FailedEntry {
@@ -133,10 +140,12 @@ interface ActivationStepResult {
     error?: string;
     /** Paid and claimed, but the post is archived and stays unpublished until the employer restores it. */
     leftArchived?: true;
+    /** Paid and claimed, but an admin took the post down and it stays down. */
+    leftHeld?: true;
 }
 
 interface RenewalStepResult {
-    outcome: 'applied' | 'already_applied' | 'revoked_posting' | 'employer_job_missing' | 'cap_reached' | 'has-charge' | 'skipped-unpaid' | 'error';
+    outcome: 'applied' | 'already_applied' | 'revoked_posting' | 'employer_job_missing' | 'cap_reached' | 'admin_hold' | 'has-charge' | 'skipped-unpaid' | 'error';
     error?: string;
     /** On the books, but the post is archived and stays unpublished until the employer restores it. */
     leftArchived?: true;
@@ -301,7 +310,11 @@ export const paymentReconciliationSweep = inngest.createFunction(
                             return { outcome: 'skipped-unpaid' };
                         }
                         const activation = await activatePaidJobCheckout(stripe, session);
-                        return { outcome: activation.outcome, ...(activation.leftArchived && { leftArchived: true as const }) };
+                        return {
+                            outcome: activation.outcome,
+                            ...(activation.leftArchived && { leftArchived: true as const }),
+                            ...(activation.leftHeld && { leftHeld: true as const }),
+                        };
                     } catch (err) {
                         // Contain per-row failures so one broken row can't abort
                         // the whole sweep; surfaced via the Discord alert below.
@@ -325,6 +338,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
                         sessionId: match.sessionId,
                         activation: result.outcome,
                         ...(result.leftArchived && { leftArchived: true as const }),
+                        ...(result.leftHeld && { leftHeld: true as const }),
                     });
                 }
             } else {
@@ -430,7 +444,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
             await step.run('alert-paid-but-pending', async () => {
                 const lines = [
                     ...recovered.map((r) =>
-                        `${r.subject} · session ${r.sessionId} · ${r.activation === 'activated' ? 'recovered (activated now)' : r.activation}${r.leftArchived ? LEFT_ARCHIVED_NOTE : ''}`),
+                        `${r.subject} · session ${r.sessionId} · ${r.activation === 'activated' ? 'recovered (activated now)' : r.activation}${r.leftArchived ? LEFT_ARCHIVED_NOTE : ''}${r.leftHeld ? LEFT_HELD_NOTE : ''}`),
                     ...failures.map((f) =>
                         `${f.subject}${f.sessionId ? ` · session ${f.sessionId}` : ''} · ACTIVATION FAILED: ${f.error}`),
                 ];

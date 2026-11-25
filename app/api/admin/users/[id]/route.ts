@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireApiAdmin, requireApiAdminActor, type ApiAdminActor } from '@/lib/auth/require-api-admin';
+import {
+    limitHighImpactAdminAction,
+    requireApiAdmin,
+    requireApiAdminActor,
+    type ApiAdminActor,
+} from '@/lib/auth/require-api-admin';
 import { logAudit } from '@/lib/audit-log';
 import { logger } from '@/lib/logger';
 import { withSignedAvatar } from '@/lib/avatar-url';
@@ -200,7 +205,8 @@ export async function PATCH(
  * DELETE /api/admin/users/:id
  * Deactivate user (hides profile, sets openToOffers=false).
  * Use ?hard=true for permanent deletion. Both are audit-logged, and an admin
- * cannot deactivate or delete their own account.
+ * cannot deactivate or delete their own account. Both are charged to the
+ * admin's high-impact budget (10 a minute) on top of the general admin one.
  */
 export async function DELETE(
     request: NextRequest,
@@ -208,6 +214,9 @@ export async function DELETE(
 ) {
     const { error: authError, actor } = await requireApiAdminActor(request);
     if (authError) return authError;
+
+    const limited = await limitHighImpactAdminAction('users-delete', actor);
+    if (limited) return limited;
 
     const { id } = await params;
     const hard = new URL(request.url).searchParams.get('hard') === 'true';

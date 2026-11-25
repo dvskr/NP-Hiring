@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { sendBroadcastEmail, buildBroadcastHtml, isEmailSuppressed, getOrCreateUnsubToken } from '@/lib/email-service';
 import { logger } from '@/lib/logger';
+import { isOutboundPaused, OUTBOUND_PAUSED_MESSAGE } from '@/lib/outbound-kill-switch';
 
 // ── Rate limiting config (Resend Pro: 10/sec) ──────────────────
 const BATCH_SIZE = 10;
@@ -16,6 +17,17 @@ const MAX_RETRIES = 3;
  * recipient instead of restarting or stalling forever.
  */
 export const BROADCAST_CHUNK_SIZE = 25;
+
+/**
+ * A broadcast still 'sending' that has made no progress for this long has no
+ * live sender: every run writes the row when it starts and after each chunk,
+ * a chunk takes well under a minute, and the inline send for a small list is
+ * cut off by its route's two-minute limit. The stuck-broadcast sweep
+ * (lib/inngest/functions/broadcast-send.ts) and the History tab's Resume
+ * (app/api/admin/email/resume/route.ts) both wait this long, so neither can
+ * start a sender beside one that is still mailing.
+ */
+export const BROADCAST_STALE_AFTER_MS = 30 * 60 * 1000;
 
 // Safety valve for the synchronous path — it's only used for ≤50-recipient
 // sends, so this is never a real constraint.
@@ -77,6 +89,12 @@ export interface BroadcastChunkResult {
     skipped: number;
     /** True when the chunk was full — more pending recipients may remain. */
     hasMore: boolean;
+    /**
+     * Set when the emergency brake stopped the chunk before it read anyone:
+     * every recipient is still 'pending' and the broadcast must not be
+     * finalized.
+     */
+    paused?: true;
 }
 
 export interface BroadcastFinalizeResult {
@@ -98,6 +116,14 @@ export async function processBroadcastChunk(
     broadcastId: string,
     limit: number = BROADCAST_CHUNK_SIZE,
 ): Promise<BroadcastChunkResult> {
+    // Emergency brake (lib/outbound-kill-switch.ts), checked before anyone is
+    // read. While it is engaged sendAndLog refuses every broadcast send, and
+    // each refusal would be recorded as a failed recipient who is then never
+    // mailed. A paused chunk leaves them all 'pending' for the run after it.
+    if (isOutboundPaused()) {
+        return { broadcastId, processed: 0, sent: 0, failed: 0, skipped: 0, hasMore: true, paused: true };
+    }
+
     const broadcast = await prisma.emailBroadcast.findUnique({
         where: { id: broadcastId },
     });
@@ -287,6 +313,14 @@ export async function finalizeBroadcast(broadcastId: string): Promise<BroadcastF
  * processBroadcastChunk/finalizeBroadcast primitives as durable steps.
  */
 export async function executeBroadcast(broadcastId: string): Promise<BroadcastProgress> {
+    // Emergency brake. Throwing rather than returning a quiet zero-send
+    // result: a broadcast that silently mails nobody and reports "sent" is
+    // exactly the failure the brake exists to make visible. The admin route
+    // checks first, so the operator sees the reason rather than an error.
+    if (isOutboundPaused()) {
+        throw new Error(OUTBOUND_PAUSED_MESSAGE);
+    }
+
     const broadcast = await prisma.emailBroadcast.findUnique({
         where: { id: broadcastId },
     });
@@ -308,6 +342,11 @@ export async function executeBroadcast(broadcastId: string): Promise<BroadcastPr
 
     for (let chunkIndex = 0; chunkIndex < MAX_SYNC_CHUNKS; chunkIndex++) {
         const chunk = await processBroadcastChunk(broadcastId, BROADCAST_CHUNK_SIZE);
+        if (chunk.paused) {
+            // Left 'sending' with its recipients pending, never finalized:
+            // the stuck-broadcast sweep continues it once the pause is lifted.
+            return { broadcastId, total: processed, sent, failed, skipped, status: 'sending' };
+        }
         processed += chunk.processed;
         sent += chunk.sent;
         failed += chunk.failed;

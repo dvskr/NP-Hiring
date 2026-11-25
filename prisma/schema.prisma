@@ -71,6 +71,10 @@ model Job {
   unpublishReasonNote      String?                   @map("unpublish_reason_note") @db.Text
   unpublishedAt            DateTime?                 @map("unpublished_at")
   archivedAt               DateTime?                 @map("archived_at")
+  /// Set when an admin took the posting down (lib/admin/job-hold.ts). The
+  /// owner cannot resume or renew it while it is set, and a payment does not
+  /// put it back up; an admin publishing the posting again clears it.
+  adminHoldAt              DateTime?                 @map("admin_hold_at")
   // Phase 3 #21 — employer-controlled "refresh" timestamp used by the
   // weekly-digest cron to gate which jobs are eligible to be re-sent
   // to candidates. Default value mirrors createdAt at insert time;
@@ -130,6 +134,21 @@ model Job {
   // before backfill runs. After scripts/backfill-category-tags.ts has
   // populated all rows, the legacy fallback is dead code.
   categoryTags             String[]                  @default([]) @map("category_tags")
+  // Paid-post twins (lib/paid-post-twins.ts): set on a free feed listing
+  // while a confirmed employer's live paid post lists the same role. Every
+  // listing predicate hides a marked row and its URL redirects to that post.
+  // Written only by lib/paid-post-twins-sync.ts. ON DELETE SET NULL releases
+  // the copies of a deleted post. Migrations 20261126000004 (column and
+  // foreign key, added NOT VALID) and 20261126000005 (its validation).
+  shadowedByJobId          String?                   @map("shadowed_by_job_id")
+  shadowedBy               Job?                      @relation("PaidPostTwin", fields: [shadowedByJobId], references: [id], onDelete: SetNull)
+  shadowedCopies           Job[]                     @relation("PaidPostTwin")
+  // When lib/paid-post-twins-sync.ts filed this employer post under the
+  // company its copies were listed under. Null for a link made any other way
+  // (ingest, scripts/link-all-jobs.ts, a company merge, every link older than
+  // the sync): the sync takes a post off a company page only when it filed
+  // it there itself. Migration 20261126000008.
+  twinCompanyLinkedAt      DateTime?                 @map("twin_company_linked_at")
   applyClicks              ApplyClick[]
   jobApplications          JobApplication[]
   jobReports               JobReport[]
@@ -141,6 +160,8 @@ model Job {
   healthChecks             JobHealthCheck[]
   embedding                JobEmbedding?
   recommendations          CandidateRecommendation[]
+  // Where and when the admin social kit posted this job (social_post_logs).
+  socialPostLogs           SocialPostLog[]
 
   @@index([isPublished])
   // B104: composite for every expiry-gated query — cleanup-expired's
@@ -169,6 +190,10 @@ model Job {
   // "professionClass NOT IN (non-NP classes) OR NULL" (GLOBAL_EXCLUSIONS),
   // and the backfill/quarantine scripts scan by class.
   @@index([professionClass])
+  // Paid-post twins: the sync reads every marked row, and a paid post's
+  // copies are counted and released by this pointer. Migration
+  // 20261126000006, in a file of its own.
+  @@index([shadowedByJobId])
   @@map("jobs")
 }
 
@@ -888,6 +913,12 @@ model UserProfile {
   deletedAt               DateTime? @map("deleted_at")
   purgeAt                 DateTime? @map("purge_at")
   purgeWarningEmailSentAt DateTime? @map("purge_warning_email_sent_at")
+
+  // Employer names (lib/paid-post-twins.ts employerOrgKey) an operator
+  // confirmed this account speaks for, written only from
+  // /admin/verify-employers (lib/admin/employer-verification.ts). Separate
+  // from Company.claimVerifiedAt (Profile Claims). Migration 20261126000004.
+  verifiedEmployerOrgKeys String[] @default([]) @map("verified_employer_org_keys")
 
   // ── Relations ──
   employerJobs         EmployerJob[]
@@ -2039,6 +2070,30 @@ model ShortLinkClick {
   // campaign yet?" — without this index the lookup full-scans the table.
   @@index([recipientLeadId, createdAt])
   @@map("shortlink_clicks")
+}
+
+/// One time a job was posted to a social platform or forum, logged by hand
+/// from the admin social kit (/admin/social-kit). Clicks on those posts are
+/// in shortlink_clicks under campaign 'organic-paid-jobs'; this table records
+/// where and when each post went out, so the operator can see what has been
+/// posted on which platform and spread posts across the week. Created by
+/// migration 20261126000002_add_social_post_logs; row level security on
+/// (20261126000003_social_post_logs_rls).
+model SocialPostLog {
+  id       String   @id @default(cuid())
+  jobId    String   @map("job_id")
+  /// linkedin | facebook | reddit | x | forum (SocialPlatform in lib/social-kit/types.ts)
+  platform String   @db.VarChar(16)
+  /// Where it went: a group, subreddit, page or forum name. Optional.
+  venue    String?  @db.VarChar(120)
+  /// Link to the live post, when the operator pasted one.
+  postUrl  String?  @map("post_url") @db.VarChar(500)
+  postedAt DateTime @default(now()) @map("posted_at")
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, platform, postedAt])
+  @@index([postedAt])
+  @@map("social_post_logs")
 }
 
 // ─── Assistant connectors (MCP + OAuth 2.1) ─────────────────────────────────

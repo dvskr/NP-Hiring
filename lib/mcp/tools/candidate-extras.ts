@@ -7,6 +7,7 @@ import {
   jobAlertsForEmailWhere,
 } from '@/lib/job-alerts/delete-alert';
 import type { GatedSalary } from '@/lib/salary-analytics';
+import { copiesWithVisibleTwinWhere } from '@/lib/paid-post-twin-lookup';
 import type {
   ApplicantProfileSummary,
   FactRow,
@@ -252,6 +253,11 @@ const SAVED_JOBS_MAX = 30;
 /**
  * The open job each saved id leads to, keyed by the saved id, by the
  * live-job rule every tool uses. An id with no entry has closed.
+ *
+ * For ids that missed, a second read finds the paid post standing in for a
+ * free copy (lib/paid-post-twin-lookup.ts): the copy is hidden and its URL
+ * redirects to that post, so a role saved before the copy was marked is
+ * still open. The second read runs only when the first one misses.
  */
 async function openJobsBySavedId(savedIds: readonly string[]): Promise<Map<string, JobCardRow>> {
   if (savedIds.length === 0) return new Map();
@@ -259,7 +265,15 @@ async function openJobsBySavedId(savedIds: readonly string[]): Promise<Map<strin
     where: { AND: [liveJobWhere(), { id: { in: [...savedIds] } }] },
     select: JOB_CARD_SELECT,
   });
-  return new Map(open.map((job) => [job.id, job] as const));
+  const bySavedId = new Map(open.map((job) => [job.id, job] as const));
+  const missing = savedIds.filter((id) => !bySavedId.has(id));
+  if (missing.length === 0) return bySavedId;
+  const copies = await prisma.job.findMany({
+    where: copiesWithVisibleTwinWhere(missing),
+    select: { id: true, shadowedBy: { select: JOB_CARD_SELECT } },
+  });
+  const standIns = copies.flatMap((copy) => (copy.shadowedBy ? [[copy.id, copy.shadowedBy] as const] : []));
+  return new Map([...bySavedId, ...standIns]);
 }
 
 function savedJobLine(index: number, job: JobCard): string {

@@ -567,7 +567,10 @@ test.describe('admin mutations (local only)', () => {
     const prisma = db();
     await prisma.job.update({
       where: { id: seeds.jobId },
-      data: { title: seeds.jobTitle, isPublished: seeds.jobWasPublished, companyId: seeds.jobPrevCompanyId },
+      // adminHoldAt: an admin unpublish places a hold (lib/admin/job-hold.ts)
+      // that the employer journeys' toggle would answer with 403, should a
+      // test stop between its unpublish and its republish.
+      data: { title: seeds.jobTitle, isPublished: seeds.jobWasPublished, companyId: seeds.jobPrevCompanyId, adminHoldAt: null },
     }).catch(() => undefined);
     await prisma.companyClaim.deleteMany({ where: { companyId: seeds.companyId } }).catch(() => undefined);
     await prisma.company.delete({ where: { id: seeds.companyId } }).catch(() => undefined);
@@ -1335,21 +1338,26 @@ test.describe('admin API hardening (local only)', () => {
     expect.soft([400, 422], `profileVisible:'no' answered ${badFlag.status()} — expected validation 400, not Prisma 500`).toContain(badFlag.status());
   });
 
-  test('rate limit parity: admin routes that omit the request argument still throttle at 20/min', async ({ request }) => {
+  test('rate limit parity: every admin route throttles a burst from one address', async ({ request }) => {
+    // lib/auth/require-api-admin.ts charges RATE_LIMITS.adminIp (120 a minute
+    // per address) before the session is read, then RATE_LIMITS.admin (60 a
+    // minute per admin per route group). A burst one past the address guard
+    // meets a 429 whether this request context is signed in or not.
+    const BURST = 123;
     const burst = async (url: string, ip: string): Promise<number[]> => {
       const out: number[] = [];
-      for (let i = 0; i < 23; i += 1) {
+      for (let i = 0; i < BURST; i += 1) {
         const res = await request.get(url, { headers: { 'x-forwarded-for': ip } });
         out.push(res.status());
       }
       return out;
     };
     const jobs = await burst('/api/admin/jobs', nextIp());
-    test.skip(!jobs.includes(429), `limiter never fired on /api/admin/jobs (${[...new Set(jobs)].join(',')}) — no rate-limit backend in this environment`);
+    test.skip(!jobs.includes(429), `limiter never fired on /api/admin/jobs (${[...new Set(jobs)].join(',')}): no rate-limit backend in this environment`);
     const health = await burst('/api/admin/health', nextIp());
     expect(
       health,
-      '/api/admin/health (and email/*, pipeline-flow) call requireApiAdmin() without the request, so RATE_LIMITS.admin is never applied to them',
+      '/api/admin/health (and email/*, pipeline-flow) must hand the request to requireApiAdmin, or the admin limits never apply to them',
     ).toContain(429);
   });
 

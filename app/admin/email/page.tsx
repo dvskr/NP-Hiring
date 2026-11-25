@@ -47,13 +47,26 @@ const btnDanger: React.CSSProperties = {
 };
 
 const AUDIENCE_LABELS: Record<Audience, string> = {
-    all: '📧 All Users (Accounts + Subscribers)',
-    job_seekers: '🔍 Job Seekers',
-    employers: '🏢 Employers',
-    subscribers: '🔔 All Email Subscribers',
-    newsletter: '📰 Newsletter Opt-Ins',
-    custom: '✏️ Custom Email List',
+    all: 'All Users (Accounts and Subscribers)',
+    job_seekers: 'Job Seekers',
+    employers: 'Employers',
+    subscribers: 'All Email Subscribers',
+    newsletter: 'Newsletter Opt-Ins',
+    custom: 'Custom Email List',
 };
+
+/**
+ * What a named audience leaves out, shown under its count. The count comes
+ * from the same list the send builds, so these are the people who will not
+ * get the email.
+ */
+function audienceNote(audience: Audience): string | null {
+    if (audience === 'custom') return null;
+    if (audience === 'subscribers' || audience === 'all') {
+        return 'Unsubscribed and suppressed addresses are left out, and so are mailing list entries that were added automatically and never signed up, unless they opted into the newsletter or have a job alert.';
+    }
+    return 'Unsubscribed and suppressed addresses are left out.';
+}
 
 const MERGE_TAGS = [
     { tag: '{{firstName}}', label: 'First Name', example: 'Sarah' },
@@ -102,6 +115,7 @@ export default function AdminEmailPage() {
     // ── History state ──
     const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [resumingId, setResumingId] = useState<string | null>(null);
 
     // ── Templates state ──
     const [templates, setTemplates] = useState<Template[]>([]);
@@ -210,6 +224,9 @@ export default function AdminEmailPage() {
                     body,
                     audience: 'custom',
                     customEmails: [adminEmail], // the signed-in admin's own email
+                    // A test send renders like a real broadcast but is not
+                    // recorded as one: it stays out of History and its counts.
+                    isTest: true,
                 }),
             });
             const data = await res.json();
@@ -229,6 +246,26 @@ export default function AdminEmailPage() {
         } catch { /* silent */ }
         finally { setLoadingHistory(false); }
     }, []);
+
+    // ── Resume a broadcast that stopped partway ──
+    // The server decides: it refuses while a sender may still be live and
+    // hands the broadcast to the background sender otherwise. Only recipients
+    // still waiting are sent; nobody already mailed is mailed again.
+    const handleResume = async (broadcastId: string) => {
+        setResumingId(broadcastId);
+        try {
+            const res = await fetch('/api/admin/email/resume', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ broadcastId }),
+            });
+            const data = await res.json();
+            if (data.success) showMsg(data.message || 'Broadcast resumed.');
+            else showMsg(data.error || 'Resume failed', true);
+        } catch { showMsg('Resume failed', true); }
+        finally { setResumingId(null); }
+        fetchHistory();
+    };
 
     // ── Templates ──
     const fetchTemplates = useCallback(async () => {
@@ -420,6 +457,11 @@ export default function AdminEmailPage() {
                                             {audienceInfo.count.toLocaleString()}
                                         </div>
                                         <div style={muted}>recipients</div>
+                                        {audienceNote(audience) && (
+                                            <div style={{ ...muted, marginTop: '6px', lineHeight: '1.5' }}>
+                                                {audienceNote(audience)}
+                                            </div>
+                                        )}
                                         {audienceInfo.sample.length > 0 && (
                                             <div style={{ marginTop: '8px', borderTop: '1px solid #E8ECF0', paddingTop: '8px' }}>
                                                 <div style={{ ...muted, fontWeight: 600, marginBottom: '4px' }}>Sample:</div>
@@ -473,7 +515,7 @@ export default function AdminEmailPage() {
                         onClick={e => e.stopPropagation()}
                     >
                         <div style={{ padding: '16px 20px', backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8ECF0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ ...heading, fontSize: '14px' }}>📧 Email Preview</span>
+                            <span style={{ ...heading, fontSize: '14px' }}>Email Preview</span>
                             <button onClick={() => setPreviewHtml(null)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '18px' }}>✕</button>
                         </div>
                         <iframe
@@ -553,8 +595,18 @@ export default function AdminEmailPage() {
                                         <td style={{ padding: '14px 16px', fontSize: '13px', color: b.failedCount > 0 ? '#EF4444' : '#94A3B8', fontWeight: 600, borderBottom: '1px solid #E8ECF0', textAlign: 'right' }}>
                                             {b.failedCount}
                                         </td>
-                                        <td style={{ padding: '14px 16px', borderBottom: '1px solid #E8ECF0' }}>
+                                        <td style={{ padding: '14px 16px', borderBottom: '1px solid #E8ECF0', whiteSpace: 'nowrap' }}>
                                             {statusBadge(b.status)}
+                                            {b.status === 'sending' && (
+                                                <button
+                                                    onClick={() => handleResume(b.id)}
+                                                    disabled={resumingId !== null}
+                                                    title="Continue a broadcast that stopped partway. Recipients already mailed are not mailed again."
+                                                    style={{ ...btnSecondary, padding: '4px 10px', marginLeft: '8px', opacity: resumingId !== null ? 0.5 : 1 }}
+                                                >
+                                                    {resumingId === b.id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : null} Resume
+                                                </button>
+                                            )}
                                         </td>
                                         <td style={{ padding: '14px 16px', fontSize: '12px', color: '#94A3B8', borderBottom: '1px solid #E8ECF0', whiteSpace: 'nowrap' }}>
                                             {formatCT(b.sentAt || b.createdAt)}

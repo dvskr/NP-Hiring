@@ -1050,6 +1050,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         isPublished: true,
         isManuallyUnpublished: false,
         archivedAt: null,
+        // A free copy of a confirmed employer's live paid post redirects to
+        // that post (lib/paid-post-twins.ts); the widget lists the post only.
+        shadowedByJobId: null,
         AND: [
           // State match — check both stateCode + state columns and the
           // full state name, mirroring /jobs page filter logic

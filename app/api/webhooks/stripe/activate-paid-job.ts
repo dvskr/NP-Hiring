@@ -16,7 +16,9 @@
  * runs the side effects (publish, JobCharge, confirmation email); every other
  * caller gets 'already_active' and does nothing. The publish flip happens
  * AFTER the claim so a refunded/disputed posting can never be silently
- * re-published by a late verify-page hit or a sweep run.
+ * re-published by a late verify-page hit or a sweep run, and in the same
+ * transaction (claimAndPublish), so a publish that fails rolls the claim
+ * back: the row is 'pending' again for the retry, never paid and down.
  *
  * Archived postings: a pending post the employer archived while its checkout
  * was open is paid for and claimed as usual, but never published
@@ -24,10 +26,17 @@
  * listing is live" email and no search engine ping, and a warning names it
  * so the employer can be pointed to the restore. The result carries
  * leftArchived.
+ *
+ * Postings an admin took down (jobs.admin_hold_at, lib/admin/job-hold.ts): a
+ * payment never puts one live. It is claimed and ledgered as usual, so a
+ * refund is matched to it, but the publish carries adminHoldAt: null in its
+ * WHERE and matches nothing. The post stays down, gets no email and no ping,
+ * and an alert asks an operator to refund the payment or lift the hold. The
+ * result carries leftHeld.
  */
 
 import type Stripe from 'stripe';
-import type { Job } from '@prisma/client';
+import type { Job, Prisma } from '@prisma/client';
 import { after } from 'next/server';
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
@@ -38,6 +47,7 @@ import { logger } from '@/lib/logger';
 import { sendConfirmationEmail } from '@/lib/email-service';
 import { pingSearchEnginesForJobPage } from '@/lib/job-page-indexing';
 import { trackServerPurchase, type PurchaseParams } from '@/lib/analytics-server';
+import { alertWebhookFailure } from './webhook-support';
 
 /** How sendPurchaseEvent made sure the purchase POST leaves. Returned for tests. */
 export type PurchaseEventDelivery = 'after_response' | 'awaited';
@@ -128,6 +138,8 @@ export interface PaidJobActivationResult {
   jobId: string;
   /** Paid and claimed, but the post is archived and stays unpublished until the employer restores it. */
   leftArchived?: true;
+  /** Paid and claimed, but an admin took the post down and it stays down (lib/admin/job-hold.ts). */
+  leftHeld?: true;
 }
 
 function prismaErrorCode(err: unknown): string | undefined {
@@ -231,8 +243,8 @@ export async function detectIntroDoubleCharge(
 }
 
 /**
- * The claim was lost (P2025). Decide between a harmless replay and a SECOND
- * payment for one posting:
+ * The claim was lost (it moved no row). Decide between a harmless replay and
+ * a SECOND payment for one posting:
  *   - this session is already on the ledger → replay (webhook retry, verify
  *     page, sweep) — nothing to do;
  *   - the row is 'paid' and no OTHER new-post charge exists → the winner is
@@ -283,6 +295,44 @@ async function resolveLostClaim(
   return 'duplicate_payment';
 }
 
+/**
+ * Atomic claim: exactly one of {webhook, verify self-heal, sweep} flips
+ * pending → paid. The WHERE matches only a 'pending' row, so a count of 0
+ * means someone else already claimed it (or the row is refunded/disputed and
+ * must stay that way): false then. A write that matches no row raises no
+ * error, so nothing is thrown or caught inside the transaction.
+ */
+async function claimPendingRow(tx: Prisma.TransactionClient, employerJobId: string, paidTier: PaidTier): Promise<boolean> {
+  const { count } = await tx.employerJob.updateMany({
+    where: { id: employerJobId, paymentStatus: 'pending' },
+    data: { paymentStatus: 'paid', pricingTier: paidTier },
+  });
+  return count === 1;
+}
+
+/**
+ * The claim, then the publish, in one transaction; null when the claim was
+ * lost. Committed apart, a publish that failed after the claim left a paid
+ * posting down for good: Stripe's retry lost the claim (the row was 'paid'
+ * by then), and resolveLostClaim answers 'already_active' without
+ * publishing. Rolled back together, the row is 'pending' again, and the
+ * retry, the verify page or the daily sweep runs the whole activation. A
+ * post archived or taken down by an admin is still claimed: its publish
+ * matches nothing (publishUnlessArchived) and the claim commits alone. Both
+ * writes count the rows they matched, so only a real failure throws, and it
+ * rolls both back.
+ */
+async function claimAndPublish(
+  employerJobId: string,
+  jobId: string,
+  paidTier: PaidTier,
+): Promise<{ job: Job; published: boolean } | null> {
+  return prisma.$transaction(async (tx) => {
+    if (!(await claimPendingRow(tx, employerJobId, paidTier))) return null;
+    return publishUnlessArchived(tx, jobId);
+  });
+}
+
 export async function activatePaidJobCheckout(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
@@ -315,27 +365,17 @@ export async function activatePaidJobCheckout(
   const paidTier = asPaidTier(session.metadata?.pricing);
   const fallbackAmountCents = config.priceCentsForTier(paidTier);
 
-  // Atomic claim: exactly one of {webhook, verify self-heal, sweep} flips
-  // pending → paid. Prisma ≥5 allows non-unique filters in `update` where;
-  // P2025 = no row matched = someone else already claimed it (or the row is
-  // refunded/disputed and must stay that way).
-  try {
-    await prisma.employerJob.update({
-      where: { id: employerJob.id, paymentStatus: 'pending' },
-      data: { paymentStatus: 'paid', pricingTier: paidTier },
-    });
-  } catch (claimErr) {
-    if (prismaErrorCode(claimErr) === 'P2025') {
-      const outcome = await resolveLostClaim(stripe, session, employerJob.id, jobId);
-      return { outcome, jobId };
-    }
-    throw claimErr;
+  // Claim, then publish, in one transaction (claimAndPublish): a refunded or
+  // disputed row is never claimed, so never published, and an archived one
+  // is never put live (publishUnlessArchived).
+  const activation = await claimAndPublish(employerJob.id, jobId, paidTier);
+  if (!activation) {
+    const outcome = await resolveLostClaim(stripe, session, employerJob.id, jobId);
+    return { outcome, jobId };
   }
-
-  // Publish AFTER winning the claim — republish on webhook retry is
-  // idempotent, but a refunded/disputed row never reaches this line, and an
-  // archived one is never put live (publishUnlessArchived).
-  const { job, published } = await publishUnlessArchived(jobId);
+  const { job, published } = activation;
+  // Left down: archived, or taken down by an admin. The row read back says which.
+  const leftHeld = !published && !!job.adminHoldAt;
 
   // Audit #2: record JobCharge for the new-post payment.
   // Audit #28: also persist payment_intent so the refund webhook can
@@ -412,6 +452,8 @@ export async function activatePaidJobCheckout(
       logger.error('Failed to send confirmation email', emailError, { jobId });
       // Don't throw - job already activated
     }
+  } else if (leftHeld) {
+    await alertHeldPayment(session, jobId, employerJob.id);
   } else {
     logger.warn('[Stripe] New post paid after it was archived: payment recorded, the post stays unpublished and archived until the employer restores it', {
       jobId,
@@ -468,33 +510,60 @@ export async function activatePaidJobCheckout(
 
   // The 'new' charge is still not on the ledger: rethrown last (see above).
   if (ledgerError !== null) throw ledgerError;
-  return { outcome: 'activated', jobId, ...(!published && { leftArchived: true as const }) };
+  return {
+    outcome: 'activated',
+    jobId,
+    ...(!published && (leftHeld ? { leftHeld: true as const } : { leftArchived: true as const })),
+  };
+}
+
+/**
+ * A new post paid while an admin hold is on it (lib/admin/job-hold.ts): it is
+ * claimed and ledgered, and it stays down. Money is held for a post nobody
+ * can see, so this reaches a human: refund it, or publish the post from the
+ * admin jobs page, which lifts the hold.
+ */
+async function alertHeldPayment(session: Stripe.Checkout.Session, jobId: string, employerJobId: string): Promise<void> {
+  const extras = {
+    paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : undefined,
+    amountCents: session.amount_total ?? undefined,
+    jobId,
+    employerJobId,
+    sessionId: session.id,
+    action: 'Refund this payment in full in Stripe, or publish the posting from the admin jobs page to lift the hold.',
+  };
+  logger.error('[Stripe] New post paid while an admin hold is on it: payment recorded, the post stays down', undefined, extras);
+  await alertWebhookFailure('New post paid while an admin hold is on it, refund it or lift the hold', null, extras);
 }
 
 /**
  * Put the paid post live, unless it was archived while its checkout was
  * open: the dashboard requires a restore before any republish, and the
- * chargeback-won path in ./route.ts skips archived rows the same way. The
- * archived check sits in the WHERE of the publish itself, so an archive
- * landing at the same moment cannot be overtaken. When the publish matches
- * nothing (Prisma P2025, as for the claim above), the post keeps isPublished
- * false and gets only the verified flag its paid listing earns, which a
- * restore and republish then shows. A job row that is gone fails that
- * second write too, and the error reaches the caller as before.
+ * chargeback-won path in ./job-charge-refunds.ts skips archived rows the same way. Nor
+ * when an admin took it down (lib/admin/job-hold.ts). Both checks sit in the
+ * WHERE of the publish itself, so an archive or a takedown landing at the
+ * same moment cannot be overtaken. A publish that matches no row (count 0)
+ * leaves isPublished false and writes nothing else. The row is read back
+ * either way, for the caller: its adminHoldAt tells a takedown from an
+ * archive. A job row that is gone is an error, and rolls the claim back
+ * with it.
+ *
+ * Runs on the claim's transaction client (claimAndPublish): the publish
+ * commits with the claim or not at all.
+ *
+ * Neither path sets isVerifiedEmployer: paying never confirms who the
+ * employer is. lib/paid-post-twins-sync.ts gives the "Verified employer"
+ * check to posts of accounts confirmed at /admin/verify-employers.
  */
-async function publishUnlessArchived(jobId: string): Promise<{ job: Job; published: boolean }> {
-  try {
-    // contentChangedAt: the posting goes public now, so its content is new
-    // now (sitemap lastmod, the page's "Last updated"; indexing audit
-    // fixSoon 5). Only the claim winner reaches this write, once per payment.
-    const job = await prisma.job.update({
-      where: { id: jobId, archivedAt: null },
-      data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: new Date() },
-    });
-    return { job, published: true };
-  } catch (publishErr) {
-    if (prismaErrorCode(publishErr) !== 'P2025') throw publishErr;
-    const job = await prisma.job.update({ where: { id: jobId }, data: { isVerifiedEmployer: true } });
-    return { job, published: false };
-  }
+async function publishUnlessArchived(tx: Prisma.TransactionClient, jobId: string): Promise<{ job: Job; published: boolean }> {
+  // contentChangedAt: the posting goes public now, so its content is new
+  // now (sitemap lastmod, the page's "Last updated"; indexing audit
+  // fixSoon 5). Only the claim winner reaches this write, once per payment.
+  const { count } = await tx.job.updateMany({
+    where: { id: jobId, archivedAt: null, adminHoldAt: null },
+    data: { isPublished: true, contentChangedAt: new Date() },
+  });
+  const job = await tx.job.findUnique({ where: { id: jobId } });
+  if (!job) throw new Error(`Job ${jobId} is gone, so its paid checkout cannot be activated`);
+  return { job, published: count === 1 };
 }

@@ -41,7 +41,7 @@ export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
-    // requireApiAdmin also applies the admin rate limit (20/min per IP).
+    // requireApiAdmin also applies the admin rate limits (lib/auth/require-api-admin.ts).
     const authError = await requireApiAdmin(request);
     if (authError) return authError;
 

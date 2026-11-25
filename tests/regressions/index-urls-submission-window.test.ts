@@ -68,6 +68,8 @@ interface JobRow extends MemoryRow {
     isPublished: boolean;
     expiresAt: Date | null;
     healthConsecutiveMissing: number;
+    /** Set on a free copy of a live paid post, which activeIndexableJobWhere hides. */
+    shadowedByJobId: string | null;
     city: string | null;
     state: string | null;
     stateCode: string | null;
@@ -94,7 +96,7 @@ let runs: RunRow[] = [];
 
 const COLUMNS: ReadonlySet<string> = new Set([
     'id', 'title', 'slug', 'employer', 'description', 'professionClass', 'isPublished', 'expiresAt',
-    'healthConsecutiveMissing', 'city', 'state', 'stateCode', 'location', 'mode', 'country', 'isRemote', 'isHybrid', 'createdAt',
+    'healthConsecutiveMissing', 'shadowedByJobId', 'city', 'state', 'stateCode', 'location', 'mode', 'country', 'isRemote', 'isHybrid', 'createdAt',
     'contentChangedAt', 'updatedAt',
 ]);
 
@@ -171,6 +173,7 @@ function job(i: number, createdAt: Date, overrides: Partial<JobRow> = {}): JobRo
         isPublished: true,
         expiresAt: at(30 * DAY),
         healthConsecutiveMissing: 0,
+        shadowedByJobId: null,
         city: 'Austin',
         state: 'Texas',
         stateCode: 'TX',
@@ -386,6 +389,14 @@ describe('index-urls submits only pages that answer 200 with valid JobPosting', 
             job(12, created, { healthConsecutiveMissing: DEAD_LINK_MISS_THRESHOLD }),
             job(13, created, { professionClass: 'physician', title: 'Psychiatrist' }),
         ];
+
+        expect((await runCron(NOW)).submitted).toEqual([urlOf(live)]);
+    });
+
+    it('leaves out a free copy of a live paid post, whose URL redirects to that post', async () => {
+        const created = at(-2 * HOUR);
+        const live = job(1, created);
+        jobs = [live, job(19, created, { shadowedByJobId: live.id })];
 
         expect((await runCron(NOW)).submitted).toEqual([urlOf(live)]);
     });

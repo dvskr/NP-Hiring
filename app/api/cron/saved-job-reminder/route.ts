@@ -4,6 +4,8 @@ import { sendSavedJobReminderEmail } from '@/lib/email-service'
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
+import { isOutboundPaused } from '@/lib/outbound-kill-switch';
+import { outboundPausedRun } from '@/lib/cron/outbound-pause';
 
 export const maxDuration = 120 // 2 minutes — saved job reminder emails
 
@@ -13,6 +15,12 @@ export async function GET(request: NextRequest) {
 
     try {
         return await withCronTracking('saved-job-reminder', async () => {
+        // Emergency brake (lib/outbound-kill-switch.ts), checked before the
+        // eligibility scan so the pause costs nothing while it is engaged, and
+        // first in the tracked run so it is recorded as a run that sent
+        // nothing (lib/cron/outbound-pause.ts).
+        if (isOutboundPaused()) return outboundPausedRun()
+
         // Find saved jobs that are 3+ days old (user hasn't applied)
         const threeDaysAgo = new Date()
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)

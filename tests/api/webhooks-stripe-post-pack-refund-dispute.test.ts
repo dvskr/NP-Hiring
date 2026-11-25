@@ -198,7 +198,7 @@ describe('a chargeback', () => {
         }));
         expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['ej-1'] }, paymentStatus: 'disputed' }, data: { paymentStatus: 'pack' } });
         expect(prisma.job.updateMany).toHaveBeenCalledWith({
-            where: { id: { in: ['job-1'] }, archivedAt: null, employerJobs: { postPackId: 'pack-1', paymentStatus: 'disputed' } },
+            where: { id: { in: ['job-1'] }, archivedAt: null, adminHoldAt: null, employerJobs: { postPackId: 'pack-1', paymentStatus: 'disputed' } },
             data: { isPublished: true, contentChangedAt: NOW },
         });
         expect(alerts()).toContain('dispute won');

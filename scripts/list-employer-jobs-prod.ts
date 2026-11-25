@@ -18,8 +18,9 @@ import { formatSalary } from '@/lib/utils';
 // script because dotenv hasn't injected DATABASE_URL by the time ESM
 // imports are hoisted).
 import { ACTIVE_CAMPAIGN } from '@/lib/shortlinks/campaigns';
+import { brand } from '@/config/brand';
 
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
 // Resolve a job's slug to its /r/f<id> short code (Facebook platform).
 // Falls back to the bare /jobs/<slug> URL if the job isn't in the active

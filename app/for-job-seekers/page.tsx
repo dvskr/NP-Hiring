@@ -71,8 +71,10 @@ async function getStats() {
   try {
     const [site, remoteJobs, stateCount] = await Promise.all([
       getSiteStats(),
-      prisma.job.count({ where: { isPublished: true, isRemote: true } }),
-      prisma.job.groupBy({ by: ['state'], where: { isPublished: true, state: { not: null } } }).then(r => r.length),
+      // shadowedByJobId: a free copy of a live paid post is that post's
+      // opening, not another one (lib/paid-post-twins.ts).
+      prisma.job.count({ where: { isPublished: true, shadowedByJobId: null, isRemote: true } }),
+      prisma.job.groupBy({ by: ['state'], where: { isPublished: true, shadowedByJobId: null, state: { not: null } } }).then(r => r.length),
     ]);
     return { totalJobs: site.totalJobs, remoteJobs, stateCount, totalCompanies: site.totalCompanies };
   } catch {

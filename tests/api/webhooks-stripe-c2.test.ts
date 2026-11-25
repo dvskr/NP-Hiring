@@ -61,6 +61,8 @@ describe('Stripe webhook C2 — idempotency rollback', () => {
         vi.clearAllMocks();
         process.env.STRIPE_SECRET_KEY = 'sk_test_x';
         process.env.STRIPE_WEBHOOK_SECRET = 'whsec_x';
+        // The activation's claim and publish run in one transaction (claimAndPublish), on the client itself here.
+        vi.mocked(prisma.$transaction).mockImplementation(((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
     });
 
     it('deletes dedupe row when EmployerJob is missing (new-post)', async () => {
@@ -79,9 +81,14 @@ describe('Stripe webhook C2 — idempotency rollback', () => {
         expect(prisma.processedStripeEvent.delete).toHaveBeenCalledWith({ where: { eventId: 'evt_1' } });
     });
 
-    it('deletes dedupe row when prisma.job.update throws', async () => {
+    it('deletes dedupe row when the publish write throws', async () => {
         vi.mocked(prisma.processedStripeEvent.create).mockResolvedValue({} as never);
-        vi.mocked(prisma.job.update).mockRejectedValue(new Error('db boom'));
+        // The row is found and claimed, so the failing write is the publish itself.
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+            id: 'ej2', jobId: 'job2', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: null,
+        } as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
+        vi.mocked(prisma.job.updateMany).mockRejectedValue(new Error('db boom'));
 
         const { POST } = await import('@/app/api/webhooks/stripe/route');
         const res = await POST(makeRequest({
@@ -92,15 +99,19 @@ describe('Stripe webhook C2 — idempotency rollback', () => {
 
         expect(res.status).toBe(500);
         expect(prisma.processedStripeEvent.delete).toHaveBeenCalledWith({ where: { eventId: 'evt_2' } });
+        // The publish failed inside the claim's transaction, so nothing after it ran.
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(prisma.jobCharge.create).not.toHaveBeenCalled();
     });
 
     it('does NOT delete dedupe when handler returns success', async () => {
         vi.mocked(prisma.processedStripeEvent.create).mockResolvedValue({} as never);
-        vi.mocked(prisma.job.update).mockResolvedValue({ id: 'job3', title: 't', slug: 'slug-job3' } as never);
+        vi.mocked(prisma.job.updateMany).mockResolvedValue({ count: 1 } as never);
+        vi.mocked(prisma.job.findUnique).mockResolvedValue({ id: 'job3', title: 't', slug: 'slug-job3', adminHoldAt: null } as never);
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
             id: 'ej3', contactEmail: 'x@y.com', dashboardToken: 'tok',
         } as never);
-        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
         vi.mocked(prisma.jobCharge.create).mockResolvedValue({} as never);
         vi.mocked(prisma.emailLead.findUnique).mockResolvedValue({ unsubscribeToken: 'utok' } as never);
 
@@ -131,7 +142,7 @@ describe('Stripe webhook C2 — idempotency rollback', () => {
         expect(res.status).toBe(200);
         expect(json.deduped).toBe(true);
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
-        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
     });
 
     it('reclaims a stale processing claim left by a delivery that died mid-flight, and processes the retry', async () => {
@@ -188,6 +199,8 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
         process.env.STRIPE_SECRET_KEY = 'sk_test_x';
         process.env.STRIPE_WEBHOOK_SECRET = 'whsec_x';
         vi.mocked(prisma.processedStripeEvent.create).mockResolvedValue({} as never);
+        // The activation's claim and publish run in one transaction (claimAndPublish), on the client itself here.
+        vi.mocked(prisma.$transaction).mockImplementation(((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
     });
 
     it('defers an UNPAID completed session: nothing published, nothing ledgered, 200', async () => {
@@ -201,8 +214,8 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
         expect(res.status).toBe(200);
         expect((await res.json()).deferred).toBe(true);
         expect(prisma.employerJob.findFirst).not.toHaveBeenCalled();
-        expect(prisma.employerJob.update).not.toHaveBeenCalled();
-        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
         expect(prisma.jobCharge.create).not.toHaveBeenCalled();
     });
 
@@ -221,8 +234,9 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
 
     it('fulfils on checkout.session.async_payment_succeeded through the same activation path', async () => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejA', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: null } as never);
-        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
-        vi.mocked(prisma.job.update).mockResolvedValue({ id: 'jobA', title: 't', slug: null } as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
+        vi.mocked(prisma.job.updateMany).mockResolvedValue({ count: 1 } as never);
+        vi.mocked(prisma.job.findUnique).mockResolvedValue({ id: 'jobA', title: 't', slug: null, adminHoldAt: null } as never);
         vi.mocked(prisma.jobCharge.create).mockResolvedValue({} as never);
         vi.mocked(prisma.jobDraft.deleteMany).mockResolvedValue({ count: 0 } as never);
 
@@ -234,12 +248,13 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
         }) as never);
 
         expect(res.status).toBe(200);
-        expect(prisma.employerJob.update).toHaveBeenCalledWith(expect.objectContaining({
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({
             where: { id: 'ejA', paymentStatus: 'pending' },
         }));
         // First publish stamps contentChangedAt (indexing audit fixSoon 5).
-        expect(prisma.job.update).toHaveBeenCalledWith(expect.objectContaining({
-            data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: expect.any(Date) },
+        // Payment sets no Verified employer check (lib/paid-post-twins-sync.ts).
+        expect(prisma.job.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+            data: { isPublished: true, contentChangedAt: expect.any(Date) },
         }));
         expect(prisma.jobCharge.create).toHaveBeenCalled();
     });
@@ -253,14 +268,15 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
         }) as never);
 
         expect(res.status).toBe(200);
-        expect(prisma.employerJob.update).not.toHaveBeenCalled();
-        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
         expect(JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls)).toContain('Delayed checkout payment failed');
     });
 
     it('a second payment for the same posting is ledgered, alerted and acknowledged (never silently swallowed)', async () => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejD', contactEmail: 'x@y.com', dashboardToken: 'tok' } as never);
-        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        // The claim moves no row: the posting is 'paid' already.
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
         vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([{ stripeSessionId: 'cs_first', type: 'new' }] as never);
         vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
@@ -279,12 +295,12 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
         }));
         expect(JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls)).toContain('second payment for one posting');
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
-        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
     });
 
     it('a second payment on a refunded posting is also ledgered and alerted', async () => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejX', contactEmail: 'x@y.com', dashboardToken: 'tok' } as never);
-        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'refunded' } as never);
         vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
         vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
@@ -304,7 +320,7 @@ describe('Stripe webhook — payment_status gate and delayed payment methods', (
 
     it('a same-session replay after activation stays a quiet no-op', async () => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejR', contactEmail: 'x@y.com', dashboardToken: 'tok' } as never);
-        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
         vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([{ stripeSessionId: 'cs_same', type: 'new' }] as never);
 
@@ -347,12 +363,15 @@ describe('Stripe webhook: the new-post ledger write', () => {
         process.env.STRIPE_WEBHOOK_SECRET = 'whsec_x';
         vi.mocked(prisma.processedStripeEvent.create).mockResolvedValue({} as never);
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejL', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: null } as never);
-        vi.mocked(prisma.job.update).mockResolvedValue({ id: 'jobL', title: 't', slug: null } as never);
+        vi.mocked(prisma.job.updateMany).mockResolvedValue({ count: 1 } as never);
+        vi.mocked(prisma.job.findUnique).mockResolvedValue({ id: 'jobL', title: 't', slug: null, adminHoldAt: null } as never);
         vi.mocked(prisma.jobDraft.deleteMany).mockResolvedValue({ count: 0 } as never);
+        // The claim and the publish run in one transaction (claimAndPublish), on the client itself here.
+        vi.mocked(prisma.$transaction).mockImplementation(((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
     });
 
     it('a failed write answers 500 and rolls the dedupe row back, so Stripe retries', async () => {
-        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
         vi.mocked(prisma.jobCharge.create).mockRejectedValue(new Error('connection reset'));
 
         const { POST } = await import('@/app/api/webhooks/stripe/route');
@@ -364,7 +383,7 @@ describe('Stripe webhook: the new-post ledger write', () => {
     });
 
     it('a duplicate write (P2002) means the charge is already recorded: 200, nothing rolled back', async () => {
-        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
         vi.mocked(prisma.jobCharge.create).mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
 
         const { POST } = await import('@/app/api/webhooks/stripe/route');
@@ -376,7 +395,7 @@ describe('Stripe webhook: the new-post ledger write', () => {
 
     it("Stripe's retry backfills the charge the failed write lost, and answers 200", async () => {
         // The first delivery claimed the row ('paid') and published it before the write failed.
-        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
         vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
         vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
@@ -395,7 +414,7 @@ describe('Stripe webhook: the new-post ledger write', () => {
 
     it('a failed write still runs the steps the retry never runs, then answers 500 (code review M3)', async () => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ejL', userId: 'user-L', contactEmail: 'x@y.com', dashboardToken: 'tok', quotaDomain: 'clinic.example' } as never);
-        vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
         vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
         vi.mocked(prisma.jobCharge.create).mockRejectedValue(new Error('connection reset'));
         const { sendConfirmationEmail } = await import('@/lib/email-service');
@@ -420,7 +439,7 @@ describe('Stripe webhook: the new-post ledger write', () => {
     });
 
     it("a retry whose backfill fails too answers 500 again: no payment is acknowledged without its ledger row (code review M3)", async () => {
-        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
         vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
         vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
@@ -434,7 +453,7 @@ describe('Stripe webhook: the new-post ledger write', () => {
     });
 
     it('a second payment whose ledger backfill fails answers 500 too, and is acknowledged only once it is on the ledger', async () => {
-        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
         vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([{ stripeSessionId: 'cs_first', type: 'new' }] as never);
         vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);
@@ -451,7 +470,7 @@ describe('Stripe webhook: the new-post ledger write', () => {
     });
 
     it('a backfill another path already wrote (P2002) is the charge on the ledger: 200', async () => {
-        vi.mocked(prisma.employerJob.update).mockRejectedValue(Object.assign(new Error('not found'), { code: 'P2025' }));
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
         vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ paymentStatus: 'paid' } as never);
         vi.mocked(prisma.jobCharge.findMany).mockResolvedValue([] as never);
         vi.mocked(prisma.jobCharge.findFirst).mockResolvedValue(null);

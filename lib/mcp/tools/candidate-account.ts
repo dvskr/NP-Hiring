@@ -174,11 +174,20 @@ export const unsaveJob = defineTool({
     const jobId = parseJobRef(args.job_id);
     if (!jobId) throw new UserFacingError(`That is not a ${BOARD_NAME} job id.`);
     // By the saved id itself, open or closed: a job that has closed since it
-    // was saved still comes off the list.
-    const { count } = await prisma.savedJob.deleteMany({ where: { userId: access.userId, jobId } });
+    // was saved still comes off the list. Saving a free copy's id stores the
+    // paid post it duplicates (save_job, lib/paid-post-twins.ts), so removing
+    // by the copy's id reaches that row as well. The other way round too: the
+    // website may have saved the copy itself, which list_saved_jobs shows as
+    // its paid post, so removing that post clears its copies' rows. Only this
+    // account's rows are ever in reach.
+    const live = await findPublicJob(jobId, { id: true });
+    const posts = [...new Set([jobId, ...(live ? [live.id] : [])])];
+    const copies = await prisma.job.findMany({ where: { shadowedByJobId: { in: posts } }, select: { id: true } });
+    const ids = [...new Set([...posts, ...copies.map((copy) => copy.id)])];
+    const { count } = await prisma.savedJob.deleteMany({ where: { userId: access.userId, jobId: { in: ids } } });
     return {
       text: count > 0 ? 'Removed from saved jobs.' : 'That job was not in the saved jobs.',
-      structured: { saved: false, jobId },
+      structured: { saved: false, jobId: live?.id ?? jobId },
     };
   },
 });

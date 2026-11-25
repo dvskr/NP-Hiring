@@ -8,73 +8,86 @@
  *
  * This helper accepts either:
  *   1. Bearer-token match against `CRON_SECRET` (Vercel cron path).
- *   2. An authenticated admin session (manual trigger path).
- *   3. In NODE_ENV=development, both are skipped.
+ *   2. An authenticated admin session (manual trigger path). A soft-deleted
+ *      admin is refused (lib/auth/admin-session.ts).
+ *   3. A checkout that has no CRON_SECRET to check against, in local
+ *      development only (see isUnauthenticatedCronAllowed).
  *
- * Returns null when authorized; otherwise a 401 NextResponse the caller
- * should return immediately.
+ * Returns null when authorized; otherwise a 401 or 403 NextResponse the
+ * caller should return immediately, or a 500 when the auth service failed.
  */
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
-import { createClient } from '@/lib/supabase/server';
-import { prisma } from '@/lib/prisma';
+import { createHash, timingSafeEqual } from 'crypto';
 import { logger } from '@/lib/logger';
+import { resolveAdminSession } from '@/lib/auth/admin-session';
 
 /**
- * B101: constant-time bearer comparison. A plain `===` on the header string
- * short-circuits at the first mismatching character, leaking how many
- * leading characters of CRON_SECRET matched (timing side-channel). The
- * byte-length gate leaks only the secret's length, which is standard and
- * acceptable (same pattern as app/api/blog/route.ts).
+ * The open door, and why it is this narrow.
+ *
+ * P5.A (2026-06-01) required NODE_ENV=development and no Vercel env, which
+ * still meant NODE_ENV alone decided it: any self-hosted deployment that runs
+ * with NODE_ENV=development served every cron route, the destructive purges
+ * included, to anonymous callers. NODE_ENV describes a build, not a trust
+ * boundary.
+ *
+ * A deployment that runs crons has a CRON_SECRET, so its presence is the
+ * signal that there is something to authenticate against: once it is set,
+ * the bearer token and an admin session are the only ways in, on every host.
+ * What is left open is a fresh local checkout with no secret configured,
+ * where there is no credential to present and nothing deployed to reach.
+ *
+ * Exported so the gate can be tested without standing up Supabase or Prisma.
  */
-function isValidCronBearer(authHeader: string | null, cronSecret: string): boolean {
-    if (!authHeader?.startsWith('Bearer ')) return false;
-    const provided = Buffer.from(authHeader.slice('Bearer '.length));
-    const expected = Buffer.from(cronSecret);
-    return provided.length === expected.length && timingSafeEqual(provided, expected);
+export function isUnauthenticatedCronAllowed(env: NodeJS.ProcessEnv = process.env): boolean {
+    return (
+        env.NODE_ENV === 'development' &&
+        !env.VERCEL &&
+        !env.VERCEL_ENV &&
+        !env.CRON_SECRET
+    );
+}
+
+/**
+ * B101: constant-time check of an Authorization header against
+ * `Bearer <secret>`. A plain `===` returns as soon as a character differs,
+ * which leaks how much of a guess was right to anyone timing the response.
+ * Both sides are hashed first, so the compared buffers always have the same
+ * length: timingSafeEqual never throws, and the secret's length does not
+ * leak either.
+ */
+function bearerMatches(authHeader: string, secret: string): boolean {
+    const given = createHash('sha256').update(authHeader).digest();
+    const expected = createHash('sha256').update(`Bearer ${secret}`).digest();
+    return timingSafeEqual(given, expected);
 }
 
 export async function verifyCronOrAdmin(req: Request): Promise<NextResponse | null> {
-    // P5.A fix (2026-06-01): the dev short-circuit was too broad. Vercel
-    // preview deployments and Next.js dev-server tests both set
-    // NODE_ENV !== 'production' (preview = "production" actually, but
-    // some tooling sets it to "development"), so the guard would silently
-    // skip auth in environments other than local dev. Tighten to "local
-    // CLI only" by also requiring no public deployment URL.
-    //
-    // Allowlist: NODE_ENV=development AND not running on Vercel.
-    if (
-        process.env.NODE_ENV === 'development' &&
-        !process.env.VERCEL &&
-        !process.env.VERCEL_ENV
-    ) {
+    if (isUnauthenticatedCronAllowed()) {
         return null;
     }
 
     // Fast path: Vercel cron's bearer token (constant-time compare, B101).
     const authHeader = req.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && isValidCronBearer(authHeader, cronSecret)) {
+    if (cronSecret && authHeader !== null && bearerMatches(authHeader, cronSecret)) {
         return null;
     }
 
     // Slow path: admin session via Supabase cookie.
     try {
-        const supabase = await createClient();
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
+        const session = await resolveAdminSession();
+        if (session.status === 'admin') return null;
+        if (session.status === 'signed_out') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const profile = await prisma.userProfile.findUnique({
-            where: { supabaseId: user.id },
-            select: { role: true },
-        });
-        if (profile?.role !== 'admin') {
+        if (session.status === 'not_admin') {
             return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
         }
-        return null;
+        logger.error('[verifyCronOrAdmin] the auth service did not answer', session.error);
+        return NextResponse.json(
+            { error: 'Authentication infrastructure failure' },
+            { status: 500 },
+        );
     } catch (err) {
         // H5 fix: previously the bare `catch {}` returned a generic 401,
         // making Supabase/Prisma infra failures invisible in observability.

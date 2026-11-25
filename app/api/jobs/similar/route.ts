@@ -36,6 +36,8 @@ export async function GET(req: NextRequest) {
         where: {
             id: { not: sourceJob.id },
             isPublished: true,
+            // Not a free copy of a live paid post (lib/paid-post-twins.ts).
+            shadowedByJobId: null,
             expiresAt: { gt: new Date() },
             OR: [
                 { mode: sourceJob.mode },

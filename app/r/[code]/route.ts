@@ -2,31 +2,40 @@ import { brand } from '@/config/brand'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
+import { runAfterResponse } from '@/lib/after-response'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import {
   identifyBot,
+  parseJobLinkCode,
   recordClick,
+  resolveJobLink,
   resolveShortlink,
 } from '@/lib/shortlinks'
+import type { JobLinkCode, ShortlinkResolution } from '@/lib/shortlinks'
 
 /**
  * Social-campaign short-link redirect.
  *
- *   /r/f3   → facebook click on job #3
- *   /r/i7   → instagram click on job #7
  *   /r/l0   → linkedin click on the "browse all" landing
+ *   /r/p2   → program director outreach, to /for-programs
+ *   /r/f3   → facebook click on catalog job #3 (lib/shortlinks/campaigns.ts;
+ *             this board's catalog lists none, so it goes to /jobs)
+ *   /r/l3f9a20c1 → linkedin click on the employer post whose job id starts
+ *                  3f9a20c1 (the admin social kit's per-job links)
  *
  * Pipeline per request:
  *   1. Validate code shape (zod) — reject obvious garbage with a 302 to /jobs
  *      so a typo never strands a user but also never enters the tracker.
  *   2. Rate-limit by IP. /r/ is a cheap 302 by design, but it's still an
  *      open endpoint and shouldn't be a free proxy.
- *   3. Resolve code → destination (pure, in-memory).
- *   4. Honor privacy signals (DNT / GPC / pmhnp_privacy_signal cookie):
+ *   3. Resolve code → destination: in memory for catalog codes, one small
+ *      employer_jobs lookup for per-job codes.
+ *   4. Skip HEAD probes and honor privacy signals (DNT / GPC / pmhnp_privacy_signal cookie):
  *      redirect but do NOT log.
  *   5. Classify bot — record with is_bot=true; do not dedup or rate-limit
  *      preview-fetch traffic separately (preview fetches are 1/share).
- *   6. Fire-and-forget tracker write. DB latency never blocks the redirect.
+ *   6. Tracker write scheduled with runAfterResponse, so DB latency never
+ *      blocks the redirect and the function is not frozen before it lands.
  *   7. 302 to the bare destination. The redirect itself sets X-Robots-Tag
  *      and Cache-Control so /r/ paths don't leak into search indexes.
  */
@@ -35,8 +44,10 @@ const PARAMS_SCHEMA = z.object({
   code: z
     .string()
     .min(1)
-    .max(8)
-    .regex(/^[A-Za-z][0-9]{1,4}$/, 'code must be <letter><digits>'),
+    .max(9)
+    // <letter><1 to 4 digits> for the catalog campaigns, <letter><8 hex> for
+    // the per-job links the admin social kit writes (lib/shortlinks/job-links.ts).
+    .regex(/^[A-Za-z](?:[0-9]{1,4}|[0-9A-Fa-f]{8})$/, 'code must be <letter><digits> or <letter><8 hex>'),
 })
 
 // Per-recipient attribution token. UUIDs (36 chars), cuids (~25 chars),
@@ -111,7 +122,12 @@ export async function GET(
   if (limited) return limited
 
   // ── 3. Resolve ────────────────────────────────────────────────────
-  const resolved = resolveShortlink(code, baseUrl)
+  // Catalog codes resolve in memory. Per-job codes need one small lookup,
+  // done after the rate limit so the endpoint cannot be used to hammer it.
+  const jobCode = parseJobLinkCode(code)
+  const resolved = jobCode
+    ? await resolveJobLinkSafely(jobCode, baseUrl, code)
+    : resolveShortlink(code, baseUrl)
   if (!resolved) {
     logger.warn('[shortlink] unresolved code', { code })
     return withRedirectHeaders(
@@ -119,7 +135,13 @@ export async function GET(
     )
   }
 
-  // ── 4. Privacy signals — redirect without logging ─────────────────
+  // ── 4. HEAD probes and privacy signals: redirect without logging ──
+  // Next.js answers HEAD with this GET handler. Nobody reads a page with
+  // HEAD: it is link checkers and scanners testing the URL, and recording
+  // them would count a click nobody made.
+  if (req.method === 'HEAD') {
+    return withRedirectHeaders(NextResponse.redirect(resolved.destination, 302))
+  }
   if (isPrivacyRespectingRequest(req)) {
     logger.debug('[shortlink] privacy signal — skipping tracker', {
       code,
@@ -137,18 +159,23 @@ export async function GET(
     null
   const bot = identifyBot(userAgent)
 
-  // ── 6. Fire-and-forget tracker ────────────────────────────────────
+  // ── 6. Tracker write after the response ───────────────────────────
+  // runAfterResponse keeps the function alive until the row lands, so the
+  // click counts (the admin social kit reads them) do not lose writes to a
+  // frozen function, and the redirect never waits on the database.
   const recipientLeadId = extractRecipientLeadId(req)
-  void recordClick({
-    resolution: resolved,
-    code,
-    bot,
-    ip: clientIpOf(req),
-    userAgent,
-    referer,
-    country,
-    recipientLeadId,
-  })
+  runAfterResponse('shortlink click write', () =>
+    recordClick({
+      resolution: resolved,
+      code,
+      bot,
+      ip: clientIpOf(req),
+      userAgent,
+      referer,
+      country,
+      recipientLeadId,
+    }),
+  )
 
   logger.info('[shortlink] click', {
     code,
@@ -163,4 +190,22 @@ export async function GET(
 
   // ── 7. Redirect ───────────────────────────────────────────────────
   return withRedirectHeaders(NextResponse.redirect(resolved.destination, 302))
+}
+
+/**
+ * A database error must not strand the person who clicked: treat it as an
+ * unknown code, which sends them to /jobs. The error is logged with its
+ * stack, so the failure is never silent.
+ */
+async function resolveJobLinkSafely(
+  jobCode: JobLinkCode,
+  baseUrl: string,
+  code: string,
+): Promise<ShortlinkResolution | null> {
+  try {
+    return await resolveJobLink(jobCode, baseUrl)
+  } catch (error) {
+    logger.error('[shortlink] job link lookup failed', error, { code })
+    return null
+  }
 }

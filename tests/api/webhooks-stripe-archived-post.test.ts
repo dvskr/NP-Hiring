@@ -3,7 +3,7 @@
  *
  * The dashboard requires a restore before any republish (toggle-publish 409s
  * an archived post), and the chargeback-won path in
- * app/api/webhooks/stripe/route.ts already skips archived rows. Two payment
+ * app/api/webhooks/stripe/job-charge-refunds.ts already skips archived rows. Two payment
  * paths could still publish one: a renewal paid for a post archived after
  * its checkout opened (app/api/webhooks/stripe/apply-renewal.ts), and a new
  * post's checkout paid after the pending post was archived
@@ -18,7 +18,8 @@
  *     either; the purchase event still goes out; a warning names the post;
  *   - new post: the claim and the ledger row happen as usual; the publish
  *     carries archivedAt: null in its WHERE, so the check and the write are
- *     one statement, and an archived post gets only the verified flag, no
+ *     one statement, and an archived post gets no other write (payment never
+ *     sets the Verified employer check, lib/paid-post-twins-sync.ts does), no
  *     "your listing is live" email and no ping;
  *   - a post that is not archived is published exactly as before.
  */
@@ -205,7 +206,8 @@ describe('a renewal paid for a post archived after its checkout opened', () => {
 
     await deliver('evt_renew_archived_order', RENEWAL_SESSION);
 
-    expect(tx.job.findUnique).toHaveBeenCalledWith({ where: { id: 'job1' }, select: { archivedAt: true } });
+    // The admin hold is read in the same statement (lib/admin/job-hold.ts).
+    expect(tx.job.findUnique).toHaveBeenCalledWith({ where: { id: 'job1' }, select: { archivedAt: true, adminHoldAt: true } });
     expect(tx.job.update.mock.invocationCallOrder[0]).toBeLessThan(tx.job.findUnique.mock.invocationCallOrder[0]);
     // Outside the transaction, only the read of the columns the renewal needs.
     expect(prisma.job.findUnique).toHaveBeenCalledTimes(1);
@@ -257,20 +259,26 @@ describe('a renewal paid for a post archived after its checkout opened', () => {
 });
 
 describe('a new post paid after it was archived while its checkout was open', () => {
-  /** The publish matches nothing while the post is archived (Prisma P2025), as the real WHERE would. */
+  /** The publish matches no row while the post is archived (count 0), as the real WHERE would. */
   function jobRow(archived: boolean) {
-    vi.mocked(prisma.job.update).mockImplementation((async (args: { where: Record<string, unknown> }) => {
-      if (archived && 'archivedAt' in args.where) {
-        throw Object.assign(new Error('No record was found for an update.'), { code: 'P2025' });
-      }
-      return { id: 'job2', title: 'Nurse Practitioner', slug: 'nurse-practitioner-job2' };
-    }) as never);
+    vi.mocked(prisma.job.updateMany).mockImplementation((async (args: { where: Record<string, unknown> }) => (
+      { count: archived && 'archivedAt' in args.where ? 0 : 1 }
+    )) as never);
+    // The row read back after the publish, for the caller.
+    vi.mocked(prisma.job.findUnique).mockResolvedValue(
+      { id: 'job2', title: 'Nurse Practitioner', slug: 'nurse-practitioner-job2' } as never,
+    );
   }
 
   beforeEach(() => {
     vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
       id: 'ej2', jobId: 'job2', paymentStatus: 'pending', contactEmail: 'owner@clinic.example', dashboardToken: 'tok', quotaDomain: null,
     } as never);
+    // The claim and the publish run in one transaction (claimAndPublish), on
+    // the client itself here: the renewal tests above left their own.
+    vi.mocked(prisma.$transaction).mockImplementation(((fn: (client: typeof prisma) => Promise<unknown>) => fn(prisma)) as never);
+    // The claim moves the pending row.
+    vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
   });
 
   it('claims and ledgers the payment, but leaves the post unpublished and archived', async () => {
@@ -280,19 +288,21 @@ describe('a new post paid after it was archived while its checkout was open', ()
 
     expect(res.status).toBe(200);
     expect(json).toEqual({ received: true, leftArchived: true });
-    expect(prisma.employerJob.update).toHaveBeenCalledWith({
+    expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({
       where: { id: 'ej2', paymentStatus: 'pending' },
       data: { paymentStatus: 'paid', pricingTier: 'pro' },
     });
-    const writes = vi.mocked(prisma.job.update).mock.calls.map(([args]) => args);
+    const writes = vi.mocked(prisma.job.updateMany).mock.calls.map(([args]) => args);
     // The publish carried the archived check in its WHERE and matched nothing...
     expect(writes[0]).toEqual({
-      where: { id: 'job2', archivedAt: null },
-      data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: expect.any(Date) },
+      where: { id: 'job2', archivedAt: null, adminHoldAt: null },
+      data: { isPublished: true, contentChangedAt: expect.any(Date) },
     });
-    // ...so the post got only the verified flag its paid listing earns.
-    expect(writes[1]).toEqual({ where: { id: 'job2' }, data: { isVerifiedEmployer: true } });
-    expect(writes).toHaveLength(2);
+    // ...so nothing else is written: the row is read back for the caller.
+    // Payment never sets the Verified employer check (lib/paid-post-twins-sync.ts).
+    expect(writes).toHaveLength(1);
+    expect(prisma.job.update).not.toHaveBeenCalled();
+    expect(prisma.job.findUnique).toHaveBeenCalledWith({ where: { id: 'job2' } });
     expect(prisma.jobCharge.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ stripeSessionId: 'cs_new_post', type: 'new', employerJobId: 'ej2' }),
     });
@@ -307,18 +317,19 @@ describe('a new post paid after it was archived while its checkout was open', ()
     expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
   });
 
-  it('a post that is not archived is published exactly as before, the check in the same statement', async () => {
+  it('a post that is not archived is published in one statement, without the Verified employer check', async () => {
     jobRow(false);
 
     const { res, json } = await deliver('evt_new_live', NEW_POST_SESSION);
 
     expect(res.status).toBe(200);
     expect(json).toEqual({ received: true });
-    expect(prisma.job.update).toHaveBeenCalledTimes(1);
-    expect(prisma.job.update).toHaveBeenCalledWith({
-      where: { id: 'job2', archivedAt: null },
-      data: { isPublished: true, isVerifiedEmployer: true, contentChangedAt: expect.any(Date) },
+    expect(prisma.job.updateMany).toHaveBeenCalledTimes(1);
+    expect(prisma.job.updateMany).toHaveBeenCalledWith({
+      where: { id: 'job2', archivedAt: null, adminHoldAt: null },
+      data: { isPublished: true, contentChangedAt: expect.any(Date) },
     });
+    expect(prisma.job.update).not.toHaveBeenCalled();
     expect(sendConfirmationEmail).toHaveBeenCalledTimes(1);
     expect(pingSearchEnginesForJobPage).toHaveBeenCalledTimes(1);
   });
@@ -333,7 +344,9 @@ describe('a new post paid after it was archived while its checkout was open', ()
   });
 
   it('a job row that is gone is still an error the webhook retries, not a post left archived', async () => {
-    vi.mocked(prisma.job.update).mockRejectedValue(Object.assign(new Error('No record was found for an update.'), { code: 'P2025' }));
+    // The publish matches no row, and the read back finds none.
+    vi.mocked(prisma.job.updateMany).mockResolvedValue({ count: 0 } as never);
+    vi.mocked(prisma.job.findUnique).mockResolvedValue(null as never);
 
     const { res } = await deliver('evt_new_gone', NEW_POST_SESSION);
 

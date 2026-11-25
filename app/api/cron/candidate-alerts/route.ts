@@ -10,6 +10,8 @@ import { getEmployerActivePostings } from '@/lib/tier-limits';
 import { talentPoolWhere } from '@/lib/candidate-pool';
 import { MAX_ALERT_SPECIALTIES, MAX_ALERT_STATES, splitAlertList } from '@/lib/candidate-alert-filters';
 import { brand } from '@/config/brand';
+import { isOutboundPaused } from '@/lib/outbound-kill-switch';
+import { outboundPausedRun } from '@/lib/cron/outbound-pause';
 
 export const maxDuration = 120; // 2 minutes — email sends to multiple employers
 
@@ -149,6 +151,12 @@ export async function GET(req: Request) {
 
     try {
         return await withCronTracking('candidate-alerts', async () => {
+        // Emergency brake (lib/outbound-kill-switch.ts), checked before the
+        // eligibility scan so the pause costs nothing while it is engaged, and
+        // first in the tracked run so it is recorded as a run that sent
+        // nothing (lib/cron/outbound-pause.ts).
+        if (isOutboundPaused()) return outboundPausedRun();
+
         // Get all active alerts
         const alerts = await loadActiveAlerts();
 

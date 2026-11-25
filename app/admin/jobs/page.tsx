@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatCT } from '@/lib/format-ct';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
-import { readApiError } from './api-feedback';
+import { adminFetch, type AdminFetchResult } from '@/lib/admin/admin-fetch';
+import AdminLoadError from '../_components/AdminLoadError';
+import { describeBulkResult } from './bulk-result';
 import {
   Search, ChevronLeft, ChevronRight, Eye, MousePointerClick,
   FileCheck, Trash2, Star, StarOff, Globe, GlobeLock,
@@ -22,6 +24,32 @@ interface AdminJob {
   expiresAt: string | null; applyLink: string;
 }
 interface SourceOption { source: string; count: number }
+
+interface JobsPayload { jobs?: AdminJob[]; total?: number; totalPages?: number; sources?: SourceOption[] }
+
+/** The filters a list read is for. */
+interface JobListQuery {
+  page: number; search: string; sourceFilter: string;
+  publishedFilter: string; featuredFilter: string; sortBy: string;
+}
+
+/** One string per set of filters, so the page can tell which list an answer belongs to. */
+function listKeyOf(query: JobListQuery): string {
+  return JSON.stringify([query.page, query.search, query.sourceFilter, query.publishedFilter, query.featuredFilter, query.sortBy]);
+}
+
+/** The list read for one set of filters. It sets no state: the page applies its answer (applyJobs). */
+function requestJobs(query: JobListQuery): Promise<AdminFetchResult<JobsPayload>> {
+  const params = new URLSearchParams();
+  params.set('page', query.page.toString());
+  params.set('limit', '25');
+  params.set('sort', query.sortBy);
+  if (query.search) params.set('search', query.search);
+  if (query.sourceFilter !== 'all') params.set('source', query.sourceFilter);
+  if (query.publishedFilter) params.set('published', query.publishedFilter);
+  if (query.featuredFilter) params.set('featured', query.featuredFilter);
+  return adminFetch<JobsPayload>(`/api/admin/jobs?${params.toString()}`);
+}
 
 /* ─── Shared styles ─── */
 const s = {
@@ -59,7 +87,6 @@ export default function AdminJobsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sources, setSources] = useState<SourceOption[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -80,35 +107,41 @@ export default function AdminJobsPage() {
 
   // Action feedback
   const [actionMsg, setActionMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  // A failed list load, kept until a load succeeds (actionMsg clears itself).
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const fetchJobs = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      params.set('page', page.toString());
-      params.set('limit', '25');
-      params.set('sort', sortBy);
-      if (search) params.set('search', search);
-      if (sourceFilter !== 'all') params.set('source', sourceFilter);
-      if (publishedFilter) params.set('published', publishedFilter);
-      if (featuredFilter) params.set('featured', featuredFilter);
+  // The list asked for by the filters on screen, and the last list that answered. The list
+  // is loading while they differ. Only an answer sets state, never the effect itself, and an
+  // effect's read that answers after its filters changed is dropped.
+  const listKey = listKeyOf({ page, search, sourceFilter, publishedFilter, featuredFilter, sortBy });
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const loading = loadedKey !== listKey;
 
-      const res = await fetch(`/api/admin/jobs?${params.toString()}`);
-      const data = await res.json();
-      if (data.success) {
-        setJobs(data.jobs);
-        setTotal(data.total);
-        setTotalPages(data.totalPages);
-        if (data.sources) setSources(data.sources);
-      }
-    } catch (err) {
-      console.error('Error fetching jobs:', err);
-    } finally {
-      setLoading(false);
+  const applyJobs = (result: AdminFetchResult<JobsPayload>, key: string) => {
+    if (result.ok) {
+      setJobs(result.data.jobs ?? []);
+      setTotal(result.data.total ?? 0);
+      setTotalPages(result.data.totalPages ?? 1);
+      if (result.data.sources) setSources(result.data.sources);
+      setLoadError(null);
+    } else {
+      setLoadError(result.error);
     }
+    setLoadedKey(key);
+  };
+
+  useEffect(() => {
+    let current = true;
+    const query = { page, search, sourceFilter, publishedFilter, featuredFilter, sortBy };
+    void requestJobs(query).then((result) => { if (current) applyJobs(result, listKeyOf(query)); });
+    return () => { current = false; };
   }, [page, search, sourceFilter, publishedFilter, featuredFilter, sortBy]);
 
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  // Reads the list on screen again (after an action, or a retry).
+  const refreshJobs = () => {
+    const query = { page, search, sourceFilter, publishedFilter, featuredFilter, sortBy };
+    void requestJobs(query).then((result) => applyJobs(result, listKeyOf(query)));
+  };
 
   // Debounced search
   const [searchInput, setSearchInput] = useState('');
@@ -119,33 +152,29 @@ export default function AdminJobsPage() {
 
   // Toggle helpers
   const toggleField = async (jobId: string, field: string, value: boolean) => {
-    try {
-      const res = await fetch(`/api/admin/jobs/${jobId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: value }),
-      });
-      if (!res.ok) {
-        showMsg(await readApiError(res, 'Failed to update job'), true);
-        return;
-      }
-      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: value } : j));
-      showMsg(`${field === 'isPublished' ? (value ? 'Published' : 'Unpublished') : (value ? 'Featured' : 'Unfeatured')}`, false);
-    } catch { showMsg('Failed to update job. Check your connection and try again.', true); }
+    const result = await adminFetch(`/api/admin/jobs/${jobId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value }),
+    });
+    if (!result.ok) {
+      showMsg(`Could not update the job. ${result.error}`, true);
+      return;
+    }
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: value } : j));
+    showMsg(`${field === 'isPublished' ? (value ? 'Published' : 'Unpublished') : (value ? 'Featured' : 'Unfeatured')}`, false);
   };
 
   const deleteJob = async (jobId: string, hard = false) => {
     if (!confirm(hard ? 'Permanently delete this job? This cannot be undone.' : 'Unpublish this job?')) return;
-    try {
-      const res = await fetch(`/api/admin/jobs/${jobId}?hard=${hard}`, { method: 'DELETE' });
-      if (!res.ok) {
-        showMsg(await readApiError(res, hard ? 'Failed to delete job' : 'Failed to unpublish job'), true);
-        return;
-      }
-      if (hard) setJobs(prev => prev.filter(j => j.id !== jobId));
-      else setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isPublished: false } : j));
-      showMsg(hard ? 'Job permanently deleted' : 'Job unpublished', false);
-    } catch { showMsg('Failed to delete job. Check your connection and try again.', true); }
+    const result = await adminFetch(`/api/admin/jobs/${jobId}?hard=${hard}`, { method: 'DELETE' });
+    if (!result.ok) {
+      showMsg(`Could not ${hard ? 'delete' : 'unpublish'} the job. ${result.error}`, true);
+      return;
+    }
+    if (hard) setJobs(prev => prev.filter(j => j.id !== jobId));
+    else setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isPublished: false } : j));
+    showMsg(hard ? 'Job permanently deleted' : 'Job unpublished', false);
   };
 
   // Bulk actions
@@ -154,23 +183,22 @@ export default function AdminJobsPage() {
     const label = action === 'hard_delete' ? 'permanently delete' : action;
     if (action.includes('delete') && !confirm(`${label} ${selected.size} job(s)?`)) return;
 
-    try {
-      setBulkLoading(true);
-      const res = await fetch('/api/admin/jobs/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, jobIds: Array.from(selected) }),
-      });
-      if (!res.ok) {
-        showMsg(await readApiError(res, 'Bulk action failed'), true);
-        return;
-      }
-      const data = await res.json();
-      showMsg(`${data.action}: ${data.affected} job(s)`, false);
-      setSelected(new Set());
-      fetchJobs();
-    } catch { showMsg('Bulk action failed. Check your connection and try again.', true); }
-    finally { setBulkLoading(false); }
+    setBulkLoading(true);
+    const result = await adminFetch<{ action?: string; affected?: number; skippedJobIds?: unknown }>('/api/admin/jobs/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, jobIds: Array.from(selected) }),
+    });
+    setBulkLoading(false);
+    if (!result.ok) {
+      showMsg(`Could not apply the bulk action. ${result.error}`, true);
+      return;
+    }
+    // The jobs it left alone (an archived or unpaid post on a publish) are
+    // counted, so a partial run never reads as a complete one.
+    showMsg(describeBulkResult(result.data.action ?? action, result.data.affected ?? 0, result.data.skippedJobIds), false);
+    setSelected(new Set());
+    refreshJobs();
   };
 
   // Edit modal
@@ -193,27 +221,23 @@ export default function AdminJobsPage() {
 
   const saveEdit = async () => {
     if (!editingJob || editLoading) return;
-    try {
-      setEditLoading(true);
-      const res = await fetch(`/api/admin/jobs/${editingJob.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-      if (!res.ok) {
-        // Keep the dialog open with the admin's edits so they can retry.
-        const message = await readApiError(res, 'Failed to update job');
-        setEditError(message);
-        return;
-      }
-      showMsg('Job updated', false);
-      setEditingJob(null);
-      fetchJobs();
-    } catch {
-      const message = 'Failed to update job. Check your connection and try again.';
-      setEditError(message);
+    setEditLoading(true);
+    setEditError(null);
+    const result = await adminFetch(`/api/admin/jobs/${editingJob.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    });
+    setEditLoading(false);
+    if (!result.ok) {
+      // Keep the dialog open with the admin's edits so they can correct and
+      // retry; the reason shows inside the dialog, above its buttons.
+      setEditError(`Could not save the job. ${result.error}`);
+      return;
     }
-    finally { setEditLoading(false); }
+    showMsg('Job updated', false);
+    setEditingJob(null);
+    refreshJobs();
   };
 
   const showMsg = (text: string, isError: boolean) => {
@@ -244,7 +268,7 @@ export default function AdminJobsPage() {
           <p style={s.muted}>{total.toLocaleString()} total jobs</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={fetchJobs} style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={refreshJobs} style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <RefreshCw size={14} /> Refresh
           </button>
         </div>
@@ -257,6 +281,10 @@ export default function AdminJobsPage() {
           backgroundColor: actionMsg.isError ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
           color: actionMsg.isError ? '#F87171' : '#22C55E',
         }}>{actionMsg.text}</div>
+      )}
+
+      {loadError && (
+        <AdminLoadError subject="The jobs list" message={loadError} onRetry={refreshJobs} />
       )}
 
       {/* Filters */}

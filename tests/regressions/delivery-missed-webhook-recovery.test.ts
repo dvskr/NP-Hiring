@@ -20,14 +20,19 @@ describe('shared activation module (single source of truth)', () => {
 
   it('claims pending→paid atomically BEFORE publishing the job', () => {
     const claimIdx = src.indexOf("paymentStatus: 'pending' },");
-    const publishIdx = src.indexOf('isPublished: true, isVerifiedEmployer: true');
+    // The publish no longer sets the Verified employer check: only
+    // lib/paid-post-twins-sync.ts does, for confirmed employers.
+    const publishIdx = src.indexOf('data: { isPublished: true, contentChangedAt: new Date() }');
     expect(claimIdx).toBeGreaterThan(-1);
     expect(publishIdx).toBeGreaterThan(-1);
     expect(claimIdx).toBeLessThan(publishIdx);
   });
 
-  it('treats a lost claim (P2025) as already_active instead of re-applying side effects', () => {
-    expect(src).toContain("'P2025'");
+  it('treats a lost claim (no pending row moved) as already_active instead of re-applying side effects', () => {
+    // The claim counts the rows it moved: none means another path won it.
+    // The replay itself runs in tests/api/activate-paid-job-atomic-publish.test.ts.
+    expect(src).toMatch(/employerJob\.updateMany\(\{\s*where: \{ id: employerJobId, paymentStatus: 'pending' \}/);
+    expect(src).toContain('return count === 1;');
     expect(src).toContain("return 'already_active'");
   });
 

@@ -247,21 +247,25 @@ describe('section 2: the flows', () => {
 
     it('2c: the activation claims the row before it publishes, and never publishes an archived post', () => {
         const claim = activate.indexOf("paymentStatus: 'pending'");
-        const publish = activate.indexOf('publishUnlessArchived(jobId)');
+        // The publish runs on the claim's transaction client (claimAndPublish).
+        const publish = activate.indexOf('publishUnlessArchived(tx, jobId)');
         expect(claim).toBeGreaterThan(-1);
         expect(publish).toBeGreaterThan(-1);
         const claimsFirst = claim < publish;
 
-        const docClaim = section2c.indexOf("EmployerJob.update where paymentStatus='pending'");
-        const docPublish = section2c.indexOf('Job.update (isPublished=true');
+        // Both writes count the rows they match (updateMany), so nothing is caught inside the transaction.
+        const docClaim = section2c.indexOf("EmployerJob.updateMany where paymentStatus='pending'");
+        const docPublish = section2c.indexOf('Job.updateMany (isPublished=true');
         expect(docClaim, 'the claim step').toBeGreaterThan(-1);
         expect(docPublish, 'the publish step').toBeGreaterThan(-1);
         expect(docClaim < docPublish).toBe(claimsFirst);
 
-        // The publish matches only a row that is not archived.
-        expect(activate).toMatch(/where: \{ id: jobId, archivedAt: null \}/);
+        // The publish matches only a row that is not archived, and not under
+        // an admin hold (lib/admin/job-hold.ts).
+        expect(activate).toMatch(/where: \{ id: jobId, archivedAt: null, adminHoldAt: null \}/);
         const publishStep = section2c.slice(docPublish, section2c.indexOf('JobCharge.create', docPublish));
         expect(publishStep).toMatch(/unless the post was archived while\s+[│ ]*its checkout was open/);
+        expect(publishStep).toMatch(/Nor when an admin took the post down \(lib\/admin\/job-hold\.ts\)/);
     });
 
     it('2d prices a renewal by the post it renews, from config, and ledgers what Stripe charged', () => {

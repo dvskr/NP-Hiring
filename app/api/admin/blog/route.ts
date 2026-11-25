@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { logAudit } from '@/lib/audit-log';
 import {
+    parseBlogCategory,
     parseBlogStatus,
     parseBlogTitle,
     parseFaqJson,
@@ -75,6 +76,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: statusResult.error }, { status: 400 });
         }
         const status = statusResult.value;
+        // A new post must use a category the blog can label and filter on.
+        const categoryResult = parseBlogCategory(category, 'create');
+        if (!categoryResult.ok) {
+            return NextResponse.json({ success: false, error: categoryResult.error }, { status: 400 });
+        }
 
         // Editorially-authored schema fields (FAQPage JSON-LD + dateModified).
         const faqResult = parseFaqJson(body.faqJson);
@@ -105,7 +111,7 @@ export async function POST(request: NextRequest) {
                 title,
                 slug,
                 content,
-                category,
+                category: categoryResult.value,
                 status,
                 metaDescription: metaDescription || null,
                 targetKeyword: targetKeyword || null,

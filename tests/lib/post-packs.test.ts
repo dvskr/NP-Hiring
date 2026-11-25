@@ -335,13 +335,33 @@ describe("takeDownPackPosts / restorePackPosts: the pack's own posts follow it",
             where: { id: { in: ['ej-live', 'ej-ended', 'ej-archived', 'ej-paused'] }, paymentStatus: 'disputed' },
             data: { paymentStatus: 'pack' },
         });
-        // Republished first, matched on the status the rows still hold; the status flips last.
+        // Republished first, matched on the status the rows still hold, and
+        // never over an admin takedown (lib/admin/job-hold.ts); the status flips last.
         expect(prisma.job.updateMany).toHaveBeenCalledWith({
-            where: { id: { in: ['job-live'] }, archivedAt: null, employerJobs: { postPackId: 'pack-1', paymentStatus: 'disputed' } },
+            where: { id: { in: ['job-live'] }, archivedAt: null, adminHoldAt: null, employerJobs: { postPackId: 'pack-1', paymentStatus: 'disputed' } },
             data: { isPublished: true, contentChangedAt: NOW },
         });
         expect(vi.mocked(prisma.job.updateMany).mock.invocationCallOrder[0])
             .toBeLessThan(vi.mocked(prisma.employerJob.updateMany).mock.invocationCallOrder[0]);
+    });
+
+    it('a post an admin took down between the read and the write stays down', async () => {
+        // The read saw it live and unpaused; the takedown landed after it.
+        vi.mocked(prisma.employerJob.findMany).mockResolvedValue([
+            { id: 'ej-held', jobId: 'job-held', job: { expiresAt: new Date('2027-04-01T00:00:00.000Z'), archivedAt: null, isManuallyUnpublished: false } },
+        ] as never);
+        const heldNow = new Set(['job-held']);
+        vi.mocked(prisma.job.updateMany).mockImplementation((async ({ where }: { where: { id: { in: string[] }; adminHoldAt?: null } }) => ({
+            // The database applies the WHERE: a held row matches only when the WHERE does not ask for no hold.
+            count: where.id.in.filter((id) => !(heldNow.has(id) && where.adminHoldAt === null)).length,
+        })) as never);
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 1 } as never);
+
+        await restorePackPosts('pack-1', NOW);
+
+        const [args] = vi.mocked(prisma.job.updateMany).mock.calls[0] as [{ where: { adminHoldAt?: null } }];
+        expect(args.where.adminHoldAt).toBeNull();
+        expect(await vi.mocked(prisma.job.updateMany).mock.results[0].value).toEqual({ count: 0 });
     });
 });
 

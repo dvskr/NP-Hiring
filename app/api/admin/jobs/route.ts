@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { logAudit } from '@/lib/audit-log';
-import { createClient } from '@/lib/supabase/server';
 import { parsePagingParam, resolveAdminActorId, validateJobCreate, withOrderedSalary } from './_lib/job-input';
+import { randomUUID } from 'node:crypto';
+import { config } from '@/lib/config';
+import { expiresFromNow } from '@/lib/expires-at';
+import { slugify } from '@/lib/utils';
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -18,13 +21,14 @@ export async function GET(request: NextRequest) {
     const authError = await requireApiAdmin(request);
     if (authError) return authError;
 
-    // Audit log: admin accessing job data
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    void logAudit({
+    // Audit log: admin accessing job data. The entry names the acting admin
+    // by auth id, like every other admin.job.* row; an email address would
+    // put personal data in the audit table (lib/audit-log.ts). Written before
+    // the read, so a failed read is still on record.
+    await logAudit({
         action: 'admin.jobs.list',
         actorType: 'admin',
-        metadata: { email: user?.email || 'unknown' },
+        actorId: await resolveAdminActorId(),
     });
 
     try {
@@ -176,16 +180,18 @@ export async function POST(request: NextRequest) {
     const bool = (key: string, fallback: boolean) => (input[key] as boolean | undefined) ?? fallback;
 
     try {
-        // Generate slug
-        const baseSlug = `${title}-${employer}`
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '')
-            .slice(0, 80);
-        const slug = `${baseSlug}-${Date.now().toString(36)}`;
+        // The id is minted here so the slug can end in it, as every other
+        // job's does (lib/utils.ts slugify, the ingest pattern). The slug
+        // this route used to write ended in a base36 timestamp, and
+        // middleware.ts answers a /jobs/<slug> with no UUID at its end as an
+        // unknown page (410), so every admin-created job's page was gone.
+        const id = randomUUID();
+        const slug = slugify(`${title} ${employer}`, id);
+        const now = new Date();
 
         const job = await prisma.job.create({
             data: {
+                id,
                 title,
                 employer,
                 location: input.location as string,
@@ -194,6 +200,11 @@ export async function POST(request: NextRequest) {
                 slug,
                 sourceType: 'direct',
                 sourceProvider: 'admin',
+                // Posted here, now: undated rows sort last under Newest First.
+                originalPostedAt: now,
+                // The standard listing term. Without an expiry the listings
+                // and the sitemaps keep a job for ever.
+                expiresAt: expiresFromNow(config.durationDays, now),
                 isPublished: bool('isPublished', true),
                 isFeatured: bool('isFeatured', false),
                 jobType: str('jobType'),

@@ -1,9 +1,20 @@
 import { describe, it, expect } from 'vitest'
 import { resolveShortlink } from '@/lib/shortlinks/resolver'
-import { ACTIVE_CAMPAIGN, PLATFORM_BY_LETTER } from '@/lib/shortlinks/campaigns'
+import { ACTIVE_CAMPAIGN, BOARD_CAMPAIGN, JOB_LINKS_CAMPAIGN, PLATFORM_BY_LETTER } from '@/lib/shortlinks/campaigns'
 import type { ShortlinkCampaign } from '@/lib/shortlinks/types'
+import { readCode } from '../../helpers/source'
 
-const BASE = 'https://pmhnphiring.com'
+const BASE = 'https://board.example'
+
+/** A catalog with numbered job codes, for the paths this board's own catalog does not use yet. */
+const NUMBERED: ShortlinkCampaign = {
+  campaign: 'numbered-test-campaign',
+  jobs: [
+    { id: 1, slug: 'family-np-example-1', content: 'example-one' },
+    { id: 2, slug: 'acute-np-example-2', content: 'example-two' },
+    { id: 3, slug: 'peds-np-example-3', content: 'example-three' },
+  ],
+}
 
 describe('resolveShortlink — invalid input', () => {
   it.each([
@@ -26,13 +37,9 @@ describe('resolveShortlink — invalid input', () => {
   })
 
   it('rejects unknown job numbers', () => {
-    // Note (2026-06-01): commit 7f3e2c6 added FB shortlinks for jobs
-    // 12-14, so the previous fixture (`i12`) is now valid. Use numbers
-    // safely beyond the current shortlink table — bumping when new jobs
-    // are added is fine; this assertion is about the upper-bound reject,
-    // not about specific numbers.
     expect(resolveShortlink('f99', BASE)).toBeNull()
     expect(resolveShortlink('i999', BASE)).toBeNull()
+    expect(resolveShortlink('f4', BASE, NUMBERED)).toBeNull()
   })
 
   it('handles non-string input defensively', () => {
@@ -90,55 +97,80 @@ describe('resolveShortlink — program-director ("p" letter)', () => {
   })
 })
 
-describe('resolveShortlink — active campaign', () => {
+describe("this board's catalog", () => {
+  it("is the active campaign, with no numbered job codes and none of another board's jobs", () => {
+    expect(ACTIVE_CAMPAIGN).toBe(BOARD_CAMPAIGN)
+    expect(ACTIVE_CAMPAIGN.jobs).toEqual([])
+    expect(ACTIVE_CAMPAIGN.campaign).not.toBe(JOB_LINKS_CAMPAIGN)
+    // The campaigns file carries no job slugs or employer labels of its own.
+    const source = readCode('lib/shortlinks/campaigns.ts')
+    expect(source).not.toMatch(/slug:\s*'/)
+    expect(source).not.toMatch(/pmhnp|psychiatr/i)
+  })
+
+  it('sends a numbered code nobody ships, such as the old /r/f1 to /r/f14, nowhere: the route falls back to /jobs', () => {
+    for (let id = 1; id <= 14; id += 1) {
+      for (const letter of ['f', 'i', 'l', 'x', 'r', 't', 'n']) {
+        expect(resolveShortlink(`${letter}${id}`, BASE), `code ${letter}${id}`).toBeNull()
+      }
+    }
+  })
+
+  it('still serves browse-all and the program director landing', () => {
+    expect(resolveShortlink('f0', BASE)!.destinationPath).toBe('/jobs')
+    expect(resolveShortlink('f0', BASE)!.campaign).toBe(BOARD_CAMPAIGN.campaign)
+    expect(resolveShortlink('p3', BASE)!.destinationPath).toBe('/for-programs')
+  })
+})
+
+describe('resolveShortlink: a catalog with numbered job codes', () => {
   it('produces a bare /jobs/<slug> destination with no query params', () => {
-    const r = resolveShortlink('i1', BASE)
+    const r = resolveShortlink('i1', BASE, NUMBERED)
     expect(r).not.toBeNull()
     const parsed = new URL(r!.destination)
-    expect(parsed.pathname).toBe(`/jobs/${ACTIVE_CAMPAIGN.jobs[0].slug}`)
+    expect(parsed.pathname).toBe(`/jobs/${NUMBERED.jobs[0].slug}`)
     expect(parsed.search).toBe('')
-    expect(r!.destinationPath).toBe(`/jobs/${ACTIVE_CAMPAIGN.jobs[0].slug}`)
+    expect(r!.destinationPath).toBe(`/jobs/${NUMBERED.jobs[0].slug}`)
     expect(r!.platform).toBe('instagram')
-    expect(r!.content).toBe(ACTIVE_CAMPAIGN.jobs[0].content)
+    expect(r!.content).toBe(NUMBERED.jobs[0].content)
     expect(r!.jobId).toBe(1)
-    expect(r!.campaign).toBe(ACTIVE_CAMPAIGN.campaign)
+    expect(r!.campaign).toBe(NUMBERED.campaign)
   })
 
   it('maps each platform letter to the documented source', () => {
     for (const [letter, source] of Object.entries(PLATFORM_BY_LETTER)) {
-      const r = resolveShortlink(`${letter}1`, BASE)
+      const r = resolveShortlink(`${letter}1`, BASE, NUMBERED)
       expect(r, `code ${letter}1`).not.toBeNull()
       expect(r!.platform).toBe(source)
     }
   })
 
   it('is case-insensitive on the platform letter', () => {
-    const lower = resolveShortlink('f3', BASE)
-    const upper = resolveShortlink('F3', BASE)
+    const lower = resolveShortlink('f3', BASE, NUMBERED)
+    const upper = resolveShortlink('F3', BASE, NUMBERED)
     expect(lower).not.toBeNull()
     expect(upper).toEqual(lower)
   })
 
-  it('produces a distinct destination for every active job code', () => {
+  it('produces a distinct destination for every job code', () => {
     const seen = new Set<string>()
-    for (const job of ACTIVE_CAMPAIGN.jobs) {
-      const r = resolveShortlink(`f${job.id}`, BASE)
+    for (const job of NUMBERED.jobs) {
+      const r = resolveShortlink(`f${job.id}`, BASE, NUMBERED)
       expect(r, `code f${job.id}`).not.toBeNull()
       expect(seen.has(r!.destination), `duplicate for ${job.content}`).toBe(false)
       seen.add(r!.destination)
     }
-    expect(seen.size).toBe(ACTIVE_CAMPAIGN.jobs.length)
+    expect(seen.size).toBe(NUMBERED.jobs.length)
   })
 
   it('returns a frozen object so callers cannot mutate shared state', () => {
-    const r = resolveShortlink('f1', BASE)
-    expect(r).not.toBeNull()
-    expect(Object.isFrozen(r!)).toBe(true)
+    expect(Object.isFrozen(resolveShortlink('f1', BASE, NUMBERED)!)).toBe(true)
+    expect(Object.isFrozen(resolveShortlink('f0', BASE)!)).toBe(true)
   })
 
   it('trims a trailing slash on baseUrl', () => {
-    const r1 = resolveShortlink('f1', 'https://example.com')
-    const r2 = resolveShortlink('f1', 'https://example.com/')
+    const r1 = resolveShortlink('f1', 'https://example.com', NUMBERED)
+    const r2 = resolveShortlink('f1', 'https://example.com/', NUMBERED)
     expect(r1!.destination).toBe(r2!.destination)
   })
 })

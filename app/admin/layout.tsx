@@ -16,8 +16,10 @@ export default async function AdminLayout({
   const requestHeaders = await headers();
   const returnTo = adminReturnPath(requestHeaders.get(REQUEST_PATHNAME_HEADER));
 
-  // Redirects to /login?next=<returnTo> if not authenticated,
-  // and to /unauthorized if not admin.
+  // Redirects to /login?next=<returnTo> if not authenticated, to
+  // /unauthorized if not admin, and an admin account in its deletion window
+  // to the login form (signing in restores it; returnTo is kept) or, once the
+  // purge may take it, to the login form's account-unavailable message.
   await requireAdmin(returnTo);
 
   return <AdminSidebar>{children}</AdminSidebar>;

@@ -108,6 +108,7 @@ export async function platformRevenueJobsWithSimilarity(
         JOIN jobs j ON j.id = je.job_id
         WHERE j.is_published = true
           AND j.archived_at IS NULL
+          AND j.shadowed_by_job_id IS NULL
           ${PROFESSION_CLASS_EXCLUSION_SQL}
           AND (
               j.source_type = 'employer'
@@ -160,6 +161,7 @@ export async function semanticJobSearch(
         JOIN jobs j ON j.id = je.job_id
         WHERE j.is_published = true
           AND j.archived_at IS NULL
+          AND j.shadowed_by_job_id IS NULL
           ${PROFESSION_CLASS_EXCLUSION_SQL}
           ${stateFilter}
           ${remoteFilter}

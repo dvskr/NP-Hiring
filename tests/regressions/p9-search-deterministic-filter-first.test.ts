@@ -131,9 +131,10 @@ const hybridColoradoNP: Row = {
   isRemote: false, isHybrid: true, isPublished: true,
 };
 
-// Every stored row carries the dead-link counter (a non-null column, default 0).
+// Every stored row carries the dead-link counter (a non-null column, default 0)
+// and the paid-post copy mark, null on a listing that is nobody's copy.
 const SEED: Row[] = [remoteTexasNP, onsiteTexasNP, remoteCaliforniaNP, hybridColoradoNP]
-  .map((row) => ({ healthConsecutiveMissing: 0, ...row }));
+  .map((row) => ({ healthConsecutiveMissing: 0, shadowedByJobId: null, ...row }));
 
 function runSearch(search: string, extra: Partial<typeof DEFAULT_FILTERS> = {}, rows: Row[] = SEED): Row[] {
   const where = buildWhereClause({ ...DEFAULT_FILTERS, ...extra, search });
@@ -142,8 +143,8 @@ function runSearch(search: string, extra: Partial<typeof DEFAULT_FILTERS> = {}, 
 
 describe('dead links never reach /jobs search (EDGE-CRONS handoff 20)', () => {
   it('a job at the dead-link threshold is dropped; one miss short of it stays', () => {
-    const dead = { ...remoteTexasNP, id: 'dead-tx', healthConsecutiveMissing: 5 };
-    const flaky = { ...remoteTexasNP, id: 'flaky-tx', healthConsecutiveMissing: 4 };
+    const dead = { ...remoteTexasNP, id: 'dead-tx', healthConsecutiveMissing: 5, shadowedByJobId: null };
+    const flaky = { ...remoteTexasNP, id: 'flaky-tx', healthConsecutiveMissing: 4, shadowedByJobId: null };
     const found = ids(runSearch('remote nurse practitioner jobs in Texas', {}, [...SEED, dead, flaky]));
     expect(found).not.toContain('dead-tx');
     expect(found).toContain('flaky-tx');

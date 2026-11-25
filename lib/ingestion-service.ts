@@ -108,6 +108,7 @@ let globalTitleKeyMap: Map<string, string> | null = null; // identityKey -> jobI
 // so "Denver, CO" and "Denver, Colorado, United States" are one posting.
 let globalSiteKeyMap: Map<string, string> | null = null; // buildSiteIdentityKey -> jobId
 import { pingAllSearchEnginesBatch } from './search-indexing';
+import { withoutPaidPostCopies } from './paid-post-copy-pings';
 import { computeQualityScore } from './utils/quality-score';
 import { inngest } from './inngest/client';
 
@@ -1775,8 +1776,8 @@ export async function ingestJobs(
     console.error('[Employer Emails] Failed to collect:', emailError);
   }
 
-  // Ping search engines for all newly added jobs
-  const allNewUrls = results.flatMap(r => r.newJobUrls);
+  // Ping search engines for the newly added jobs, minus copies of a live paid post
+  const allNewUrls = await withoutPaidPostCopies(results.flatMap(r => r.newJobUrls));
   if (allNewUrls.length > 0) {
     console.log(`\n[Indexing] Submitting ${allNewUrls.length} new job URLs to search engines...`);
     try {

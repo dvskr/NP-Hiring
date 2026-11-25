@@ -80,6 +80,9 @@ function job(overrides: Partial<MemoryRow>): MemoryRow {
     location: 'Austin, TX',
     // A non-null column (default 0): /jobs search reads the dead-link gate.
     healthConsecutiveMissing: 0,
+    // Not a free copy of a live paid post: /jobs search hides marked rows
+    // (lib/paid-post-twins.ts).
+    shadowedByJobId: null,
     // The linked company as the counts SELECT loads it: null = no company.
     company: null,
     ...overrides,

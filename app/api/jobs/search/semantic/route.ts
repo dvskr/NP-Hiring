@@ -191,6 +191,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         where: {
             isPublished: true,
             archivedAt: null,
+            // A free copy of a live paid post redirects to it (lib/paid-post-twins.ts).
+            shadowedByJobId: null,
             // `state` column stores full names ("California"); the parser
             // returns 2-letter codes — filter against `stateCode` instead.
             ...(state ? { stateCode: state } : {}),
@@ -256,6 +258,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const jobs = await prisma.job.findMany({
         where: {
             id: { in: fused.map((h) => h.jobId) },
+            // Nor a free copy of a live paid post (lib/paid-post-twins.ts).
+            shadowedByJobId: null,
             // The vector leg does not read the dead-link gate; this choke point does.
             AND: [...GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })), liveLinkWhere()],
         },

@@ -3,14 +3,16 @@
  *
  *   1. every mutating branch (create, PATCH, soft/hard DELETE, bulk) writes an
  *      AuditLog row carrying the admin actor;
- *   2. bulk hard_delete refuses free postings (quota guard parity with DELETE ?hard=true);
+ *   2. bulk hard_delete refuses employer postings that were paid for (the same
+ *      guard as DELETE ?hard=true, app/api/admin/_lib/job-takedown.ts), and
+ *      is charged to the admin's high-impact budget (10 a minute);
  *   3. PATCH validates types/shape (400, nothing written);
  *   4. admin unpublish sets isManuallyUnpublished (republish clears it);
  *   5. POST validates numbers and apply-link URLs;
  *   6. GET clamps non-numeric paging to defaults.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const db = vi.hoisted(() => ({
     job: {
@@ -23,12 +25,22 @@ const db = vi.hoisted(() => ({
         count: vi.fn(),
         groupBy: vi.fn(),
     },
+    // The array form: a bulk takedown places and keeps holds in one transaction.
+    $transaction: vi.fn(async (operations: Promise<unknown>[]) => Promise.all(operations)),
 }));
 const logAudit = vi.hoisted(() => vi.fn());
+const gate = vi.hoisted(() => ({
+    actor: { profileId: 'admin-profile-id', supabaseId: 'admin-supabase-id' },
+    limitHighImpactAdminAction: vi.fn(),
+}));
 
 vi.mock('@/lib/prisma', () => ({ prisma: db }));
 vi.mock('@/lib/audit-log', () => ({ logAudit }));
-vi.mock('@/lib/auth/require-api-admin', () => ({ requireApiAdmin: vi.fn(async () => null) }));
+vi.mock('@/lib/auth/require-api-admin', () => ({
+    requireApiAdmin: vi.fn(async () => null),
+    requireApiAdminActor: vi.fn(async () => ({ error: null, actor: gate.actor })),
+    limitHighImpactAdminAction: gate.limitHighImpactAdminAction,
+}));
 vi.mock('@/lib/supabase/server', () => ({
     createClient: vi.fn(async () => ({
         auth: { getUser: async () => ({ data: { user: { id: 'admin-supabase-id', email: 'admin@example.test' } } }) },
@@ -55,12 +67,15 @@ const priorJob = {
     title: 'Psych NP', employer: 'Acme', location: 'Austin, TX', description: 'desc',
     applyLink: 'https://acme.example/apply', isPublished: true, isFeatured: false, expiresAt: null,
     employerJobs: null,
+    _count: { jobApplications: 0 },
 };
 
 beforeEach(() => {
     vi.clearAllMocks();
+    gate.limitHighImpactAdminAction.mockResolvedValue(null);
     db.job.findUnique.mockResolvedValue(priorJob);
     db.job.update.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: JOB_ID, ...priorJob, ...data }));
+    db.job.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe('PATCH /api/admin/jobs/:id', () => {
@@ -145,24 +160,26 @@ describe('DELETE /api/admin/jobs/:id', () => {
 
 describe('POST /api/admin/jobs/bulk', () => {
     const jobs = [
-        { id: 'a', title: 'A', employerJobs: null },
-        { id: 'b', title: 'B', employerJobs: { paymentStatus: 'free' } },
+        { id: 'a', title: 'A', employerJobs: null, _count: { jobApplications: 0 } },
+        { id: 'b', title: 'B', employerJobs: { paymentStatus: 'free', updatedAt: new Date() }, _count: { jobApplications: 0 } },
     ];
 
-    it('hard_delete refuses the whole batch when any job is a free posting', async () => {
+    it('hard_delete refuses the whole batch when any job is an employer posting that was paid for or given', async () => {
         db.job.findMany.mockResolvedValue(jobs);
         const res = await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'hard_delete', jobIds: ['a', 'b'] }));
         expect(res.status).toBe(409);
-        expect((await res.json()).freeJobIds).toEqual(['b']);
+        expect((await res.json()).blockedJobIds).toEqual(['b']);
         expect(db.job.deleteMany).not.toHaveBeenCalled();
     });
 
-    it('hard_delete keeps the free guard inside the delete itself', async () => {
+    it('hard_delete keeps the guard inside the delete itself', async () => {
         db.job.findMany.mockResolvedValueOnce([jobs[0]]).mockResolvedValueOnce([]);
         db.job.deleteMany.mockResolvedValue({ count: 1 });
         const res = await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'hard_delete', jobIds: ['a'] }));
         expect(res.status).toBe(200);
-        expect(db.job.deleteMany.mock.calls[0][0].where.NOT).toEqual({ employerJobs: { is: { paymentStatus: 'free' } } });
+        const where = db.job.deleteMany.mock.calls[0][0].where;
+        expect(where).toMatchObject({ id: { in: ['a'] }, jobApplications: { none: {} } });
+        expect(where.OR).toContainEqual({ employerJobs: { is: null } });
         expect(logAudit.mock.calls[0][0]).toMatchObject({ action: 'admin.job.bulk_hard_delete', targetId: 'a', actorId: 'admin-supabase-id' });
     });
 
@@ -186,27 +203,57 @@ describe('POST /api/admin/jobs/bulk', () => {
         expect((await res.json()).affected).toBe(2);
         const calls = db.job.updateMany.mock.calls.map((c) => c[0] as { where: Record<string, unknown>; data: Record<string, unknown> });
         expect(calls).toHaveLength(2);
-        // Already published: republished state, no new stamp.
+        // Already published: republished state (any hold ends), no new stamp.
         expect(calls[0].where).toEqual({ id: { in: ['a', 'b'] }, isPublished: true });
-        expect(calls[0].data).toEqual({ isPublished: true, isManuallyUnpublished: false });
-        // Unpublished: revived, so the content changed now.
-        expect(calls[1].where).toEqual({ id: { in: ['a', 'b'] }, isPublished: false });
+        expect(calls[0].data).toEqual({ isPublished: true, isManuallyUnpublished: false, adminHoldAt: null });
+        // Unpublished: revived, so the content changed now. The publish guard
+        // rides in the WHERE (app/api/admin/_lib/job-takedown.ts).
+        expect(calls[1].where).toMatchObject({ id: { in: ['a', 'b'] }, isPublished: false, archivedAt: null });
         expect(calls[1].data).toMatchObject({ isPublished: true, isManuallyUnpublished: false });
         expect(calls[1].data.contentChangedAt).toBeInstanceOf(Date);
         expect(logAudit.mock.calls.map((c) => c[0].action)).toEqual(['admin.job.bulk_publish', 'admin.job.bulk_publish']);
     });
 
-    it.each(['unpublish', 'feature', 'unfeature'])('%s never stamps contentChangedAt', async (action) => {
+    // An unpublish is a takedown: one write places the hold on the rows that
+    // had none, one keeps it on the rows already held (lib/admin/job-hold.ts).
+    it.each([['unpublish', 2], ['feature', 1], ['unfeature', 1]] as const)('%s never stamps contentChangedAt', async (action, writes) => {
         db.job.findMany.mockResolvedValue(jobs);
         await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action, jobIds: ['a', 'b'] }));
-        expect(db.job.updateMany).toHaveBeenCalledTimes(1);
-        expect(db.job.updateMany.mock.calls[0][0].data).not.toHaveProperty('contentChangedAt');
+        expect(db.job.updateMany).toHaveBeenCalledTimes(writes);
+        for (const [args] of db.job.updateMany.mock.calls) {
+            expect(args.data).not.toHaveProperty('contentChangedAt');
+        }
     });
 
     it('rejects an unknown action and non-string ids before touching the database', async () => {
         expect((await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'nuke', jobIds: ['a'] }))).status).toBe(400);
         expect((await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'publish', jobIds: [{}] }))).status).toBe(400);
         expect(db.job.findMany).not.toHaveBeenCalled();
+    });
+
+    it('hard_delete is charged to the admin\'s high-impact budget, and its 429 reads and deletes nothing', async () => {
+        gate.limitHighImpactAdminAction.mockResolvedValueOnce(NextResponse.json({ error: 'Too many requests' }, { status: 429 }));
+
+        const res = await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'hard_delete', jobIds: ['a'] }));
+
+        expect(res.status).toBe(429);
+        expect(gate.limitHighImpactAdminAction).toHaveBeenCalledWith('jobs-hard-delete', gate.actor);
+        expect(db.job.findMany).not.toHaveBeenCalled();
+        expect(db.job.deleteMany).not.toHaveBeenCalled();
+        expect(logAudit).not.toHaveBeenCalled();
+    });
+
+    it.each(['publish', 'unpublish', 'delete', 'feature', 'unfeature'])('%s is not charged to the high-impact budget', async (action) => {
+        db.job.findMany.mockResolvedValue([jobs[0]]);
+
+        await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action, jobIds: ['a'] }));
+
+        expect(gate.limitHighImpactAdminAction).not.toHaveBeenCalled();
+    });
+
+    it('an invalid hard_delete request is answered 400 before the high-impact budget is charged', async () => {
+        expect((await BULK(jsonReq('/api/admin/jobs/bulk', 'POST', { action: 'hard_delete', jobIds: [] }))).status).toBe(400);
+        expect(gate.limitHighImpactAdminAction).not.toHaveBeenCalled();
     });
 });
 

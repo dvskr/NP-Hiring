@@ -1,6 +1,7 @@
 /**
  * P10 admin-content-ui regressions:
- *  1. /admin/jobs reports non-2xx PATCH/DELETE/bulk responses instead of swallowing them
+ *  1. /admin/jobs reports failed PATCH/DELETE/bulk responses instead of swallowing them
+ *     (through lib/admin/admin-fetch.ts)
  *  2. the Edit Job modal is a real dialog (role, aria-modal, label, focus trap, Escape)
  *  3. admin blog create/update/delete write AuditLog rows; PUT validates status and
  *     title; unknown ids are 404
@@ -20,7 +21,8 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/rate-limit', () => ({
     rateLimit: vi.fn(async () => null),
-    RATE_LIMITS: { admin: { limit: 20, windowMs: 60_000 } },
+    rateLimitShared: vi.fn(async () => null),
+    RATE_LIMITS: { admin: { limit: 60, windowSeconds: 60 }, adminIp: { limit: 120, windowSeconds: 60 } },
 }));
 
 vi.mock('@/lib/prisma', () => ({
@@ -53,7 +55,8 @@ import { PATCH as testimonialPATCH } from '@/app/api/admin/testimonials/[id]/rou
 import { POST as flagsPOST } from '@/app/api/admin/ai/flags/route';
 import { PATCH as pdPATCH } from '@/app/api/admin/pd-campaign/route';
 import { parseBlogStatus, parseBlogTitle, isRecordNotFound } from '@/app/api/admin/blog/validate';
-import { readApiError } from '@/app/admin/jobs/api-feedback';
+import { describeApiFailure } from '@/lib/admin/admin-fetch';
+import { readCode } from '../helpers/source';
 
 const ADMIN = 'admin-supabase-id';
 const POST_ID = '11111111-1111-4111-8111-111111111111';
@@ -242,24 +245,22 @@ describe('pd-campaign unknown lead', () => {
 });
 
 describe('/admin/jobs failure feedback', () => {
-    const response = (status: number, body: string) => new Response(body, { status, headers: { 'content-type': 'application/json' } });
-
-    it('surfaces the API error for a non-2xx response', async () => {
-        expect(await readApiError(response(400, JSON.stringify({ error: 'title must not be empty' })), 'Failed to update job'))
-            .toBe('Failed to update job: title must not be empty');
-        expect(await readApiError(response(500, JSON.stringify({ success: false, error: 'Failed to update job' })), 'Failed to update job'))
-            .toBe('Failed to update job (HTTP 500)');
-        expect(await readApiError(response(502, '<html>bad gateway</html>'), 'Bulk action failed'))
-            .toBe('Bulk action failed (HTTP 502)');
+    it('surfaces the API error for a failed response, with the status for a server fault', () => {
+        // lib/admin/admin-fetch.ts took over app/admin/jobs/api-feedback.ts.
+        expect(describeApiFailure(400, { error: 'title must not be empty' })).toBe('title must not be empty');
+        expect(describeApiFailure(500, { success: false, error: 'Failed to update job' })).toBe('Failed to update job (HTTP 500)');
+        expect(describeApiFailure(502, null)).toBe('The request failed (HTTP 502).');
     });
 
     const page = readFileSync(path.join(process.cwd(), 'app/admin/jobs/page.tsx'), 'utf8');
 
-    it('every PATCH/DELETE/bulk handler branches on !res.ok', () => {
-        expect(page.match(/if \(!res\.ok\) \{/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    it('every PATCH/DELETE/bulk handler goes through adminFetch and branches on its failure', () => {
+        const code = readCode('app/admin/jobs/page.tsx');
+        expect(code.match(/(^|[^A-Za-z.])fetch\s*\(/g) ?? [], 'a bare fetch() decides by omission what a failure means').toHaveLength(0);
+        expect(code.match(/if \(!result\.ok\) \{/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
         // No success-only branch left that silently ignores failures.
-        expect(page).not.toMatch(/if \(res\.ok\) \{/);
-        expect(page).not.toMatch(/if \(data\.success\) \{\s*showMsg/);
+        expect(code).not.toMatch(/if \(res\.ok\) \{/);
+        expect(code).not.toMatch(/if \(data\.success\) \{\s*showMsg/);
     });
 
     it('the Edit Job modal has dialog semantics wired to the shared focus trap', () => {

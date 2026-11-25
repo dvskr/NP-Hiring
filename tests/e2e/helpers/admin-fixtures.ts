@@ -42,9 +42,13 @@ export const PLACEHOLDER_ID = '00000000-0000-4000-8000-000000000000';
 export const RENDER_ERROR = /application error|something went wrong|internal server error|unhandled runtime error/i;
 
 // ── Rate-limit dodge ────────────────────────────────────────────────────────
-// lib/rate-limit.ts keys the 20/min admin bucket on x-forwarded-for. Every
-// browser context and every raw API call gets a fresh private IP so the
-// spec's own traffic can never trip the limiter and mask an auth result.
+// lib/auth/require-api-admin.ts keys its pre-auth guard (RATE_LIMITS.adminIp,
+// 120/min) on x-forwarded-for. Every browser context and every raw API call
+// gets a fresh private IP so the spec's own traffic can never trip that guard
+// and mask an auth result. The per-admin budget (RATE_LIMITS.admin, 60/min
+// per route group) follows the signed-in admin, not the address, so a fresh
+// IP does not reset it: keep one admin's calls to one route group under 60
+// a minute.
 
 let ipCounter = Math.floor(Math.random() * 20_000);
 

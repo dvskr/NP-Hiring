@@ -28,7 +28,8 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 vi.mock('@/lib/rate-limit', () => ({
     rateLimit: vi.fn(async () => null),
-    RATE_LIMITS: { admin: { limit: 20, windowMs: 60_000 } },
+    rateLimitShared: vi.fn(async () => null),
+    RATE_LIMITS: { admin: { limit: 60, windowSeconds: 60 }, adminIp: { limit: 120, windowSeconds: 60 } },
 }));
 const logAudit = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('@/lib/audit-log', () => ({ logAudit }));

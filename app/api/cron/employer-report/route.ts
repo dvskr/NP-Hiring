@@ -4,6 +4,8 @@ import { sendPerformanceReportEmail, isEmailSuppressed } from '@/lib/email-servi
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
+import { isOutboundPaused } from '@/lib/outbound-kill-switch';
+import { outboundPausedRun } from '@/lib/cron/outbound-pause';
 
 export const maxDuration = 120 // 2 minutes — employer report emails
 
@@ -13,6 +15,12 @@ export async function GET(request: NextRequest) {
 
     try {
         return await withCronTracking('employer-report', async () => {
+        // Emergency brake (lib/outbound-kill-switch.ts), checked before any
+        // eligibility work so the pause costs nothing while it is engaged, and
+        // first in the tracked run so it is recorded as a run that sent
+        // nothing (lib/cron/outbound-pause.ts).
+        if (isOutboundPaused()) return outboundPausedRun()
+
         // Find all employers with active jobs
         const employerJobs = await prisma.employerJob.findMany({
             where: {

@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { visibleTwinsOfCopiesWhere } from '@/lib/paid-post-twin-lookup';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
 import { isEstimatedSalary } from '@/app/jobs/[slug]/job-posting-facts';
 import { effectiveExperienceLabel, effectiveNewGradFriendly } from '@/lib/experience-label';
@@ -236,11 +237,19 @@ export function parseJobRef(input: string): string | null {
   return match ? match[1].toLowerCase() : null;
 }
 
-/** A live job on this site, by id, slug or URL, or null. */
+/**
+ * A live job on this site, by id, slug or URL, or null. A free copy of a role
+ * its employer is paying to feature is hidden and its URL redirects to the
+ * paid post (lib/paid-post-twins.ts), so a copy's id or pasted URL answers
+ * with that post, not "no longer open". Callers get the post's own id back.
+ * The second query runs only when the first one misses.
+ */
 export async function findPublicJob<S extends Prisma.JobSelect>(ref: string, select: S) {
   const id = parseJobRef(ref);
   if (!id) return null;
-  return prisma.job.findFirst({ where: { AND: [liveJobWhere(), { id }] }, select });
+  const job = await prisma.job.findFirst({ where: { AND: [liveJobWhere(), { id }] }, select });
+  if (job) return job;
+  return prisma.job.findFirst({ where: visibleTwinsOfCopiesWhere([id]), select });
 }
 
 /** "TX", "tx", "Texas" and "texas" all name Texas; "DC" names the District of Columbia. */

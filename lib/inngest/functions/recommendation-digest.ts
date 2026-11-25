@@ -19,6 +19,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { sendAndLog } from '@/lib/email-service';
+import { isOutboundPaused } from '@/lib/outbound-kill-switch';
 import { getBaseUrl } from '@/lib/env';
 import {
     buildRecommendationDigestHtml,
@@ -45,6 +46,16 @@ export const recommendationDigestWeekly = inngest.createFunction(
         concurrency: 5,
     },
     async ({ step }) => {
+        // Emergency brake (lib/outbound-kill-switch.ts). This digest is an
+        // automated marketing send like the crons, so the pause reaches it
+        // too. Outside any step, so it is read again on every invocation:
+        // checked before the candidate query, a paused run does no work, and
+        // a pause that lands mid-run stops the remaining sends.
+        if (isOutboundPaused()) {
+            logger.info('recommendation-digest: skipped, automated sending is paused');
+            return { paused: true, sent: 0 };
+        }
+
         // Find candidates who:
         //   - have at least one rec in the past 7 days
         //   - have a known email, aren't suppressed (a bounce or complaint, and
@@ -99,8 +110,11 @@ export const recommendationDigestWeekly = inngest.createFunction(
                 if (!enabled) { skippedFlag += 1; return; }
 
                 // Pull this candidate's latest batch — top N tier-pinned slots.
+                // A batch can predate a listing's mark as a free copy of a
+                // live paid post (lib/paid-post-twins.ts). The listings hide
+                // those and their URLs redirect, so the email skips them.
                 const recs = await prisma.candidateRecommendation.findMany({
-                    where: { supabaseId: cand.supabase_id, dismissedAt: null },
+                    where: { supabaseId: cand.supabase_id, dismissedAt: null, job: { shadowedByJobId: null } },
                     orderBy: [{ createdAt: 'desc' }, { rank: 'asc' }],
                     take: DIGEST_TOP_N,
                     include: {

@@ -1,15 +1,21 @@
 'use client';
 
 /**
- * Admin Pipeline Flow panel — Goal #6.
+ * Admin Pipeline Flow panel, Goal #6.
  *
  * Single-tab visualization of the ingest funnel, per-source rejection
- * buckets, and recent cron run history. Designed so a new team member
- * can answer "where did the 47k go?" in one glance.
+ * buckets, the registered sources with the silent ones first, and recent
+ * cron run history. Designed so a new team member can answer "where did
+ * the 47k go?" in one glance.
  */
 import { useEffect, useState, useMemo } from 'react';
 import { Activity, AlertCircle, CheckCircle2, Clock, Filter, RefreshCw, XCircle } from 'lucide-react';
 import { formatCT } from '@/lib/format-ct';
+import {
+    describeRegistrySources,
+    splitScheduledSources,
+    type RegistrySourceRow,
+} from '@/lib/admin/pipeline-sources';
 
 interface SourceFunnel {
     source: string;
@@ -37,6 +43,8 @@ interface PipelineFlowResponse {
     recentRuns: CronRunRow[];
     topRejectionReasons: Array<{ reason: string; n: number }>;
     activeSources: string[];
+    /** Registry sources this board deliberately does not schedule. */
+    unscheduledSources?: string[];
 }
 
 type Window = 'today' | 'last7d';
@@ -146,8 +154,18 @@ export default function PipelineFlowPage() {
     }, []);
 
     const view = data ? data[window] : null;
-    const funnels = view?.funnels ?? [];
+    const funnels = useMemo(() => view?.funnels ?? [], [view]);
     const totals = view?.totals ?? { fetched: 0, added: 0, rejected: 0 };
+    const sourceSplit = useMemo(
+        () => splitScheduledSources(data?.activeSources ?? [], data?.unscheduledSources ?? []),
+        [data?.activeSources, data?.unscheduledSources],
+    );
+    const registryRows = useMemo(
+        () => describeRegistrySources(sourceSplit.scheduled, funnels),
+        [sourceSplit, funnels],
+    );
+    const silentCount = registryRows.filter((r) => !r.hasStats).length;
+    const windowWords = window === 'today' ? 'today' : 'in the last 7 days';
 
     return (
         <div style={{ padding: '24px 28px', maxWidth: '1280px' }}>
@@ -256,6 +274,17 @@ export default function PipelineFlowPage() {
                 </div>
             </Section>
 
+            {/* Registry sources: one with no source_stats row in the window is silent */}
+            <Section title={`Registered sources (${registryRows.length})`} icon={<Clock size={16} />}>
+                <RegisteredSources
+                    rows={registryRows}
+                    silentCount={silentCount}
+                    windowWords={windowWords}
+                    unscheduled={sourceSplit.unscheduled}
+                    loading={loading}
+                />
+            </Section>
+
             {/* Top rejection reasons */}
             <Section title="Top rejection reasons (last 7d)" icon={<XCircle size={16} />}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -341,5 +370,69 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
                 {children}
             </div>
         </div>
+    );
+}
+
+interface RegisteredSourcesProps {
+    rows: readonly RegistrySourceRow[];
+    silentCount: number;
+    /** 'today' or 'in the last 7 days'. */
+    windowWords: string;
+    unscheduled: readonly string[];
+    loading: boolean;
+}
+
+/**
+ * Every scheduled source with its funnel counts for the window, silent ones
+ * first. A source whose cron stopped leaves no source_stats row, so without
+ * this list it would simply be missing from the funnel above.
+ */
+function RegisteredSources({ rows, silentCount, windowWords, unscheduled, loading }: RegisteredSourcesProps) {
+    const th: React.CSSProperties = { padding: '10px 14px', fontWeight: 600, color: '#1A2E35' };
+    const td: React.CSSProperties = { padding: '8px 14px', color: '#6B7F8A' };
+
+    if (rows.length === 0) {
+        return loading
+            ? null
+            : <div style={{ padding: '24px', color: '#6B7F8A', textAlign: 'center' }}>No sources registered.</div>;
+    }
+
+    return (
+        <>
+            <p style={{ margin: 0, padding: '12px 14px 0', fontSize: '13px', color: '#6B7F8A' }}>
+                {silentCount === 0
+                    ? `Every scheduled source has a source_stats row ${windowWords}.`
+                    : `${silentCount} ${silentCount === 1 ? 'source has' : 'sources have'} no source_stats row ${windowWords}. A source whose cron stopped shows here.`}
+            </p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginTop: '8px' }}>
+                <thead>
+                    <tr style={{ background: '#F8FAF9', textAlign: 'left' }}>
+                        <th style={th}>Source</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Fetched</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Added</th>
+                        <th style={th}>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((r) => (
+                        <tr key={r.source} style={{ borderTop: '1px solid #E8ECF0' }}>
+                            <td style={{ ...td, fontFamily: 'monospace', color: '#1A2E35' }}>{r.source}</td>
+                            <td style={{ ...td, textAlign: 'right' }}>{r.hasStats ? fmt(r.fetched) : 'None'}</td>
+                            <td style={{ ...td, textAlign: 'right' }}>{r.hasStats ? fmt(r.added) : 'None'}</td>
+                            <td style={td}>
+                                {r.hasStats
+                                    ? <span style={{ color: BUCKET_COLOR.added }}>Ran</span>
+                                    : <span style={{ color: '#B45309', fontWeight: 600 }}>No stats row in this window</span>}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            {unscheduled.length > 0 && (
+                <p style={{ margin: 0, padding: '10px 14px 12px', fontSize: '12px', color: '#94A3B8', borderTop: '1px solid #E8ECF0' }}>
+                    Not scheduled on this board, so not checked: {unscheduled.join(', ')}.
+                </p>
+            )}
+        </>
     );
 }

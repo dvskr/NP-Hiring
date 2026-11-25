@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { inngest } from '@/lib/inngest/client';
@@ -6,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { logAudit } from '@/lib/audit-log';
 import { contentChangeStamp } from '@/lib/job-content-change';
 import { revalidateJobPage } from '@/lib/job-page-revalidation';
+import { holdChange } from '@/lib/admin/job-hold';
 import {
     UPDATE_FIELD_KINDS,
     patchAuditAction,
@@ -14,6 +16,16 @@ import {
     validateJobUpdate,
     withOrderedSalary,
 } from '../_lib/job-input';
+import {
+    HARD_DELETE_CHANGED_MESSAGE,
+    HARD_DELETE_GUARD_SELECT,
+    PUBLISHABLE_JOB_WHERE,
+    PUBLISH_BLOCKED_MESSAGE,
+    hardDeletableJobWhere,
+    hardDeleteRefusal,
+    isPublishBlocked,
+    isRecordNotFound,
+} from '../../_lib/job-takedown';
 
 /**
  * GET /api/admin/jobs/:id
@@ -59,7 +71,18 @@ const AUDIT_DIFF_EXCLUDED = new Set(['description', 'descriptionSummary', 'benef
 const EMBED_FIELDS = ['title', 'description', 'setting', 'population', 'state', 'benefits'];
 const MAX_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000; // 12 months
 
+/**
+ * Columns PATCH reads before it writes: every editable field (the audit diff
+ * and the content stamp compare them), and the hold, archive and payment
+ * state the publish guard and the takedown read.
+ */
+const PATCH_PRIOR_SELECT = Object.fromEntries(
+    [...Object.keys(UPDATE_FIELD_KINDS), 'expiresAt', 'adminHoldAt', 'archivedAt', 'employerJobs'].map((k) => [k, true]),
+);
+
 const badRequest = (error: string) => NextResponse.json({ success: false, error }, { status: 400 });
+const notFound = () => NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
+const conflict = (error: string) => NextResponse.json({ success: false, error }, { status: 409 });
 
 /**
  * Validate expiresAt. Must be parseable, in the future and within 12 months.
@@ -79,10 +102,118 @@ function parseExpiresAt(raw: unknown): { ok: true; value: Date | null } | { ok: 
     return { ok: true, value: parsed };
 }
 
+/** The PATCH body as an object naming at least one field PATCH knows, or the 400 to answer. */
+async function readPatchBody(request: NextRequest): Promise<{ body: Record<string, unknown> } | { error: NextResponse }> {
+    let body: unknown;
+    try {
+        body = await request.json();
+    } catch {
+        return { error: badRequest('Request body must be valid JSON') };
+    }
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+        return { error: badRequest('Request body must be a JSON object') };
+    }
+    const record = body as Record<string, unknown>;
+    const knownKeys = Object.keys(record).filter((k) => k in UPDATE_FIELD_KINDS || k === 'expiresAt');
+    if (knownKeys.length === 0) return { error: badRequest('No valid fields provided') };
+    return { body: record };
+}
+
+/** The prior row's hold, archive and payment state, as the publish guard reads it. */
+function priorPublishState(prior: Record<string, unknown>) {
+    return {
+        adminHoldAt: (prior.adminHoldAt as Date | null | undefined) ?? null,
+        archivedAt: (prior.archivedAt as Date | null | undefined) ?? null,
+        employerJobs: (prior.employerJobs as { paymentStatus: string } | null | undefined) ?? null,
+    };
+}
+
+/**
+ * The job write. A publish of a posting that was down carries the publish
+ * guard in its WHERE, so an archive or a refund landing after the read
+ * cannot be overtaken. Null when no row matched.
+ */
+async function writeJobUpdate(id: string, data: Record<string, unknown>, reviving: boolean) {
+    try {
+        return await prisma.job.update({
+            where: reviving ? { ...PUBLISHABLE_JOB_WHERE, id } : { id },
+            data,
+            select: {
+                id: true, title: true, employer: true, isPublished: true,
+                isFeatured: true, updatedAt: true, expiresAt: true, slug: true,
+            },
+        });
+    } catch (error) {
+        if (isRecordNotFound(error)) return null;
+        throw error;
+    }
+}
+
+interface PatchAudit {
+    id: string;
+    prior: Record<string, unknown>;
+    data: Record<string, unknown>;
+    fields: string[];
+    /** The isPublished the body sent, if it sent one. */
+    publish: boolean | undefined;
+    /** The expiry the body sent, if it sent one. */
+    expiresAt: Date | null | undefined;
+    /** The expiry stored after the write. */
+    storedExpiresAt: Date | null;
+}
+
+/**
+ * The PATCH audit rows: the edit, with what it did to the admin hold when it
+ * published or unpublished, and an expiry change of its own.
+ */
+async function auditPatch(audit: PatchAudit): Promise<void> {
+    const actorId = await resolveAdminActorId();
+    const priorTitle = audit.prior.title as string;
+
+    if (audit.fields.length > 0) {
+        const changes = Object.fromEntries(
+            audit.fields
+                .filter((f) => !AUDIT_DIFF_EXCLUDED.has(f))
+                .map((f) => [f, { from: audit.prior[f] ?? null, to: audit.data[f] ?? null }]),
+        );
+        const hold = audit.publish === undefined ? null : holdChange(audit.publish, audit.prior.adminHoldAt as Date | null | undefined);
+        await logAudit({
+            action: patchAuditAction(audit.fields, audit.data),
+            actorType: 'admin',
+            actorId,
+            targetType: 'job',
+            targetId: audit.id,
+            metadata: { jobTitle: priorTitle, fields: audit.fields, changes, ...(hold && { hold }) },
+        });
+    }
+
+    if (audit.expiresAt !== undefined) {
+        const priorIso = (audit.prior.expiresAt as Date | null)?.toISOString() ?? null;
+        const newIso = audit.storedExpiresAt?.toISOString() ?? null;
+        if (priorIso !== newIso) {
+            await logAudit({
+                action: 'admin.job.expiry_change',
+                actorType: 'admin',
+                actorId,
+                targetType: 'job',
+                targetId: audit.id,
+                metadata: { from: priorIso, to: newIso, jobTitle: priorTitle },
+            });
+        }
+    }
+}
+
 /**
  * PATCH /api/admin/jobs/:id
  * Update allow-listed job fields. Every value is type and shape validated
  * (400 on failure, nothing written) and every change is audit-logged.
+ *
+ * An isPublished the body sends is the platform's decision, which the owner
+ * must not be able to undo (lib/admin/job-hold.ts): false is a takedown, also
+ * of a posting its owner had paused, and keeps an earlier takedown's time;
+ * true ends a hold and any pause, and is refused (409) for a posting that is
+ * archived or not paid for. The admin screens send isPublished only from the
+ * publish toggle and the analytics Reports tab, never from the edit form.
  */
 export async function PATCH(
     request: NextRequest,
@@ -92,62 +223,41 @@ export async function PATCH(
     if (authError) return authError;
 
     const { id } = await params;
-
-    let body: unknown;
-    try {
-        body = await request.json();
-    } catch {
-        return badRequest('Request body must be valid JSON');
-    }
-    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-        return badRequest('Request body must be a JSON object');
-    }
-    const knownKeys = Object.keys(body).filter((k) => k in UPDATE_FIELD_KINDS || k === 'expiresAt');
-    if (knownKeys.length === 0) return badRequest('No valid fields provided');
+    const read = await readPatchBody(request);
+    if ('error' in read) return read.error;
+    const { body } = read;
 
     try {
-        const priorSelect = Object.fromEntries(
-            [...Object.keys(UPDATE_FIELD_KINDS), 'expiresAt'].map((k) => [k, true]),
-        );
-        const prior = await prisma.job.findUnique({ where: { id }, select: priorSelect }) as Record<string, unknown> | null;
-        if (!prior) {
-            return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
-        }
+        const prior = await prisma.job.findUnique({ where: { id }, select: PATCH_PRIOR_SELECT }) as Record<string, unknown> | null;
+        if (!prior) return notFound();
 
         const validated = validateJobUpdate(body, prior.applyLink as string | null);
         if (!validated.ok) return badRequest(validated.error);
 
-        let expiresAt: Date | null | undefined;
-        if ('expiresAt' in body) {
-            const parsed = parseExpiresAt((body as Record<string, unknown>).expiresAt);
-            if (!parsed.ok) return badRequest(parsed.error);
-            expiresAt = parsed.value;
-        }
+        const parsedExpiry = 'expiresAt' in body ? parseExpiresAt(body.expiresAt) : null;
+        if (parsedExpiry && !parsedExpiry.ok) return badRequest(parsedExpiry.error);
+        const expiresAt = parsedExpiry?.ok ? parsedExpiry.value : undefined;
+
+        const publish = typeof validated.data.isPublished === 'boolean' ? validated.data.isPublished : undefined;
+        const state = priorPublishState(prior);
+        const reviving = publish === true && prior.isPublished === false;
+        if (reviving && isPublishBlocked(state)) return conflict(PUBLISH_BLOCKED_MESSAGE);
 
         const fields = Object.keys(validated.data);
         const edits: Record<string, unknown> = {
             ...withOrderedSalary(validated.data),
-            ...(typeof validated.data.isPublished === 'boolean' ? publishStateFields(validated.data.isPublished) : {}),
+            ...(publish !== undefined ? publishStateFields(publish, state.adminHoldAt) : {}),
             ...(expiresAt !== undefined ? { expiresAt } : {}),
         };
         // contentChangedAt (sitemap lastmod, "Last updated") moves when the
         // edit changes a rendered field or republishes the job; feature,
         // verification and quality-score edits leave it alone.
-        const data: Record<string, unknown> = {
-            ...edits,
-            ...contentChangeStamp(prior, edits, {
-                revived: edits.isPublished === true && prior.isPublished === false,
-            }),
-        };
+        const data: Record<string, unknown> = { ...edits, ...contentChangeStamp(prior, edits, { revived: reviving }) };
 
-        const job = await prisma.job.update({
-            where: { id },
-            data,
-            select: {
-                id: true, title: true, employer: true, isPublished: true,
-                isFeatured: true, updatedAt: true, expiresAt: true, slug: true,
-            },
-        });
+        const job = await writeJobUpdate(id, data, reviving);
+        // No row matched: the job is gone, or a publish found it archived or
+        // without its payment after the read.
+        if (!job) return reviving ? conflict(PUBLISH_BLOCKED_MESSAGE) : notFound();
 
         // The job page is cached for a day: show the edit now.
         revalidateJobPage(job.slug, 'Admin Jobs');
@@ -160,39 +270,7 @@ export async function PATCH(
             });
         }
 
-        const actorId = await resolveAdminActorId();
-        const priorTitle = prior.title as string;
-
-        if (fields.length > 0) {
-            const changes = Object.fromEntries(
-                fields
-                    .filter((f) => !AUDIT_DIFF_EXCLUDED.has(f))
-                    .map((f) => [f, { from: prior[f] ?? null, to: data[f] ?? null }]),
-            );
-            await logAudit({
-                action: patchAuditAction(fields, data),
-                actorType: 'admin',
-                actorId,
-                targetType: 'job',
-                targetId: id,
-                metadata: { jobTitle: priorTitle, fields, changes },
-            });
-        }
-
-        if (expiresAt !== undefined) {
-            const priorIso = (prior.expiresAt as Date | null)?.toISOString() ?? null;
-            const newIso = job.expiresAt?.toISOString() ?? null;
-            if (priorIso !== newIso) {
-                await logAudit({
-                    action: 'admin.job.expiry_change',
-                    actorType: 'admin',
-                    actorId,
-                    targetType: 'job',
-                    targetId: id,
-                    metadata: { from: priorIso, to: newIso, jobTitle: priorTitle },
-                });
-            }
-        }
+        await auditPatch({ id, prior, data, fields, publish, expiresAt, storedExpiresAt: job.expiresAt });
 
         return NextResponse.json({ success: true, job });
     } catch (error) {
@@ -202,53 +280,29 @@ export async function PATCH(
 }
 
 /**
- * paymentStatus values whose EmployerJob row anchors a per-domain
- * entitlement and therefore must survive a hard delete:
- *   'free' is legacy free-quota rows (audit #25).
- *   'paid' is the intro-price allowance: lib/pricing.ts#getNextPaidTier
- *          quotes 'intro' whenever a domain has ZERO 'paid' rows, so
- *          cascading one away would re-open config.introPrice for the
- *          whole company domain.
- * 'promo' rows are not anchors (the promo cap counts LIVE posts only, and
- * soft-delete already unpublishes), and neither are legacy 'plan' rows (the
- * Employer plan is retired and its code deleted), so admins can still
- * hard-delete those. Nor are 'pack' rows: a 5-post pack's
- * credits are a counter on the pack's own row (lib/post-packs.ts), so a
- * deleted post hands no credit back, and the intro rule counts the pack,
- * not its posts.
+ * Columns DELETE reads: what the audit row records, the page to refresh,
+ * the hold a takedown keeps, and what the hard delete guard reads.
  */
-const HARD_DELETE_PROTECTED_STATUSES = ['free', 'paid'] as const;
+const DELETE_SELECT = {
+    title: true,
+    employer: true,
+    isPublished: true,
+    slug: true,
+    adminHoldAt: true,
+    ...HARD_DELETE_GUARD_SELECT,
+} satisfies Prisma.JobSelect;
 
-const isHardDeleteProtected = (status: string | null | undefined): boolean =>
-    status != null && (HARD_DELETE_PROTECTED_STATUSES as readonly string[]).includes(status);
-
-/** What the caller loses if we let the cascade through, per anchor status. */
-const HARD_DELETE_ANCHOR_LABELS: Record<string, string> = {
-    free: 'free quota record',
-    paid: 'intro price allowance',
-};
-
-/**
- * 409 copy for a blocked hard delete. `status` is omitted when the block
- * came from the re-check inside the write, where we no longer know which
- * anchor status the row had raced into.
- */
-const hardDeleteBlockedError = (status?: string | null): string => {
-    const posting = status ? `a ${status} posting` : 'this posting';
-    const anchor = (status && HARD_DELETE_ANCHOR_LABELS[status]) || 'per-domain pricing record';
-    return `Cannot hard-delete ${posting} because the cascade would erase the ${anchor}. Soft-delete it (no ?hard flag) instead, or contact engineering for a record-preserving removal.`;
-};
+type JobForDelete = Prisma.JobGetPayload<{ select: typeof DELETE_SELECT }>;
 
 /**
  * DELETE /api/admin/jobs/:id
- * Soft-delete by default (unpublishes and pins against ingest renewal).
- * Use ?hard=true for permanent deletion.
- *
- * Audit #25: hard-delete is BLOCKED on rows in HARD_DELETE_PROTECTED_STATUSES.
- * Cascade-deleting an EmployerJob row that anchors a per-domain entitlement
- * would reset it, letting the (probably just spammy) employer start again
- * from a clean slate. Admin can still soft-delete such posts, which removes
- * them from search without nuking the pricing signal.
+ * Soft delete by default: a takedown (lib/admin/job-hold.ts), which the
+ * owner cannot undo and an admin publish reverses.
+ * Use ?hard=true for permanent deletion. It is refused (409) for every
+ * employer post except an unpaid one whose checkout can no longer be paid,
+ * and for any job with applications: the cascade would erase the payment
+ * status, the pricing record and the candidates' applications
+ * (app/api/admin/_lib/job-takedown.ts).
  */
 export async function DELETE(
     request: NextRequest,
@@ -261,79 +315,61 @@ export async function DELETE(
     const hard = new URL(request.url).searchParams.get('hard') === 'true';
 
     try {
-        const job = await prisma.job.findUnique({
-            where: { id },
-            select: {
-                title: true,
-                employer: true,
-                isPublished: true,
-                employerJobs: { select: { paymentStatus: true } },
-            },
-        });
-        if (!job) {
-            return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
-        }
+        const job = await prisma.job.findUnique({ where: { id }, select: DELETE_SELECT });
+        if (!job) return notFound();
         const actorId = await resolveAdminActorId();
-
-        if (hard) {
-            // Audit #25: refuse hard-delete if the EmployerJob row anchors a
-            // per-domain entitlement (legacy free quota, intro-price
-            // allowance). Cascade through EmployerJob would drop the
-            // quotaDomain row the pricing rules count against.
-            const anchorStatus = job.employerJobs?.paymentStatus ?? null;
-            if (isHardDeleteProtected(anchorStatus)) {
-                return NextResponse.json(
-                    { success: false, error: hardDeleteBlockedError(anchorStatus) },
-                    { status: 409 },
-                );
-            }
-            // The paymentStatus filter repeats the guard inside the write so
-            // a row that became an anchor between the read and the delete
-            // still survives.
-            const deleted = await prisma.job.deleteMany({
-                where: {
-                    id,
-                    NOT: {
-                        employerJobs: {
-                            is: { paymentStatus: { in: [...HARD_DELETE_PROTECTED_STATUSES] } },
-                        },
-                    },
-                },
-            });
-            if (deleted.count === 0) {
-                return NextResponse.json(
-                    { success: false, error: hardDeleteBlockedError() },
-                    { status: 409 },
-                );
-            }
-            await logAudit({
-                action: 'admin.job.hard_delete',
-                actorType: 'admin',
-                actorId,
-                targetType: 'job',
-                targetId: id,
-                metadata: {
-                    jobTitle: job.title,
-                    employer: job.employer,
-                    paymentStatus: job.employerJobs?.paymentStatus ?? null,
-                },
-            });
-            return NextResponse.json({ success: true, action: 'hard_deleted' });
-        }
-
-        await prisma.job.update({ where: { id }, data: publishStateFields(false) });
-        await logAudit({
-            action: 'admin.job.soft_delete',
-            actorType: 'admin',
-            actorId,
-            targetType: 'job',
-            targetId: id,
-            metadata: { jobTitle: job.title, employer: job.employer, wasPublished: job.isPublished },
-        });
-
-        return NextResponse.json({ success: true, action: 'soft_deleted' });
+        return hard ? await hardDeleteJob(id, job, actorId) : await softDeleteJob(id, job, actorId);
     } catch (error) {
+        // Gone between the read and the write: the answer an unknown id gets.
+        if (isRecordNotFound(error)) return notFound();
         console.error('[Admin Jobs] DELETE error:', error);
         return NextResponse.json({ success: false, error: 'Failed to delete job' }, { status: 500 });
     }
+}
+
+/** A permanent delete, behind the guard in app/api/admin/_lib/job-takedown.ts. */
+async function hardDeleteJob(id: string, job: JobForDelete, actorId: string | null): Promise<NextResponse> {
+    const now = new Date();
+    const refusal = hardDeleteRefusal([{ ...job, id }], now);
+    if (refusal) return conflict(refusal.error);
+
+    // The guard again, in the delete itself: a payment, a checkout or an
+    // application landing after the read keeps the row.
+    const deleted = await prisma.job.deleteMany({ where: { ...hardDeletableJobWhere(now), id } });
+    if (deleted.count === 0) return conflict(HARD_DELETE_CHANGED_MESSAGE);
+
+    revalidateJobPage(job.slug, 'Admin Jobs');
+    await logAudit({
+        action: 'admin.job.hard_delete',
+        actorType: 'admin',
+        actorId,
+        targetType: 'job',
+        targetId: id,
+        metadata: {
+            jobTitle: job.title,
+            employer: job.employer,
+            paymentStatus: job.employerJobs?.paymentStatus ?? null,
+        },
+    });
+    return NextResponse.json({ success: true, action: 'hard_deleted' });
+}
+
+/** A takedown. A posting already held keeps the time of its first takedown. */
+async function softDeleteJob(id: string, job: JobForDelete, actorId: string | null): Promise<NextResponse> {
+    await prisma.job.update({ where: { id }, data: publishStateFields(false, job.adminHoldAt) });
+    revalidateJobPage(job.slug, 'Admin Jobs');
+    await logAudit({
+        action: 'admin.job.soft_delete',
+        actorType: 'admin',
+        actorId,
+        targetType: 'job',
+        targetId: id,
+        metadata: {
+            jobTitle: job.title,
+            employer: job.employer,
+            wasPublished: job.isPublished,
+            hold: holdChange(false, job.adminHoldAt),
+        },
+    });
+    return NextResponse.json({ success: true, action: 'soft_deleted' });
 }

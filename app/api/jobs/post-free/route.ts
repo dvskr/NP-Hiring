@@ -463,7 +463,9 @@ export async function POST(request: NextRequest) {
             // (see lib/utils/job-sort.ts and JobCard), not from this flag.
             isFeatured: false,
             isPublished: true,
-            isVerifiedEmployer: true,
+            // No isVerifiedEmployer here: posting never confirms who the
+            // employer is. lib/paid-post-twins-sync.ts sets the check for
+            // accounts confirmed at /admin/verify-employers.
             sourceType: 'employer',
             expiresAt,
             // A new posting's content is new now (sitemap lastmod, the

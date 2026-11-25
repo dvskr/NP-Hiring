@@ -41,6 +41,7 @@ import {
   normalizeContentWhitespace,
 } from '@/lib/sanitize';
 import { readJsonObject } from '@/lib/request-body';
+import { ADMIN_HOLD_MESSAGE } from '@/lib/admin/job-hold';
 import { createClient } from '@/lib/supabase/server';
 import { getBaseUrl, getEnv, isFeatureEnabled } from '@/lib/env';
 import { normalizeSalary } from '@/lib/salary-normalizer';
@@ -602,6 +603,11 @@ async function retirePreviousSession(stripe: Stripe, previousSessionId: string |
  * the original (jobId / pricing), so the existing webhook,
  * verify-checkout-session, and reconciliation activation paths all work
  * unchanged.
+ *
+ * A posting an admin took down (lib/admin/job-hold.ts) is refused with 409
+ * before anything else is checked or written, as the renewal checkout and
+ * the owner's resume refuse it: the payment would buy a listing that stays
+ * down, and the resume would restart its listing window.
  */
 async function resumeAbandonedCheckout(
   stripe: Stripe,
@@ -614,7 +620,7 @@ async function resumeAbandonedCheckout(
     where: { jobId },
     include: {
       job: {
-        select: { id: true, title: true, employer: true, location: true, archivedAt: true },
+        select: { id: true, title: true, employer: true, location: true, archivedAt: true, adminHoldAt: true },
       },
     },
   });
@@ -637,6 +643,13 @@ async function resumeAbandonedCheckout(
     employerJob.contactEmail.toLowerCase() === userEmail.toLowerCase();
   if (!ownsByUser && !ownsByEmail) {
     return NextResponse.json({ error: 'You do not have access to this job' }, { status: 403 });
+  }
+
+  if (employerJob.job.adminHoldAt) {
+    return NextResponse.json(
+      { error: ADMIN_HOLD_MESSAGE, message: ADMIN_HOLD_MESSAGE, cause: 'admin_hold' },
+      { status: 409 }
+    );
   }
 
   if (employerJob.paymentStatus !== 'pending' && employerJob.paymentStatus !== 'expired') {

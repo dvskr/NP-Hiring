@@ -1,0 +1,14 @@
+-- Validates the foreign key 20261126000004_add_verified_employer_twins added
+-- NOT VALID: jobs.shadowed_by_job_id references jobs.id.
+--
+-- Validation scans jobs to check the rows that were there before the key
+-- existed (every one of them NULL, so it cannot fail). It runs in its own
+-- file, so its own transaction, because VALIDATE CONSTRAINT holds only a
+-- SHARE UPDATE EXCLUSIVE lock on jobs (and ROW SHARE on the referenced
+-- table, jobs again), which lets every read and write continue for the
+-- whole scan. Inside the previous file the scan would have run under that
+-- file's ACCESS EXCLUSIVE lock and held every read of jobs until it ended.
+-- Waiting for this lock holds no read or write either, so the file sets no
+-- lock timeout.
+-- tests/regressions/verified-employer-twins-migration.test.ts pins this file.
+ALTER TABLE "jobs" VALIDATE CONSTRAINT "jobs_shadowed_by_job_id_fkey";

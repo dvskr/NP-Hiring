@@ -30,6 +30,13 @@ import {
   isUnrecordedPackPayment,
 } from './post-pack-refunds';
 import {
+  applyLedgerDispute,
+  employerJobForCharge,
+  fullRefundRevokesPosting,
+  restoreWonPosting,
+  revokeRefundedPosting,
+} from './job-charge-refunds';
+import {
   alertWebhookFailure,
   claimEmailSend,
   prismaErrorCode,
@@ -46,6 +53,8 @@ import {
  *   post-pack-refunds.ts  — 5-post pack refunds and chargebacks
  *   guide-checkout.ts     — guides store purchases, refunds and chargebacks
  *   webhook-support.ts    — alerting (Sentry + Discord), email claims, helpers
+ * A post's own refunds and chargebacks, the payments on the JobCharge
+ * ledger, are applied to its posting by job-charge-refunds.ts.
  *
  * Required endpoint events (the list in .env.example; processEvent handles
  * each one):
@@ -358,10 +367,10 @@ async function handleCheckoutSessionPaid(
     if (activation.outcome === 'already_active') {
       logger.info('[Stripe] Checkout already activated by another path', { jobId, sessionId: session.id });
     }
-    // Paid and claimed, but archived while the checkout was open: not live
-    // until the employer restores it. Said in the acknowledgement, so the
-    // delivery log in Stripe shows it.
+    // Paid and claimed, but not live: archived while the checkout was open (until the employer restores it), or
+    // taken down by an admin (lib/admin/job-hold.ts). Said in the acknowledgement, so Stripe's delivery log shows it.
     if (activation.leftArchived) return NextResponse.json({ received: true, leftArchived: true });
+    if (activation.leftHeld) return NextResponse.json({ received: true, leftHeld: true });
   } catch (activationErr) {
     logger.error('Error updating job in database', activationErr, { jobId });
     return failAndRetry(cleanupDedupe, 'New-post activation failed', activationErr, { eventId: event.id, jobId, sessionId: session.id }, 'Failed to update job');
@@ -423,11 +432,11 @@ async function handleRenewalPaid(
       });
       return NextResponse.json({ received: true, note: 'renewal on revoked posting — refund required' });
     }
-    if (result.outcome === 'cap_reached') {
-      // The post is at its renewal cap, so nothing was applied. The charge
-      // is on the ledger and apply-renewal.ts raised the refund alert; keep
-      // the dedupe row so Stripe does not retry.
-      return NextResponse.json({ received: true, note: 'renewal at the renewal limit, not applied, refund required' });
+    if (result.outcome === 'cap_reached' || result.outcome === 'admin_hold') {
+      // Nothing applied: the post is at its renewal cap, or an admin took it down (lib/admin/job-hold.ts). The charge
+      // is on the ledger and apply-renewal.ts raised the refund alert; keep the dedupe row so Stripe does not retry.
+      const why = result.outcome === 'cap_reached' ? 'at the renewal limit' : 'on a posting under an admin hold';
+      return NextResponse.json({ received: true, note: `renewal ${why}, not applied, refund required` });
     }
     // leftArchived: applied, but the post stays unpublished until restored.
     return NextResponse.json({ received: true, ...(result.leftArchived && { leftArchived: true }) });
@@ -553,54 +562,13 @@ async function retryUntilSaleRecorded(
   );
 }
 
-/** The EmployerJob behind a ledger row. B112: employerJobId is nullable (FK ON DELETE SET NULL). */
-async function employerJobForCharge(employerJobId: string | null) {
-  return employerJobId
-    ? prisma.employerJob.findUnique({
-        where: { id: employerJobId },
-        include: { job: { select: { id: true, title: true } } },
-      })
-    : null;
-}
-
-/**
- * Whether a full refund of this charge takes the posting down. It does when
- * the posting is left with no payment to stand on, and it does not while
- * another payment for it stands (one not refunded in full). The alerts "Two
- * paid renewals for one posting" (apply-renewal.ts) and "second payment for
- * one posting" above ask the operator for exactly that refund, and revoking
- * on it took down a posting the employer had paid for twice.
- *
- *   A renewal: revokes only a 'paid' posting with no other payment standing.
- *     An applied renewal always leaves the posting 'paid', so any other
- *     status means this one was never applied (the renewal cap, or a posting
- *     already revoked): refunding it changes nothing, which also keeps a
- *     'disputed' marker from being overwritten.
- *   A post fee: revokes unless the same fee was paid twice. A renewal alone
- *     does not keep a posting whose own fee went back, as before.
- *
- * The days a refunded renewal added stay on the posting: the ledger does not
- * record how many each renewal added (the renewal cap can shorten them).
- */
-async function fullRefundRevokesPosting(
-  jobCharge: { id: string; type: string },
-  employerJob: { id: string; paymentStatus: string },
-): Promise<boolean> {
-  if (jobCharge.type === 'renewal' && employerJob.paymentStatus !== 'paid') return false;
-  const others = await prisma.jobCharge.findMany({
-    where: { employerJobId: employerJob.id, id: { not: jobCharge.id } },
-    select: { type: true, amountCents: true, refundedAmountCents: true },
-  });
-  const standing = others.filter((other) => (other.refundedAmountCents ?? 0) < other.amountCents);
-  return jobCharge.type === 'renewal'
-    ? standing.length === 0
-    : !standing.some((other) => other.type === jobCharge.type);
-}
-
 /**
  * Audit #28: charge.refunded — updates the JobCharge ledger, flips a FULL
  * refund to 'refunded' + unpublishes when no other payment for the posting
- * stands (fullRefundRevokesPosting), and sends a confirmation email.
+ * stands (fullRefundRevokesPosting), and sends a confirmation email. The
+ * ledger row is written on its own first: the decision reads the posting's
+ * other payments, so a concurrent refund of another of them sees this one.
+ * The status and the unpublish then go in one transaction (revokeRefundedPosting).
  */
 async function handleChargeRefunded(stripe: Stripe, event: Stripe.Event, charge: Stripe.Charge, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
   try {
@@ -645,8 +613,7 @@ async function handleChargeRefunded(stripe: Stripe, event: Stripe.Event, charge:
       // job but loses invoice/receipt downloads and can never republish.
       if (isFullRefund) {
         if (await fullRefundRevokesPosting(jobCharge, employerJob)) {
-          await prisma.employerJob.update({ where: { id: employerJob.id }, data: { paymentStatus: 'refunded' } });
-          await prisma.job.update({ where: { id: employerJob.jobId }, data: { isPublished: false } });
+          await revokeRefundedPosting(employerJob);
         } else {
           entitlementRetained = true;
           logger.warn('charge.refunded: full refund of one payment, the posting keeps its entitlement', {
@@ -694,7 +661,9 @@ async function handleChargeRefunded(stripe: Stripe, event: Stripe.Event, charge:
 /**
  * Chargeback: the bank pulls the funds and Stripe does NOT emit
  * charge.refunded. Revoke entitlement (unpublish + mark 'disputed', which the
- * invoice/receipt routes, toggle-publish and renewal checkout treat as non-paid).
+ * invoice/receipt routes, toggle-publish and renewal checkout treat as non-paid),
+ * both in one transaction (revokeDisputedPosting), unless the money was
+ * refunded already (applyLedgerDispute).
  */
 async function handleDisputeCreated(stripe: Stripe, event: Stripe.Event, dispute: Stripe.Dispute, cleanupDedupe: CleanupDedupe): Promise<NextResponse> {
   try {
@@ -714,15 +683,8 @@ async function handleDisputeCreated(stripe: Stripe, event: Stripe.Event, dispute
       logger.warn('charge.dispute.created: no matching JobCharge', { paymentIntentId, disputeId: dispute.id });
       return NextResponse.json({ received: true, note: 'no matching JobCharge' });
     }
-    const employerJob = await employerJobForCharge(jobCharge.employerJobId);
-    if (employerJob) {
-      await prisma.employerJob.update({ where: { id: employerJob.id }, data: { paymentStatus: 'disputed' } });
-      await prisma.job.update({ where: { id: employerJob.jobId }, data: { isPublished: false } });
-      logger.warn('Chargeback: revoked posting on dispute', { employerJobId: employerJob.id, disputeId: dispute.id, amount: dispute.amount });
-    } else {
-      logger.warn('charge.dispute.created: JobCharge has no matching EmployerJob', { jobChargeId: jobCharge.id });
-    }
-    return NextResponse.json({ received: true });
+    // Awaited here, so a failure lands in the catch below and Stripe retries.
+    return await applyLedgerDispute(jobCharge, dispute, event.id);
   } catch (disputeErr) {
     logger.error('Error handling charge.dispute.created webhook', disputeErr);
     return failAndRetry(cleanupDedupe, 'charge.dispute.created handler failed', disputeErr, { eventId: event.id }, 'Failed to handle dispute');
@@ -732,9 +694,10 @@ async function handleDisputeCreated(stripe: Stripe, event: Stripe.Event, dispute
 /**
  * charge.dispute.closed — the other half of the chargeback lifecycle.
  *   won  → the funds came back: restore 'paid' on a still-'disputed' posting
- *          and re-publish it if its listing window has not ended. A dispute
- *          closed 'warning_closed' (an inquiry that never became a
- *          chargeback) is restored the same way (disputeClosedInOurFavour).
+ *          and re-publish it if its window is open and no admin hold keeps it
+ *          down (lib/admin/job-hold.ts), both in one transaction
+ *          (restoreWonPosting). An inquiry closed 'warning_closed' is
+ *          restored the same way (disputeClosedInOurFavour).
  *   lost → record the lost funds on the ledger (refund columns,
  *          refundReason 'dispute_lost'); the posting stays revoked.
  */
@@ -774,24 +737,9 @@ async function handleDisputeClosed(stripe: Stripe, event: Stripe.Event, dispute:
     if (!employerJob) {
       return NextResponse.json({ received: true, dispute: 'won' });
     }
-    // Only a posting still marked 'disputed' is restored — a later refund or
-    // any other state change wins over the dispute outcome.
-    const restored = await prisma.employerJob.updateMany({
-      where: { id: employerJob.id, paymentStatus: 'disputed' },
-      data: { paymentStatus: 'paid' },
-    });
-    let republished = false;
-    if (restored.count > 0) {
-      const job = await prisma.job.findUnique({ where: { id: employerJob.jobId }, select: { expiresAt: true, archivedAt: true } });
-      if (job && !job.archivedAt && job.expiresAt && job.expiresAt.getTime() > Date.now()) {
-        // A revival: the posting is public again, so contentChangedAt moves
-        // (sitemap lastmod; indexing audit fixSoon 5).
-        await prisma.job.update({ where: { id: employerJob.jobId }, data: { isPublished: true, contentChangedAt: new Date() } });
-        republished = true;
-      }
-    }
-    logger.info('Chargeback won — posting restored', { employerJobId: employerJob.id, disputeId: dispute.id, restored: restored.count > 0, republished });
-    return NextResponse.json({ received: true, dispute: 'won', restored: restored.count > 0, republished });
+    const { restored, republished } = await restoreWonPosting(employerJob);
+    logger.info('Chargeback won: the posting is restored while it is still disputed', { employerJobId: employerJob.id, disputeId: dispute.id, restored, republished });
+    return NextResponse.json({ received: true, dispute: 'won', restored, republished });
   } catch (closedErr) {
     logger.error('Error handling charge.dispute.closed webhook', closedErr);
     return failAndRetry(cleanupDedupe, 'charge.dispute.closed handler failed', closedErr, { eventId: event.id }, 'Failed to handle dispute close');

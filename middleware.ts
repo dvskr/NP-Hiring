@@ -20,12 +20,16 @@ import { isCompanyProfileSlugShape } from '@/lib/company-slug';
 import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
 import {
     LISTING_GATE_SELECT,
+    NOT_A_PAID_POST_COPY_REST_FILTER,
     NOT_FOUND_REWRITE_PATH,
     cityGateLookup,
     cityGateVerdict,
     passesListingQuarantine,
     type ListingGateRow,
 } from '@/lib/pseo/listing-gates-edge';
+// Free copies of a confirmed employer's live paid post (lib/paid-post-twins.ts):
+// the job gate below sends a copy's URL to that post.
+import { TWIN_MARK_COLUMN, fetchTwinRedirect, twinRedirectUrl } from '@/lib/paid-post-twin-edge';
 import {
     STATE_ELIGIBLE_CATEGORY_SLUGS,
     CITY_ELIGIBLE_CATEGORY_SLUGS,
@@ -468,6 +472,8 @@ interface CachedLookup {
     gone: boolean;
     /** Why a gone ruling was made, so a cached hit serves the same copy. */
     reason?: 'quarantined';
+    /** A live ruling on a free copy of a paid post: the post's path the URL redirects to. */
+    redirectTo?: string;
     expiresAt: number;
 }
 
@@ -486,7 +492,7 @@ function cacheLookupGet(key: string): CachedLookup | null {
     return entry;
 }
 
-function cacheLookupSet(key: string, gone: boolean, reason?: CachedLookup['reason']): void {
+function cacheLookupSet(key: string, gone: boolean, reason?: CachedLookup['reason'], redirectTo?: string): void {
     if (middlewareLookupCache.size >= MIDDLEWARE_CACHE_MAX) {
         // Evict oldest (insertion-order first key).
         const oldest = middlewareLookupCache.keys().next().value;
@@ -495,8 +501,18 @@ function cacheLookupSet(key: string, gone: boolean, reason?: CachedLookup['reaso
     middlewareLookupCache.set(key, {
         gone,
         ...(reason ? { reason } : {}),
+        ...(redirectTo ? { redirectTo } : {}),
         expiresAt: Date.now() + MIDDLEWARE_CACHE_TTL_MS,
     });
+}
+
+/**
+ * A free copy of a confirmed employer's live paid post sends its visitor to
+ * that post. Temporary (307) on purpose: the mark lifts when the paid post
+ * ends, and a cached permanent redirect would outlive it.
+ */
+function paidTwinRedirect(request: NextRequest, path: string): NextResponse {
+    return NextResponse.redirect(twinRedirectUrl(path, request.url), 307);
 }
 
 // ── Strict-Consent Regions ─────────────────────────────────────────
@@ -739,6 +755,9 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
             if (cached?.gone) {
                 return cached.reason === 'quarantined' ? quarantinedJob410() : removedJob410();
             }
+            if (cached?.redirectTo) {
+                return paidTwinRedirect(request, cached.redirectTo);
+            }
             // Cached "live" result short-circuits the DB call entirely.
             if (cached && !cached.gone) {
                 // Fall through to normal pipeline — page handler will serve.
@@ -748,7 +767,7 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
                 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.PROD_SUPABASE_SERVICE_ROLE_KEY;
                 if (supabaseUrl && supabaseKey) {
                     const res = await fetch(
-                        `${supabaseUrl}/rest/v1/jobs?id=eq.${jobId}&select=id,is_published,expires_at,health_consecutive_missing,${LISTING_GATE_SELECT}`,
+                        `${supabaseUrl}/rest/v1/jobs?id=eq.${jobId}&select=id,is_published,expires_at,health_consecutive_missing,${TWIN_MARK_COLUMN},${LISTING_GATE_SELECT}`,
                         {
                             headers: {
                                 'apikey': supabaseKey,
@@ -800,6 +819,22 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
                         if (passesListingQuarantine(row) === false) {
                             cacheLookupSet(cacheKey, true, 'quarantined');
                             return quarantinedJob410();
+                        }
+                        // A free copy of a confirmed employer's live paid post
+                        // (lib/paid-post-twins.ts) sends the visitor to that post,
+                        // while it stays live past this ruling's cache window. A
+                        // failed lookup lets the copy's own page render.
+                        const twinPath = row.shadowed_by_job_id
+                            ? await fetchTwinRedirect({
+                                supabaseUrl,
+                                supabaseKey,
+                                twinId: row.shadowed_by_job_id,
+                                validUntil: Date.now() + MIDDLEWARE_CACHE_TTL_MS,
+                            })
+                            : null;
+                        if (twinPath) {
+                            cacheLookupSet(cacheKey, false, undefined, twinPath);
+                            return paidTwinRedirect(request, twinPath);
                         }
                         // Live — cache the negative so subsequent requests skip the round-trip.
                         cacheLookupSet(cacheKey, false);
@@ -968,8 +1003,10 @@ async function routeRequest(request: NextRequest): Promise<NextResponse> {
                             const nowIso = new Date().toISOString();
                             const activeExpiry = `or=(expires_at.is.null,expires_at.gt.${encodeURIComponent(nowIso)})`;
                             const deadLinkGate = `health_consecutive_missing=lt.${DEAD_LINK_MISS_THRESHOLD}`;
+                            // canonicalActiveJobWhere also hides free copies of a
+                            // live paid post (lib/paid-post-twins.ts), so this does.
                             const countRes = await fetch(
-                                `${supabaseUrl}/rest/v1/jobs?company_id=eq.${companyId}&is_published=eq.true&${activeExpiry}&${deadLinkGate}&select=${LISTING_GATE_SELECT}&limit=${ACTIVE_JOB_FETCH_LIMIT}`,
+                                `${supabaseUrl}/rest/v1/jobs?company_id=eq.${companyId}&is_published=eq.true&${NOT_A_PAID_POST_COPY_REST_FILTER}&${activeExpiry}&${deadLinkGate}&select=${LISTING_GATE_SELECT}&limit=${ACTIVE_JOB_FETCH_LIMIT}`,
                                 {
                                     headers: {
                                         'apikey': supabaseKey,

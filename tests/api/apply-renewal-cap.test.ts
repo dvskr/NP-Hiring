@@ -20,6 +20,9 @@
  *     did extend the post;
  *   - a replay of a renewal that WAS applied, and took the post to its cap,
  *     is still 'already_applied': nothing new on the ledger, no alert;
+ *   - the refused renewal withholds its session's confirmation, so a replay
+ *     of it answers 'cap_reached' again and sends no "renewed" email, no
+ *     purchase event and no second alert;
  *   - near the cap the renewal is applied with the days that are left, and
  *     the shortfall is logged.
  */
@@ -160,6 +163,14 @@ describe('a renewal paid for a post at its renewal cap extends nothing, so nothi
     expect(prisma.job.update).not.toHaveBeenCalled();
     expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
     expect(prisma.employerJob.update).not.toHaveBeenCalled();
+    // The session's confirmation is withheld for good, so no replay confirms it.
+    expect(prisma.emailSend.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        dedupeKey: 'renewal-confirmation:cs_paid',
+        status: 'withheld',
+        metadata: expect.objectContaining({ outcome: 'cap_reached' }),
+      }),
+    });
     // The employer is not told the listing was renewed, and GA books no purchase.
     expect(sendRenewalConfirmationEmail).not.toHaveBeenCalled();
     expect(trackServerPurchase).not.toHaveBeenCalled();
@@ -220,6 +231,31 @@ describe('a renewal paid for a post at its renewal cap extends nothing, so nothi
     expect(prisma.job.update).not.toHaveBeenCalled();
     expect(sendDiscordMessage).not.toHaveBeenCalled();
     expect(captureException).not.toHaveBeenCalled();
+  });
+
+  it('a replay of a renewal that was refused at the cap answers cap_reached again, and confirms nothing', async () => {
+    // The first delivery ledgered this session and withheld its confirmation.
+    jobRow(config.renewalCapDays - 15, 15);
+    vi.mocked(prisma.jobCharge.findUnique).mockResolvedValue({ id: 'jc-1' } as never);
+    vi.mocked(prisma.jobCharge.create).mockRejectedValue(Object.assign(new Error('dup'), { code: 'P2002' }));
+    vi.mocked(prisma.emailSend.findFirst).mockResolvedValueOnce({
+      metadata: { guard: 'stripe-webhook', reason: 'renewal_not_applied', outcome: 'cap_reached' },
+    } as never);
+    const { applyRenewalCheckout } = await import('@/app/api/webhooks/stripe/apply-renewal');
+    const { getStripe } = await import('@/lib/stripe');
+
+    const result = await applyRenewalCheckout(getStripe() as Stripe, PAID as unknown as Stripe.Checkout.Session);
+
+    expect(result).toEqual({ outcome: 'cap_reached', jobId: 'job1' });
+    expect(prisma.emailSend.findFirst).toHaveBeenCalledWith({
+      where: { dedupeKey: 'renewal-confirmation:cs_paid', status: 'withheld' },
+      select: { metadata: true },
+    });
+    expect(sendRenewalConfirmationEmail).not.toHaveBeenCalled();
+    expect(trackServerPurchase).not.toHaveBeenCalled();
+    expect(prisma.job.update).not.toHaveBeenCalled();
+    // The first run raised the refund alert; a replay raises none.
+    expect(sendDiscordMessage).not.toHaveBeenCalled();
   });
 });
 

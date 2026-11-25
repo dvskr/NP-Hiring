@@ -4,6 +4,7 @@
  * author faq_json or reviewed_at at all — both feed structured data on
  * the public post page, so malformed input must fail loudly, not save).
  */
+import { BLOG_CATEGORIES, isBlogCategory } from '@/lib/blog-categories';
 
 export interface FaqEntry {
     name: string;
@@ -83,6 +84,30 @@ export function parseBlogTitle(
         return { ok: false, error: 'title must be a non-empty string' };
     }
     return { ok: true, value: input.trim() };
+}
+
+/**
+ * Validate a category payload.
+ *
+ * On create the category must be in the public taxonomy (BLOG_CATEGORIES):
+ * a new post has no legacy excuse for a category the blog cannot label or
+ * filter on. On edit any non-blank string is accepted, so a post whose row
+ * predates the taxonomy stays editable: the editor sends its legacy value
+ * back unchanged.
+ */
+export function parseBlogCategory(
+    input: unknown,
+    mode: 'create' | 'edit',
+): { ok: true; value: string } | { ok: false; error: string } {
+    if (typeof input !== 'string' || !input.trim()) {
+        return { ok: false, error: 'category must be a non-empty string' };
+    }
+    const value = input.trim();
+    if (mode === 'create' && !isBlogCategory(value)) {
+        const allowed = BLOG_CATEGORIES.map((c) => `'${c.id}'`).join(', ');
+        return { ok: false, error: `category must be one of ${allowed}` };
+    }
+    return { ok: true, value };
 }
 
 /** True for Prisma's "record to update/delete does not exist" error (P2025). */

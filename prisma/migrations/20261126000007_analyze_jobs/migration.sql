@@ -1,0 +1,15 @@
+-- Statistics for the new jobs.shadowed_by_job_id column
+-- (20261126000004_add_verified_employer_twins) and its index
+-- (20261126000006_add_jobs_shadowed_by_job_id_idx), which sorts before this
+-- file so the index exists when the statistics are gathered.
+--
+-- Nearly every listing query now filters on shadowed_by_job_id IS NULL
+-- (activeIndexableJobWhere, the /jobs search and the canonical counts). Until
+-- the column has statistics PostgreSQL guesses that IS NULL matches a small
+-- fraction of rows, when in fact it matches almost all of them, and could
+-- prefer the new all-null index over the plans the listings rely on.
+-- Autovacuum would analyze eventually; this does it at deploy. ANALYZE reads
+-- a sample of the table, takes no lock that blocks reads or writes, and is
+-- allowed inside the migration's transaction.
+-- tests/regressions/verified-employer-twins-migration.test.ts pins this file.
+ANALYZE "jobs";

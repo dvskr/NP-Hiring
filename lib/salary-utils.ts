@@ -386,6 +386,10 @@ export const SALARY_SCOPE_PROFESSION_CLASS: Readonly<Record<SalaryRoleScope, str
 export function npSalaryAnalyticsWhere(now: Date = new Date(), scope: SalaryRoleScope = 'np'): Prisma.JobWhereInput {
   return {
     isPublished: true,
+    // A free copy of a confirmed employer's live paid post is the same
+    // opening; counting it would weigh that employer's pay twice
+    // (lib/paid-post-twins.ts).
+    shadowedByJobId: null,
     normalizedMinSalary: { not: null },
     normalizedMaxSalary: { not: null },
     salaryIsEstimated: false,

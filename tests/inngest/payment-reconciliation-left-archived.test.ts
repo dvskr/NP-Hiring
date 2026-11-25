@@ -11,6 +11,11 @@
  * employer must restore it, for both arms, and says nothing of the kind for
  * a post that went live.
  *
+ * Left held. activatePaidJobCheckout returns leftHeld: true when an admin
+ * took the post down (lib/admin/job-hold.ts): the payment is claimed and
+ * ledgered and the post stays down. The sweep dropped that flag too. Pins:
+ * the line says the post stays down under a hold and what to do about it.
+ *
  * Lookback. /api/create-renewal-checkout refuses a new renewal while a paid
  * one for the post is not on the ledger, looking back
  * RENEWAL_SETTLEMENT_LOOKBACK_MS (a delayed payment can settle weeks after
@@ -46,6 +51,7 @@ vi.mock('@/lib/discord-notifier', () => discordMocks);
 
 const HOUR_MS = 60 * 60 * 1000;
 const LEFT_ARCHIVED = '(left archived: employer must restore)';
+const LEFT_HELD = '(left down under an admin hold: refund it or lift the hold)';
 
 function asyncIterable<T>(items: T[]) {
     return { async *[Symbol.asyncIterator]() { for (const item of items) yield item; } };
@@ -104,6 +110,18 @@ describe('a recovered payment for a post that was archived meanwhile', () => {
         await run();
 
         expect(alertText()).toContain('job job-new · session cs_new_post · recovered (activated now)');
+        expect(alertText()).not.toContain('left archived');
+        expect(alertText()).not.toContain('admin hold');
+    });
+
+    it('new post an admin took down: the alert says it stays down and what to do, so nobody reads it as live', async () => {
+        stalePendingNewPost();
+        activationMocks.activatePaidJobCheckout.mockResolvedValue({ outcome: 'activated', jobId: 'job-new', leftHeld: true });
+
+        const result = await run();
+
+        expect(result.activated).toBe(1);
+        expect(alertText()).toContain(`job job-new · session cs_new_post · recovered (activated now) ${LEFT_HELD}`);
         expect(alertText()).not.toContain('left archived');
     });
 

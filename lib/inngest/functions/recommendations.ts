@@ -168,8 +168,10 @@ export const recommendationsDaily = inngest.createFunction(
                 clicked.map((c) => c.job.employer).filter((e): e is string => !!e),
             );
 
+            // A free copy of a live paid post gets no row, so
+            // selectRecommendations skips it (lib/paid-post-twins.ts).
             const jobRows = await prisma.job.findMany({
-                where: { id: { in: hits.map((h) => h.jobId) } },
+                where: { id: { in: hits.map((h) => h.jobId) }, shadowedByJobId: null },
                 select: {
                     id: true, employer: true, sourceType: true, applyOnPlatform: true,
                     applyLink: true, stateCode: true, isRemote: true,

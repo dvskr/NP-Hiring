@@ -175,8 +175,9 @@ describe('1. profession quarantine on pSEO listing predicates', () => {
         // Related-job and internal-link buckets never surface a quarantined row either.
         expect(src).not.toMatch(/isPublished: true \}/);
         // One shared base since the related feed and the link buckets read
-        // through getJobLinkLists (2026-11-21).
-        expect(src.match(/\{ id: \{ not: currentJobId \}, \.\.\.PUBLISHED_LISTING_WHERE \}/g)?.length).toBe(1);
+        // through getJobLinkLists (2026-11-21). It leaves out the copies a
+        // paid post hides (shadowedByJobId, lib/paid-post-twins.ts).
+        expect(src.match(/\{ id: \{ not: currentJobId \}, shadowedByJobId: null, \.\.\.PUBLISHED_LISTING_WHERE \}/g)?.length).toBe(1);
     });
 
     it('the category x city and setting x state templates wrap every buildWhere call', () => {

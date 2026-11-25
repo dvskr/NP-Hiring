@@ -15,9 +15,13 @@ export type {
 export {
   PLATFORM_BY_LETTER,
   KNOWN_PLATFORM_LETTERS,
-  FEATURED_EMPLOYERS_MAY_2026,
+  BOARD_CAMPAIGN,
   ACTIVE_CAMPAIGN,
+  JOB_LINKS_CAMPAIGN,
 } from './campaigns'
+
+export { parseJobLinkCode, jobLinkPath, resolveJobLink } from './job-links'
+export type { JobLinkCode } from './job-links'
 
 export { resolveShortlink } from './resolver'
 export { identifyBot } from './bots'

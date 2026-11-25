@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireApiAdmin } from '@/lib/auth/require-api-admin';
+import { requireApiAdminActor } from '@/lib/auth/require-api-admin';
 import { logAudit } from '@/lib/audit-log';
-import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
     // Verify admin session
-    const authError = await requireApiAdmin(request);
+    const { error: authError, actor } = await requireApiAdminActor(request);
     if (authError) return authError;
 
-    // Audit log: admin accessing user data
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    void logAudit({
+    // Audit log: admin accessing user data. The entry names the acting admin
+    // by profile id, like the role.change and admin.user.* rows of
+    // /api/admin/users/:id; an email address would put personal data in the
+    // audit table (lib/audit-log.ts). Written before the read, so a failed
+    // read is still on record.
+    await logAudit({
         action: 'admin.users.list',
         actorType: 'admin',
-        metadata: { email: user?.email || 'unknown' },
+        actorId: actor.profileId,
     });
 
     try {

@@ -1,5 +1,6 @@
 import { sanitizeUrl } from '@/lib/sanitize';
 import { createClient } from '@/lib/supabase/server';
+import { adminReleaseData, adminTakedownData, type AdminReleaseData, type AdminTakedownData } from '@/lib/admin/job-hold';
 
 /**
  * Input validation shared by the admin job routes
@@ -205,14 +206,15 @@ export function withOrderedSalary(data: Record<string, unknown>): Record<string,
 }
 
 /**
- * Publish-state side effects. An admin unpublish pins the job against ingest
- * renewal (lib/ingestion-service.ts renewJob skips isManuallyUnpublished rows);
- * an admin republish releases the pin.
+ * Publish-state fields of an admin publish or unpublish
+ * (lib/admin/job-hold.ts). An unpublish is a takedown: it places the admin
+ * hold, which only an admin lifts, and pins the job against ingest renewal
+ * and every other automatic republisher (lib/ingestion-service.ts
+ * renewExistingJob skips isManuallyUnpublished rows). `heldSince` keeps the
+ * time of an earlier takedown. A publish ends the hold and any pause.
  */
-export function publishStateFields(isPublished: boolean): { isPublished: boolean; isManuallyUnpublished: boolean; unpublishedAt?: Date } {
-    return isPublished
-        ? { isPublished: true, isManuallyUnpublished: false }
-        : { isPublished: false, isManuallyUnpublished: true, unpublishedAt: new Date() };
+export function publishStateFields(isPublished: boolean, heldSince?: Date | null): AdminTakedownData | AdminReleaseData {
+    return isPublished ? adminReleaseData() : adminTakedownData(heldSince ?? new Date());
 }
 
 /** Audit action for a PATCH: toggles get their own verb, anything else is an update. */

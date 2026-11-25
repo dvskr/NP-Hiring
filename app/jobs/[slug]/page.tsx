@@ -43,7 +43,7 @@ import GuidePromo from '@/components/guides/GuidePromo';
 import { guideForJob } from '@/lib/guides/job-guide';
 import { prisma } from '@/lib/prisma';
 import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
-import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
+import { DEAD_LINK_MISS_THRESHOLD, activeIndexableJobWhere } from '@/lib/active-job-filter';
 // Indexing audit 2026-09: one module decides what the markup AND the page
 // may claim (verified remote, places, role title, posted date), one builds
 // the gated breadcrumb trail, one the <title> and description, one the
@@ -81,7 +81,7 @@ import { getPostBySlug } from '@/lib/blog';
 // through displayText (lib/display-text.ts).
 import { displayText } from '@/lib/display-text';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 // ISR: Cache job detail pages for 24 hours.
 // An uncached job page ran about 25 DB queries before 2026-11-21 (related jobs,
@@ -140,7 +140,27 @@ type JobResult =
   | { status: 'found'; job: Job }
   | { status: 'expired'; employer?: string; title?: string; reason: ClosedReason }
   | { status: 'gone' }
-  | { status: 'quarantined' };
+  | { status: 'quarantined' }
+  | { status: 'twin'; path: string };
+
+/**
+ * Where a free copy of a confirmed employer's live paid post sends the
+ * visitor (lib/paid-post-twins.ts): that post, while the listings show it
+ * and it outlives this page's cache window (`revalidate`), so a cached
+ * redirect never lands anyone on a 410. Null, and the copy renders as
+ * itself, otherwise. middleware.ts answers the same URL with a real 307
+ * first; this is the fallback for when that gate cannot run.
+ */
+async function paidTwinPath(twinId: string | null): Promise<string | null> {
+  if (!twinId) return null;
+  const twin = await prisma.job.findFirst({
+    where: { ...activeIndexableJobWhere(), id: twinId },
+    select: { id: true, slug: true, expiresAt: true },
+  });
+  if (!twin) return null;
+  const outlivesCache = !twin.expiresAt || twin.expiresAt.getTime() > Date.now() + revalidate * 1000;
+  return outlivesCache ? `/jobs/${twin.slug || twin.id}` : null;
+}
 
 const getJob = cache(async function getJob(id: string): Promise<JobResult> {
   try {
@@ -214,6 +234,9 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
     // gate cannot run. Its notFound() alone cannot set the status: this route
     // streams behind loading.tsx.
     if (!jobWithRelation) return { status: 'quarantined' };
+
+    const twinPath = await paidTwinPath(jobWithRelation.shadowedByJobId);
+    if (twinPath) return { status: 'twin', path: twinPath };
 
     // Views are counted by the visitor's browser (JobViewTracker posts to
     // /api/jobs/[id]/track-view), not here: this render runs once per ISR
@@ -289,7 +312,9 @@ async function getJobLinkLists({
   relatedLimit = 4,
   bucketLimit = 3,
 }: JobLinkListParams) {
-  const baseWhere = { id: { not: currentJobId }, ...PUBLISHED_LISTING_WHERE };
+  // Never a free copy of a live paid post (lib/paid-post-twins.ts): its URL
+  // redirects to that post.
+  const baseWhere = { id: { not: currentJobId }, shadowedByJobId: null, ...PUBLISHED_LISTING_WHERE };
   const baseOrder = { createdAt: 'desc' as const };
   const candidateLimit = Math.max(relatedLimit, bucketLimit);
   const none = Promise.resolve([] as Awaited<ReturnType<typeof prisma.job.findMany>>);
@@ -472,6 +497,11 @@ export async function generateMetadata({ params }: JobPageProps) {
       description: `This position is no longer available. Browse current ${brand.niche.short} job openings on ${brand.name}.`,
       robots: { index: false, follow: true },
     };
+  }
+
+  // The page body redirects to the paid post; nothing here is ever shown.
+  if (result.status === 'twin') {
+    return { robots: { index: false, follow: true } };
   }
 
   // GSC Fix: Expired jobs → noindex page with rich content instead of bare 404.
@@ -771,6 +801,12 @@ export default async function JobPage({ params }: JobPageProps) {
   }
   if (result.status === 'gone') {
     notFound();
+  }
+
+  // A free copy of a live paid post (see paidTwinPath). Temporary on
+  // purpose: the mark lifts when the paid post ends.
+  if (result.status === 'twin') {
+    redirect(result.path);
   }
 
   // Job exists but expired/unpublished → render rich expired page

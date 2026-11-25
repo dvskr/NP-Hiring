@@ -55,6 +55,25 @@
  * is recorded on the ledger without touching the posting and alerted for a
  * refund, and the outcome is 'cap_reached'.
  *
+ * Postings an admin took down (jobs.admin_hold_at, lib/admin/job-hold.ts):
+ * a renewal is not applied at all. The create route refuses to sell one, but
+ * a takedown can land while a checkout is open, and the money would buy days
+ * on a posting that stays down. The hold is read inside the transaction,
+ * after the extension write that takes the job row's lock; a held posting
+ * rolls the whole transaction back, the payment is recorded on the ledger
+ * without touching the posting and alerted for a refund, and the outcome is
+ * 'admin_hold'. No confirmation email goes out for a held posting, on a
+ * replay either.
+ *
+ * A replay of a renewal that was NOT applied (revoked posting, renewal cap,
+ * admin hold): its ledger row answers the replay's transaction with P2002,
+ * like a replay of one that was. Each of those outcomes therefore also takes
+ * the session's confirmation email key with status 'withheld' and the
+ * outcome (withholdConfirmation), and a replay that meets the ledger row
+ * reads it and answers that outcome again: no "your post is live again"
+ * email for a renewal that never applied, even when the hold was lifted or
+ * the status changed in between, and no purchase event.
+ *
  * Callers MUST have verified `session.payment_status === 'paid'` and
  * `session.metadata.type === 'renewal'`.
  */
@@ -84,7 +103,8 @@ export type RenewalOutcome =
   | 'already_applied'
   | 'revoked_posting'
   | 'employer_job_missing'
-  | 'cap_reached';
+  | 'cap_reached'
+  | 'admin_hold';
 
 export interface RenewalResult {
   outcome: RenewalOutcome;
@@ -108,6 +128,13 @@ class RevokedPostingError extends Error {
   constructor() {
     super('posting was refunded, disputed or never paid for before the renewal applied');
     this.name = 'RevokedPostingError';
+  }
+}
+
+class HeldPostingError extends Error {
+  constructor() {
+    super('posting is under an admin hold');
+    this.name = 'HeldPostingError';
   }
 }
 
@@ -136,13 +163,122 @@ function renewalChargeData(session: Stripe.Checkout.Session, employerJobId: stri
   };
 }
 
-/** Ledger-only write for a renewal that is not applied (revoked posting, renewal cap). Never throws on a duplicate. */
-async function recordChargeOnly(session: Stripe.Checkout.Session, employerJobId: string, invoiceData: StripeInvoiceData): Promise<void> {
+/** The outcomes of a renewal recorded on the ledger and not applied. */
+type UnappliedOutcome = 'revoked_posting' | 'cap_reached' | 'admin_hold';
+
+const UNAPPLIED_OUTCOMES: ReadonlySet<string> = new Set<UnappliedOutcome>(['revoked_posting', 'cap_reached', 'admin_hold']);
+
+/** Why a renewal on the ledger was not applied, as its withheld confirmation records it. */
+interface UnappliedRecord {
+  outcome: UnappliedOutcome;
+  /** For 'revoked_posting': the posting's payment status when it was refused. */
+  revokedStatus?: string;
+}
+
+/** EmailSend.status of a confirmation that must never go out: its renewal was not applied. */
+const WITHHELD_STATUS = 'withheld';
+
+/** The dedupe key of a session's confirmation email (claimEmailSend), which a withheld marker takes too. */
+function renewalEmailKey(sessionId: string): string {
+  return `renewal-confirmation:${sessionId}`;
+}
+
+/**
+ * Records that this session's renewal was not applied, by taking its
+ * confirmation email's dedupe key with status 'withheld' and the outcome. The
+ * claim a confirmation needs then always fails for the session, and a replay
+ * reads the outcome back (unappliedRecordOf).
+ *
+ * A duplicate key is a replay, or a confirmation already claimed for a
+ * renewal of this session that WAS applied (the posting was refunded since):
+ * either way there is nothing to write, and an applied renewal's claim is
+ * never overwritten.
+ */
+async function withholdConfirmation(sessionId: string, to: string, record: UnappliedRecord): Promise<void> {
   try {
-    await prisma.jobCharge.create({ data: renewalChargeData(session, employerJobId, invoiceData) });
+    await prisma.emailSend.create({
+      data: {
+        dedupeKey: renewalEmailKey(sessionId),
+        to,
+        subject: '[withheld] renewal_confirmation',
+        emailType: 'renewal_confirmation',
+        status: WITHHELD_STATUS,
+        metadata: { guard: 'stripe-webhook', reason: 'renewal_not_applied', ...record },
+      },
+    });
   } catch (err) {
     if (prismaErrorCode(err) !== 'P2002') throw err;
   }
+}
+
+/** The outcome a withheld marker records; an unreadable one stays withheld and reads as a refused posting, which callers alert on. */
+function parseUnappliedRecord(metadata: unknown): UnappliedRecord {
+  const fields = typeof metadata === 'object' && metadata !== null ? (metadata as Record<string, unknown>) : {};
+  const outcome = typeof fields.outcome === 'string' && UNAPPLIED_OUTCOMES.has(fields.outcome)
+    ? (fields.outcome as UnappliedOutcome)
+    : 'revoked_posting';
+  const revokedStatus = typeof fields.revokedStatus === 'string' ? fields.revokedStatus : undefined;
+  return { outcome, ...(revokedStatus !== undefined && { revokedStatus }) };
+}
+
+/** Why this session's renewal was recorded and not applied, or null when nothing says it was not applied. */
+async function unappliedRecordOf(sessionId: string): Promise<UnappliedRecord | null> {
+  const marker = await prisma.emailSend.findFirst({
+    where: { dedupeKey: renewalEmailKey(sessionId), status: WITHHELD_STATUS },
+    select: { metadata: true },
+  });
+  return marker ? parseUnappliedRecord(marker.metadata) : null;
+}
+
+/**
+ * Ledger-only write for a renewal that is not applied (revoked posting,
+ * renewal cap, admin hold), after the withheld marker. That order is the
+ * safe one if the run dies between the two writes: a marker with no ledger
+ * row is found by the next run, which applies the renewal if it now can
+ * (applyRenewalCheckout then clears the marker), whereas a ledger row with no
+ * marker would read to a replay as a renewal that was applied, and confirm
+ * it. Never throws on a duplicate.
+ */
+async function recordChargeOnly(
+  session: Stripe.Checkout.Session,
+  employerJob: { id: string; contactEmail: string },
+  invoiceData: StripeInvoiceData,
+  record: UnappliedRecord,
+): Promise<void> {
+  await withholdConfirmation(session.id, employerJob.contactEmail, record);
+  try {
+    await prisma.jobCharge.create({ data: renewalChargeData(session, employerJob.id, invoiceData) });
+  } catch (err) {
+    if (prismaErrorCode(err) !== 'P2002') throw err;
+  }
+}
+
+/**
+ * A renewal this session applied clears a withheld marker a run that died
+ * before its ledger write left behind, so the confirmation can go out.
+ * Only a 'withheld' row is removed, never a claim. Best effort: the renewal
+ * is applied by now, so a failure is logged and the email is the only loss.
+ */
+async function clearWithheldConfirmation(sessionId: string, jobId: string): Promise<void> {
+  try {
+    await prisma.emailSend.deleteMany({ where: { dedupeKey: renewalEmailKey(sessionId), status: WITHHELD_STATUS } });
+  } catch (err) {
+    logger.error('[Renewal] Could not clear a withheld confirmation marker after applying the renewal', err, { jobId, sessionId });
+  }
+}
+
+/**
+ * A replay of a renewal recorded and not applied: the same outcome again,
+ * and nothing else. No confirmation email, no purchase event, no search
+ * engine ping, and no second refund alert from here; the first run raised it.
+ */
+function replayOfUnappliedRenewal(session: Stripe.Checkout.Session, jobId: string, record: UnappliedRecord): RenewalResult {
+  logger.info('[Renewal] Replay of a renewal that was recorded and not applied: nothing sent', {
+    jobId,
+    sessionId: session.id,
+    outcome: record.outcome,
+  });
+  return { outcome: record.outcome, jobId, ...(record.revokedStatus !== undefined && { revokedStatus: record.revokedStatus }) };
 }
 
 export async function applyRenewalCheckout(
@@ -166,7 +302,8 @@ export async function applyRenewalCheckout(
   const invoiceData = await fetchInvoiceData(stripe, session);
 
   if (REFUSED_STATUSES.includes(employerJob.paymentStatus)) {
-    await recordChargeOnly(session, employerJob.id, invoiceData);
+    const revoked = { outcome: 'revoked_posting', revokedStatus: employerJob.paymentStatus } as const;
+    await recordChargeOnly(session, employerJob, invoiceData, revoked);
     return { outcome: 'revoked_posting', jobId, revokedStatus: employerJob.paymentStatus };
   }
 
@@ -184,11 +321,13 @@ export async function applyRenewalCheckout(
   const newExpiresAt = extension.expiresAt;
 
   // At the cap there is nothing to apply (see the file header). A session
-  // already on the ledger is a replay of a renewal that WAS applied, and may
-  // itself be what took the post to its cap: that one falls through to the
-  // transaction, whose unique ledger row answers 'already_applied'.
+  // already on the ledger is a replay: of a renewal that WAS applied, and may
+  // itself be what took the post to its cap, or of one refused at the cap.
+  // Both fall through to the transaction, whose unique ledger row sends them
+  // to the replay handling below: 'already_applied' for the first, and the
+  // outcome its withheld confirmation records for the second.
   if (extension.daysAdded === 0 && !(await isSessionOnLedger(session.id))) {
-    return recordRenewalAtCap(stripe, session, jobId, employerJob.id, invoiceData);
+    return recordRenewalAtCap(stripe, session, jobId, employerJob, invoiceData);
   }
 
   let outcome: RenewalOutcome = 'applied';
@@ -210,7 +349,8 @@ export async function applyRenewalCheckout(
         where: { id: jobId },
         data: {
           expiresAt: newExpiresAt,
-          isVerifiedEmployer: true,
+          // No isVerifiedEmployer here: paying never confirms who the
+          // employer is (lib/paid-post-twins-sync.ts sets the check).
           // expiresAt is a rendered field (lib/job-content-change.ts
           // RENDERED_JOB_FIELDS), so the posting's content changed now
           // (indexing audit fixSoon 5), whether it goes back live or not.
@@ -222,20 +362,36 @@ export async function applyRenewalCheckout(
     });
   } catch (err) {
     if (err instanceof RevokedPostingError) {
-      await recordChargeOnly(session, employerJob.id, invoiceData);
       const current = await prisma.employerJob.findUnique({ where: { id: employerJob.id }, select: { paymentStatus: true } });
+      await recordChargeOnly(session, employerJob, invoiceData, {
+        outcome: 'revoked_posting',
+        ...(current?.paymentStatus !== undefined && { revokedStatus: current.paymentStatus }),
+      });
       return { outcome: 'revoked_posting', jobId, revokedStatus: current?.paymentStatus };
     }
+    if (err instanceof HeldPostingError) {
+      return recordRenewalUnderHold(stripe, session, jobId, employerJob, invoiceData);
+    }
     if (prismaErrorCode(err) !== 'P2002') throw err;
+    // The session is on the ledger already. A renewal recorded there and not
+    // applied says so in its withheld confirmation: answer as the first run
+    // did, and confirm nothing.
+    const unapplied = await unappliedRecordOf(session.id);
+    if (unapplied) return replayOfUnappliedRenewal(session, jobId, unapplied);
     outcome = 'already_applied';
   }
+
+  // A marker a run that died before its ledger write left behind no longer
+  // holds: this session's renewal is applied, and its confirmation may go out.
+  if (outcome === 'applied') await clearWithheldConfirmation(session.id, jobId);
 
   // An archived post is not live, so it gets no "live again" email; Stripe's
   // own receipt still reaches the employer. A replay reads the post again,
   // so a first run that died before the email never sends it for an
-  // archived post either.
+  // archived post either, nor for a post an admin has taken down since.
   const leftArchived = outcome === 'applied' ? !published : await isJobArchived(jobId);
-  if (!leftArchived) {
+  const heldNow = outcome !== 'applied' && !leftArchived && (await isJobHeld(jobId));
+  if (!leftArchived && !heldNow) {
     // B109: the email is guarded by its own dedupe claim, so a replay after a
     // partial failure (state applied, email not sent) still sends it once.
     const expiresForEmail = outcome === 'applied' ? newExpiresAt : (existingJob.expiresAt ?? newExpiresAt);
@@ -307,9 +463,13 @@ export async function applyRenewalCheckout(
  * the post itself, and one that landed earlier is seen by this read. The
  * dashboard requires a restore before any republish, and the chargeback-won
  * path in ./route.ts skips archived rows the same way. True when published.
+ *
+ * A post an admin took down (lib/admin/job-hold.ts) throws instead, which
+ * rolls the whole renewal back: none of it is applied (see the file header).
  */
 async function publishUnlessArchived(tx: Prisma.TransactionClient, jobId: string): Promise<boolean> {
-  const job = await tx.job.findUnique({ where: { id: jobId }, select: { archivedAt: true } });
+  const job = await tx.job.findUnique({ where: { id: jobId }, select: { archivedAt: true, adminHoldAt: true } });
+  if (job?.adminHoldAt) throw new HeldPostingError();
   if (job?.archivedAt) return false;
   await tx.job.update({ where: { id: jobId }, data: { isPublished: true } });
   return true;
@@ -321,6 +481,12 @@ async function isJobArchived(jobId: string): Promise<boolean> {
   return !!job?.archivedAt;
 }
 
+/** Whether an admin has taken the post down; read on a replay, like isJobArchived. */
+async function isJobHeld(jobId: string): Promise<boolean> {
+  const job = await prisma.job.findUnique({ where: { id: jobId }, select: { adminHoldAt: true } });
+  return !!job?.adminHoldAt;
+}
+
 async function sendRenewalEmailOnce(
   session: Stripe.Checkout.Session,
   jobId: string,
@@ -329,7 +495,7 @@ async function sendRenewalEmailOnce(
   expiresAt: Date,
   invoiceData: StripeInvoiceData,
 ): Promise<void> {
-  const emailKey = `renewal-confirmation:${session.id}`;
+  const emailKey = renewalEmailKey(session.id);
   if (!(await claimEmailSend(emailKey, employerJob.contactEmail, 'renewal_confirmation'))) {
     logger.info('Renewal confirmation email already sent for this session — skipping duplicate', { jobId, sessionId: session.id });
     return;
@@ -380,22 +546,32 @@ const REFUND_UNAPPLIED_RENEWAL = 'Refund this payment in full in Stripe. It adde
  */
 const REFUND_ONE_OF_TWO_RENEWALS = 'Refund one of these payments in full in Stripe. The posting stays live while the other payment stands, and keeps the days both renewals added.';
 
+/** Why a paid renewal was not applied: its outcome, and what the operator reads. */
+interface UnappliedRenewal {
+  outcome: 'cap_reached' | 'admin_hold';
+  /** The posting, as the log line and the alert name it. */
+  posting: string;
+}
+
 /**
- * A renewal paid for a post at its renewal cap (see the file header). The
- * payment goes on the ledger, where a refund is matched to it, and nothing
- * else is written: no status change, no expiry, no republish. No
- * confirmation email and no purchase event either, since nothing was
- * renewed. The alert is raised here, not by each caller, so the webhook, the
- * verify page, the sweep and the create route all report it alike.
+ * A renewal paid that is not applied at all: at the renewal cap, or on a
+ * posting an admin took down (see the file header). The payment goes on the
+ * ledger, where a refund is matched to it, and nothing else is written: no
+ * status change, no expiry, no republish. No confirmation email and no
+ * purchase event either, since nothing was renewed. The alert is raised
+ * here, not by each caller, so the webhook, the verify page, the sweep and
+ * the create route all report it alike.
  */
-async function recordRenewalAtCap(
+async function recordUnappliedRenewal(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
-  jobId: string,
-  employerJobId: string,
+  posting: { jobId: string; employerJob: { id: string; contactEmail: string } },
   invoiceData: StripeInvoiceData,
+  unapplied: UnappliedRenewal,
 ): Promise<RenewalResult> {
-  await recordChargeOnly(session, employerJobId, invoiceData);
+  const { jobId, employerJob } = posting;
+  const employerJobId = employerJob.id;
+  await recordChargeOnly(session, employerJob, invoiceData, { outcome: unapplied.outcome });
   const extras = {
     paymentIntentId: stripeIdOf(session.payment_intent) ?? undefined,
     amountCents: session.amount_total ?? undefined,
@@ -404,11 +580,39 @@ async function recordRenewalAtCap(
     sessionId: session.id,
     action: REFUND_UNAPPLIED_RENEWAL,
   };
-  logger.warn('[Renewal] Renewal paid for a posting at its renewal limit: payment recorded, nothing applied, refund required', extras);
-  await alertWebhookFailure('Renewal paid for a posting at its renewal limit, refund required', null, extras);
+  logger.warn(`[Renewal] Renewal paid for ${unapplied.posting}: payment recorded, nothing applied, refund required`, extras);
+  await alertWebhookFailure(`Renewal paid for ${unapplied.posting}, refund required`, null, extras);
   // The post's open renewal checkouts can only take more money for nothing.
   await settleOtherRenewalSessions(stripe, session, jobId, employerJobId, { alertSecondPayment: false });
-  return { outcome: 'cap_reached', jobId };
+  return { outcome: unapplied.outcome, jobId };
+}
+
+/** A renewal paid for a post at its renewal cap (see the file header). */
+async function recordRenewalAtCap(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  jobId: string,
+  employerJob: { id: string; contactEmail: string },
+  invoiceData: StripeInvoiceData,
+): Promise<RenewalResult> {
+  return recordUnappliedRenewal(stripe, session, { jobId, employerJob }, invoiceData, {
+    outcome: 'cap_reached',
+    posting: 'a posting at its renewal limit',
+  });
+}
+
+/** A renewal paid for a post an admin took down (lib/admin/job-hold.ts; see the file header). */
+async function recordRenewalUnderHold(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  jobId: string,
+  employerJob: { id: string; contactEmail: string },
+  invoiceData: StripeInvoiceData,
+): Promise<RenewalResult> {
+  return recordUnappliedRenewal(stripe, session, { jobId, employerJob }, invoiceData, {
+    outcome: 'admin_hold',
+    posting: 'a posting an admin took down',
+  });
 }
 
 /** Another payment for the same renewal: the ids a refund needs. */

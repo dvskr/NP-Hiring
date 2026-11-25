@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MapPin, Briefcase, Monitor, ExternalLink, ChevronLeft, ChevronRight, Loader2, Check, CheckCircle } from 'lucide-react';
+import { MapPin, Briefcase, Monitor, ExternalLink, ChevronLeft, ChevronRight, Loader2, Check } from 'lucide-react';
 import { formatSalary } from '@/lib/utils';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
 import { config } from '@/lib/config';
@@ -335,7 +335,9 @@ export default function PreviewPage() {
     applyOnPlatform: !!formData.applyOnPlatform,
     isFeatured,
     isPublished: true,
-    isVerifiedEmployer: true,
+    // The check is added once we confirm the company, not on posting or
+    // payment, so the preview does not promise it.
+    isVerifiedEmployer: false,
     sourceType: 'employer',
     sourceProvider: null,
     sourceSite: null,
@@ -540,13 +542,8 @@ export default function PreviewPage() {
                   sold appears on the listing card — see the real <JobCard>
                   preview above (badge restored 2026-07-28). */}
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '16px' }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '5px',
-                  padding: '4px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
-                  background: '#FCE7F3', color: '#9D174D',
-                }}>
-                  <CheckCircle size={13} /> Verified Employer
-                </span>
+                {/* No Verified Employer pill: the check comes from confirming
+                    the company at /admin/verify-employers, never from posting. */}
                 {formData.jobType && (
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: '4px',

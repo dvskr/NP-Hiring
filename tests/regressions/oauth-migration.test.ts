@@ -111,10 +111,17 @@ describe(`migration ${FOLDER}`, () => {
         expect(statements).toContain('CREATE UNIQUE INDEX "oauth_tokens_token_hash_key" ON "oauth_tokens"("token_hash");');
     });
 
-    it('sorts after every earlier migration, and the first version stays in the history', () => {
-        const folders = fs.readdirSync(path.join(process.cwd(), 'prisma/migrations')).filter((name) => /^\d{14}_/.test(name)).sort();
-        expect(folders[folders.length - 1]).toBe(FOLDER);
+    it('sorts after the first version, which stays in the history, and no later migration touches its tables', () => {
+        const dir = path.join(process.cwd(), 'prisma/migrations');
+        const folders = fs.readdirSync(dir).filter((name) => /^\d{14}_/.test(name)).sort();
         expect(folders).toContain(FIRST_VERSION);
+        expect(folders).toContain(FOLDER);
+        expect(folders.indexOf(FOLDER)).toBeGreaterThan(folders.indexOf(FIRST_VERSION));
+        // Migrations added since leave its six tables alone, so the schema still reads what it created.
+        for (const later of folders.slice(folders.indexOf(FOLDER) + 1)) {
+            const laterSql = fs.readFileSync(path.join(dir, later, 'migration.sql'), 'utf8');
+            for (const table of CREATED) expect(laterSql, `${later} touches ${table}`).not.toContain(`"${table}"`);
+        }
     });
 });
 

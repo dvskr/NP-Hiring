@@ -10,6 +10,8 @@ export interface DashboardJobRow {
     readonly paymentStatus: string;
     readonly archivedAt: string | null;
     readonly isPublished: boolean;
+    /** Set when an admin took the post down (lib/admin/job-hold.ts); only an admin puts it back. */
+    readonly adminHoldAt?: string | null;
 }
 
 /**
@@ -30,9 +32,11 @@ export interface RenewTiming {
  * Whether the row offers Renew: a renewable post that has ended or ends soon,
  * and is not archived. An archived post is off the board by its employer's
  * choice, so a renewal would buy days for a post nobody can see; the
- * employer restores it first.
+ * employer restores it first. A post an admin took down is never offered
+ * one: it stays down whatever is paid, and the renewal checkout answers 409.
  */
-export function shouldOfferRenew(job: Pick<DashboardJobRow, 'paymentStatus' | 'archivedAt'>, timing: RenewTiming): boolean {
+export function shouldOfferRenew(job: Pick<DashboardJobRow, 'paymentStatus' | 'archivedAt' | 'adminHoldAt'>, timing: RenewTiming): boolean {
+    if (job.adminHoldAt) return false;
     if (job.archivedAt) return false;
     if (NON_RENEWABLE_STATUSES.has(job.paymentStatus)) return false;
     return timing.expired || timing.expiringSoon;

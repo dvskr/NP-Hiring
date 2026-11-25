@@ -246,9 +246,13 @@ describe('P5 A5 (4) — page integration: main column, every breakpoint, ISR int
         expect(src).toMatch(
             /getCachedCityJobCount\(job\.city, locationCityRecord\.state, locationCityRecord\.stateCode\)/,
         );
+        // Both sides leave out the free copies a live paid post hides: the
+        // city page through the canonical predicate (activeIndexableJobWhere's
+        // shadowedByJobId: null), the count here explicitly.
         expect(read('app/jobs/[slug]/place-cache.ts')).toMatch(
-            /\.\.\.PUBLISHED_LISTING_WHERE,\s*city:\s*\{\s*equals:\s*city,\s*mode:\s*'insensitive'\s*\},\s*OR:\s*\[\s*\{\s*state:\s*stateName\s*\},\s*\{\s*stateCode\s*\},?\s*\]/,
+            /\.\.\.PUBLISHED_LISTING_WHERE,\s*(?:\/\/[^\n]*\n\s*)?shadowedByJobId:\s*null,\s*city:\s*\{\s*equals:\s*city,\s*mode:\s*'insensitive'\s*\},\s*OR:\s*\[\s*\{\s*state:\s*stateName\s*\},\s*\{\s*stateCode\s*\},?\s*\]/,
         );
+        expect(read('lib/active-job-filter.ts')).toMatch(/isPublished: true,\s*shadowedByJobId: null,/);
     });
 
     it('ISR is untouched: revalidate stays a day and no Dynamic API crept in', () => {

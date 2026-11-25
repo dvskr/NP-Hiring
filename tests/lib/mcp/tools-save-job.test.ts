@@ -11,7 +11,8 @@
  * A saved row holds the id of the job the person saved. save_job saves the
  * live job's own id, and unsave_job deletes the row by the id it is given,
  * open or closed: a job that has closed since it was saved still comes off
- * the list.
+ * the list. It also reaches the rows of a paid post's free copies
+ * (tests/lib/paid-post-twin-read-paths.test.ts covers those).
  *
  * All fixtures are fictional.
  */
@@ -22,7 +23,7 @@ const POST = '11111111-2222-4333-8444-555555555555';
 
 const { db } = vi.hoisted(() => ({
   db: {
-    job: { findFirst: vi.fn() },
+    job: { findFirst: vi.fn(), findMany: vi.fn() },
     savedJob: { deleteMany: vi.fn(), upsert: vi.fn() },
   },
 }));
@@ -50,6 +51,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.savedJob.deleteMany.mockResolvedValue({ count: 1 });
   db.savedJob.upsert.mockResolvedValue({});
+  // No free copies of a paid post point at the job (lib/paid-post-twins.ts).
+  db.job.findMany.mockResolvedValue([]);
 });
 
 describe('save_job only adds', () => {
@@ -80,7 +83,7 @@ describe('unsave_job', () => {
     const out = await unsaveJob.run({ job_id: `${brand.baseUrl}/jobs/psychiatric-nurse-practitioner-${POST}` }, ctx);
 
     expect(db.savedJob.deleteMany).toHaveBeenCalledTimes(1);
-    expect(db.savedJob.deleteMany.mock.calls[0][0].where).toEqual({ userId: 'user-1', jobId: POST });
+    expect(db.savedJob.deleteMany.mock.calls[0][0].where).toEqual({ userId: 'user-1', jobId: { in: [POST] } });
     expect(out.text).toBe('Removed from saved jobs.');
   });
 
@@ -91,7 +94,7 @@ describe('unsave_job', () => {
     const out = await unsaveJob.run({ job_id: POST }, ctx);
 
     expect(db.savedJob.deleteMany).toHaveBeenCalledTimes(1);
-    expect(db.savedJob.deleteMany.mock.calls[0][0].where).toEqual({ userId: 'user-1', jobId: POST });
+    expect(db.savedJob.deleteMany.mock.calls[0][0].where).toEqual({ userId: 'user-1', jobId: { in: [POST] } });
     expect(out.text).toBe('That job was not in the saved jobs.');
   });
 });

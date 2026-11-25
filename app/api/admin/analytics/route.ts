@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { ctDayBounds } from '@/lib/format-ct';
 import { parsePagingParam } from '@/app/api/admin/jobs/_lib/job-input';
+import { canonicalActiveJobWhere } from '@/lib/canonical-counts';
+import { MAILING_LIST_LEADS, NEWSLETTER_LEADS } from '@/lib/admin/broadcast-audience';
 
 const DEFAULT_DAYS = 30;
 const MAX_DAYS = 365;
@@ -37,9 +39,11 @@ export async function GET(request: NextRequest) {
         const { startUtc: todayStartCT } = ctDayBounds(now);
         const since = new Date(todayStartCT.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
 
-        // "Today / last 24h" = since CT-midnight. "Last 7 days" = since
-        // CT-midnight 6 calendar days ago (so a Monday afternoon view
-        // includes Monday + the prior Tuesday onward, 7 calendar days).
+        // The "24h" fields below are the current CT calendar day (since CT
+        // midnight), not a trailing 24 hours; the pages label them "today
+        // (CT)". "Last 7 days" = since CT-midnight 6 calendar days ago (so a
+        // Monday afternoon view includes Monday + the prior Tuesday onward,
+        // 7 calendar days).
         const oneDayAgo = todayStartCT;
         const sevenDaysAgo = new Date(todayStartCT.getTime() - 6 * 24 * 60 * 60 * 1000);
 
@@ -138,12 +142,19 @@ export async function GET(request: NextRequest) {
                 prisma.jobApplication.count({ where: { appliedAt: { gte: sevenDaysAgo } } }),
                 prisma.userProfile.count(),
                 prisma.userProfile.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-                prisma.emailLead.count({ where: { isSubscribed: true } }),
-                prisma.emailLead.count({ where: { newsletterOptIn: true } }),
+                // The people a "subscribers" broadcast reaches, so this agrees
+                // with the Compose tab. A bare isSubscribed also counted every
+                // entry created only to hold an unsubscribe token.
+                prisma.emailLead.count({ where: MAILING_LIST_LEADS }),
+                // The people a "newsletter" broadcast reaches: an opt-in that
+                // has since unsubscribed or bounced is not counted.
+                prisma.emailLead.count({ where: NEWSLETTER_LEADS }),
                 prisma.jobAlert.count({ where: { isActive: true } }),
                 prisma.jobAlert.count({ where: { isActive: true, frequency: 'daily' } }),
                 prisma.jobAlert.count({ where: { isActive: true, frequency: 'weekly' } }),
-                prisma.job.count({ where: { isPublished: true } }),
+                // What /jobs shows (lib/canonical-counts.ts), so this agrees
+                // with the public site, not every published row.
+                prisma.job.count({ where: canonicalActiveJobWhere(now) }),
                 prisma.employerJob.count(),
                 prisma.employerLead.count(),
             ]);
@@ -154,10 +165,10 @@ export async function GET(request: NextRequest) {
                 _count: true,
             });
 
-            // Job source breakdown
+            // Job source breakdown, over the same live jobs as activeJobs
             const jobSourceBreakdown = await prisma.job.groupBy({
                 by: ['sourceProvider'],
-                where: { isPublished: true },
+                where: canonicalActiveJobWhere(now),
                 _count: true,
             });
 
@@ -259,7 +270,10 @@ export async function GET(request: NextRequest) {
                     take: 5,
                     select: { id: true, email: true, firstName: true, lastName: true, role: true, createdAt: true },
                 }),
+                // "New Subscribers": people who asked for mail, not entries
+                // created only to hold an unsubscribe token.
                 prisma.emailLead.findMany({
+                    where: MAILING_LIST_LEADS,
                     orderBy: { createdAt: 'desc' },
                     take: 5,
                     select: { id: true, email: true, source: true, createdAt: true },
@@ -279,8 +293,9 @@ export async function GET(request: NextRequest) {
                 where: { createdAt: { gte: since } },
                 select: { createdAt: true },
             });
+            // The subscriber series counts what the subscriber total counts.
             const subscribersByDay = await prisma.emailLead.findMany({
-                where: { createdAt: { gte: since } },
+                where: { ...MAILING_LIST_LEADS, createdAt: { gte: since } },
                 select: { createdAt: true },
             });
 

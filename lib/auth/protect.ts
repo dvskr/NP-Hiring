@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { ensureProfileFromAuth } from '@/lib/auth/ensure-profile'
+import { accountDeletionState, deletedAccountLoginPath } from '@/lib/auth/account-deletion-state'
 
 // Type definitions
 export type UserRole = 'job_seeker' | 'employer' | 'admin'
@@ -22,6 +23,9 @@ export interface UserProfile {
   company: string | null
   resumeUrl: string | null
   avatarUrl: string | null
+  /** Soft-delete columns (lib/auth/account-deletion-state.ts), read by requireAdmin. */
+  deletedAt?: Date | null
+  purgeAt?: Date | null
 }
 
 /**
@@ -69,10 +73,21 @@ export async function requireRole(allowedRoles: UserRole[], returnTo?: string): 
 }
 
 /**
- * Require admin role
+ * Require admin role.
+ *
+ * An admin account in its deletion window is not an admin: the API guard
+ * refuses it as well (lib/auth/admin-session.ts), and the console never
+ * renders for it. Inside the window it goes to the login form with the
+ * console path kept, because signing in again restores the account and
+ * returns there. Past the window it is told the account is gone.
  */
 export async function requireAdmin(returnTo?: string) {
-  return requireRole(['admin'], returnTo)
+  const session = await requireRole(['admin'], returnTo)
+  const deletion = accountDeletionState(session.profile)
+  if (deletion !== 'active') {
+    redirect(deletedAccountLoginPath(deletion, returnTo))
+  }
+  return session
 }
 
 /**
@@ -97,6 +112,16 @@ export async function getCurrentUser(): Promise<{ user: AuthUser; profile: UserP
   const profile = await prisma.userProfile.findUnique({
     where: { supabaseId: user.id }
   })
+
+  // A soft-deleted account reads as signed out here, for two reasons. Public
+  // surfaces must not treat an account that asked to be erased as a live
+  // identity. And /login and /signup forward anyone this recognises to their
+  // destination: for an admin that requireAdmin turns away during the
+  // deletion window, that forward would loop between /login and /admin.
+  // Nothing here restores the account; signing in again does.
+  if (profile?.deletedAt) {
+    return null
+  }
 
   return {
     user: { id: user.id, email: user.email! },

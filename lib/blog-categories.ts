@@ -48,3 +48,17 @@ export const BLOG_CATEGORIES: { id: BlogCategory; label: string }[] = [
     { id: 'career_opportunities', label: 'Career Opportunities' },
     { id: 'tech_tools', label: 'Tech & Tools' },
 ];
+
+/** True when the id is one of the categories above. */
+export function isBlogCategory(id: unknown): id is BlogCategory {
+    return typeof id === 'string' && BLOG_CATEGORIES.some((c) => c.id === id);
+}
+
+/**
+ * A category's display label, or the raw id for a row that predates the
+ * taxonomy. Edits do not range-check category, so such posts stay editable,
+ * and showing the id beats showing nothing.
+ */
+export function blogCategoryLabel(id: string): string {
+    return BLOG_CATEGORIES.find((c) => c.id === id)?.label ?? id;
+}

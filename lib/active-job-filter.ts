@@ -36,10 +36,17 @@ export { DEAD_LINK_MISS_THRESHOLD };
  * equivalent.
  *
  * `now` is injectable for deterministic tests.
+ *
+ * Paid-post twins: a free copy of a confirmed employer's live paid post
+ * (lib/paid-post-twins.ts) redirects to that post, so no surface built on
+ * this predicate lists or advertises it. A top-level key, so a caller that
+ * must see copies too (lib/paid-post-twins-sync.ts) can set it undefined,
+ * and canonicalActiveJobWhere carries it through its spread.
  */
 export function activeIndexableJobWhere(now: Date = new Date()): Prisma.JobWhereInput {
     return {
         isPublished: true,
+        shadowedByJobId: null,
         healthConsecutiveMissing: { lt: DEAD_LINK_MISS_THRESHOLD },
         NOT: [...GLOBAL_EXCLUSIONS],
         OR: [
@@ -47,4 +54,16 @@ export function activeIndexableJobWhere(now: Date = new Date()): Prisma.JobWhere
             { expiresAt: { gt: now } },
         ],
     };
+}
+
+/**
+ * Jobs still inside their run at `now`: no expiry, or one not yet passed.
+ * An expiry equal to `now` still counts, as the employer toggle's read check
+ * (an expiry before now refuses a republish) lets it. For the WHERE of a
+ * write that must agree with that check made a moment earlier
+ * (app/api/employer/jobs/[jobId]/toggle-publish/route.ts). Typed as the one
+ * OR, so it spreads into a WHERE that has no OR of its own.
+ */
+export function insideRunWhere(now: Date): { OR: Prisma.JobWhereInput[] } {
+    return { OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] };
 }

@@ -5,6 +5,7 @@ import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { logAudit } from '@/lib/audit-log';
 import {
     isRecordNotFound,
+    parseBlogCategory,
     parseBlogStatus,
     parseBlogTitle,
     parseFaqJson,
@@ -62,7 +63,7 @@ export async function PUT(
         if (!body || typeof body !== 'object' || Array.isArray(body)) {
             return badRequest('Invalid JSON body');
         }
-        const copiedFields = ['content', 'category', 'metaDescription', 'targetKeyword', 'imageUrl'];
+        const copiedFields = ['content', 'metaDescription', 'targetKeyword', 'imageUrl'];
         const data: Record<string, unknown> = {};
 
         for (const field of copiedFields) {
@@ -83,6 +84,13 @@ export async function PUT(
             const statusResult = parseBlogStatus(body.status);
             if (!statusResult.ok) return badRequest(statusResult.error);
             data.status = statusResult.value;
+        }
+        // Category must be text, but is not range-checked on edit: a post
+        // whose row predates the taxonomy keeps its legacy value editable.
+        if ('category' in body) {
+            const categoryResult = parseBlogCategory(body.category, 'edit');
+            if (!categoryResult.ok) return badRequest(categoryResult.error);
+            data.category = categoryResult.value;
         }
 
         // Editorially-authored schema fields — validated, never copied raw

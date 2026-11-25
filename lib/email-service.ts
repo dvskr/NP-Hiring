@@ -17,6 +17,7 @@ import { resolveRenewalOffer, renewalSavingsLabel, type RenewalOffer } from '@/l
 import { LADDER_HEADLINE, PROMO_HEADLINE, PROMO_SUB, ladderLine, packUseByLabel } from '@/lib/pricing-copy';
 import { buildListUnsubscribeHeaders } from '@/lib/email/list-unsubscribe';
 import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
+import { isOutboundPaused, OUTBOUND_PAUSED_MESSAGE } from '@/lib/outbound-kill-switch';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -207,6 +208,21 @@ const MARKETING_EMAIL_TYPES = new Set<EmailType>([
   'pd_outreach',
 ]);
 
+/**
+ * Marketing mail a person asked for seconds ago and is waiting on: the
+ * confirmation of the alert they just created and the guide they just
+ * requested. The emergency brake (lib/outbound-kill-switch.ts) does not hold
+ * these back; every other marketing type stops while it is engaged.
+ */
+const USER_REQUESTED_EMAIL_TYPES = new Set<EmailType>(['welcome_alert', 'salary_guide']);
+
+/** True when the emergency brake holds this kind of mail back right now. */
+function heldByOutboundPause(emailType: EmailType): boolean {
+  return MARKETING_EMAIL_TYPES.has(emailType)
+    && !USER_REQUESTED_EMAIL_TYPES.has(emailType)
+    && isOutboundPaused();
+}
+
 // ── HTML sanitization — prevents XSS in user-supplied content ──
 export function escapeHtml(str: string): string {
   return str
@@ -251,12 +267,23 @@ function htmlToPlainText(html: string): string {
 //   • List-Unsubscribe header injection (Gmail/Yahoo bulk-sender rule)
 //   • EmailSend row in the DB for analytics + webhook status updates
 //   • Plain-text fallback computed from HTML
+//   • The emergency brake (OUTBOUND_MESSAGING_PAUSED) for automated
+//     marketing mail, checked before anything is built or handed over
 export async function sendAndLog(
   params: { from: string; to: string; subject: string; html: string },
   emailType: EmailType,
   metadata?: Record<string, unknown>,
   unsubscribeUrl?: string
 ) {
+  // Checked where marketing mail leaves, so a sender that forgets its own
+  // check still stops. Nothing reaches the provider and no EmailSend row is
+  // written; the throw lands in the caller's catch, which reports
+  // { success: false } like any send that did not go out.
+  if (heldByOutboundPause(emailType)) {
+    logger.warn('sendAndLog: automated sending is paused, refusing', { emailType });
+    throw new Error(`Email not sent (${emailType}): ${OUTBOUND_PAUSED_MESSAGE}`);
+  }
+
   const isMarketing = MARKETING_EMAIL_TYPES.has(emailType);
   // PD outreach gets a personal from-name. Everything else marketing
   // (job alerts, broadcasts, candidate alerts) stays on the generic

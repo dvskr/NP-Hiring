@@ -4,9 +4,15 @@
  *    otherwise the customer keeps a live job but loses invoice/receipt/republish.
  *  - A FULL refund flips paymentStatus='refunded' and unpublishes.
  *  - A chargeback (charge.dispute.created) — which never emits charge.refunded —
- *    must revoke: unpublish + paymentStatus='disputed'.
+ *    must revoke: unpublish + paymentStatus='disputed'. Not on money already
+ *    refunded: a payment refunded in full, or a posting already 'refunded',
+ *    is left as it is and alerted, so a dispute won later cannot restore a
+ *    refunded posting to 'paid' and put it back on the board.
  *  - A WON dispute (charge.dispute.closed) restores 'paid' and re-publishes a
- *    still-unexpired posting; a LOST one is recorded on the ledger.
+ *    still-unexpired posting; a LOST one is recorded on the ledger. The
+ *    republish carries its archive and hold gates in its WHERE, and each
+ *    status change commits with its listing change in one transaction
+ *    (webhooks-stripe-revoke-atomicity.test.ts covers the rollback).
  *  - A renewal paid on a refunded/disputed posting never re-publishes it
  *    (pre-check AND the conditional write inside the transaction), is
  *    ledgered for the refund, alerted, and acknowledged without a retry.
@@ -68,6 +74,16 @@ beforeEach(() => {
     vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({ id: 'ej1', jobId: 'job1', contactEmail: 'e@x.com', job: { id: 'job1', title: 'PMHNP' } } as never);
     vi.mocked(prisma.employerJob.update).mockResolvedValue({} as never);
     vi.mocked(prisma.job.update).mockResolvedValue({} as never);
+    vi.mocked(prisma.job.updateMany).mockResolvedValue({ count: 1 } as never);
+    // Both forms: a refund takes the posting down in a batch transaction
+    // (revokeRefundedPosting), a chargeback in an interactive one
+    // (revokeDisputedPosting), and a chargeback won restores it in another
+    // (restoreWonPosting). Rollback is covered by
+    // webhooks-stripe-revoke-atomicity.test.ts.
+    vi.mocked(prisma.$transaction).mockImplementation(((arg: unknown) =>
+        typeof arg === 'function'
+            ? (arg as (tx: typeof prisma) => Promise<unknown>)(prisma)
+            : Promise.all(arg as Promise<unknown>[])) as never);
 });
 
 describe('Stripe webhook — refund/dispute entitlement', () => {
@@ -102,6 +118,8 @@ describe('Stripe webhook — refund/dispute entitlement', () => {
     });
 
     it('chargeback (dispute.created) revokes: unpublish + disputed', async () => {
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValueOnce({ count: 1 } as never);
+
         const { POST } = await import('@/app/api/webhooks/stripe/route');
         const res = await POST(makeRequest({
             id: 'evt_dp', type: 'charge.dispute.created',
@@ -109,12 +127,101 @@ describe('Stripe webhook — refund/dispute entitlement', () => {
         }) as never);
 
         expect(res.status).toBe(200);
-        expect(prisma.employerJob.update).toHaveBeenCalledWith(
-            expect.objectContaining({ data: { paymentStatus: 'disputed' } }),
-        );
+        // Never over a refund: the status write matches only a posting that is not 'refunded'.
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({
+            where: { id: 'ej1', paymentStatus: { not: 'refunded' } },
+            data: { paymentStatus: 'disputed' },
+        });
         expect(prisma.job.update).toHaveBeenCalledWith(
             expect.objectContaining({ where: { id: 'job1' }, data: { isPublished: false } }),
         );
+        expect(await res.json()).toEqual({ received: true });
+    });
+});
+
+describe('Stripe webhook: a chargeback on money already refunded leaves the posting as it is', () => {
+    const disputeOpened = async (eventId: string) => {
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        return POST(makeRequest({
+            id: eventId, type: 'charge.dispute.created',
+            data: { object: { id: 'dp_after_refund', payment_intent: 'pi1', amount: AMOUNT } },
+        }) as never);
+    };
+
+    function posting(paymentStatus: string) {
+        vi.mocked(prisma.employerJob.findUnique).mockResolvedValue({
+            id: 'ej1', jobId: 'job1', paymentStatus, contactEmail: 'e@x.com', job: { id: 'job1', title: 'Nurse Practitioner' },
+        } as never);
+    }
+
+    const alerts = () => JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls);
+
+    it("a posting already 'refunded' (by another payment) keeps its status: nothing is written, and an operator is alerted", async () => {
+        posting('refunded');
+        // The conditional write finds the posting 'refunded' and matches nothing.
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValueOnce({ count: 0 } as never);
+
+        const res = await disputeOpened('evt_dp_refunded_posting');
+
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ received: true, note: 'dispute on money already refunded, posting left as it is' });
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({
+            where: { id: 'ej1', paymentStatus: { not: 'refunded' } },
+            data: { paymentStatus: 'disputed' },
+        });
+        expect(prisma.employerJob.update).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(alerts()).toContain('Chargeback on a posting already refunded');
+        expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+    });
+
+    it.each(['refunded', 'paid'])(
+        "a payment refunded in full is not disputed against the posting (posting '%s'): nothing is written, and an operator is alerted",
+        async (status) => {
+            // 'paid': another payment for the posting stands, so its refund left the posting up.
+            posting(status);
+            vi.mocked(prisma.jobCharge.findUnique).mockResolvedValue({
+                id: 'jc1', employerJobId: 'ej1', amountCents: AMOUNT, refundedAmountCents: AMOUNT,
+            } as never);
+
+            const res = await disputeOpened(`evt_dp_refunded_charge_${status}`);
+
+            expect(res.status).toBe(200);
+            expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+            expect(prisma.employerJob.update).not.toHaveBeenCalled();
+            expect(prisma.job.update).not.toHaveBeenCalled();
+            expect(alerts()).toContain('Chargeback on a payment already refunded in full');
+        },
+    );
+
+    it('a dispute closed later finds nothing disputed on the refunded posting, won or lost', async () => {
+        posting('refunded');
+        vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never);
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+
+        for (const status of ['won', 'lost']) {
+            const res = await POST(makeRequest({
+                id: `evt_dp_closed_${status}`, type: 'charge.dispute.closed',
+                data: { object: { id: 'dp_after_refund', payment_intent: 'pi1', amount: AMOUNT, status } },
+            }) as never);
+            expect(res.status).toBe(200);
+        }
+
+        // Won: the restore matches only a 'disputed' posting, so nothing is restored or republished.
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledTimes(1);
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({
+            where: { id: 'ej1', paymentStatus: 'disputed' },
+            data: { paymentStatus: 'paid' },
+        });
+        expect(prisma.job.findUnique).not.toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+        // Lost: the ledger records it; the posting is not touched.
+        expect(prisma.jobCharge.update).toHaveBeenCalledWith({
+            where: { id: 'jc1' },
+            data: expect.objectContaining({ refundReason: 'dispute_lost' }),
+        });
+        expect(prisma.employerJob.update).not.toHaveBeenCalled();
     });
 });
 
@@ -274,11 +381,14 @@ describe('Stripe webhook — charge.dispute.closed', () => {
             where: { id: 'ej1', paymentStatus: 'disputed' },
             data: { paymentStatus: 'paid' },
         });
-        // A revival stamps contentChangedAt (indexing audit fixSoon 5).
-        expect(prisma.job.update).toHaveBeenCalledWith({
-            where: { id: 'job1' },
+        // A revival stamps contentChangedAt (indexing audit fixSoon 5). The
+        // write carries the gates it read, so an archive or a hold landing
+        // after the read keeps the posting down.
+        expect(prisma.job.updateMany).toHaveBeenCalledWith({
+            where: { id: 'job1', archivedAt: null, adminHoldAt: null },
             data: { isPublished: true, contentChangedAt: expect.any(Date) },
         });
+        expect(await res.json()).toEqual({ received: true, dispute: 'won', restored: true, republished: true });
     });
 
     it('WON: restores paid but does not re-publish an expired posting', async () => {
@@ -293,6 +403,7 @@ describe('Stripe webhook — charge.dispute.closed', () => {
         }) as never);
 
         expect(prisma.employerJob.updateMany).toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
         expect(prisma.job.update).not.toHaveBeenCalled();
     });
 
@@ -312,8 +423,8 @@ describe('Stripe webhook — charge.dispute.closed', () => {
             where: { id: 'ej1', paymentStatus: 'disputed' },
             data: { paymentStatus: 'paid' },
         });
-        expect(prisma.job.update).toHaveBeenCalledWith({
-            where: { id: 'job1' },
+        expect(prisma.job.updateMany).toHaveBeenCalledWith({
+            where: { id: 'job1', archivedAt: null, adminHoldAt: null },
             data: { isPublished: true, contentChangedAt: expect.any(Date) },
         });
     });
@@ -328,6 +439,8 @@ describe('Stripe webhook — charge.dispute.closed', () => {
             data: { object: { id: 'dp1', payment_intent: 'pi1', amount: AMOUNT, status: 'won' } },
         }) as never);
 
+        expect(prisma.job.findUnique).not.toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
         expect(prisma.job.update).not.toHaveBeenCalled();
     });
 
@@ -344,6 +457,7 @@ describe('Stripe webhook — charge.dispute.closed', () => {
             data: expect.objectContaining({ refundedAmountCents: AMOUNT, refundReason: 'dispute_lost' }),
         });
         expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        expect(prisma.job.updateMany).not.toHaveBeenCalled();
         expect(prisma.job.update).not.toHaveBeenCalled();
     });
 });
@@ -444,6 +558,40 @@ describe('Stripe webhook — renewal can never re-publish a refunded or disputed
         }));
         expect(prisma.job.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'job1' }, data: expect.objectContaining({ isPublished: true }) }));
         expect(sendRenewalConfirmationEmail).toHaveBeenCalledOnce();
+    });
+
+    it("a refused renewal withholds its session's confirmation, with the status it was refused on", async () => {
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ej1', jobId: 'job1', paymentStatus: 'disputed', contactEmail: 'e@x.com', dashboardToken: 'tok' } as never);
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        await POST(makeRequest(renewalEvent('evt_ren_withheld')) as never);
+
+        expect(prisma.emailSend.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+                dedupeKey: 'renewal-confirmation:cs_ren',
+                status: 'withheld',
+                metadata: expect.objectContaining({ outcome: 'revoked_posting', revokedStatus: 'disputed' }),
+            }),
+        });
+    });
+
+    it('a replay after the dispute was won sends no "live again" email for the renewal that was refused', async () => {
+        // The posting reads 'paid' again, and the session is on the ledger with its confirmation withheld.
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ej1', jobId: 'job1', paymentStatus: 'paid', contactEmail: 'e@x.com', dashboardToken: 'tok' } as never);
+        vi.mocked(prisma.jobCharge.create).mockRejectedValue(Object.assign(new Error('dup'), { code: 'P2002' }));
+        vi.mocked(prisma.emailSend.findFirst).mockResolvedValueOnce({
+            metadata: { guard: 'stripe-webhook', reason: 'renewal_not_applied', outcome: 'revoked_posting', revokedStatus: 'disputed' },
+        } as never);
+
+        const { applyRenewalCheckout } = await import('@/app/api/webhooks/stripe/apply-renewal');
+        const { getStripe } = await import('@/lib/stripe');
+        const session = renewalEvent().data.object;
+        const result = await applyRenewalCheckout(getStripe() as never, session as never);
+
+        expect(result).toEqual({ outcome: 'revoked_posting', jobId: 'job1', revokedStatus: 'disputed' });
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(sendRenewalConfirmationEmail).not.toHaveBeenCalled();
     });
 
     it('a second path on the same session hits the unique ledger row and never extends the expiry twice', async () => {

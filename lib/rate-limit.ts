@@ -47,8 +47,34 @@ export const RATE_LIMITS = {
     profile: { limit: 20, windowSeconds: 60 },
     /** Track/telemetry: 60 req/min */
     telemetry: { limit: 60, windowSeconds: 60 },
-    /** Admin endpoints: 20 req/min */
-    admin: { limit: 20, windowSeconds: 60 },
+    /**
+     * Admin console, per signed-in admin per route group: 60 req/min.
+     *
+     * It used to be 20 req/min keyed on IP alone, shared by every /api/admin
+     * route and charged before authentication, so an operator walking through
+     * the console (jobs, users and analytics in the same minute, or a
+     * debounced search) spent it, and anonymous traffic from the same address
+     * spent it for them. The budget now belongs to the admin and the route
+     * group (lib/auth/require-api-admin.ts), so a burst on one screen cannot
+     * lock the rest of the console.
+     */
+    admin: { limit: 60, windowSeconds: 60 },
+    /**
+     * High-impact admin actions, per signed-in admin per action: 10 req/min,
+     * charged on top of RATE_LIMITS.admin (lib/auth/require-api-admin.ts
+     * limitHighImpactAdminAction). A broadcast send, a bulk hard delete of
+     * jobs and a user deletion each mail many people or remove what cannot be
+     * restored, so a stuck button or a script in a loop is stopped within ten
+     * calls instead of sixty.
+     */
+    adminHighImpact: { limit: 10, windowSeconds: 60 },
+    /**
+     * Pre-auth guard on /api/admin: 120 req/min per IP across every admin
+     * route. It runs before the session is known, so it stays loose enough for
+     * a real console session; its job is only to bound anonymous hammering,
+     * which costs a Supabase round trip per call.
+     */
+    adminIp: { limit: 120, windowSeconds: 60 },
     /** Employer endpoints: 30 req/min */
     employer: { limit: 30, windowSeconds: 60 },
     /** Candidate messaging: 10 messages per 24h */
@@ -218,7 +244,8 @@ export async function rateLimit(
 /**
  * A limit shared by every request with the same key, whatever its IP: for a
  * client identified another way, such as a crawler by its user agent
- * (middleware.ts, lib/crawler-policy.ts). Answers 429 with Retry-After past
+ * (middleware.ts, lib/crawler-policy.ts) or a signed-in admin by their
+ * session (lib/auth/require-api-admin.ts). Answers 429 with Retry-After past
  * the limit, null otherwise.
  */
 export async function rateLimitShared(sharedKey: string, config: RateLimitConfig): Promise<NextResponse | null> {
