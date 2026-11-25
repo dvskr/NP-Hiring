@@ -88,10 +88,12 @@ describe('B1 — InMail/active-posting gate cannot be skipped via a new job-scop
     expect(gateCheck).toMatch(/existingConversation = await prisma\.conversation\.findFirst\(\{\s*where:\s*\{\s*jobId:\s*jobId \|\| null/);
   });
   // Owner, 2026-11-25: an active posting, not a featured one, which a new post
-  // never is. The behavior is pinned in tests/api/employer-messages-recipient.test.ts.
+  // never is, and a credit of the named job's posting or, with no job named,
+  // of the posting canSendInMail picks. The behavior is pinned in
+  // tests/api/employer-messages-recipient.test.ts and tests/lib/inmail-attribution.test.ts.
   it('gate still enforces an active posting + InMail credits for new threads', () => {
     const src = read(rel);
-    expect(src).toContain('canSendInMail(senderProfile.id, user.id, tier)');
+    expect(src).toContain('canSendInMail(senderProfile.id, user.id, tier, jobId ?? undefined)');
     expect(src).toContain('activePostingJobWhere()');
     expect(src).not.toMatch(/isFeatured/);
   });

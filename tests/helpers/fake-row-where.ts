@@ -4,13 +4,15 @@
  * clause against fixture rows instead of pinning its shape.
  *
  * An operator it does not know throws, so a clause it cannot evaluate fails
- * the test instead of quietly matching. To-one relations are resolved by the
- * caller (`relations`), as a direct where or `{ is }`. SQL's NULL logic is not
- * modelled: fixtures set every field a clause reads.
+ * the test instead of quietly matching. Relations are resolved by the caller
+ * (`relations`): a to-one relation returns its row or null, read as a direct
+ * where or `{ is }`; a to-many relation returns its rows, read through
+ * `some`, `none` or `every`. SQL's NULL logic is not modelled: fixtures set
+ * every field a clause reads.
  */
 
 export type Row = Record<string, unknown>;
-export type Relations = Record<string, (row: Row) => Row | null>;
+export type Relations = Record<string, (row: Row) => Row | Row[] | null>;
 
 function same(a: unknown, b: unknown): boolean {
     if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
@@ -50,7 +52,22 @@ function fieldMatches(value: unknown, cond: unknown): boolean {
 
 const asList = (cond: unknown): unknown[] => (Array.isArray(cond) ? cond : [cond]);
 
-/** Whether `row` satisfies a Prisma where clause. */
+/** A to-many relation filter: `some`, `none` or `every` of the related rows. */
+function listMatches(rows: Row[], filter: Row, relations: Relations): boolean {
+    return Object.entries(filter).every(([op, where]) => {
+        switch (op) {
+            case 'some': return rows.some((related) => rowMatches(related, where, relations));
+            case 'none': return !rows.some((related) => rowMatches(related, where, relations));
+            case 'every': return rows.every((related) => rowMatches(related, where, relations));
+            default: throw new Error(`fake where: unsupported list operator "${op}"`);
+        }
+    });
+}
+
+/**
+ * Whether `row` satisfies a Prisma where clause. The relations apply at every
+ * level, so a clause can reach through one relation into the next.
+ */
 export function rowMatches(row: Row, where: unknown, relations: Relations = {}): boolean {
     if (where === undefined) return true;
     return Object.entries(where as Row).every(([key, cond]) => {
@@ -62,7 +79,8 @@ export function rowMatches(row: Row, where: unknown, relations: Relations = {}):
         if (!relation) return fieldMatches(row[key], cond);
         const related = relation(row);
         const filter = cond as Row;
-        if (cond !== null && 'is' in filter) return related !== null && rowMatches(related, filter.is);
-        return related !== null && rowMatches(related, cond);
+        if (Array.isArray(related)) return listMatches(related, filter, relations);
+        if (cond !== null && 'is' in filter) return related !== null && rowMatches(related, filter.is, relations);
+        return related !== null && rowMatches(related, cond, relations);
     });
 }

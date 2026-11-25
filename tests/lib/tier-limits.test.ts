@@ -172,6 +172,15 @@ describe('canUnlockCandidate', () => {
     });
 });
 
+/**
+ * `n` threads as getInMailsForPosting reads them: opened by PROFILE_ID with a
+ * message about `jobId`. The full rule is pinned in
+ * tests/lib/inmail-attribution.test.ts.
+ */
+function openedThreads(n: number, jobId: string) {
+    return Array.from({ length: n }, () => ({ jobId, messages: [{ senderId: PROFILE_ID, jobId }] }));
+}
+
 describe('canSendInMail', () => {
     beforeEach(() => vi.clearAllMocks());
 
@@ -182,35 +191,37 @@ describe('canSendInMail', () => {
         expect(result.allowed).toBe(false);
     });
 
-    it('allows when InMail count for the active posting is below cap', async () => {
+    it('allows when InMail count for the active posting is below cap, naming the posting it spends', async () => {
         const posting = makePosting();
         vi.mocked(prisma.employerJob.findMany).mockResolvedValue([posting] as never);
-        vi.mocked(prisma.conversation.count).mockResolvedValueOnce(10 as never); // 10/25 used on this job
+        vi.mocked(prisma.conversation.findMany).mockResolvedValueOnce(openedThreads(10, posting.job.id) as never); // 10/25 used on this job
 
         const result = await canSendInMail(PROFILE_ID, EMPLOYER_ID, 'pro');
-        expect(result.allowed).toBe(true);
+        expect(result).toEqual({ allowed: true, used: 10, limit: 25, jobId: posting.job.id });
     });
 
     it('denies when all active postings are exhausted', async () => {
         const posting = makePosting();
         vi.mocked(prisma.employerJob.findMany).mockResolvedValue([posting] as never);
-        vi.mocked(prisma.conversation.count).mockResolvedValueOnce(25 as never); // 25/25 used
+        vi.mocked(prisma.conversation.findMany).mockResolvedValueOnce(openedThreads(25, posting.job.id) as never); // 25/25 used
 
         const result = await canSendInMail(PROFILE_ID, EMPLOYER_ID, 'pro');
         expect(result.allowed).toBe(false);
     });
 
-    it('counts conversations created on or after the posting createdAt', async () => {
+    it('counts conversations created on or after the posting createdAt, about its job or charged to it', async () => {
         const posting = makePosting();
         vi.mocked(prisma.employerJob.findMany).mockResolvedValue([posting] as never);
-        vi.mocked(prisma.conversation.count).mockResolvedValueOnce(0 as never);
+        vi.mocked(prisma.conversation.findMany).mockResolvedValueOnce([] as never);
 
         await canSendInMail(PROFILE_ID, EMPLOYER_ID, 'pro');
 
-        const arg = vi.mocked(prisma.conversation.count).mock.calls[0][0]!;
+        const arg = vi.mocked(prisma.conversation.findMany).mock.calls[0][0]!;
         expect(arg.where).toMatchObject({
-            jobId: posting.job.id,
             createdAt: { gte: posting.createdAt },
+            AND: expect.arrayContaining([
+                { OR: [{ jobId: posting.job.id }, { jobId: null, messages: { some: { senderId: PROFILE_ID, jobId: posting.job.id } } }] },
+            ]),
         });
     });
 });
@@ -238,7 +249,7 @@ describe('getUsageSummary', () => {
         const p2 = makePosting({ id: 'p2' });
         vi.mocked(prisma.employerJob.findMany).mockResolvedValue([p1, p2] as never);
         vi.mocked(prisma.profileView.count).mockResolvedValue(0 as never);
-        vi.mocked(prisma.conversation.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.conversation.findMany).mockResolvedValue([] as never);
 
         const result = await getUsageSummary(PROFILE_ID, EMPLOYER_ID, 'pro');
         expect(result.candidateUnlocks.limit).toBe(50);

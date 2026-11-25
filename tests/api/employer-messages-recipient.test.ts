@@ -398,6 +398,14 @@ function expectTurnedAway(before: Store): void {
     expect(h.canSendInMail).not.toHaveBeenCalled();
 }
 
+/**
+ * A credit on the named job's posting, or with no job named on 'job-own':
+ * canSendInMail names the posting a new thread spends. Which one it picks is
+ * pinned in tests/lib/inmail-attribution.test.ts.
+ */
+const CREDIT_LEFT = async (_senderId: string, _employerId: string, _tier: string, jobId?: string) =>
+    ({ allowed: true, used: 0, limit: 25, jobId: jobId ?? 'job-own' });
+
 beforeEach(() => {
     vi.clearAllMocks();
     sequence = 0;
@@ -405,7 +413,7 @@ beforeEach(() => {
     installFakeDatabase();
     h.sendEmployerMessageNotification.mockResolvedValue({ success: true });
     h.getEmployerTier.mockResolvedValue('pro');
-    h.canSendInMail.mockResolvedValue({ allowed: true, used: 0, limit: 25 });
+    h.canSendInMail.mockImplementation(CREDIT_LEFT);
     signIn(EMPLOYER);
 });
 
@@ -432,8 +440,11 @@ describe('POST /api/employer/messages: the ways an employer reaches someone', ()
         const res = await send(inMail('auth-applicant', jobId));
 
         expect(res.status).toBe(200);
+        // The thread keeps the job it was sent with; the message that opens
+        // it names the posting whose credit it spent.
+        expect(db.conversations).toEqual([expect.objectContaining({ jobId: jobId ?? null })]);
         expect(db.messages).toEqual([
-            expect.objectContaining({ recipientId: profileId('auth-applicant'), jobId: jobId ?? null }),
+            expect.objectContaining({ recipientId: profileId('auth-applicant'), jobId: 'job-own' }),
         ]);
         expect(h.sendEmployerMessageNotification).toHaveBeenCalledTimes(1);
     });
@@ -552,7 +563,7 @@ describe('POST /api/employer/messages: new outreach needs an active posting, nev
         expect((await send(inMail('auth-pool'))).status).toBe(200);
     });
 
-    it('keeps the InMail check after the posting gate, exactly as it was', async () => {
+    it('keeps the InMail check after the posting gate, on the named job', async () => {
         h.canSendInMail.mockResolvedValue({ allowed: false, used: 25, limit: 25 });
 
         const res = await send(inMail('auth-pool', 'job-own'));
@@ -561,8 +572,17 @@ describe('POST /api/employer/messages: new outreach needs an active posting, nev
             status: 403,
             body: { error: 'InMail limit reached for this posting', used: 25, limit: 25, tier: 'pro', upgradeRequired: true },
         });
-        expect(h.canSendInMail).toHaveBeenCalledWith(profileId(EMPLOYER.id), EMPLOYER.id, 'pro');
+        expect(h.canSendInMail).toHaveBeenCalledWith(profileId(EMPLOYER.id), EMPLOYER.id, 'pro', 'job-own');
         expect(db.messages).toEqual([]);
+    });
+
+    it('refuses new outreach when the check names no posting to charge, and writes nothing', async () => {
+        h.canSendInMail.mockResolvedValue({ allowed: true, used: 0, limit: 25 });
+
+        expect((await send(inMail('auth-pool'))).status).toBe(403);
+        expect(db.conversations).toEqual([]);
+        expect(db.messages).toEqual([]);
+        expect(h.sendEmployerMessageNotification).not.toHaveBeenCalled();
     });
 
     it('lets a reply land in an existing thread with no active posting', async () => {

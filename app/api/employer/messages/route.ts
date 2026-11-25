@@ -191,6 +191,9 @@ export async function POST(req: NextRequest) {
             select: { id: true },
         });
 
+        // The job of the posting whose InMail credit a new thread spends.
+        let chargedJobId: string | null = null;
+
         if (!existingConversation) {
             // SECURITY: new outreach reaches only someone this employer may
             // contact (mayOpenThreadWith above). The recipient was never
@@ -239,10 +242,17 @@ export async function POST(req: NextRequest) {
                 }, { status: 403 });
             }
 
-            // Check InMail credits for new outreach
+            // Every new thread spends one InMail credit of one active
+            // posting (owner, 2026-11-25). A named job spends its own
+            // posting's credit; with no job named, canSendInMail picks the
+            // active posting with credit left that ends soonest. A thread
+            // with no job used to count against no posting, so leaving out
+            // the job id sent InMails without limit. With no credit to
+            // spend, or no posting to charge, nothing is written.
+            // tests/lib/inmail-attribution.test.ts
             const tier = await getEmployerTier(user.id);
-            const inmailCheck = await canSendInMail(senderProfile.id, user.id, tier);
-            if (!inmailCheck.allowed) {
+            const inmailCheck = await canSendInMail(senderProfile.id, user.id, tier, jobId ?? undefined);
+            if (!inmailCheck.allowed || !inmailCheck.jobId) {
                 return NextResponse.json({
                     error: 'InMail limit reached for this posting',
                     used: inmailCheck.used,
@@ -251,6 +261,7 @@ export async function POST(req: NextRequest) {
                     upgradeRequired: true,
                 }, { status: 403 });
             }
+            chargedJobId = inmailCheck.jobId;
         }
 
         // Look up job title if jobId provided
@@ -279,6 +290,7 @@ export async function POST(req: NextRequest) {
                 },
             });
 
+            const opensThread = !conversation;
             if (!conversation) {
                 const [participantA, participantB] = [senderProfile.id, recipient.id].sort();
                 conversation = await tx.conversation.create({
@@ -299,7 +311,12 @@ export async function POST(req: NextRequest) {
                     subject,
                     // Same sanitizer as the reply path (POST /api/conversations/[id])
                     body: sanitizeText(messageBody.trim(), 2000),
-                    ...(jobId && { jobId }),
+                    // The thread's job. A thread that names no job keeps none,
+                    // so the candidate sees no posting the employer never
+                    // named; the message that opens it records the posting
+                    // whose credit it spent, which getInMailsForPosting counts.
+                    // A later message in it carries none, as a reply does.
+                    jobId: conversation.jobId ?? (opensThread ? chargedJobId : null),
                 },
             });
 

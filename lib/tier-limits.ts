@@ -60,24 +60,73 @@ export async function getUnlocksForPosting(employerJobId: string): Promise<numbe
 }
 
 /**
- * Count how many InMails (unique conversations) are tied to a specific job posting.
- * Only counts unique conversations, not total messages — follow-up replies are free.
+ * The InMails charged to a posting: the threads this employer opened since
+ * the posting began, about the posting's job, or naming no job with the
+ * posting recorded on the message that opened them. Replies are free, so a
+ * thread counts once however many messages it holds.
+ *
+ * A thread that names no job records the posting it spent on its opening
+ * message (POST /api/employer/messages), not on the thread: the thread's job
+ * would show the candidate a posting the employer never named, and would move
+ * the thread off the (pair, no job) key a later message to them lands on.
+ * Such a thread opened before 2026-11-25 has no posting on that message and
+ * counts against none.
+ *
+ * Only threads the employer opened count, as on PMHNP Hiring. There the
+ * initiator is participantA; NP stores a new thread's participants in sorted
+ * order, so the sender of the thread's first message says who opened it. A
+ * candidate's question about a job (app/api/candidate/messages names the job)
+ * used to count against the employer's own allowance.
+ * tests/lib/inmail-attribution.test.ts
  */
 export async function getInMailsForPosting(
     senderId: string,
     jobId: string,
     postingCreatedAt: Date
 ): Promise<number> {
-    return prisma.conversation.count({
+    const threads = await prisma.conversation.findMany({
         where: {
-            OR: [
-                { participantA: senderId },
-                { participantB: senderId },
+            AND: [
+                { OR: [{ participantA: senderId }, { participantB: senderId }] },
+                { OR: [{ jobId }, { jobId: null, messages: { some: { senderId, jobId } } }] },
             ],
-            jobId,
             createdAt: { gte: postingCreatedAt },
         },
+        select: {
+            jobId: true,
+            messages: {
+                orderBy: [{ sentAt: 'asc' }, { id: 'asc' }],
+                take: 1,
+                select: { senderId: true, jobId: true },
+            },
+        },
     });
+    return threads.filter((thread) => {
+        const opening = thread.messages[0];
+        return opening !== undefined && opening.senderId === senderId && (thread.jobId ?? opening.jobId) === jobId;
+    }).length;
+}
+
+/** The fields inMailSpendOrder reads from an active posting. */
+interface SpendOrderPosting {
+    readonly id: string;
+    readonly createdAt: Date;
+    readonly job: { readonly expiresAt: Date | null };
+}
+
+/**
+ * The order a new thread that names no job spends InMail credits in: the
+ * posting that ends soonest first, since its credits lapse with it, so the
+ * employer keeps the most credits overall. A posting with no end date never
+ * lapses and comes last; among equal end dates the older posting comes first,
+ * then the id, so the same postings always give the same order.
+ */
+export function inMailSpendOrder<T extends SpendOrderPosting>(postings: readonly T[]): T[] {
+    const endsAt = (posting: T): number => posting.job.expiresAt?.getTime() ?? Number.POSITIVE_INFINITY;
+    return [...postings].sort((a, b) =>
+        endsAt(a) - endsAt(b)
+        || a.createdAt.getTime() - b.createdAt.getTime()
+        || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 /**
@@ -207,46 +256,56 @@ export async function canUnlockCandidate(
 }
 
 /**
- * Check if the employer can send another InMail.
+ * Whether the employer may open a new thread, and the posting whose InMail
+ * credit it spends: `jobId` in the answer is that posting's job, and the
+ * caller records it on the thread so getInMailsForPosting counts it.
  * Per-posting: each posting gets its own credit pool for InMails.
+ *
+ * A thread that names a job (`jobId`) spends that posting's credit and no
+ * other's. Checked against "any posting with room" while the thread was
+ * counted under the named one, an exhausted posting kept sending for as long
+ * as another posting had room, whose count never moved (PMHNP Hiring's fix).
+ *
+ * A thread that names no job spends the credit of the first active posting
+ * in inMailSpendOrder that has credit left: the one that ends soonest. A
+ * thread with no job named used to count against no posting at all.
+ *
+ * Refused, with the totals of the postings it read, when none has credit.
+ * tests/lib/inmail-attribution.test.ts
  */
 export async function canSendInMail(
     senderId: string,
     employerId: string,
-    tier: PricingTier
-): Promise<{ allowed: boolean; used: number; limit: number }> {
-    const limits = config.getTierLimits(tier);
-    const limit = limits.inmailsPerPosting;
+    tier: PricingTier,
+    jobId?: string,
+): Promise<{ allowed: boolean; used: number; limit: number; jobId?: string }> {
+    const limit = config.getTierLimits(tier).inmailsPerPosting;
 
-    // Unlimited tier
-    if (!Number.isFinite(limit)) {
-        return { allowed: true, used: 0, limit: Infinity };
-    }
-
-    // Get all active postings
-    const postings = await getEmployerActivePostings(employerId);
+    const activePostings = await getEmployerActivePostings(employerId);
+    const postings = jobId
+        ? activePostings.filter((posting) => posting.job.id === jobId)
+        : inMailSpendOrder(activePostings);
     if (postings.length === 0) {
         return { allowed: false, used: 0, limit };
     }
 
-    // Check each posting for remaining InMail credits
     let totalUsed = 0;
+    let totalLimit = 0;
     for (const posting of postings) {
-        const postingLimits = config.getTierLimits(posting.pricingTier as PricingTier);
-        const postingLimit = postingLimits.inmailsPerPosting;
-        const used = await getInMailsForPosting(senderId, posting.job.id, posting.createdAt);
-        totalUsed += used;
-
-        if (Number.isFinite(postingLimit) && used < postingLimit) {
-            return { allowed: true, used: totalUsed, limit: postingLimit };
-        }
+        const postingLimit = config.getTierLimits(posting.pricingTier as PricingTier).inmailsPerPosting;
         if (!Number.isFinite(postingLimit)) {
-            return { allowed: true, used: totalUsed, limit: Infinity };
+            return { allowed: true, used: totalUsed, limit: Infinity, jobId: posting.job.id };
         }
+        const used = await getInMailsForPosting(senderId, posting.job.id, posting.createdAt);
+        if (used < postingLimit) {
+            return { allowed: true, used, limit: postingLimit, jobId: posting.job.id };
+        }
+        totalUsed += used;
+        totalLimit += postingLimit;
     }
 
-    // All postings exhausted
-    return { allowed: false, used: totalUsed, limit };
+    // Every posting it may spend is exhausted
+    return { allowed: false, used: totalUsed, limit: totalLimit };
 }
 
 /**
