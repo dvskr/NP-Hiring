@@ -19,8 +19,7 @@ import { OCCUPATION_WAGES } from '@/lib/salary-guide-occupation-wages';
 import {
     BLS_NATIONAL,
     BLS_OEWS_REFERENCE_PERIOD,
-    BLS_PA_STATE_WAGES,
-    BLS_STATE_WAGES,
+    blsNpPaStateRows,
     blsStatesByMedianDesc,
     bottomStatesByMedian,
     formatBlsDollars,
@@ -80,13 +79,7 @@ export function highestPaidTypeAnswer(snapshot: NpPaySnapshot | null): string {
 
 /** States where the BLS NP median was above the PA median, counted from the same release. */
 export function statesWhereNpMedianTopsPa(): string[] {
-    return Object.values(BLS_STATE_WAGES)
-        .filter((np) => {
-            const pa = BLS_PA_STATE_WAGES[np.state];
-            return np.annualMedian.value !== null && pa?.annualMedian.value != null && np.annualMedian.value > pa.annualMedian.value;
-        })
-        .map((np) => np.state)
-        .sort();
+    return blsNpPaStateRows().filter((row) => row.higher === 'np').map((row) => row.state);
 }
 
 export function paOrNpAnswer(): string {

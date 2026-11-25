@@ -18,6 +18,7 @@ import {
     BLS_RN_STATE_WAGES,
     BLS_STATE_SOURCE_URL,
     BLS_STATE_WAGES,
+    blsNpPaStateRows,
     blsStatesByMedianDesc,
     bottomStatesByMedian,
     compareWithNationalMedian,
@@ -155,5 +156,23 @@ describe('BLS state wages: ranking helpers', () => {
             if (clause) expect(clause).toMatch(/(above|below) the national median of \$132,300$|^in line with/);
         }
         expect(hasBlsStateMedian('Guam')).toBe(false);
+    });
+});
+
+describe('BLS state wages: NP vs PA by state', () => {
+    it('pairs both medians for the 50 states and DC, in state name order, with the gap computed from them', () => {
+        const rows = blsNpPaStateRows();
+        expect(rows).toHaveLength(51);
+        expect(rows.map((row) => row.state)).toEqual(Object.keys(BLS_STATE_WAGES).sort((a, b) => a.localeCompare(b)));
+        for (const row of rows) {
+            expect(row.np).toBe(BLS_STATE_WAGES[row.state].annualMedian);
+            expect(row.pa).toBe(BLS_PA_STATE_WAGES[row.state].annualMedian);
+            if (row.np.value === null || row.pa.value === null) {
+                expect([row.gap, row.higher]).toEqual([null, null]);
+                continue;
+            }
+            expect(row.gap).toBe(Math.abs(row.pa.value - row.np.value));
+            expect(row.higher).toBe(row.pa.value > row.np.value ? 'pa' : row.np.value > row.pa.value ? 'np' : null);
+        }
     });
 });

@@ -10,11 +10,22 @@
  * lib/stats-sources.ts. PA pay is from the same BLS OEWS release as the NP
  * median, and every NP and PA employment figure is from the same BLS
  * Employment Projections table and cycle as the NP growth rate
- * (verified-facts.ts), so each row compares like for like.
+ * (verified-facts.ts), so each row compares like for like. The state pay
+ * table reads the BLS OEWS state estimates of that release from
+ * lib/salary-guide-bls-states.ts, and registers every figure it prints.
  */
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import {
+    BLS_OEWS_READ_ON,
+    BLS_OEWS_REFERENCE_PERIOD,
+    BLS_STATE_SOURCE_URL,
+    blsNpPaStateRows,
+    formatBlsDollars,
+    type BlsNpPaStateRow,
+} from '@/lib/salary-guide-bls-states';
+import {
+    formatGuideDate,
     monthYear,
     type FaqItem,
     type GuideContent,
@@ -22,12 +33,18 @@ import {
     type SourceLink,
     type VerifiedFigure,
 } from '@/app/resources/what-is-a-nurse-practitioner/guide-model';
-import { BLS_PROJECTIONS, PA_MEDIAN_WAGE, PRIMARY_SOURCES } from '@/app/resources/what-is-a-nurse-practitioner/verified-facts';
+import { BLS_PROJECTIONS, FACTS_CHECKED_ON, PA_MEDIAN_WAGE, PRIMARY_SOURCES } from '@/app/resources/what-is-a-nurse-practitioner/verified-facts';
 
 export const NP_VS_PA_PATH = '/resources/np-vs-pa';
 
-/** First publication and last review: Article.datePublished and dateModified. */
-export const PAGE_DATE = '2026-11-23';
+/** First publication: Article.datePublished. */
+export const PAGE_PUBLISHED = '2026-11-23';
+/**
+ * Last content change: Article.dateModified and the visible "Updated" date.
+ * Bump it, with the page's lastmod (app/api/sitemaps/lastmod.ts), only when
+ * the copy changes. 2026-11-25: the state pay table and three FAQs.
+ */
+export const PAGE_MODIFIED = '2026-11-25';
 
 const NP = brand.niche.short;
 const NP_TITLE = brand.niche.long;
@@ -242,8 +259,70 @@ const PAY: GuideSection = {
         {
             kind: 'paragraph',
             content: [
-                `For ${NP} pay by state, setting and specialty, see the `,
+                'The ',
+                { text: 'state table below', href: '#pay-by-state' },
+                ` compares the two medians in every state. For ${NP} pay by setting and specialty, see the `,
                 { text: `${NP} salary guide`, href: '/salary-guide' },
+                '.',
+            ],
+        },
+    ],
+};
+
+// ─── Pay by state: BLS OEWS state estimates, same release ───────────────────
+
+const STATE_ROWS = blsNpPaStateRows();
+const NP_AHEAD = STATE_ROWS.filter((row) => row.higher === 'np').length;
+const PA_AHEAD = STATE_ROWS.filter((row) => row.higher === 'pa').length;
+const TIED = STATE_ROWS.filter((row) => row.gap === 0).length;
+/** The states and DC, as the BLS state file reports them. */
+const STATE_COUNT = String(STATE_ROWS.length - 1);
+
+const dollars = (amount: number): string => `$${amount.toLocaleString('en-US')}`;
+
+/** What the last column prints: which median is higher, and by how much. */
+function higherCell(row: BlsNpPaStateRow): string {
+    if (row.gap === null) return 'Not published by BLS';
+    if (row.higher === null) return 'Equal';
+    return `${row.higher === 'np' ? NP : 'PA'} by ${dollars(row.gap)}`;
+}
+
+/** "The PA median is higher in 38 of them and the NP median in 13": the order follows the counts. */
+const STATE_ORDER =
+    PA_AHEAD >= NP_AHEAD
+        ? `The PA median is higher in ${PA_AHEAD} of them and the ${NP} median in ${NP_AHEAD}`
+        : `The ${NP} median is higher in ${NP_AHEAD} of them and the PA median in ${PA_AHEAD}`;
+
+const PAY_BY_STATE: GuideSection = {
+    id: 'pay-by-state',
+    heading: `${NP} vs PA Pay by State (BLS, ${BLS_OEWS_REFERENCE_PERIOD})`,
+    icon: 'mapPin',
+    blocks: [
+        {
+            kind: 'paragraph',
+            content: [
+                `BLS publishes the median annual wage of both occupations for the ${STATE_COUNT} states and DC. ${STATE_ORDER}` +
+                    `${TIED > 0 ? `, and ${TIED} are equal` : ''}, so the national gap of ${MEDIAN_GAP} does not hold in every ` +
+                    "state. Compare an offer with your own state's figures.",
+            ],
+        },
+        {
+            kind: 'table',
+            caption:
+                'Median annual wage for nurse practitioners and physician assistants in each state and DC, from the BLS ' +
+                `Occupational Employment and Wage Statistics state estimates for ${BLS_OEWS_REFERENCE_PERIOD}, and which median is higher`,
+            columns: ['State', `${NP} median annual wage`, 'PA median annual wage', 'Higher median'],
+            rows: STATE_ROWS.map((row) => ({
+                label: row.state,
+                cells: [[formatBlsDollars(row.np)], [formatBlsDollars(row.pa)], [higherCell(row)]],
+            })),
+        },
+        {
+            kind: 'paragraph',
+            content: [
+                `These are BLS state estimates from the same ${BLS_OEWS_REFERENCE_PERIOD} survey as the national medians above. ` +
+                    "For each state's percentile range and the number of NPs employed, see the ",
+                { text: `${NP} salary guide's state table`, href: '/salary-guide#salary-by-state' },
                 '.',
             ],
         },
@@ -336,6 +415,15 @@ const FAQS: readonly FaqItem[] = [
         ],
     },
     {
+        question: `Is a PA higher than an ${NP}?`,
+        answer: [
+            'No. Neither role ranks above the other: they are separate professions with their own education, certification ' +
+                `and licensure. ${NP}s are registered nurses with graduate nursing education who certify through AANPCB or ANCC, ` +
+                'and PAs complete a PA program and certify through NCCPA. Both diagnose, treat and prescribe, and state law, not ' +
+                'the title, sets how much physician involvement each one needs.',
+        ],
+    },
+    {
         question: `Which is better, ${NP} or PA?`,
         answer: [
             `Neither is better in general. The ${NP} path builds on nursing and ties your training to a population focus, and ` +
@@ -345,21 +433,36 @@ const FAQS: readonly FaqItem[] = [
         ],
     },
     {
+        // Replaces "Can NPs and PAs practice independently?", whose answer this
+        // one carries: practice authority is the difference the question asks about.
+        question: `What can an ${NP} do that a PA cannot?`,
+        answer: [
+            'In a clinic, both examine, diagnose, order tests, treat and prescribe. The difference is practice authority. AANP ' +
+                `classifies ${FULL_PRACTICE.formatted} as Full Practice for ${NP}s: there, an ${NP} can practice without a ` +
+                'physician agreement, although some of those states first require a transition period. For PAs, BLS reports ' +
+                `that most states require an agreement with a supervising physician. Rules change as legislatures act: check the ${NP} rule in the `,
+            { text: 'scope of practice explorer', href: '/scope-of-practice' },
+            ', and confirm any rule with the licensing board in your state.',
+        ],
+    },
+    {
+        question: `Is an ${NP} or PA closer to a doctor?`,
+        answer: [
+            'Neither is a physician, and neither holds a medical degree such as an MD or DO. In training, the PA is closer: PA ' +
+                'education follows a medical curriculum, which BLS describes as classroom and laboratory instruction in subjects ' +
+                `such as human anatomy, clinical medicine and pharmacology. ${NP} education builds on nursing, after a registered ` +
+                'nurse license. Physicians, unlike either, complete medical school and a residency.',
+        ],
+    },
+    {
         question: `Do ${NP}s or PAs make more money?`,
         answer: [
             `${HIGHER_PAID} have the higher national median, by ${MEDIAN_GAP}. BLS reports a median annual wage of ` +
                 `${PA_MEDIAN} for physician assistants and ${NP_MEDIAN} for nurse practitioners in ${PAY_VINTAGE}, from the ` +
-                'same survey. Medians cover every specialty and setting, so compare offers for the same specialty and region.',
-        ],
-    },
-    {
-        question: `Can ${NP}s and PAs practice independently?`,
-        answer: [
-            `It depends on the state. AANP classifies ${FULL_PRACTICE.formatted} as Full Practice for ${NP}s, although some of ` +
-                'those states first require a transition period. For PAs, BLS reports that most states require an agreement with ' +
-                `a supervising physician. Rules change as legislatures act: check the ${NP} rule in the `,
-            { text: 'scope of practice explorer', href: '/scope-of-practice' },
-            ', and confirm any rule with the licensing board in your state.',
+                `same survey. By state the order changes: the ${NP} median is higher in ${NP_AHEAD} of the ${STATE_COUNT} ` +
+                'states and DC, as the ',
+            { text: 'state table', href: '#pay-by-state' },
+            ' shows. Medians cover every specialty and setting, so compare offers for the same specialty and region.',
         ],
     },
     {
@@ -399,8 +502,14 @@ const SOURCES: readonly SourceLink[] = [
     },
     { label: STAT_SOURCES.npMedianWageBls.source, url: STAT_SOURCES.npMedianWageBls.sourceUrl, note: 'the NP median wage' },
     { ...PRIMARY_SOURCES.blsPaWageSeries, note: `the PA median wage for ${PAY_VINTAGE}, from the same survey as the NP median` },
+    {
+        label: `BLS Occupational Employment and Wage Statistics, state estimates, ${BLS_OEWS_REFERENCE_PERIOD}`,
+        url: BLS_STATE_SOURCE_URL,
+        note: 'the NP and PA median annual wages for each state and DC',
+    },
     { ...PRIMARY_SOURCES.blsOohPa, note: 'PA education, program length, clinical training, licensing, supervision agreements and specialties' },
     { ...PRIMARY_SOURCES.blsOohNp, note: 'NP duties, education and licensure' },
+    { ...PRIMARY_SOURCES.blsOohPhysicians, note: 'physician degrees, medical school and residency' },
     { ...PRIMARY_SOURCES.nccpaCertify, note: 'the PANCE, its ARC-PA eligibility rule and the PA-C credential' },
     { ...PRIMARY_SOURCES.nccpaMaintain, note: 'the PA certification maintenance cycle, CME credits and the PANRE and PANRE-LA exams' },
     { ...PRIMARY_SOURCES.anccFnp, note: 'FNP-BC eligibility and clinical hours' },
@@ -435,12 +544,28 @@ const FIGURES: readonly VerifiedFigure[] = [
     { text: 'five', claim: 'two-year periods in the NCCPA cycle', sourceUrl: PRIMARY_SOURCES.nccpaMaintain.url },
     { text: 'two', claim: 'years in each NCCPA CME period', sourceUrl: PRIMARY_SOURCES.nccpaMaintain.url },
     { text: '100', claim: 'CME credits in each NCCPA two-year period', sourceUrl: PRIMARY_SOURCES.nccpaMaintain.url },
+    // The state table and its counts, registered from the rows it prints.
+    { text: STATE_COUNT, claim: 'states in the BLS state estimates, beside DC', sourceUrl: BLS_STATE_SOURCE_URL },
+    { text: String(PA_AHEAD), claim: 'states and DC where the PA median is higher', sourceUrl: BLS_STATE_SOURCE_URL },
+    { text: String(NP_AHEAD), claim: 'states and DC where the NP median is higher', sourceUrl: BLS_STATE_SOURCE_URL },
+    ...(TIED > 0 ? [{ text: String(TIED), claim: 'states and DC where the two medians are equal', sourceUrl: BLS_STATE_SOURCE_URL }] : []),
+    ...STATE_ROWS.flatMap((row): VerifiedFigure[] => [
+        ...(row.np.value !== null
+            ? [{ text: formatBlsDollars(row.np), claim: `${row.state} NP median annual wage, ${BLS_OEWS_REFERENCE_PERIOD}`, sourceUrl: BLS_STATE_SOURCE_URL }]
+            : []),
+        ...(row.pa.value !== null
+            ? [{ text: formatBlsDollars(row.pa), claim: `${row.state} PA median annual wage, ${BLS_OEWS_REFERENCE_PERIOD}`, sourceUrl: BLS_STATE_SOURCE_URL }]
+            : []),
+        ...(row.gap
+            ? [{ text: dollars(row.gap), claim: `${row.state} gap between the two medians, computed from them`, sourceUrl: BLS_STATE_SOURCE_URL }]
+            : []),
+    ]),
 ];
 
 export const NP_VS_PA: GuideContent = {
     path: NP_VS_PA_PATH,
-    datePublished: PAGE_DATE,
-    dateModified: PAGE_DATE,
+    datePublished: PAGE_PUBLISHED,
+    dateModified: PAGE_MODIFIED,
     title: `${NP} vs PA: Education, Pay and Practice Compared`,
     description:
         `${NP_SENTENCE} vs physician assistant: how ${NP} and PA education, clinical hours, certification, practice authority, ` +
@@ -459,12 +584,13 @@ export const NP_VS_PA: GuideContent = {
     quickAnswer: QUICK_ANSWER,
     heroTone: 'pinkBlue',
     heroIcon: 'scale',
-    sections: [OVERVIEW, SIDE_BY_SIDE, PAY, OUTLOOK, CHOOSE],
+    sections: [OVERVIEW, SIDE_BY_SIDE, PAY, PAY_BY_STATE, OUTLOOK, CHOOSE],
     faqHeading: 'Frequently Asked Questions',
     faqs: FAQS,
     sources: SOURCES,
     sourcesNote:
-        `${brand.name} checked every figure on this page against these sources on the review date above. Practice, ` +
+        `${brand.name} read the state wage figures from the BLS state file on ${formatGuideDate(BLS_OEWS_READ_ON)} and checked ` +
+        `every other figure on this page against these sources on ${formatGuideDate(FACTS_CHECKED_ON)}. Practice, ` +
         'certification and licensure rules change, so confirm them with the certifying body and the state licensing board ' +
         'before you act on them.',
     figures: FIGURES,

@@ -66,8 +66,8 @@ Canonical figures, as cited across the site (last verified 2026-10-06):
 - /security: Security posture and vulnerability disclosure
 
 ### Practice and contract references
-- /resources/what-is-a-nurse-practitioner: What a nurse practitioner is: the role, the path to practice, certification boards, population foci, DNP vs NP, pay and outlook
-- /resources/np-vs-pa: Nurse practitioner vs physician assistant: education, clinical hours, certification, practice authority, pay and outlook side by side
+- /resources/what-is-a-nurse-practitioner: What a nurse practitioner is: the role, NP vs RN, the path to practice, certification boards, population foci, DNP vs NP, pay and outlook
+- /resources/np-vs-pa: Nurse practitioner vs physician assistant: education, clinical hours, certification, practice authority, pay and outlook side by side, with both BLS medians for every state and DC
 - /resources/1099-vs-w2: 1099 vs W-2 for nurse practitioners
 - /resources/fpa-guide: What full practice authority means
 - /scope-of-practice: Practice authority rules by state

@@ -140,8 +140,8 @@ All tools are free and live under https://nphiring.com/tools.
 - /salary-guide/specialty: NP salary by specialty
 - /for-job-seekers: Job search hub linking the resume, cover letter, interview, negotiation, credentialing, new grad and fellowship guides
 - /resources: Licensure and career tools, including a state licensure checker
-- /resources/what-is-a-nurse-practitioner: A nurse practitioner (NP) is a registered nurse with graduate education, national certification and a state APRN license who assesses, diagnoses, treats and prescribes within state law. Covers NP meaning, the AANPCB and ANCC certification boards, the six population foci, practice authority, DNP vs NP, BLS pay and the 2025 to 2035 outlook
-- /resources/np-vs-pa: Nurse practitioner vs physician assistant: nursing vs medical education, clinical hours, AANPCB or ANCC certification vs the NCCPA PANCE, recertification cycles and practice authority. BLS May 2025 medians: $132,300 for NPs and $135,880 for PAs; projected growth 2025 to 2035: 41% for NPs and 21% for PAs
+- /resources/what-is-a-nurse-practitioner: A nurse practitioner (NP) is a registered nurse with graduate education, national certification and a state APRN license who assesses, diagnoses, treats and prescribes within state law. Covers NP meaning, NP vs RN, the AANPCB and ANCC certification boards, the six population foci, practice authority, DNP vs NP, BLS pay and the 2025 to 2035 outlook
+- /resources/np-vs-pa: Nurse practitioner vs physician assistant: nursing vs medical education, clinical hours, AANPCB or ANCC certification vs the NCCPA PANCE, recertification cycles and practice authority. BLS May 2025 medians: $132,300 for NPs and $135,880 for PAs; projected growth 2025 to 2035: 41% for NPs and 21% for PAs. A state table gives both BLS medians for every state and DC
 - /resources/1099-vs-w2: 1099 vs W-2 for nurse practitioners
 - /resources/fpa-guide: What full practice authority means
 - /scope-of-practice: Practice authority rules by state

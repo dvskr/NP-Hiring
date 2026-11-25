@@ -2,7 +2,7 @@
  * Copy and data for /resources/what-is-a-nurse-practitioner.
  *
  * Kept apart from page.tsx so the tests, and app/sitemap.ts if it ever needs
- * PAGE_DATE, can import the page's data without importing a route module.
+ * the page dates, can import the page's data without importing a route module.
  * guide-view.tsx renders it; guide-model.ts builds the metadata and the
  * Article, FAQPage and BreadcrumbList JSON-LD from the same objects.
  *
@@ -21,13 +21,20 @@ import { brand } from '@/config/brand';
 import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 import { getAanpTierDefinition } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
-import { monthYear, type FaqItem, type GuideContent, type GuideSection, type SourceLink, type VerifiedFigure } from './guide-model';
-import { BLS_PROJECTIONS, PRIMARY_SOURCES } from './verified-facts';
+import { BLS_NATIONAL, BLS_NATIONAL_SOURCE_URL, BLS_OEWS_READ_ON, BLS_OEWS_REFERENCE_PERIOD, formatBlsDollars } from '@/lib/salary-guide-bls-states';
+import { formatGuideDate, monthYear, type FaqItem, type GuideContent, type GuideSection, type SourceLink, type VerifiedFigure } from './guide-model';
+import { BLS_PROJECTIONS, FACTS_CHECKED_ON, PRIMARY_SOURCES } from './verified-facts';
 
 export const WHAT_IS_A_NURSE_PRACTITIONER_PATH = '/resources/what-is-a-nurse-practitioner';
 
-/** First publication and last review: Article.datePublished and dateModified. */
-export const PAGE_DATE = '2026-11-23';
+/** First publication: Article.datePublished. */
+export const PAGE_PUBLISHED = '2026-11-23';
+/**
+ * Last content change: Article.dateModified and the visible "Updated" date.
+ * Bump it, with the page's lastmod (app/api/sitemaps/lastmod.ts), only when
+ * the copy changes. 2026-11-25: the NP vs RN section and FAQ.
+ */
+export const PAGE_MODIFIED = '2026-11-25';
 
 const NP = brand.niche.short;
 const NP_TITLE = brand.niche.long;
@@ -43,6 +50,8 @@ const NP_GROWTH = STAT_SOURCES.blsGrowth2035.formatted;
 const FULL_PRACTICE = STAT_SOURCES.fullPracticeStates;
 const NP_JOBS = BLS_PROJECTIONS.nursePractitioners;
 const CYCLE = BLS_PROJECTIONS.cycle;
+/** Registered nurses (29-1141), national median annual wage, from the BLS national file of the same OEWS release. */
+const RN_MEDIAN = formatBlsDollars(BLS_NATIONAL.rn.annualMedian);
 
 // ─── The behavioral health track, from the registry ──────────────────────────
 
@@ -189,6 +198,45 @@ const COMPARISON: GuideSection = {
             content: [
                 `For a side by side look at ${NP} and PA education, clinical hours, certification, practice authority and pay, see `,
                 { text: `${NP} vs PA`, href: '/resources/np-vs-pa' },
+                '.',
+            ],
+        },
+    ],
+};
+
+const NP_VS_RN: GuideSection = {
+    id: 'np-vs-rn',
+    heading: `${NP_TITLE} vs Registered Nurse`,
+    icon: 'graduation',
+    blocks: [
+        {
+            kind: 'paragraph',
+            content: [
+                `Every ${NP} is a registered nurse first. The ${NP} role adds a graduate ${NP} program, national certification ` +
+                    'in a population focus and a state APRN license to the RN license, and with them a wider scope.',
+            ],
+        },
+        {
+            kind: 'paragraph',
+            content: [
+                'BLS describes registered nurses as providing and coordinating patient care and educating patients and the ' +
+                    `public about health conditions. ${NP}s, as advanced practice registered nurses, also diagnose illness, order ` +
+                    'and interpret tests and prescribe medication, within the limits of state law.',
+            ],
+        },
+        {
+            kind: 'stats',
+            items: [
+                { value: NP_MEDIAN, label: `${NP_SENTENCE} median annual wage` },
+                { value: RN_MEDIAN, label: 'Registered nurse median annual wage' },
+            ],
+            caption: [`BLS Occupational Employment and Wage Statistics, ${PAY_VINTAGE}, national estimates.`],
+        },
+        {
+            kind: 'paragraph',
+            content: [
+                'The steps from an RN license to an APRN license are set out below, under ',
+                { text: `how to become a ${NP_PROSE}`, href: '#become' },
                 '.',
             ],
         },
@@ -576,6 +624,15 @@ const FAQS: readonly FaqItem[] = [
         ],
     },
     {
+        question: `Is an RN higher than a ${NP_PROSE}?`,
+        answer: [
+            `No. A ${NP_PROSE} is the more advanced role: every ${NP} holds a registered nurse license, plus graduate ` +
+                'education, national certification in a population focus and a state APRN license. In the BLS ' +
+                `${PAY_VINTAGE} survey, the median annual wage was ${RN_MEDIAN} for registered nurses and ${NP_MEDIAN} for ` +
+                'nurse practitioners.',
+        ],
+    },
+    {
         question: `Can ${NP_PROSE}s prescribe medication?`,
         answer: [
             'Yes, within state law. Prescribing is part of the NP role in the Consensus Model, and BLS notes that many nurse ' +
@@ -650,7 +707,12 @@ const SOURCES: readonly SourceLink[] = [
         url: FULL_PRACTICE.sourceUrl,
         note: `practice environment classifications, ${FULL_PRACTICE.asOf}`,
     },
-    { ...PRIMARY_SOURCES.blsOohRn, note: 'the education paths and licensing of registered nurses' },
+    { ...PRIMARY_SOURCES.blsOohRn, note: 'what registered nurses do, their education paths and licensing' },
+    {
+        label: `BLS Occupational Employment and Wage Statistics, national estimates, ${BLS_OEWS_REFERENCE_PERIOD}`,
+        url: BLS_NATIONAL_SOURCE_URL,
+        note: 'the registered nurse median annual wage',
+    },
     { ...PRIMARY_SOURCES.blsOohPhysicians, note: 'physician degrees, medical school and residency length, and licensing' },
     { ...PRIMARY_SOURCES.blsOohPa, note: 'physician assistant education, licensing and supervision agreements' },
     { ...PRIMARY_SOURCES.nccpaCertify, note: 'the PANCE and the PA-C credential' },
@@ -684,12 +746,13 @@ const FIGURES: readonly VerifiedFigure[] = [
     { text: '2018', claim: 'NONPF calls for the DNP as entry-level NP preparation', sourceUrl: PRIMARY_SOURCES.aacnDnp.url },
     { text: '2025', claim: 'the target year of the NONPF goal', sourceUrl: PRIMARY_SOURCES.aacnDnp.url },
     { text: 'April 2023', claim: 'NONPF reaffirms the goal', sourceUrl: PRIMARY_SOURCES.aacnDnp.url },
+    { text: RN_MEDIAN, claim: `registered nurse national median annual wage, ${BLS_OEWS_REFERENCE_PERIOD}`, sourceUrl: BLS_NATIONAL_SOURCE_URL },
 ];
 
 export const WHAT_IS_A_NURSE_PRACTITIONER: GuideContent = {
     path: WHAT_IS_A_NURSE_PRACTITIONER_PATH,
-    datePublished: PAGE_DATE,
-    dateModified: PAGE_DATE,
+    datePublished: PAGE_PUBLISHED,
+    dateModified: PAGE_MODIFIED,
     title: `What Is a ${NP_TITLE} (${NP})? Role and Path`,
     description:
         `${NP} meaning: a ${NP_PROSE} is an advanced practice registered nurse. What NPs do, how to become one, ` +
@@ -709,12 +772,13 @@ export const WHAT_IS_A_NURSE_PRACTITIONER: GuideContent = {
     quickAnswer: QUICK_ANSWER,
     heroTone: 'pink',
     heroIcon: 'stethoscope',
-    sections: [MEANING, ROLE, COMPARISON, BECOME, CERTIFICATION, LICENSURE, SPECIALTIES, PAY, OUTLOOK, SETTINGS, DNP_VS_NP],
+    sections: [MEANING, ROLE, COMPARISON, NP_VS_RN, BECOME, CERTIFICATION, LICENSURE, SPECIALTIES, PAY, OUTLOOK, SETTINGS, DNP_VS_NP],
     faqHeading: 'Frequently Asked Questions',
     faqs: FAQS,
     sources: SOURCES,
     sourcesNote:
-        `${brand.name} checked every figure on this page against these sources on the review date above. Practice, ` +
+        `${brand.name} read the registered nurse wage from the BLS national file on ${formatGuideDate(BLS_OEWS_READ_ON)} and ` +
+        `checked every other figure on this page against these sources on ${formatGuideDate(FACTS_CHECKED_ON)}. Practice, ` +
         'certification and licensure rules change, so confirm them with the certifying body and your state board of ' +
         'nursing before you act on them.',
     figures: FIGURES,

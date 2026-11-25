@@ -196,10 +196,12 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/resources/private-practice-guide': '2026-11-07',
   // 2026-11-07 (guides store): a Negotiate Like an NP card.
   '/resources/1099-vs-w2': '2026-11-07',
-  // 2026-11-23 (definition guides release): new; each page prints this day
-  // (PAGE_DATE in its content.ts).
-  '/resources/what-is-a-nurse-practitioner': '2026-11-23',
-  '/resources/np-vs-pa': '2026-11-23',
+  // 2026-11-23 (definition guides release): new.
+  // 2026-11-25 (NP salary build): the NP vs RN section and the NP vs PA state
+  // pay table, with new FAQs. Each page prints this day as its "Updated" date
+  // (PAGE_MODIFIED in its content.ts); keep the two in step.
+  '/resources/what-is-a-nurse-practitioner': '2026-11-25',
+  '/resources/np-vs-pa': '2026-11-25',
   '/scope-of-practice': '2026-10-13',
   // 2026-11-07 (guides store): a Career Bundle card under the tools.
   '/tools': '2026-11-07',

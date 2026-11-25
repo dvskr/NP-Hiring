@@ -17,6 +17,10 @@
  *   8. NP figures follow lib/stats-sources.ts (a changed figure reaches the copy)
  *   9. the hand-verified figures share the stats-sources vintage and add up
  *  10. the new files add no reference-niche copy
+ *  11. the salary build additions (2026-11-25): the NP vs PA state pay table
+ *      matches the BLS state module row for row, its counts match the rows,
+ *      the RN median is the same release as the NP median, and the new FAQs
+ *      are there
  */
 import { describe, it, expect, vi } from 'vitest';
 import fs from 'node:fs';
@@ -40,12 +44,25 @@ import {
     SITE_ORGANIZATION,
     type GuideContent,
 } from '@/app/resources/what-is-a-nurse-practitioner/guide-model';
-import { BLS_PROJECTIONS, PA_MEDIAN_WAGE } from '@/app/resources/what-is-a-nurse-practitioner/verified-facts';
+import { BLS_PROJECTIONS, FACTS_CHECKED_ON, PA_MEDIAN_WAGE } from '@/app/resources/what-is-a-nurse-practitioner/verified-facts';
+import {
+    BLS_NATIONAL,
+    BLS_NATIONAL_SOURCE_URL,
+    BLS_OEWS_AS_OF,
+    BLS_OEWS_READ_ON,
+    BLS_PA_STATE_WAGES,
+    BLS_STATE_SOURCE_URL,
+    BLS_STATE_WAGES,
+    formatBlsDollars,
+} from '@/lib/salary-guide-bls-states';
 import { scanNicheCopyDebt } from '../regressions/brand-leak-scan';
 
 const ROOT = process.cwd();
 const APP_DIR = path.join(ROOT, 'app');
-const PAGE_DATE = '2026-11-23';
+/** First publication. */
+const PUBLISHED = '2026-11-23';
+/** The salary build's additions (2026-11-25): the NP vs PA state pay table, the NP vs RN section, four FAQs. */
+const MODIFIED = '2026-11-25';
 const GUIDE_DIRS = ['app/resources/what-is-a-nurse-practitioner/', 'app/resources/np-vs-pa/'];
 
 interface GuideCase {
@@ -264,8 +281,10 @@ describe.each(CASES)('$name: the rendered page', ({ guide, route }) => {
         const answers = [...html.matchAll(/<p[^>]*data-faq-answer[^>]*>([\s\S]*?)<\/p>/g)].map((match) => inlineText(match[1]));
         const visible = questions.map((question, index) => ({ question, answer: answers[index] }));
 
+        // Salary build 2026-11: up to 9, for the questions readers ask beside
+        // the core ones (NP vs PA: 9, what-is: 8).
         expect(data.length).toBeGreaterThanOrEqual(5);
-        expect(data.length).toBeLessThanOrEqual(7);
+        expect(data.length).toBeLessThanOrEqual(9);
         expect(marked).toEqual(data);
         expect(visible).toEqual(data);
     });
@@ -284,13 +303,21 @@ describe.each(CASES)('$name: the rendered page', ({ guide, route }) => {
         expect(article.author).toEqual(editorialSchemaFields().author ?? organization);
         expect(article.headline).toBe(guide.title);
         expect(article.description).toBe(guide.description);
-        expect(article.datePublished).toBe(PAGE_DATE);
-        expect(article.dateModified).toBe(PAGE_DATE);
+        expect(article.datePublished).toBe(PUBLISHED);
+        expect(article.dateModified).toBe(MODIFIED);
+        expect(guide.datePublished < guide.dateModified).toBe(true);
         expect(article.mainEntityOfPage).toEqual({ '@type': 'WebPage', '@id': `${brand.baseUrl}${guide.path}` });
     });
 
     it('shows the update date the Article JSON-LD carries', () => {
-        expect(html).toMatch(/Updated <time date[Tt]ime="2026-11-23">November 23, 2026<\/time>/);
+        expect(html).toMatch(/Updated <time date[Tt]ime="2026-11-25">November 25, 2026<\/time>/);
+    });
+
+    it('the sources note names the day each kind of figure was checked', () => {
+        // The BLS wages were read when the generator ran, everything else on
+        // FACTS_CHECKED_ON: the note must not claim one date for both.
+        expect(guide.sourcesNote).toContain(formatGuideDate(BLS_OEWS_READ_ON));
+        expect(guide.sourcesNote).toContain(formatGuideDate(FACTS_CHECKED_ON));
     });
 
     it('the BreadcrumbList ends at the page', () => {
@@ -407,7 +434,7 @@ describe('what-is-a-nurse-practitioner: the population foci', () => {
 
     it('covers the sub-questions readers ask, each in its own H2', () => {
         const headings = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((match) => inlineText(match[1]));
-        for (const topic of [/Stand For/, /Do\?$/, /vs Physician vs Physician Assistant/, /Become/, /Certify/, /Practice Authority/, /Population Foci/, /Make\?/, /Job Outlook/, /Work\?/, /^DNP vs NP/, /Frequently Asked Questions/, /^Sources$/]) {
+        for (const topic of [/Stand For/, /Do\?$/, /vs Physician vs Physician Assistant/, /vs Registered Nurse$/, /Become/, /Certify/, /Practice Authority/, /Population Foci/, /Make\?/, /Job Outlook/, /Work\?/, /^DNP vs NP/, /Frequently Asked Questions/, /^Sources$/]) {
             expect(headings.some((heading) => topic.test(heading)), String(topic)).toBe(true);
         }
     });
@@ -421,6 +448,69 @@ describe('np-vs-pa: the side by side table', () => {
         for (const label of [/^Education model$/, /^Degree and program length$/, /^Clinical hours$/, /^Certifying body and exam$/, /^Recertification$/, /^Practice authority$/, /^Specialty flexibility$/, /^Median pay/, /^Projected growth/]) {
             expect(labels.some((row) => label.test(row)), String(label)).toBe(true);
         }
+    });
+});
+
+describe('np-vs-pa: the state pay table (salary build 2026-11)', () => {
+    const NP = brand.niche.short;
+    const stateTable = NP_VS_PA.sections
+        .flatMap((section) => section.blocks)
+        .find((block) => block.kind === 'table' && block.columns[0] === 'State');
+    const rows = stateTable && stateTable.kind === 'table' ? stateTable.rows : [];
+
+    it('lists the 50 states and DC once each, with both BLS medians as BLS printed them', () => {
+        expect(rows).toHaveLength(51);
+        expect(new Set(rows.map((row) => row.label))).toEqual(new Set(Object.keys(BLS_STATE_WAGES)));
+        for (const row of rows) {
+            const [np, pa, higher] = row.cells.map(plainText);
+            const npFigure = BLS_STATE_WAGES[row.label].annualMedian;
+            const paFigure = BLS_PA_STATE_WAGES[row.label].annualMedian;
+            expect(np, row.label).toBe(formatBlsDollars(npFigure));
+            expect(pa, row.label).toBe(formatBlsDollars(paFigure));
+            const diff = (paFigure.value as number) - (npFigure.value as number);
+            const gap = `$${Math.abs(diff).toLocaleString('en-US')}`;
+            expect(higher, row.label).toBe(diff > 0 ? `PA by ${gap}` : diff < 0 ? `${NP} by ${gap}` : 'Equal');
+        }
+    });
+
+    it('the counts the copy prints are the counts of the rows', () => {
+        const npAhead = rows.filter((row) => plainText(row.cells[2]).startsWith(`${NP} by`)).length;
+        const paAhead = rows.filter((row) => plainText(row.cells[2]).startsWith('PA by')).length;
+        expect(npAhead + paAhead).toBeGreaterThan(0);
+        const text = copyStrings(NP_VS_PA).join('\n');
+        expect(text).toContain(
+            paAhead >= npAhead
+                ? `The PA median is higher in ${paAhead} of them and the ${NP} median in ${npAhead}`
+                : `The ${NP} median is higher in ${npAhead} of them and the PA median in ${paAhead}`,
+        );
+        expect(text).toContain(`the ${NP} median is higher in ${npAhead} of the 50 states and DC`);
+    });
+
+    it('cites the BLS state file, and links the salary guide state table', () => {
+        expect(NP_VS_PA.sources.map((source) => source.url)).toContain(BLS_STATE_SOURCE_URL);
+        expect(dataHrefs(NP_VS_PA)).toContain('/salary-guide#salary-by-state');
+    });
+
+    it('answers the questions readers ask about the two roles', () => {
+        const questions = NP_VS_PA.faqs.map((faq) => faq.question);
+        for (const question of [`Is a PA higher than an ${NP}?`, `What can an ${NP} do that a PA cannot?`, `Is an ${NP} or PA closer to a doctor?`]) {
+            expect(questions).toContain(question);
+        }
+    });
+});
+
+describe('what-is-a-nurse-practitioner: NP vs RN (salary build 2026-11)', () => {
+    it('prints the BLS national RN median, from the same release as the NP median, as a registered figure', () => {
+        expect(BLS_OEWS_AS_OF).toBe(STAT_SOURCES.npMedianWageBls.asOf);
+        const rn = formatBlsDollars(BLS_NATIONAL.rn.annualMedian);
+        expect(copyStrings(WHAT_IS_A_NURSE_PRACTITIONER).join('\n')).toContain(rn);
+        expect(WHAT_IS_A_NURSE_PRACTITIONER.figures.find((figure) => figure.text === rn)?.sourceUrl).toBe(BLS_NATIONAL_SOURCE_URL);
+    });
+
+    it('answers whether an RN is higher than an NP, with a no', () => {
+        const faq = WHAT_IS_A_NURSE_PRACTITIONER.faqs.find((item) => item.question === `Is an RN higher than a ${brand.niche.descriptor}?`);
+        expect(faq, 'the RN FAQ must exist').toBeTruthy();
+        expect(plainText(faq?.answer ?? [])).toMatch(/^No\. /);
     });
 });
 

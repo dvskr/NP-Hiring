@@ -30,6 +30,8 @@ import {
     BLS_NP_FIELDS,
     BLS_NP_STATE_ROWS,
     BLS_OEWS_AS_OF,
+    BLS_OEWS_GENERATED_ON,
+    BLS_OEWS_NATIONAL_FILE_URL,
     BLS_OEWS_REFERENCE_PERIOD,
     BLS_OEWS_STATE_FILE_URL,
     BLS_OEWS_VINTAGE,
@@ -107,6 +109,12 @@ export const BLS_STATE_SOURCE_LABEL = `BLS OEWS, Nurse Practitioners (29-1171), 
 
 /** The BLS download the state rows were read from (a permanent URL for this release). */
 export const BLS_STATE_SOURCE_URL = BLS_OEWS_STATE_FILE_URL;
+
+/** The BLS download the national rows (BLS_NATIONAL) were read from, same release. */
+export const BLS_NATIONAL_SOURCE_URL = BLS_OEWS_NATIONAL_FILE_URL;
+
+/** The day the generator read both BLS files (scripts/import-bls-oews-states.py). */
+export const BLS_OEWS_READ_ON = BLS_OEWS_GENERATED_ON;
 
 /**
  * Written into every StatSource built here. The URL names this release's
@@ -304,4 +312,28 @@ export function compareWithNationalMedian(row: BlsStateWage): string | null {
     const nationalLabel = formatBlsDollars(BLS_NATIONAL.np.annualMedian);
     if (pct === 0) return `in line with the national median of ${nationalLabel}`;
     return `${Math.abs(pct)}% ${pct > 0 ? 'above' : 'below'} the national median of ${nationalLabel}`;
+}
+
+/** One state's NP (29-1171) and PA (29-1071) median annual wages, side by side. */
+export interface BlsNpPaStateRow {
+    readonly state: string;
+    readonly np: BlsFigure;
+    readonly pa: BlsFigure;
+    /** The occupation with the higher median, or null when they tie or either is unpublished. */
+    readonly higher: 'np' | 'pa' | null;
+    /** The absolute gap in dollars; null when either median is unpublished. */
+    readonly gap: number | null;
+}
+
+/** NP and PA state medians for the 50 states and DC, in state name order. */
+export function blsNpPaStateRows(): BlsNpPaStateRow[] {
+    return Object.values(BLS_STATE_WAGES)
+        .sort((a, b) => a.state.localeCompare(b.state))
+        .map((npRow) => {
+            const np = npRow.annualMedian;
+            const pa = BLS_PA_STATE_WAGES[npRow.state]?.annualMedian ?? { value: null, raw: '', footnote: 'not-published' as const };
+            if (np.value === null || pa.value === null) return { state: npRow.state, np, pa, higher: null, gap: null };
+            const diff = pa.value - np.value;
+            return { state: npRow.state, np, pa, higher: diff > 0 ? 'pa' : diff < 0 ? 'np' : null, gap: Math.abs(diff) };
+        });
 }

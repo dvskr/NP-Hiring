@@ -206,17 +206,13 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
  */
 /**
  * The UTC day the definition guides shipped, and the pages whose copy that
- * release changed: the two new guides and /resources (their guide cards; it
- * left the guides store group). /press shipped here too and moved on to the
- * salary build. Same rule: move the constant and these entries together if
- * they ship later.
+ * release changed: /resources (the new guides' cards; it left the guides
+ * store group). The two guides and /press shipped here too and moved on to
+ * the salary build. Same rule: move the constant and these entries together
+ * if they ship later.
  */
 const DEFINITION_GUIDES_DAY = '2026-11-23';
-const DEFINITION_GUIDES_PAGES: readonly string[] = [
-    '/resources/what-is-a-nurse-practitioner',
-    '/resources/np-vs-pa',
-    '/resources',
-];
+const DEFINITION_GUIDES_PAGES: readonly string[] = ['/resources'];
 
 const GUIDES_FOLLOW_UPS_DAY = '2026-11-07';
 const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]'];
@@ -233,12 +229,19 @@ const CONNECTOR_REBUILD_PAGES: readonly string[] = ['/privacy'];
 /**
  * The UTC day the NP salary build ships, and the pages whose copy it
  * changed: the salary guide hub (the BLS wage table for every state), the
- * state salary template (its BLS wage card and FAQ) and /press (it lists the
- * NP Pay Report and links its CSV). Same rule: move the constant and these
- * entries together if it ships later.
+ * state salary template (its BLS wage card and FAQ), /press (it lists the
+ * NP Pay Report and links its CSV) and the two definition guides (the NP vs
+ * RN section, the NP vs PA state pay table and their FAQs). Same rule: move
+ * the constant and these entries together if it ships later.
  */
 const SALARY_BUILD_DAY = '2026-11-25';
-const SALARY_BUILD_PAGES: readonly string[] = ['/salary-guide', '/salary-guide/[state]', '/press'];
+const SALARY_BUILD_PAGES: readonly string[] = [
+    '/salary-guide',
+    '/salary-guide/[state]',
+    '/press',
+    '/resources/what-is-a-nurse-practitioner',
+    '/resources/np-vs-pa',
+];
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */
 const PROMO_SWITCH_PAGES = [
