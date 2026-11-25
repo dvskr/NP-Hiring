@@ -87,6 +87,10 @@ async function main(): Promise<void> {
         try { counts[label] = await fn(); } catch { counts[label] = 0; }
     }
     const pid = profile?.id;
+    // ProfileView has no foreign key to UserProfile, and the unlock routes
+    // key both sides by Supabase id (viewerId: the employer's, candidateId:
+    // the candidate's), so its rows go by sid, as viewer or as the one viewed.
+    const profileViewsOfUser = sid ? { OR: [{ viewerId: sid }, { candidateId: sid }] } : null;
     if (sid) {
         await tally('employerJob', () => prisma.employerJob.count({ where: { userId: sid } }));
         await tally('jobDraft', () => prisma.jobDraft.count({ where: { userId: sid } }));
@@ -94,8 +98,10 @@ async function main(): Promise<void> {
         await tally('savedJob', () => prisma.savedJob.count({ where: { userId: sid } }));
         await tally('pushSubscription', () => prisma.pushSubscription.count({ where: { userId: sid } }));
     }
+    if (profileViewsOfUser) {
+        await tally('profileView (either side)', () => prisma.profileView.count({ where: profileViewsOfUser }));
+    }
     if (pid) {
-        await tally('profileView (as viewer)', () => prisma.profileView.count({ where: { viewerId: pid } }));
         await tally('savedCandidate', () => prisma.savedCandidate.count({ where: { employerId: pid } }));
     }
     await tally('jobAlert', () => prisma.jobAlert.count({ where: { email } }));
@@ -133,8 +139,10 @@ async function main(): Promise<void> {
         await safeDelete('jdTemplate', () => prisma.jdTemplate.deleteMany({ where: { userId: sid } }));
         await safeDelete('employerJob', () => prisma.employerJob.deleteMany({ where: { userId: sid } }));
     }
+    if (profileViewsOfUser) {
+        await safeDelete('profileView', () => prisma.profileView.deleteMany({ where: profileViewsOfUser }));
+    }
     if (pid) {
-        await safeDelete('profileView', () => prisma.profileView.deleteMany({ where: { viewerId: pid } }));
         await safeDelete('savedCandidate', () => prisma.savedCandidate.deleteMany({ where: { employerId: pid } }));
     }
     await safeDelete('jobAlert', () => prisma.jobAlert.deleteMany({ where: { email } }));
