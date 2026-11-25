@@ -10,6 +10,8 @@ import { mintDocReadUrl, extractRequestContext, toBareDocPath } from '@/lib/docu
 import { isOwnMessageAttachmentKey } from '@/lib/message-attachment-key';
 import { MESSAGE_BODY_MAX, readJsonObject, validateReplyPayload } from '@/app/api/conversations/_lib/message-payload';
 import { isDeletedForViewer, visibleToViewerWhere } from '@/app/api/conversations/_lib/message-visibility';
+import { participantDisplay } from '@/app/api/conversations/_lib/participant-name';
+import { loadSurnameCheck } from '@/app/api/conversations/_lib/surname-disclosure';
 
 /**
  * GET /api/conversations/[id]
@@ -31,7 +33,7 @@ export async function GET(
 
         const profile = await prisma.userProfile.findUnique({
             where: { supabaseId: user.id },
-            select: { id: true },
+            select: { id: true, role: true },
         });
         if (!profile) {
             return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
@@ -92,16 +94,14 @@ export async function GET(
         });
 
         const otherUser = conversation.participantA === profile.id ? conversation.userB : conversation.userA;
-        // SECURITY: an unnamed person with no company is "User", never the
-        // start of their email address, which this thread header showed to
-        // the other participant. The email is not read here.
-        // tests/api/conversations-deleted-and-unnamed.test.ts
-        const otherName = [otherUser.firstName, otherUser.lastName].filter(Boolean).join(' ')
-            || otherUser.company
-            || 'User';
-        const initials = otherUser.firstName
-            ? `${otherUser.firstName.charAt(0)}${(otherUser.lastName || '').charAt(0)}`.toUpperCase()
-            : otherName.charAt(0).toUpperCase();
+        // SECURITY: named without the email address (_lib/participant-name.ts),
+        // and the surname rule of the inbox (_lib/surname-disclosure.ts).
+        const showsSurname = await loadSurnameCheck(
+            { user, role: profile.role },
+            [{ conversationId: conversation.id, counterpart: otherUser }],
+        );
+        const surnameShown = showsSurname(conversation.id, otherUser);
+        const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: surnameShown });
 
         return NextResponse.json({
             conversation: {
@@ -113,7 +113,7 @@ export async function GET(
                     id: otherUser.id,
                     supabaseId: otherUser.supabaseId,
                     name: otherName,
-                    company: otherUser.company,
+                    company: surnameShown ? otherUser.company : null,
                     role: otherUser.role,
                     avatarUrl: otherUser.avatarUrl,
                     headline: otherUser.headline || null,

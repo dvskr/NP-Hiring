@@ -40,7 +40,7 @@ import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { logger } from '@/lib/logger';
 import { AI_DAILY_CAPS } from '@/lib/ai-usage';
 import { midnightCentralTimeAsUtc } from '@/lib/time';
-import { talentPoolWhere } from '@/lib/candidate-pool';
+import { candidateAccessTier, seesPostingTierFields, talentPoolWhere } from '@/lib/candidate-pool';
 
 const RERANK_DAILY_CAP = AI_DAILY_CAPS.talent_search_rerank;
 
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const hasActivePosting = isAdmin
         ? true
         : (await getEmployerActivePostings(user.id)).length > 0;
+    const access = candidateAccessTier({ isAdmin, hasActivePosting });
 
     const tenant = { type: 'employer' as const, id: user.id };
 
@@ -201,7 +202,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // ── 2. Vector search → top 50 ───────────────────────────────────────
     const vectorHits = await semanticCandidateSearch(queryEmbedding, {
         k: 50,
-        licenseStates: states,
+        // SECURITY: license states are posting-tier data. Without a posting
+        // the filter is ignored, as in /api/employer/candidates: applied, it
+        // would confirm them. tests/api/employer-candidate-search-scope.test.ts
+        licenseStates: seesPostingTierFields(access) ? states : undefined,
     });
     if (vectorHits.length === 0) {
         return NextResponse.json({ candidates: [], reason: 'no_matches', tier, hasActivePosting });
@@ -306,7 +310,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             messages: prompt.render({ jobSummary, candidateList, topK: String(k) }),
             promptId: prompt.id,
             promptVersion: prompt.version,
-            cacheKey: ['rerank', prompt.version, query, k, ordered.map((c) => c.profile.supabaseId).join(',')],
+            // SECURITY: the candidate list holds only the fields this tier can
+            // read and the reasons can quote them, so a cached ranking is shared
+            // within the tier only. Keyed without it, a browse-tier employer
+            // could be served reasons written from another tier's
+            // certifications, license states or bios. Same test file.
+            cacheKey: ['rerank', prompt.version, access, query, k, ordered.map((c) => c.profile.supabaseId).join(',')],
             outputSchema: rerankResultSchema,
         });
         // Normalize: trim long reasons (LLM sometimes ignores the

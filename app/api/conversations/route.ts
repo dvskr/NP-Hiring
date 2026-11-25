@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { participantDisplay } from './_lib/participant-name';
+import { loadSurnameCheck } from './_lib/surname-disclosure';
 
 /**
  * GET /api/conversations
@@ -58,19 +60,20 @@ export async function GET() {
 
         const unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count.id]));
 
+        const otherOf = (conv: (typeof conversations)[number]) => (conv.participantA === profile.id ? conv.userB : conv.userA);
+        // SECURITY: an employer sees a job seeker's surname only once it is
+        // disclosed (_lib/surname-disclosure.ts). No query for anyone else.
+        const showsSurname = await loadSurnameCheck(
+            { user, role: profile.role },
+            conversations.map(conv => ({ conversationId: conv.id, counterpart: otherOf(conv) })),
+        );
+
         const formatted = conversations.map(conv => {
-            const otherUser = conv.participantA === profile.id ? conv.userB : conv.userA;
+            const otherUser = otherOf(conv);
             const lastMsg = conv.messages[0] || null;
-            // SECURITY: an unnamed person with no company is "User", never
-            // the start of their email address, which this list showed to
-            // the other side of every thread. The email is not read here.
-            // tests/api/conversations-deleted-and-unnamed.test.ts
-            const otherName = [otherUser.firstName, otherUser.lastName].filter(Boolean).join(' ')
-                || otherUser.company
-                || 'User';
-            const initials = otherUser.firstName
-                ? `${otherUser.firstName.charAt(0)}${(otherUser.lastName || '').charAt(0)}`.toUpperCase()
-                : otherName.charAt(0).toUpperCase();
+            // Named without the email address (_lib/participant-name.ts).
+            const surnameShown = showsSurname(conv.id, otherUser);
+            const { name: otherName, initials } = participantDisplay(otherUser, { showSurname: surnameShown });
 
             return {
                 id: conv.id,
@@ -78,7 +81,8 @@ export async function GET() {
                     id: otherUser.id,
                     supabaseId: otherUser.supabaseId,
                     name: otherName,
-                    company: otherUser.company,
+                    // A job seeker's company names them as surely as a surname.
+                    company: surnameShown ? otherUser.company : null,
                     role: otherUser.role,
                     avatarUrl: otherUser.avatarUrl,
                     headline: otherUser.headline || null,

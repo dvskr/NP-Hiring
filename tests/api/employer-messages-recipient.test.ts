@@ -45,12 +45,14 @@ const h = vi.hoisted(() => ({
     canSendInMail: vi.fn(),
     prisma: {
         userProfile: { findUnique: vi.fn() },
-        profileView: { findUnique: vi.fn() },
-        jobApplication: { findFirst: vi.fn() },
+        // findMany and groupBy: the sent list's surname rule
+        // (app/api/conversations/_lib/surname-disclosure.ts).
+        profileView: { findUnique: vi.fn(), findMany: vi.fn() },
+        jobApplication: { findFirst: vi.fn(), findMany: vi.fn() },
         employerJob: { findFirst: vi.fn() },
         job: { findFirst: vi.fn(), findUnique: vi.fn() },
         conversation: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-        employerMessage: { create: vi.fn(), findMany: vi.fn() },
+        employerMessage: { create: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
         $transaction: vi.fn(),
     },
 }));
@@ -250,10 +252,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date);
 
 /**
- * Equality, OR, and nested to-one relation filters: the shapes the route
- * uses. An undefined value adds no condition, as in Prisma; an unknown field
- * throws, so a change to the route's query fails here instead of matching by
- * accident.
+ * Equality, OR, { in }, and nested to-one relation filters: the shapes the
+ * route uses. An undefined value adds no condition, as in Prisma; an unknown
+ * field throws, so a change to the route's query fails here instead of
+ * matching by accident.
  */
 function matches(row: object, where: Where): boolean {
     return Object.entries(where).every(([key, condition]) => {
@@ -261,6 +263,7 @@ function matches(row: object, where: Where): boolean {
         if (key === 'OR') return (condition as Where[]).some((branch) => matches(row, branch));
         if (!(key in row)) throw new Error(`fake prisma: unknown field "${key}"`);
         const value = (row as Record<string, unknown>)[key];
+        if (isRecord(condition) && Object.keys(condition).join() === 'in') return (condition.in as unknown[]).includes(value);
         if (isRecord(condition)) return isRecord(value) && matches(value, condition);
         return value === condition;
     });
@@ -292,6 +295,16 @@ function installFakeDatabase(): void {
     });
     p.jobApplication.findFirst.mockImplementation(async (args: { where: Where }) =>
         db.applications.map(applicationWithJob).find((row) => matches(row, args.where)) ?? null);
+    p.profileView.findMany.mockImplementation(async (args: { where: Where; select?: Select }) =>
+        db.profileViews.filter((view) => matches(view, args.where)).map((view) => pick(view, args.select)));
+    p.jobApplication.findMany.mockImplementation(async (args: { where: Where; select?: Select }) =>
+        db.applications.map(applicationWithJob).filter((row) => matches(row, args.where)).map((row) => pick(row, args.select)));
+    p.employerMessage.groupBy.mockImplementation(async (args: { by: Array<keyof MessageRow>; where: Where }) => {
+        const groups = new Map(db.messages
+            .filter((row) => matches(row, args.where))
+            .map((row) => [args.by.map((key) => String(row[key])).join(':'), Object.fromEntries(args.by.map((key) => [key, row[key]]))]));
+        return [...groups.values()];
+    });
     p.employerJob.findFirst.mockImplementation(async (args: { where: Where }) =>
         db.employerJobs.map(employerJobWithJob).find((row) => matches(row, args.where)) ?? null);
     p.job.findFirst.mockImplementation(async (args: { where: Where }) =>
@@ -522,11 +535,20 @@ describe('GET /api/employer/messages: the sent list', () => {
         expect(JSON.stringify(res.body)).not.toContain('unnamed.person@example.com');
     });
 
-    it('names a named recipient by first and last name, as before', async () => {
+    it('names an applicant to its own job by first and last name, as before', async () => {
         db = { ...db, messages: [sentTo('auth-applicant')] };
 
         const res = await sentList();
 
         expect(res.body.messages).toEqual([expect.objectContaining({ recipientName: 'Grace Hopper' })]);
+    });
+
+    it('names a candidate it never unlocked, who never applied, by first name and last initial', async () => {
+        db = { ...db, messages: [sentTo('auth-pool-unopened')] };
+
+        const res = await sentList();
+
+        expect(res.body.messages).toEqual([expect.objectContaining({ recipientName: 'Grace H.' })]);
+        expect(JSON.stringify(res.body)).not.toContain('Hopper');
     });
 });

@@ -37,6 +37,10 @@ const h = vi.hoisted(() => ({
         userProfile: { findUnique: vi.fn() },
         conversation: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
         employerMessage: { groupBy: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), count: vi.fn(), create: vi.fn() },
+        // Read by the surname rule (app/api/conversations/_lib/surname-disclosure.ts).
+        // This file has no unlocks and no applications.
+        profileView: { findMany: vi.fn() },
+        jobApplication: { findMany: vi.fn() },
     },
 }));
 
@@ -237,9 +241,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date);
 
 /**
- * Equality, OR and { not } filters: the shapes these routes use. An undefined
- * value adds no condition, as in Prisma; an unknown field or filter throws, so
- * a change to a route's query fails here instead of matching by accident.
+ * Equality, OR, { not } and { in } filters: the shapes these routes use. An
+ * undefined value adds no condition, as in Prisma; an unknown field or filter
+ * throws, so a change to a route's query fails here instead of matching by
+ * accident.
  */
 function matches(row: object, where: Where): boolean {
     return Object.entries(where).every(([key, condition]) => {
@@ -248,7 +253,9 @@ function matches(row: object, where: Where): boolean {
         if (!(key in row)) throw new Error(`fake prisma: unknown field "${key}"`);
         const value = (row as Record<string, unknown>)[key];
         if (isRecord(condition)) {
-            if (Object.keys(condition).join() !== 'not') throw new Error(`fake prisma: unsupported filter on "${key}"`);
+            const filter = Object.keys(condition).join();
+            if (filter === 'in') return (condition.in as unknown[]).includes(value);
+            if (filter !== 'not') throw new Error(`fake prisma: unsupported filter on "${key}"`);
             return value !== condition.not;
         }
         return value === condition;
@@ -310,13 +317,21 @@ function installFakeDatabase(): void {
         db = { ...db, conversations: db.conversations.map((row) => (row.id === updated.id ? updated : row)) };
         return updated;
     });
-    p.employerMessage.groupBy.mockImplementation(async (args: { where: Where }) => {
+    p.employerMessage.groupBy.mockImplementation(async (args: { by: string[]; where: Where }) => {
+        const hits = db.messages.filter((message) => matches(message, args.where));
+        // The surname rule asks who wrote in which thread; the unread count, how many per thread.
+        if (args.by.includes('senderId')) {
+            const pairs = new Map(hits.map((row) => [`${row.conversationId}:${row.senderId}`, { conversationId: row.conversationId, senderId: row.senderId }]));
+            return [...pairs.values()];
+        }
         const counts = new Map<string, number>();
-        for (const row of db.messages.filter((message) => matches(message, args.where))) {
+        for (const row of hits) {
             counts.set(row.conversationId, (counts.get(row.conversationId) ?? 0) + 1);
         }
         return [...counts].map(([conversationId, count]) => ({ conversationId, _count: { id: count } }));
     });
+    p.profileView.findMany.mockResolvedValue([]);
+    p.jobApplication.findMany.mockResolvedValue([]);
     p.employerMessage.findMany.mockImplementation(async (args: { where: Where }) =>
         db.messages
             .filter((row) => matches(row, args.where))

@@ -5,15 +5,20 @@ import { getEmployerTier, getEmployerActivePostings } from '@/lib/tier-limits'
 import { PricingTier } from '@/lib/config'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { parsePagination } from '@/app/api/jobs/pagination'
-import { talentPoolWhere } from '@/lib/candidate-pool'
+import {
+    candidateAccessTier,
+    candidateTextSearchClauses,
+    seesPostingTierFields,
+    talentPoolWhere,
+} from '@/lib/candidate-pool'
 
 /**
  * Bounds on the search inputs. Each specialty or state term becomes its own
  * case-insensitive `contains` match against every candidate row, and q is
- * matched against nine columns, all of it twice (the page and the count). The
- * talent pool page sends at most its specialty presets and the 51 states (the
- * 50 and DC), both under MAX_FILTER_TERMS, and a typed query far shorter than
- * MAX_QUERY_LENGTH.
+ * matched against up to nine columns, all of it twice (the page and the
+ * count). The talent pool page sends at most its specialty presets and the 51
+ * states (the 50 and DC), both under MAX_FILTER_TERMS, and a typed query far
+ * shorter than MAX_QUERY_LENGTH.
  */
 const MAX_QUERY_LENGTH = 200
 const MAX_FILTER_TERMS = 60
@@ -59,6 +64,7 @@ export async function GET(req: NextRequest) {
     const hasActivePosting = isAdmin
         ? true
         : (await getEmployerActivePostings(user.id)).length > 0
+    const access = candidateAccessTier({ isAdmin, hasActivePosting })
 
     // Parse query params.
     // SECURITY (EMP-CAND-1): Math.max(1, parseInt('abc')) is NaN, so ?page=abc
@@ -81,22 +87,14 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = talentPoolWhere()
 
-    // Text search: match against the fields a recruiter actually searches
-    // by — name, headline, specialties, certifications, work mode (so
-    // "remote"/"hybrid"/"onsite" works), and bio (catches phrases that
-    // don't fit the other columns).
+    // SECURITY: q matched surname, bio, state, city and certifications for
+    // every employer, so a search confirmed fields the viewer cannot read.
+    // It now matches only this viewer's fields: name, headline, specialties
+    // and work mode (so "remote"/"hybrid"/"onsite" works) for everyone,
+    // certifications with a posting, surname, bio and location for admins.
+    // Pinned by tests/api/employer-candidate-search-scope.test.ts.
     if (q) {
-        where.OR = [
-            { firstName: { contains: q, mode: 'insensitive' } },
-            { lastName: { contains: q, mode: 'insensitive' } },
-            { headline: { contains: q, mode: 'insensitive' } },
-            { specialties: { contains: q, mode: 'insensitive' } },
-            { certifications: { contains: q, mode: 'insensitive' } },
-            { preferredWorkMode: { contains: q, mode: 'insensitive' } },
-            { bio: { contains: q, mode: 'insensitive' } },
-            { state: { contains: q, mode: 'insensitive' } },
-            { city: { contains: q, mode: 'insensitive' } },
-        ]
+        where.OR = candidateTextSearchClauses(q, access)
     }
 
     // Experience filter (minimum years): a whole number, held inside the Int
@@ -117,8 +115,11 @@ export async function GET(req: NextRequest) {
         ]
     }
 
-    // Licensed states filter (any match)
-    if (stateList.length > 0) {
+    // Licensed states filter (any match). License states and the resume flag
+    // are posting-tier fields, so without a posting these two filters are
+    // ignored: applied, they would confirm the hidden values. Same test file.
+    const mayFilterLocked = seesPostingTierFields(access)
+    if (mayFilterLocked && stateList.length > 0) {
         where.AND = [
             ...(where.AND || []),
             {
@@ -135,9 +136,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Has resume filter
-    if (hasResume === 'true') {
+    if (mayFilterLocked && hasResume === 'true') {
         where.resumeUrl = { not: null }
-    } else if (hasResume === 'false') {
+    } else if (mayFilterLocked && hasResume === 'false') {
         where.resumeUrl = null
     }
 

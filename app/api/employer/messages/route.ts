@@ -8,6 +8,8 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { employerJobOwnershipBranches, type EmployerJobOwner } from '@/lib/employer-ownership';
 import { readJsonObject, validateEmployerSendPayload } from '@/app/api/conversations/_lib/message-payload';
+import { personName } from '@/app/api/conversations/_lib/participant-name';
+import { loadSurnameCheck } from '@/app/api/conversations/_lib/surname-disclosure';
 import { isInTalentPool, type TalentPoolFlags } from '@/lib/candidate-pool';
 
 /**
@@ -74,14 +76,22 @@ export async function GET(req: NextRequest) {
             orderBy: { sentAt: 'desc' },
             take: 50,
             include: {
+                // id, supabaseId and role feed the surname rule; no email.
                 recipient: {
-                    select: { firstName: true, lastName: true },
+                    select: { id: true, supabaseId: true, firstName: true, lastName: true, role: true },
                 },
                 job: {
                     select: { id: true, title: true },
                 },
             },
         });
+
+        // SECURITY: the inbox's surname rule (conversations/_lib/surname-disclosure.ts).
+        // tests/api/conversation-surname-disclosure.test.ts
+        const showsSurname = await loadSurnameCheck(
+            { user, role: profile.role },
+            messages.map(m => ({ conversationId: m.conversationId, counterpart: m.recipient })),
+        );
 
         const formatted = messages.map(m => ({
             id: m.id,
@@ -94,7 +104,7 @@ export async function GET(req: NextRequest) {
             // view never shows an applicant's email, and the pool shows one
             // only with full profile access.
             // tests/api/employer-messages-recipient.test.ts
-            recipientName: [m.recipient.firstName, m.recipient.lastName].filter(Boolean).join(' ') || 'Candidate',
+            recipientName: personName(m.recipient, showsSurname(m.conversationId, m.recipient)) || 'Candidate',
             jobTitle: m.job?.title || null,
         }));
 
