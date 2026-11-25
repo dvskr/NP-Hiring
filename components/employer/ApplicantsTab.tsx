@@ -50,7 +50,8 @@ interface Applicant {
     job: {
         id: string;
         title: string;
-        isFeatured: boolean;
+        /** One of the employer's active postings, so a new message can name it. */
+        isActive: boolean;
     };
 }
 
@@ -608,8 +609,8 @@ export default function ApplicantsTab() {
 
                                         {/* Actions — stays pinned right */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                            {/* Message Button — featured posts only */}
-                                            {app.job.isFeatured && (
+                                            {/* Message Button — active postings only, as the send route requires */}
+                                            {app.job.isActive && (
                                                 <button
                                                     onClick={() => setMessagingApplicant(app)}
                                                     title={`Message ${app.candidate.name}`}

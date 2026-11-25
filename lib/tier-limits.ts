@@ -1,23 +1,16 @@
 import { prisma } from '@/lib/prisma';
 import { config, PricingTier } from '@/lib/config';
+import { activePostingJobWhere } from '@/lib/active-posting';
 
 /**
- * Get ALL active employer job postings (published + not expired).
- * Returns them ordered by tier rank (highest first).
+ * Get ALL active employer job postings (published + not expired, the rule in
+ * lib/active-posting.ts). Returns them ordered by tier rank (highest first).
  */
 export async function getEmployerActivePostings(employerId: string) {
-    const now = new Date();
-
     const activePostings = await prisma.employerJob.findMany({
         where: {
             userId: employerId,
-            job: {
-                isPublished: true,
-                OR: [
-                    { expiresAt: null },
-                    { expiresAt: { gt: now } },
-                ],
-            },
+            job: activePostingJobWhere(),
         },
         select: {
             id: true,

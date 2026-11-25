@@ -7,6 +7,7 @@ import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { stringField } from '@/lib/request-body';
 import { employerJobOwnershipBranches, isEmployerJobOwner } from '@/lib/employer-ownership';
 import { scopeJobIdsToOwned } from './scope';
+import { isActivePostingJob } from '@/lib/active-posting';
 
 /**
  * GET /api/employer/applicants
@@ -101,7 +102,8 @@ export async function GET(req: NextRequest) {
                 select: {
                     id: true,
                     title: true,
-                    isFeatured: true,
+                    isPublished: true,
+                    expiresAt: true,
                 },
             },
         },
@@ -201,7 +203,11 @@ export async function GET(req: NextRequest) {
             job: {
                 id: app.job.id,
                 title: app.job.title,
-                isFeatured: app.job.isFeatured,
+                // Whether a new message can name this job: it is one of the
+                // employer's active postings (lib/active-posting.ts), the rule
+                // POST /api/employer/messages applies. It was isFeatured,
+                // which a new post here never is.
+                isActive: isActivePostingJob(app.job),
             },
         };
     }));

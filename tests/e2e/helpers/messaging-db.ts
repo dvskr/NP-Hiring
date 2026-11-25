@@ -96,12 +96,13 @@ export interface MessagingFixture {
 const MSG_PROBE_EXTERNAL_ID = 'e2e-messaging-featured-probe';
 
 /**
- * Employer -> candidate InMail is gated on (a) the posting being featured
- * (ApplicantsTab only renders the Message button for `job.isFeatured`, and
- * POST /api/employer/messages rejects new outreach otherwise) and (b) the
- * candidate having applied. The setup-agent seed job is a free, non-featured
- * post, so this creates a dedicated featured posting owned by the E2E
- * employer plus a JobApplication from the E2E seeker. Idempotent: re-running
+ * Employer -> candidate InMail is gated on (a) the posting being active,
+ * published and unexpired (ApplicantsTab only renders the Message button for
+ * `job.isActive`, and POST /api/employer/messages rejects new outreach
+ * otherwise; it wanted a featured posting before 2026-11-25) and (b) the
+ * candidate having applied. This creates a dedicated live posting owned by
+ * the E2E employer plus a JobApplication from the E2E seeker; it is also
+ * marked featured, which the gate no longer reads. Idempotent: re-running
  * re-uses the probe row if a previous run failed to clean up.
  */
 export async function seedMessagingFixture(seekerEmail: string, employerEmail: string): Promise<MessagingFixture> {

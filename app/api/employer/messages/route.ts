@@ -11,6 +11,7 @@ import { readJsonObject, validateEmployerSendPayload } from '@/app/api/conversat
 import { personName } from '@/app/api/conversations/_lib/participant-name';
 import { loadSurnameCheck } from '@/app/api/conversations/_lib/surname-disclosure';
 import { isInTalentPool, type TalentPoolFlags } from '@/lib/candidate-pool';
+import { activePostingJobWhere } from '@/lib/active-posting';
 
 /**
  * Whether this employer may open a NEW thread with the recipient, through one
@@ -176,7 +177,7 @@ export async function POST(req: NextRequest) {
         // below uses. Opening a NEW thread (e.g. a new job-scoped thread to a
         // previously-contacted candidate) is new outreach: an InMail is a
         // unique conversation (see getInMailsForPosting), so it must pass the
-        // featured-job gate + credit check. Previously ANY prior conversation
+        // active-posting gate + credit check. Previously ANY prior conversation
         // with the candidate skipped the gate, letting an employer open
         // unlimited new job-scoped threads for free.
         const existingConversation = await prisma.conversation.findFirst({
@@ -193,10 +194,10 @@ export async function POST(req: NextRequest) {
         if (!existingConversation) {
             // SECURITY: new outreach reaches only someone this employer may
             // contact (mayOpenThreadWith above). The recipient was never
-            // checked, so an employer past the featured gate could open a
+            // checked, so an employer past the posting gate could open a
             // thread with, and email, any profile id: a seeker who hid their
             // profile or switched off "Open to offers", another employer, an
-            // admin. This runs before the featured gate, so anyone out of
+            // admin. This runs before the posting gate, so anyone out of
             // reach answers exactly as an unknown id does and the answer
             // cannot be used to probe which ids exist.
             // tests/api/employer-messages-recipient.test.ts
@@ -204,33 +205,38 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
             }
 
-            // NEW outreach — requires a featured job posting + InMail credit
-            // Gate: messaging requires a featured job posting
-            if (jobId) {
-                const job = await prisma.job.findFirst({
+            // NEW outreach needs an active posting (lib/active-posting.ts, the
+            // rule getEmployerActivePostings reads) and an InMail credit.
+            // SECURITY (owner, 2026-11-25): it needed a featured posting,
+            // which a new post here never is, so most employers could not
+            // message at all, though every post's copy promises InMails. A
+            // named job must be one of the sender's own active postings: the
+            // InMail count reads threads by their posting's job.
+            // tests/api/employer-messages-recipient.test.ts
+            const postingRule = activePostingJobWhere();
+            const hasPosting = jobId
+                ? await prisma.job.findFirst({
                     where: {
                         id: jobId,
-                        isFeatured: true,
+                        ...postingRule,
                         employerJobs: {
                             OR: employerJobOwnershipBranches(user),
                         },
                     },
                     select: { id: true },
-                });
-                if (!job) {
-                    return NextResponse.json({ error: 'Messaging is available for featured job postings only' }, { status: 403 });
-                }
-            } else {
-                const featuredJob = await prisma.employerJob.findFirst({
+                })
+                : await prisma.employerJob.findFirst({
                     where: {
                         OR: employerJobOwnershipBranches(user),
-                        job: { isFeatured: true },
+                        job: postingRule,
                     },
                     select: { id: true },
                 });
-                if (!featuredJob) {
-                    return NextResponse.json({ error: 'Messaging is available for featured job postings only' }, { status: 403 });
-                }
+            if (!hasPosting) {
+                return NextResponse.json({
+                    error: 'A new message needs an active job posting.',
+                    reason: 'needs_active_posting',
+                }, { status: 403 });
             }
 
             // Check InMail credits for new outreach

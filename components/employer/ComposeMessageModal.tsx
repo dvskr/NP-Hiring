@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { config } from '@/lib/config';
 
 /** Mirrors the server cap in POST /api/employer/messages. */
 const SUBJECT_MAX_LENGTH = 200;
@@ -56,6 +57,9 @@ export default function ComposeMessageModal({
 
     const inmailLimitReached = inmailUsage && !inmailUsage.unlimited && inmailUsage.limit !== null && inmailUsage.used >= inmailUsage.limit;
     const inmailRemaining = inmailUsage && !inmailUsage.unlimited && inmailUsage.limit !== null ? inmailUsage.limit - inmailUsage.used : null;
+    // A limit of 0 means no active posting (GET /api/employer/usage): a new
+    // message needs one, as POST /api/employer/messages requires.
+    const noActivePosting = inmailUsage && !inmailUsage.unlimited && inmailUsage.limit === 0;
 
     const handleSend = async () => {
         if (!subject.trim() || !body.trim() || inFlightRef.current) return;
@@ -175,10 +179,12 @@ export default function ComposeMessageModal({
                         }}>
                             <Mail size={14} style={{ color: inmailLimitReached ? '#EF4444' : '#60A5FA' }} />
                             <span className="text-xs font-medium" style={{ color: inmailLimitReached ? '#EF4444' : '#60A5FA' }}>
-                                {inmailLimitReached
-                                    ? 'InMail limit reached. Upgrade for unlimited.'
+                                {noActivePosting
+                                    ? 'A new message needs an active job posting.'
+                                    : inmailLimitReached
+                                    ? `InMail limit reached. Each new job post adds ${config.limits.inmailsPerPosting} more.`
                                     : inmailUsage.unlimited
-                                        ? 'Unlimited InMails (Premium)'
+                                        ? 'Unlimited InMails'
                                         : `${inmailRemaining} InMail${inmailRemaining !== 1 ? 's' : ''} remaining`
                                 }
                             </span>

@@ -28,8 +28,14 @@
  *     pool; a new key with the same person is new outreach again.
  *   - A deleted account is never a recipient, not even for a reply.
  *   - Anyone out of reach answers exactly as an unknown id does, before the
- *     featured gate and the InMail check, and nothing is written or emailed.
+ *     posting gate and the InMail check, and nothing is written or emailed.
  *   - The sent list names an unnamed recipient "Candidate", never an email.
+ *   - New outreach needs an active posting, NP's posting rule
+ *     (lib/active-posting.ts), not a featured one: a new post is never
+ *     featured, so the featured gate it had shut most employers out (owner,
+ *     2026-11-25). A named job must be one of the sender's own active
+ *     postings. The InMail check runs after it exactly as before, and a
+ *     reply needs neither.
  *
  * The prisma fake applies the route's own where clauses to in-memory rows,
  * so reach is decided by the filters the route builds, not by canned nulls.
@@ -106,7 +112,7 @@ type ProfileRow = {
     deletedAt: Date | null;
 };
 
-type JobRow = { id: string; title: string; isFeatured: boolean };
+type JobRow = { id: string; title: string; isFeatured: boolean; isPublished: boolean; expiresAt: Date | null };
 type EmployerJobRow = { id: string; jobId: string; userId: string | null; contactEmail: string };
 type ApplicationRow = { id: string; userId: string; jobId: string };
 type ProfileViewRow = { id: string; viewerId: string; candidateId: string };
@@ -155,6 +161,10 @@ const OTHER_EMPLOYER: SessionUser = { id: 'auth-other-employer', email: OTHER_EM
 const ADMIN: SessionUser = { id: 'auth-admin', email: ADMIN_EMAIL, email_confirmed_at: CONFIRMED_AT };
 const DELETED_ON = new Date('2026-10-01T12:00:00.000Z');
 const NOT_FOUND = { status: 404, body: { error: 'Recipient not found' } };
+const NEEDS_POSTING = { status: 403, body: { error: 'A new message needs an active job posting.', reason: 'needs_active_posting' } };
+/** The route reads the clock itself, so the posting dates sit well either side of now. */
+const LIVE_UNTIL = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+const ENDED_ON = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
 let db: Store;
 let sequence = 0;
@@ -204,10 +214,13 @@ function seed(): Store {
             profile('auth-unnamed', { firstName: null, lastName: null, email: 'unnamed.person@example.com' }),
         ],
         jobs: [
-            { id: 'job-own', title: 'Psychiatric NP', isFeatured: true },
-            { id: 'job-legacy', title: 'Family NP', isFeatured: false },
-            { id: 'job-other', title: 'Acute Care NP', isFeatured: true },
-            { id: 'job-admin', title: 'Pediatric NP', isFeatured: true },
+            // Live and never featured, as a new post here never is.
+            { id: 'job-own', title: 'Psychiatric NP', isFeatured: false, isPublished: true, expiresAt: LIVE_UNTIL },
+            { id: 'job-legacy', title: 'Family NP', isFeatured: false, isPublished: true, expiresAt: LIVE_UNTIL },
+            { id: 'job-other', title: 'Acute Care NP', isFeatured: true, isPublished: true, expiresAt: LIVE_UNTIL },
+            { id: 'job-admin', title: 'Pediatric NP', isFeatured: true, isPublished: true, expiresAt: LIVE_UNTIL },
+            // The employer's own post, featured by a renewal, since ended.
+            { id: 'job-ended', title: 'Acute Care NP', isFeatured: true, isPublished: true, expiresAt: ENDED_ON },
         ],
         employerJobs: [
             { id: 'ej-own', jobId: 'job-own', userId: EMPLOYER.id, contactEmail: EMPLOYER_EMAIL },
@@ -215,6 +228,7 @@ function seed(): Store {
             { id: 'ej-legacy', jobId: 'job-legacy', userId: null, contactEmail: EMPLOYER_EMAIL },
             { id: 'ej-other', jobId: 'job-other', userId: OTHER_EMPLOYER.id, contactEmail: OTHER_EMPLOYER_EMAIL },
             { id: 'ej-admin', jobId: 'job-admin', userId: ADMIN.id, contactEmail: ADMIN_EMAIL },
+            { id: 'ej-ended', jobId: 'job-ended', userId: EMPLOYER.id, contactEmail: EMPLOYER_EMAIL },
         ],
         applications: [
             { id: 'app-own', userId: 'auth-applicant', jobId: 'job-own' },
@@ -252,10 +266,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date);
 
 /**
- * Equality, OR, { in }, and nested to-one relation filters: the shapes the
- * route uses. An undefined value adds no condition, as in Prisma; an unknown
- * field throws, so a change to the route's query fails here instead of
- * matching by accident.
+ * Equality, OR, { in }, { gt } on a date, and nested to-one relation
+ * filters: the shapes the route uses. An undefined value adds no condition,
+ * as in Prisma; an unknown field throws, so a change to the route's query
+ * fails here instead of matching by accident.
  */
 function matches(row: object, where: Where): boolean {
     return Object.entries(where).every(([key, condition]) => {
@@ -264,6 +278,9 @@ function matches(row: object, where: Where): boolean {
         if (!(key in row)) throw new Error(`fake prisma: unknown field "${key}"`);
         const value = (row as Record<string, unknown>)[key];
         if (isRecord(condition) && Object.keys(condition).join() === 'in') return (condition.in as unknown[]).includes(value);
+        if (isRecord(condition) && Object.keys(condition).join() === 'gt') {
+            return value instanceof Date && condition.gt instanceof Date && value > condition.gt;
+        }
         if (isRecord(condition)) return isRecord(value) && matches(value, condition);
         return value === condition;
     });
@@ -457,7 +474,7 @@ describe('POST /api/employer/messages: anyone else answers as an unknown id does
         ['another employer', OTHER_EMPLOYER.id, undefined],
         ['an admin', ADMIN.id, undefined],
         ['a deleted account it once reached', 'auth-deleted', undefined],
-        ['a seeker out of the pool, on its own featured job', 'auth-hidden', 'job-own'],
+        ['a seeker out of the pool, on its own active posting', 'auth-hidden', 'job-own'],
     ])('answers 404 for %s: nothing written or emailed, no InMail check', async (_label, recipientId, jobId) => {
         const before = db;
 
@@ -487,6 +504,76 @@ describe('POST /api/employer/messages: anyone else answers as an unknown id does
 
         expect(await send(inMail('auth-legacy-applicant'))).toEqual(NOT_FOUND);
         expectTurnedAway(before);
+    });
+});
+
+describe('POST /api/employer/messages: new outreach needs an active posting, never a featured one', () => {
+    /** Ends or unpublishes every posting the employer owns. */
+    function withoutActivePosting(change: Partial<JobRow>): void {
+        db = { ...db, jobs: db.jobs.map((job) => (['job-own', 'job-legacy'].includes(job.id) ? { ...job, ...change } : job)) };
+    }
+
+    it('opens a thread about one of its active postings that was never featured', async () => {
+        const res = await send(inMail('auth-pool', 'job-own'));
+
+        expect(res.status).toBe(200);
+        expect(db.messages).toEqual([expect.objectContaining({ recipientId: profileId('auth-pool'), jobId: 'job-own' })]);
+        expect(h.canSendInMail).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+        ['its own posting once it has ended, featured or not', 'job-ended'],
+        ['another employer\'s active posting', 'job-other'],
+    ])('refuses new outreach about %s: nothing written or emailed, no InMail check', async (_label, jobId) => {
+        const before = db;
+
+        expect(await send(inMail('auth-pool', jobId))).toEqual(NEEDS_POSTING);
+        expect(db.conversations).toEqual(before.conversations);
+        expect(db.messages).toEqual(before.messages);
+        expect(h.sendEmployerMessageNotification).not.toHaveBeenCalled();
+        expect(h.canSendInMail).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['ended', { expiresAt: ENDED_ON }],
+        ['unpublished', { isPublished: false }],
+    ])('refuses new outreach with no job when every posting it owns is %s', async (_label, change) => {
+        withoutActivePosting(change);
+
+        expect(await send(inMail('auth-pool'))).toEqual(NEEDS_POSTING);
+        expect(db.messages).toEqual([]);
+        expect(h.canSendInMail).not.toHaveBeenCalled();
+    });
+
+    it('counts a posting with no end date as active', async () => {
+        withoutActivePosting({ expiresAt: ENDED_ON });
+        db = { ...db, jobs: db.jobs.map((job) => (job.id === 'job-own' ? { ...job, expiresAt: null } : job)) };
+
+        expect((await send(inMail('auth-pool'))).status).toBe(200);
+    });
+
+    it('keeps the InMail check after the posting gate, exactly as it was', async () => {
+        h.canSendInMail.mockResolvedValue({ allowed: false, used: 25, limit: 25 });
+
+        const res = await send(inMail('auth-pool', 'job-own'));
+
+        expect(res).toEqual({
+            status: 403,
+            body: { error: 'InMail limit reached for this posting', used: 25, limit: 25, tier: 'pro', upgradeRequired: true },
+        });
+        expect(h.canSendInMail).toHaveBeenCalledWith(profileId(EMPLOYER.id), EMPLOYER.id, 'pro');
+        expect(db.messages).toEqual([]);
+    });
+
+    it('lets a reply land in an existing thread with no active posting', async () => {
+        withoutActivePosting({ expiresAt: ENDED_ON });
+        db = { ...db, conversations: [thread(EMPLOYER.id, 'auth-pool')] };
+
+        const res = await send(inMail('auth-pool'));
+
+        expect(res.status).toBe(200);
+        expect(res.body.conversationId).toBe('conv-existing-auth-pool');
+        expect(h.canSendInMail).not.toHaveBeenCalled();
     });
 });
 

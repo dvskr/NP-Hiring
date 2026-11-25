@@ -411,7 +411,7 @@ const POOL_RECIPIENT = { role: 'job_seeker', profileVisible: true, openToOffers:
 /**
  * Sender and recipient profiles, and no existing thread, so the send is new
  * outreach. The employer opened the recipient's profile, so a pool candidate
- * is in reach and the send goes on to the featured gate; one out of the pool
+ * is in reach and the send goes on to the active-posting gate; one out of the pool
  * goes to the applicant check instead (who is in reach:
  * tests/api/employer-messages-recipient.test.ts).
  */
