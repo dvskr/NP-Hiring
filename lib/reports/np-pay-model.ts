@@ -184,14 +184,22 @@ export function thresholdShare(midpoints: readonly number[], threshold: number):
     return { threshold, employers: midpoints.filter((m) => m >= threshold).length, of: midpoints.length };
 }
 
-/** The 51 state rows, in state name order, each with its BLS figures. */
-export function stateRows(summaries: ReadonlyMap<string, ScopeSummary>, empty: ScopeSummary): NpPayScopeRow[] {
+/**
+ * The 51 state rows, in state name order, each with its BLS figures. A row
+ * links its state salary page only where that page renders: it 404s at zero
+ * active jobs, so `activeJobsByState` (the page's own predicate) decides.
+ */
+export function stateRows(
+    summaries: ReadonlyMap<string, ScopeSummary>,
+    empty: ScopeSummary,
+    activeJobsByState: ReadonlyMap<string, number>,
+): NpPayScopeRow[] {
     return Object.values(BLS_STATE_WAGES)
         .sort((a, b) => a.state.localeCompare(b.state))
         .map((bls) => scopeRow({
             scopeType: 'state',
             scope: bls.state,
-            href: `/salary-guide/${bls.slug}`,
+            href: (activeJobsByState.get(bls.state) ?? 0) > 0 ? `/salary-guide/${bls.slug}` : null,
             summary: summaries.get(bls.state) ?? empty,
             bls: blsOfState(bls),
         }));

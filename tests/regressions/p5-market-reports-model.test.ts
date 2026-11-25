@@ -36,6 +36,7 @@ import {
     STATE_OF_HIRING_EDITIONS,
     CURRENT_STATE_OF_HIRING_EDITION,
     PAY_TRANSPARENCY_REPORT,
+    NP_PAY_REPORT,
     REPORTS_HUB_PATH,
 } from '@/lib/reports/editions';
 import { brand } from '@/config/brand';
@@ -174,12 +175,15 @@ describe('P5 reports — edition configs match physical routes', () => {
     it('titles derive from brand tokens, so a fork re-niches them automatically', () => {
         expect(CURRENT_STATE_OF_HIRING_EDITION.title).toContain(brand.niche.short);
         expect(PAY_TRANSPARENCY_REPORT.title).toContain(brand.niche.short);
+        expect(NP_PAY_REPORT.title).toContain(brand.niche.short);
     });
 
-    it('hub lists exactly the current edition plus the standing report', () => {
+    it('hub lists exactly the current edition plus the two standing reports', () => {
+        // Salary build 2026-11: the NP Pay Report joins as a standing report.
         expect(ALL_REPORTS.map((r) => r.slug)).toEqual([
             CURRENT_STATE_OF_HIRING_EDITION.slug,
             PAY_TRANSPARENCY_REPORT.slug,
+            NP_PAY_REPORT.slug,
         ]);
     });
 });

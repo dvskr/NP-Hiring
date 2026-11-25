@@ -173,7 +173,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/accessibility': '2026-10-13',
   // 2026-11-23 (definition guides release): the full practice tile counts
   // states only, beside a 'plus DC' label.
-  '/press': '2026-11-23',
+  // 2026-11-25 (NP salary build): the data reports list the NP Pay Report
+  // and link its CSV.
+  '/press': '2026-11-25',
   // 2026-10-04 (backlog 2.2): the article count, the article grid, the
   // "Before you apply" band and the state guide grid now list the posts
   // lib/blog.ts serves from code; they read the empty blog_posts table and

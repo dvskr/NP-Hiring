@@ -70,6 +70,8 @@ next-env.d.ts
 
 # data exports and sensitive files
 *.csv
+# The NP Pay Report's CSV is a route folder (route.ts inside), not a data file.
+!/app/reports/np-pay/data.csv/
 /data/
 /tmp/
 /scripts/export-*.js

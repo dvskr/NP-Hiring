@@ -3,7 +3,6 @@ import { Metadata } from 'next';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import Link from 'next/link';
 import { ArrowUpRight, ArrowRight, DollarSign, TrendingUp, HelpCircle, Ruler, Star } from 'lucide-react';
-import { prisma } from '@/lib/prisma';
 import SalaryGuideForm from '@/components/SalaryGuideForm';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
@@ -26,13 +25,12 @@ import { SALARY_SPECIALTY_PAGES } from '@/app/salary-guide/specialty/specialty-c
 // counted once, a median at 5 or more employers, quartiles at 10 or more),
 // the same figures /reports/np-pay and the state pages print.
 import { BENCHMARK_MIN_EMPLOYERS } from '@/components/tools/benchmark-model';
-import { loadNpPaySnapshot } from '@/lib/reports/np-pay';
+import { getActiveJobsByState, loadNpPaySnapshot } from '@/lib/reports/np-pay';
 import { NP_PAY_REPORT_PATH, usd, type NpPaySnapshot } from '@/lib/reports/np-pay-model';
 import { MAX_RANGE_RATIO, ONE_EMPLOYER_NOTE, salaryAsOfLabel, SALARY_SANITY_MAX, SALARY_SANITY_MIN, TIER_RULE_NOTE } from '@/lib/salary-report/stats';
 import { buildHubFaqs } from '@/lib/salary-guide-hub-faq';
 import AdvertisedPaySection from './advertised-pay-section';
 import { formatStatVintage } from '@/components/SalaryProvenance';
-import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 // The BLS OEWS May 2025 state wages: the all-state table, the highest and
 // lowest paying states and the state FAQ answer all read this one module.
 import {
@@ -156,20 +154,6 @@ function calculatorStates(snapshot: NpPaySnapshot | null) {
       medianSalary: row.median as number,
       employers: row.employers as number,
     }));
-}
-
-/**
- * Active jobs per state on the predicate /salary-guide/[state] uses for its
- * own 404 gate (activeIndexableJobWhere plus the state name), so the BLS
- * table links a state page, and its jobs, only where that page renders.
- */
-async function getActiveJobsByState(): Promise<Map<string, number>> {
-  const rows = await prisma.job.groupBy({
-    by: ['state'],
-    where: { ...activeIndexableJobWhere(), state: { not: null } },
-    _count: { id: true },
-  });
-  return new Map(rows.flatMap((row) => (row.state ? [[row.state, row._count.id] as const] : [])));
 }
 
 /** All 51 BLS rows for the table: highest median first, any footnoted median last. */

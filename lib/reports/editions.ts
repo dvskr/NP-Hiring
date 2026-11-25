@@ -72,8 +72,27 @@ export const PAY_TRANSPARENCY_REPORT: ReportEdition = {
     datePublished: '2026-08-06',
 };
 
+/**
+ * The NP Pay Report is a standing surface too: advertised pay on live
+ * postings, recomputed daily, with a CSV at /reports/np-pay/data.csv.
+ * datePublished is the build day; set it to the launch day if the release
+ * lands later. Frozen quarterly editions (salary build spec, phase 2) will
+ * be NEW entries, never a rewrite of this one.
+ */
+export const NP_PAY_REPORT: ReportEdition = {
+    year: 2026,
+    slug: 'np-pay',
+    path: '/reports/np-pay',
+    title: `${brand.niche.short} Pay Report: Advertised Pay on Live Postings`,
+    description:
+        `Median advertised pay on live ${brand.niche.descriptor} postings on ${brand.name}, ` +
+        `each employer counted once, by state and specialty, beside BLS wages, with a CSV.`,
+    datePublished: '2026-11-25',
+};
+
 /** Everything the /reports hub lists, in display order. */
 export const ALL_REPORTS: readonly ReportEdition[] = [
     CURRENT_STATE_OF_HIRING_EDITION,
     PAY_TRANSPARENCY_REPORT,
+    NP_PAY_REPORT,
 ];

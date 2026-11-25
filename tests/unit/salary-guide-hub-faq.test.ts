@@ -28,7 +28,7 @@ function snapshot(): NpPaySnapshot {
         disclosure: { disclosed: 300, total: 900 },
         atOrAbove200k: { threshold: 200_000, employers: 4, of: 40 },
         national: scopeRow({ scopeType: 'national', scope: 'United States', summary: summarizeScope('n', rows(40, 110_000)), bls: NATIONAL_BLS }),
-        states: stateRows(new Map(), empty),
+        states: stateRows(new Map(), empty, new Map()),
         specialties: [
             scopeRow({ scopeType: 'specialty', scope: 'Dermatology', summary: summarizeScope('d', rows(6, 150_000)) }),
             scopeRow({ scopeType: 'specialty', scope: 'Family Practice', summary: summarizeScope('f', rows(12, 120_000)) }),

@@ -113,6 +113,21 @@ export function summarizeByState(rows: Awaited<ReturnType<typeof fetchNpAnalytic
     return new Map([...byState.entries()].map(([state, bucket]) => [state, summarizeScope(state, bucket)]));
 }
 
+/**
+ * Active jobs per state on the predicate /salary-guide/[state] uses for its
+ * own 404 gate (activeIndexableJobWhere plus the state name), so a table
+ * links a state page, and its jobs, only where that page renders. The hub
+ * and the report both read this.
+ */
+export async function getActiveJobsByState(now: Date = new Date()): Promise<Map<string, number>> {
+    const rows = await prisma.job.groupBy({
+        by: ['state'],
+        where: { ...activeIndexableJobWhere(now), state: { not: null } },
+        _count: { id: true },
+    });
+    return new Map(rows.flatMap((row) => (row.state ? [[row.state, row._count.id] as const] : [])));
+}
+
 async function aggregateNpPaySnapshot(): Promise<NpPaySnapshot> {
     const now = new Date();
     const live = activeIndexableJobWhere(now);
@@ -122,6 +137,7 @@ async function aggregateNpPaySnapshot(): Promise<NpPaySnapshot> {
         prisma.job.count({ where: live }),
         prisma.job.count({ where: { AND: [live, { salaryIsEstimated: false, normalizedMinSalary: { not: null } }] } }),
     ]);
+    const activeJobsByState = await getActiveJobsByState(now);
     const specialties = await groupRows('specialty', SPECIALTY_GROUPS);
     const workModes = await groupRows('work_mode', WORK_MODE_GROUPS);
     const employmentTypes = await groupRows('employment_type', EMPLOYMENT_GROUPS);
@@ -131,7 +147,7 @@ async function aggregateNpPaySnapshot(): Promise<NpPaySnapshot> {
         disclosure: { disclosed, total },
         atOrAbove200k: thresholdShare(cleanSalaryRows(rows).midpoints, 200_000),
         national: scopeRow({ scopeType: 'national', scope: 'United States', summary: summarizeScope('National', rows), bls: NATIONAL_BLS }),
-        states: stateRows(summarizeByState(rows), summarizeScope('none', [])),
+        states: stateRows(summarizeByState(rows), summarizeScope('none', []), activeJobsByState),
         specialties,
         workModes,
         employmentTypes,

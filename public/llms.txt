@@ -136,6 +136,7 @@ Canonical figures, as cited across the site (last verified 2026-10-06):
 - /reports: Data reports built from NP Hiring's own job postings
 - /reports/state-of-np-hiring-2026: What active NP postings show about specialty demand, geography, work mode and advertised pay, with sample limits stated
 - /reports/pay-transparency: The live share of active postings that disclose a pay range
+- /reports/np-pay: The NP Pay Report, the median pay employers advertise on live NP postings, each employer counted once, by state, specialty, work mode and experience, beside BLS wages; every figure downloads as a CSV at /reports/np-pay/data.csv
 
 ### For employers
 - /post-job: Post an NP job listing

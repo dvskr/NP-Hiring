@@ -39,7 +39,8 @@ import { getStatesByAuthority } from '@/lib/state-practice-authority';
 // P5 A7/A8: the /reports surfaces this page links to. Links render from the
 // same array the /reports hub renders from, so this list can never name a
 // report that has no page.
-import { ALL_REPORTS, REPORTS_HUB_PATH } from '@/lib/reports/editions';
+import { ALL_REPORTS, NP_PAY_REPORT, REPORTS_HUB_PATH } from '@/lib/reports/editions';
+import { NP_PAY_CSV_PATH } from '@/lib/reports/np-pay-model';
 import {
     Newspaper,
     Database,
@@ -470,6 +471,18 @@ export default async function PressPage() {
                             </li>
                         ))}
                     </ul>
+                    <p style={{ marginTop: '12px' }}>
+                        Every figure in the{' '}
+                        <Link href={NP_PAY_REPORT.path} style={linkStyle}>
+                            {brand.niche.short} Pay Report
+                        </Link>{' '}
+                        downloads as a CSV, one row per scope with the employers behind each figure, refreshed
+                        daily:{' '}
+                        <a href={NP_PAY_CSV_PATH} style={linkStyle} download>
+                            download the CSV
+                        </a>
+                        . The report page carries the methodology and a citation line.
+                    </p>
                 </Section>
 
                 <Section icon={<FlaskConical size={20} />} title="Methodology">

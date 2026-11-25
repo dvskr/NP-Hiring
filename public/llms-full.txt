@@ -132,6 +132,7 @@ All tools are free and live under https://nphiring.com/tools.
 - /reports: Data reports built from NP Hiring's own NP job postings. Every figure has a minimum sample and a source.
 - /reports/state-of-np-hiring-2026: What active NP postings on NP Hiring show about specialty demand, geography, work mode and advertised pay, with the sample limits stated and national context cited to its sources. Published August 6, 2026.
 - /reports/pay-transparency: The share of active postings on NP Hiring that disclose a pay range, computed live, plus how the site labels estimates and dated observations on how other boards handle pay disclosure.
+- /reports/np-pay: NP Pay Report. The median pay employers advertise on live NP postings on NP Hiring, recomputed daily, nationally and by state, specialty, work mode, employment type and experience, beside the BLS May 2025 wages for each state. Each employer counts once; a figure needs at least 5 employers and quartiles need 10. CRNA, CNM and CNS postings are not NP postings and are left out. These are advertised pay on postings, not wages paid. Every figure downloads as a CSV at /reports/np-pay/data.csv.
 
 ## Career Resources
 
