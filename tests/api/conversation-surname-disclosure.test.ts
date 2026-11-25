@@ -13,7 +13,9 @@
  *
  * The owner's rules of 2026-11-25 ride on the same evidence: the inbox and a
  * thread send the candidate's photo only once it holds, and license states
- * once it holds or the employer has an active posting.
+ * once it holds or the employer has an active posting. A photo that shows,
+ * on either side, goes out as a signed link that expires, never the public
+ * URL the column stores (lib/avatar-url.ts); a fake store signs here.
  *
  * All fixtures are fictional.
  */
@@ -26,6 +28,8 @@ const EMPLOYER = { id: 'profile-employer', supabaseId: 'supabase-employer', firs
 const CANDIDATE = { id: 'profile-candidate', supabaseId: 'supabase-candidate', firstName: 'Anna', lastName: 'Nguyenfic', company: 'Current Clinicfic', role: 'job_seeker' };
 
 const viewer = vi.hoisted(() => ({ supabaseId: 'supabase-employer', email: 'hiring@clinic.example' }));
+/** Every key the fake store was asked to sign. */
+const store = vi.hoisted(() => ({ signedKeys: [] as string[] }));
 const db = vi.hoisted(() => ({
     userProfile: { findUnique: vi.fn() },
     conversation: { findMany: vi.fn(), findUnique: vi.fn() },
@@ -58,6 +62,18 @@ vi.mock('@/lib/document-storage', () => ({
     extractRequestContext: vi.fn(() => ({})),
     toBareDocPath: vi.fn(() => null),
 }));
+vi.mock('@/lib/supabase/admin', () => ({
+    createAdminClient: () => ({
+        storage: {
+            from: () => ({
+                createSignedUrls: async (paths: string[]) => {
+                    store.signedKeys.push(...paths);
+                    return { data: paths.map((path) => ({ path, signedUrl: `https://test.supabase.co/storage/v1/object/sign/avatars/${path}?token=fic`, error: null })), error: null };
+                },
+            }),
+        },
+    }),
+}));
 
 import { GET as listConversations } from '@/app/api/conversations/route';
 import { GET as openConversation } from '@/app/api/conversations/[id]/route';
@@ -66,14 +82,19 @@ import { participantDisplay, personName } from '@/app/api/conversations/_lib/par
 import { showsConversationLicenseStates, showsPhoto, showsSurname } from '@/app/api/conversations/_lib/surname-disclosure';
 
 const extras = { avatarUrl: null, headline: null, specialties: null, licenseStates: null };
-const RILEY_PHOTO = 'https://cdn.example/avatars/riley-fic.jpg';
-const ANNA_PHOTO = 'https://cdn.example/avatars/anna-fic.jpg';
+/** Each photo's key, in its owner's own upload folder, as the column stores it and as a response sends it. */
+const RILEY_KEY = `prod/${EMPLOYER.supabaseId}/1700000000000.jpg`;
+const ANNA_KEY = `prod/${CANDIDATE.supabaseId}/1700000000001.jpg`;
+const stored = (key: string): string => `https://test.supabase.co/storage/v1/object/public/avatars/${key}`;
+const signedLink = (key: string): string => `https://test.supabase.co/storage/v1/object/sign/avatars/${key}?token=fic`;
+const RILEY_PHOTO = signedLink(RILEY_KEY);
+const ANNA_PHOTO = signedLink(ANNA_KEY);
 const ANNA_STATES = 'TX,OK';
 const conversation = {
     id: 'conv-1', participantA: EMPLOYER.id, participantB: CANDIDATE.id, subject: 'Family NP role', jobId: 'job-1',
     lastMessageAt: new Date('2026-11-20T10:00:00Z'), createdAt: new Date('2026-11-19T10:00:00Z'),
-    userA: { ...EMPLOYER, ...extras, avatarUrl: RILEY_PHOTO },
-    userB: { ...CANDIDATE, ...extras, avatarUrl: ANNA_PHOTO, licenseStates: ANNA_STATES },
+    userA: { ...EMPLOYER, ...extras, avatarUrl: stored(RILEY_KEY) },
+    userB: { ...CANDIDATE, ...extras, avatarUrl: stored(ANNA_KEY), licenseStates: ANNA_STATES },
     job: null,
     messages: [{ body: 'Hello Anna.', sentAt: new Date('2026-11-20T10:00:00Z'), senderId: EMPLOYER.id }],
 };
@@ -95,6 +116,7 @@ function asViewer(person: { id: string; supabaseId: string; role: string }) {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    store.signedKeys = [];
     candidateWrote = false;
     unlocked = false;
     applications = [];
@@ -232,8 +254,10 @@ describe.each([
     it('sends no photo and no license states before disclosure to an employer without a posting', async () => {
         const { raw, other } = await load();
         expect(other).toMatchObject({ avatarUrl: null, licenseStates: null, initials: 'AN' });
-        expect(raw).not.toContain(ANNA_PHOTO);
+        expect(raw).not.toContain(ANNA_KEY);
         expect(raw).not.toContain(ANNA_STATES);
+        // A photo the rule withholds is never signed either.
+        expect(store.signedKeys).toEqual([]);
     });
 
     it('sends license states, and still no photo, to an employer with an active posting', async () => {
@@ -248,7 +272,11 @@ describe.each([
         ['the candidate applied to one of its postings', () => { applications = [{ userId: CANDIDATE.supabaseId, posting: OWN_POSTING }]; }],
     ])('sends the photo and license states once %s', async (_label, disclose) => {
         disclose();
-        expect((await load()).other).toMatchObject({ avatarUrl: ANNA_PHOTO, licenseStates: ANNA_STATES });
+        const { raw, other } = await load();
+        expect(other).toMatchObject({ avatarUrl: ANNA_PHOTO, licenseStates: ANNA_STATES });
+        // A link that expires, never the stored public URL.
+        expect(raw).not.toContain('/object/public/avatars/');
+        expect(store.signedKeys).toEqual([ANNA_KEY]);
     });
 });
 
@@ -258,7 +286,9 @@ describe.each([
 ])('%s, seen by anyone else', (_label, load) => {
     it('the candidate sees the employer by full name and photo, with no extra lookups', async () => {
         asViewer(CANDIDATE);
-        expect((await load()).other).toMatchObject({ name: 'Riley Hiringfic', avatarUrl: RILEY_PHOTO });
+        const { raw, other } = await load();
+        expect(other).toMatchObject({ name: 'Riley Hiringfic', avatarUrl: RILEY_PHOTO });
+        expect(raw).not.toContain('/object/public/avatars/');
         expect(db.profileView.findMany).not.toHaveBeenCalled();
         expect(db.jobApplication.findMany).not.toHaveBeenCalled();
         expect(db.employerJob.findMany).not.toHaveBeenCalled();

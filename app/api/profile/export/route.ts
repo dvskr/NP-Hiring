@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { mintResumeReadUrl, extractRequestContext, toOwnResumePath } from '@/lib/resume-storage'
 import { verifyExtensionToken } from '@/lib/verify-extension-token'
 import { logAudit } from '@/lib/audit-log'
+import { signAvatarUrl } from '@/lib/avatar-url'
 
 function tryParseJson(val: string | null): string[] | null {
     if (!val) return null
@@ -84,7 +85,8 @@ export async function GET(req: NextRequest) {
                     country: profile.country,
                 },
                 linkedinUrl: profile.linkedinUrl,
-                avatarUrl: profile.avatarUrl,
+                // A link that expires, like every avatar the app serves (lib/avatar-url.ts).
+                avatarUrl: await signAvatarUrl(profile.avatarUrl, profile.supabaseId),
                 headline: profile.headline,
             },
             eeo: {

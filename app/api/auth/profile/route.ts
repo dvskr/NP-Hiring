@@ -11,6 +11,7 @@ import { inngest } from '@/lib/inngest/client'
 import { ensureProfileFromAuth } from '@/lib/auth/ensure-profile'
 import { toOwnResumePath } from '@/lib/resume-storage'
 import { getAvatarUrl, toOwnAvatarPath } from '@/lib/supabase-storage'
+import { withSignedAvatar } from '@/lib/avatar-url'
 
 // Shared include for _count used by completeness scoring
 const profileInclude = {
@@ -49,7 +50,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    return NextResponse.json(profile)
+    // The photo goes out as a link that expires (lib/avatar-url.ts), here and
+    // in the POST and PATCH answers below. The settings page no longer sends
+    // it back on save, so a link that failed to sign clears nothing.
+    return NextResponse.json(await withSignedAvatar(profile))
   } catch (error) {
     logger.error('Profile GET error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -249,7 +253,7 @@ export async function POST(request: NextRequest) {
 
     // Welcome email is sent after email confirmation, not during signup
 
-    return NextResponse.json(profile)
+    return NextResponse.json(await withSignedAvatar(profile))
   } catch (error) {
     logger.error('Profile POST error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -296,8 +300,10 @@ export async function PATCH(request: NextRequest) {
     // in the caller's own upload folder; anything else is ignored (the key is
     // left out of the update, never a 400), and null still clears. /api/upload
     // already stores both columns after a real upload, so this write is only
-    // the settings page repeating it. A sign-in provider picture written by
-    // /auth/callback is echoed back on every save and is kept by being
+    // the settings page repeating it; for the photo it now sends only the
+    // null that removes it. A signed link from a response
+    // (lib/avatar-url.ts) names the same key and is stored as the public URL.
+    // A sign-in provider picture written by /auth/callback is kept by being
     // ignored. The avatar URL is rebuilt from the verified key so host and
     // bucket are ours. Tests: tests/regressions/resume-ownership-writers.test.ts.
     const ownAvatarPath = body.avatarUrl ? toOwnAvatarPath(body.avatarUrl, user.id) : null
@@ -410,7 +416,7 @@ export async function PATCH(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(updatedProfile)
+    return NextResponse.json(await withSignedAvatar(updatedProfile))
   } catch (error) {
     logger.error('Profile PATCH error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags'
+import { signAvatarUrl } from '@/lib/avatar-url'
 
 /**
  * GET /api/dashboard — Return all data needed for the candidate dashboard
@@ -182,9 +183,13 @@ export async function GET(request: Request) {
 
         // Note: dashboard is primarily for job seekers but accessible to all authenticated users
 
+        // The person's own photo goes out as a link that expires (lib/avatar-url.ts).
+        const ownPhoto = profile ? { avatarUrl: await signAvatarUrl(profile.avatarUrl, user.id) } : {}
+
         return NextResponse.json({
             profile: {
                 ...profile,
+                ...ownPhoto,
                 newsletterOptIn: emailLead?.newsletterOptIn ?? false,
             },
             stats: {

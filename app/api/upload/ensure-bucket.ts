@@ -3,9 +3,11 @@ import { logger } from '@/lib/logger'
 import type { UploadKind } from './upload-errors'
 
 /**
- * Bucket definitions matching lib/supabase-storage.ts: resumes are PRIVATE
- * (served only through short-lived signed URLs), avatars are public.
- * Limits mirror validateFile there.
+ * Bucket definitions matching lib/supabase-storage.ts: both are PRIVATE.
+ * Resumes are served only through short-lived signed URLs, and so are the
+ * profile photos in avatars (lib/avatar-url.ts, owner 2026-11-25), so a
+ * bucket created here starts as the existing one ends up once
+ * docs/runbooks/private-avatars.md has run. Limits mirror validateFile there.
  */
 export const UPLOAD_BUCKETS: Record<UploadKind, { name: string; public: boolean; fileSizeLimit: number; allowedMimeTypes: string[] }> = {
   resume: {
@@ -20,7 +22,7 @@ export const UPLOAD_BUCKETS: Record<UploadKind, { name: string; public: boolean;
   },
   avatar: {
     name: 'avatars',
-    public: true,
+    public: false,
     fileSizeLimit: 2 * 1024 * 1024,
     allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
   },

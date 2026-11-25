@@ -12,7 +12,8 @@
  *     auth, content rewriting — plug in once and apply to all docs
  *
  * What's deliberately NOT in here:
- *   - Avatars (public bucket, no PII, no audit needed)
+ *   - Avatars: profile photos, signed by lib/avatar-url.ts, which applies
+ *     the same owner-folder rule; a photo view is not audit-logged
  *   - Job-posting attachments / company logos (also public)
  *   - Anything served from public buckets where signed URLs aren't
  *     the access mechanism

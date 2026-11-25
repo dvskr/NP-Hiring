@@ -12,6 +12,7 @@ import {
     talentPoolWhere,
 } from '@/lib/candidate-pool'
 import { disclosedPhoto, loadPhotoCheck } from '@/app/api/conversations/_lib/surname-disclosure'
+import { signAvatarUrls } from '@/lib/avatar-url'
 
 /**
  * Bounds on the search inputs. Each specialty or state term becomes its own
@@ -203,9 +204,14 @@ export async function GET(req: NextRequest) {
     // candidate applied to one of its jobs (conversations/_lib/surname-disclosure.ts).
     // tests/api/candidate-photo-disclosure.test.ts
     const photoShown = await loadPhotoCheck({ user, role: profile.role }, candidates.map(c => c.supabaseId))
+    // Only a photo the rule shows is signed, as a link that expires (lib/avatar-url.ts).
+    const photos = await signAvatarUrls(candidates.map(c => ({
+        stored: disclosedPhoto(c.avatarUrl, photoShown(c.supabaseId)),
+        ownerId: c.supabaseId,
+    })))
 
     // Privacy transform: full last name only for admins; everyone else first-initial
-    const results = candidates.map(c => {
+    const results = candidates.map((c, i) => {
         const base = {
             id: c.supabaseId,
             displayName: c.firstName
@@ -215,7 +221,7 @@ export async function GET(req: NextRequest) {
             yearsExperience: c.yearsExperience,
             specialties: c.specialties ? c.specialties.split(',').map(s => s.trim()) : [],
             preferredWorkMode: c.preferredWorkMode,
-            avatarUrl: disclosedPhoto(c.avatarUrl, photoShown(c.supabaseId)),
+            avatarUrl: photos[i],
             initials: `${(c.firstName || 'P').charAt(0)}${(c.lastName || 'C').charAt(0)}`.toUpperCase(),
             joinedAt: c.createdAt.toISOString(),
         }

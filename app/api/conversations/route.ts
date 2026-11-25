@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { participantDisplay } from './_lib/participant-name';
 import { disclosedPhoto, loadConversationDisclosure } from './_lib/surname-disclosure';
+import { signAvatarUrls } from '@/lib/avatar-url';
 
 /**
  * GET /api/conversations
@@ -68,8 +69,17 @@ export async function GET() {
             { user, role: profile.role },
             conversations.map(conv => ({ conversationId: conv.id, counterpart: otherOf(conv) })),
         );
+        // Both sides: only a photo the rule shows is signed, as a link that
+        // expires (lib/avatar-url.ts).
+        const photos = await signAvatarUrls(conversations.map(conv => {
+            const otherUser = otherOf(conv);
+            return {
+                stored: disclosedPhoto(otherUser.avatarUrl, disclosure(conv.id, otherUser).photo),
+                ownerId: otherUser.supabaseId,
+            };
+        }));
 
-        const formatted = conversations.map(conv => {
+        const formatted = conversations.map((conv, i) => {
             const otherUser = otherOf(conv);
             const lastMsg = conv.messages[0] || null;
             const shown = disclosure(conv.id, otherUser);
@@ -85,7 +95,7 @@ export async function GET() {
                     // A job seeker's company names them as surely as a surname.
                     company: shown.surname ? otherUser.company : null,
                     role: otherUser.role,
-                    avatarUrl: disclosedPhoto(otherUser.avatarUrl, shown.photo),
+                    avatarUrl: photos[i],
                     headline: otherUser.headline || null,
                     specialties: otherUser.specialties || null,
                     licenseStates: shown.licenseStates ? otherUser.licenseStates || null : null,

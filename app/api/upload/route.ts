@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 import { classifyUploadError, isMissingBucketError, type UploadKind } from './upload-errors';
 import { ensureUploadBucket } from './ensure-bucket';
+import { signAvatarUrl } from '@/lib/avatar-url';
 
 type StoredFile = { path: string; url: string };
 
@@ -123,7 +124,8 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      // Update user profile with avatar URL
+      // Update user profile with avatar URL. The stored public URL names the
+      // object; it is never sent out (lib/avatar-url.ts).
       await prisma.userProfile.update({
         where: { supabaseId: user.id },
         data: { avatarUrl: result.url },
@@ -132,7 +134,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      url: result.url,
+      // A new photo is shown through a link that expires, like every avatar
+      // the app serves; null when it could not be signed, and the settings
+      // page draws the placeholder until the next load.
+      url: uploadType === 'avatar' ? await signAvatarUrl(result.path, user.id) : result.url,
       path: result.path,
     });
   } catch (error) {

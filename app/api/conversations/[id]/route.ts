@@ -12,6 +12,7 @@ import { MESSAGE_BODY_MAX, readJsonObject, validateReplyPayload } from '@/app/ap
 import { isDeletedForViewer, visibleToViewerWhere } from '@/app/api/conversations/_lib/message-visibility';
 import { participantDisplay } from '@/app/api/conversations/_lib/participant-name';
 import { disclosedPhoto, loadConversationDisclosure } from '@/app/api/conversations/_lib/surname-disclosure';
+import { signAvatarUrl } from '@/lib/avatar-url';
 
 /**
  * GET /api/conversations/[id]
@@ -116,7 +117,8 @@ export async function GET(
                     name: otherName,
                     company: shown.surname ? otherUser.company : null,
                     role: otherUser.role,
-                    avatarUrl: disclosedPhoto(otherUser.avatarUrl, shown.photo),
+                    // A shown photo goes out as a link that expires (lib/avatar-url.ts).
+                    avatarUrl: await signAvatarUrl(disclosedPhoto(otherUser.avatarUrl, shown.photo), otherUser.supabaseId),
                     headline: otherUser.headline || null,
                     specialties: otherUser.specialties || null,
                     licenseStates: shown.licenseStates ? otherUser.licenseStates || null : null,

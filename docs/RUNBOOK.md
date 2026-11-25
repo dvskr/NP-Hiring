@@ -10,6 +10,7 @@
 | [compliance-audit.md](compliance-audit.md) | Status tracker | You need the 25-gap audit, closure status, sprint roadmap |
 | [dpia.md](dpia.md) | Policy | A regulator asks for your Data Protection Impact Assessment |
 | [incident-response.md](incident-response.md) | Runbook | A breach is happening or might be happening |
+| [runbooks/private-avatars.md](runbooks/private-avatars.md) | Runbook | Making the profile photo bucket private after the signed link deploy, and undoing it |
 | [fork-checklist.md](fork-checklist.md) | Process | You're cloning this repo for a different niche job board |
 | **Job pipeline** | | |
 | [ingestion-pipeline-audit.md](ingestion-pipeline-audit.md) | Reference | An ingestion source is misbehaving |
@@ -64,4 +65,4 @@ If 1 and 3 disagree, **fix the code, don't downgrade the public commitment**.
 3. Start the file with `> Audience:` and `> Last updated:`
 4. Reference, don't duplicate — if a fact is in another doc, link to it
 
-Last updated: 2026-05-08.
+Last updated: 2026-11-25.

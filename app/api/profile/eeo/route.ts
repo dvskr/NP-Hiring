@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { sanitizeText } from '@/lib/sanitize'
+import { withSignedAvatar } from '@/lib/avatar-url'
 
 export async function PUT(request: NextRequest) {
     try {
@@ -59,7 +60,9 @@ export async function PUT(request: NextRequest) {
             },
         })
 
-        return NextResponse.json(updatedProfile)
+        // The settings page takes this row as the profile, its photo included,
+        // so the photo goes out as a link that expires (lib/avatar-url.ts).
+        return NextResponse.json(await withSignedAvatar(updatedProfile))
     } catch (err) {
         console.error('EEO update error:', err)
         return NextResponse.json(

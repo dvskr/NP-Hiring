@@ -12,8 +12,12 @@
  * a candidate's page, through the real routes; and the talent pool card,
  * which draws initials when no photo is sent.
  *
- * The fake prisma applies the routes' own where clauses to fixture rows.
- * Every fixture is fictional.
+ * A photo that shows goes out as a signed link that expires, never the
+ * public URL the column stores (lib/avatar-url.ts, owner 2026-11-25), and
+ * only a photo the rule shows is ever signed.
+ *
+ * The fake prisma applies the routes' own where clauses to fixture rows, and
+ * a fake store signs. Every fixture is fictional.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -29,6 +33,8 @@ const h = vi.hoisted(() => ({
     getUser: vi.fn(),
     role: { current: 'employer' },
     canUnlockCandidate: vi.fn(),
+    /** Every key the fake store was asked to sign. */
+    signedKeys: [] as string[],
     db: {
         userProfile: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
         profileView: { findUnique: vi.fn(), findMany: vi.fn(), upsert: vi.fn() },
@@ -48,6 +54,19 @@ vi.mock('@/lib/rate-limit', () => ({
     RATE_LIMITS: { employer: { limit: 100, windowSeconds: 60 } },
 }));
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
+// The store lib/avatar-url.ts signs with: a fake that records each key.
+vi.mock('@/lib/supabase/admin', () => ({
+    createAdminClient: () => ({
+        storage: {
+            from: () => ({
+                createSignedUrls: async (paths: string[]) => {
+                    h.signedKeys.push(...paths);
+                    return { data: paths.map((path) => ({ path, signedUrl: `https://test.supabase.co/storage/v1/object/sign/avatars/${path}?token=fic`, error: null })), error: null };
+                },
+            }),
+        },
+    }),
+}));
 vi.mock('@/lib/tier-limits', () => ({
     getEmployerTier: vi.fn(async () => 'pro'),
     getEmployerActivePostings: vi.fn(async () => [{ id: 'ej-live' }]),
@@ -84,12 +103,17 @@ import { GET as savedRoute } from '@/app/api/employer/saved-candidates/route';
 import { GET as candidatePageRoute } from '@/app/api/employer/candidates/[id]/route';
 import CandidateCard from '@/components/employer/CandidateCard';
 
-const photo = (key: string): string => `https://cdn.example/avatars/${key}-fic.jpg`;
+/** The candidate's photo key, in their own upload folder. */
+const photoKey = (key: string): string => `prod/cand-${key}/1700000000000.jpg`;
+/** What the column stores: the public URL /api/upload writes. */
+const storedPhoto = (key: string): string => `https://test.supabase.co/storage/v1/object/public/avatars/${photoKey(key)}`;
+/** What a response may carry: a link that expires. */
+const photo = (key: string): string => `https://test.supabase.co/storage/v1/object/sign/avatars/${photoKey(key)}?token=fic`;
 
 function candidate(key: string, firstName: string): Row {
     return {
         id: `p-${key}`, supabaseId: `cand-${key}`, role: 'job_seeker', profileVisible: true, openToOffers: true, deletedAt: null,
-        firstName, lastName: 'Okafic', avatarUrl: photo(key), headline: 'Nurse practitioner', yearsExperience: 5,
+        firstName, lastName: 'Okafic', avatarUrl: storedPhoto(key), headline: 'Nurse practitioner', yearsExperience: 5,
         specialties: 'Family Practice (FNP)', preferredWorkMode: 'Remote', certifications: null, licenseStates: 'TX',
         desiredSalaryMin: null, desiredSalaryMax: null, desiredSalaryType: null, availableDate: null, resumeUrl: null,
         bio: null, preferredJobType: null, state: null, city: null, email: `${key}@example.com`, linkedinUrl: null,
@@ -174,6 +198,7 @@ async function savedCandidates(): Promise<Card[]> {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    h.signedKeys = [];
     installStore();
     signIn('employer');
 });
@@ -187,14 +212,21 @@ describe.each([
         const cards = await load();
 
         expect(photosOf(cards)).toEqual(LOCKED_FOR_AN_EMPLOYER);
-        expect(JSON.stringify(cards)).not.toContain(photo('locked'));
+        expect(JSON.stringify(cards)).not.toContain(photoKey('locked'));
         expect(cards.find((c) => c.id === 'cand-locked')?.initials).toBe('LO');
     });
 
-    it('sends every photo to an admin, with no lookup', async () => {
+    it('sends a shown photo as a link that expires, and signs no photo the rule withholds', async () => {
+        const raw = JSON.stringify(await load());
+
+        expect(raw).not.toContain('/object/public/avatars/');
+        expect([...h.signedKeys].sort()).toEqual([photoKey('applied'), photoKey('unlocked')]);
+    });
+
+    it('sends every photo to an admin, signed, with no lookup', async () => {
         signIn('admin');
 
-        expect(Object.values(photosOf(await load())).every((url) => url !== null)).toBe(true);
+        expect(Object.values(photosOf(await load()))).toEqual(['locked', 'unlocked', 'applied', 'elsewhere'].map(photo));
         expect(h.db.jobApplication.findMany).not.toHaveBeenCalled();
     });
 });
@@ -215,13 +247,14 @@ describe("a candidate's page", () => {
         expect((await open('cand-locked')).body).toMatchObject({ avatarUrl: photo('locked'), hasFullAccess: true });
     });
 
-    it('sends nothing, the photo included, when the unlock is refused', async () => {
+    it('sends nothing, the photo included, when the unlock is refused, and signs nothing', async () => {
         h.canUnlockCandidate.mockResolvedValue({ allowed: false, used: 0, limit: 25, reason: 'no_posting' });
 
         const { status, body } = await open('cand-locked');
 
         expect(status).toBe(403);
-        expect(JSON.stringify(body)).not.toContain(photo('locked'));
+        expect(JSON.stringify(body)).not.toContain(photoKey('locked'));
+        expect(h.signedKeys).toEqual([]);
     });
 });
 

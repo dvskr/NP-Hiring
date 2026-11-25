@@ -9,6 +9,7 @@ import { employerJobOwnershipBranches } from '@/lib/employer-ownership'
 import { talentPoolWhere } from '@/lib/candidate-pool'
 import { recordCandidateUnlock } from '@/lib/candidate-unlock'
 import { disclosedPhoto, showsPhoto } from '@/app/api/conversations/_lib/surname-disclosure'
+import { signAvatarUrl } from '@/lib/avatar-url'
 
 /**
  * GET /api/employer/candidates/[id]: a candidate's page. An employer's first
@@ -192,7 +193,8 @@ export async function GET(
         id: candidate.supabaseId,
         displayName,
         initials: `${(candidate.firstName || 'P').charAt(0)}${(candidate.lastName || 'C').charAt(0)}`.toUpperCase(),
-        avatarUrl: disclosedPhoto(candidate.avatarUrl, photoShown),
+        // A shown photo goes out as a link that expires (lib/avatar-url.ts).
+        avatarUrl: await signAvatarUrl(disclosedPhoto(candidate.avatarUrl, photoShown), candidate.supabaseId),
         headline: candidate.headline,
         yearsExperience: candidate.yearsExperience,
         specialties: candidate.specialties ? candidate.specialties.split(',').map(s => s.trim()) : [],

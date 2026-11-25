@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { requireApiAdmin, requireApiAdminActor, type ApiAdminActor } from '@/lib/auth/require-api-admin';
 import { logAudit } from '@/lib/audit-log';
 import { logger } from '@/lib/logger';
+import { withSignedAvatar } from '@/lib/avatar-url';
 
 const VALID_ROLES = ['job_seeker', 'employer', 'admin'] as const;
 type UserRole = (typeof VALID_ROLES)[number];
@@ -125,7 +126,8 @@ export async function GET(
             return jsonError('User not found', 404);
         }
 
-        return NextResponse.json({ success: true, user });
+        // An admin sees the photo too, as a link that expires (lib/avatar-url.ts).
+        return NextResponse.json({ success: true, user: await withSignedAvatar(user) });
     } catch (error) {
         logger.error('[Admin Users] GET/:id error', error);
         return jsonError('Failed to fetch user', 500);

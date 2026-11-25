@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit-log';
 import { createClient } from '@/lib/supabase/server';
+import { withSignedAvatar } from '@/lib/avatar-url';
 
 const PURGE_GRACE_DAYS = 30;
 
@@ -158,7 +159,9 @@ export async function POST(request: NextRequest) {
                 where: { id: created.id },
                 data: { status: 'completed', completedAt: new Date() },
             });
-            actionResult = { export: profile ?? {} };
+            // The photo is in it as a link that expires, like every avatar the
+            // app serves (lib/avatar-url.ts).
+            actionResult = { export: profile ? await withSignedAvatar(profile) : {} };
         }
 
         logger.info('DSAR received and actioned', {
