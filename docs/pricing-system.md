@@ -819,7 +819,7 @@ The migration adds one table and nothing else, with what Prisma cannot express: 
 | 5-post pack credits | `EmployerPostPack` rows, spent by a conditional decrement inside post-free's transaction (`lib/post-packs.ts`), with the migration's credit CHECK behind it; recorded once per Checkout Session by the webhook, the verify route or the sweep |
 | Renewal priced by the post it renews | `lib/renewal-price.ts` + `NEW_POST_CHARGE_SELECT` (lib/pricing.ts) + `config.renewalPriceCentsFor` |
 | Server-side purchase tracking | GA4 Measurement Protocol (`lib/analytics-server.ts`) |
-| Client-side funnel events | `view_post_job_page`, `begin_checkout`, `submit_free_post`, `free_post_limit_hit` (now: the next post needs payment, with the rung quoted) |
+| Client-side funnel events | `view_post_job_page`, `post_job_form_open` (`signed_in`: the form is on screen, before or after sign-up), `post_job_account_click` (`action` signup or login, from the signed-out preview), `begin_checkout`, `submit_free_post`, `free_post_limit_hit` (now: the next post needs payment, with the rung quoted) |
 | Atomic post creation | `prisma.$transaction({ isolationLevel: 'Serializable' })` on every path |
 | Lazy Stripe client | All checkout routes — graceful 503 if keys missing |
 | Stripe session verification | `/api/verify-checkout-session` + `/api/verify-renewal-session` + `/api/verify-pack-session` |

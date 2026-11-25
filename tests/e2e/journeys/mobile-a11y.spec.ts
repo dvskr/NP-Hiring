@@ -95,11 +95,12 @@ async function gotoJobsReady(page: Page, path = '/jobs'): Promise<void> {
 }
 
 /**
- * /post-job renders a sign-in gate for anonymous visitors; the wizard needs an
- * employer session with an unused free post. The shared E2E employer has
- * already spent its free post, so /post-job shows it the paid-posting gate
- * instead of the wizard; a fresh ephemeral employer (unique domain) is minted
- * once per worker and removed in afterAll.
+ * /post-job renders the wizard for anonymous visitors too (owner decision
+ * 2026-11-25), but these employer checks need an employer session with an
+ * unused free post. The shared E2E employer has already spent its free post,
+ * so /post-job shows it the paid-posting gate instead of the wizard; a fresh
+ * ephemeral employer (unique domain) is minted once per worker and removed in
+ * afterAll.
  */
 let wizardEmployer: EphemeralEmployer | null = null;
 
@@ -406,10 +407,11 @@ test.describe('mobile 375x812', () => {
     await assertBottomContentNotCovered(page, TOOL_PATH);
   });
 
-  test('/post-job (signed out): renders the employer sign-in gate, not the wizard', async ({ page }) => {
+  test('/post-job (signed out): renders the wizard with the no-account note and a login link, no overflow', async ({ page }) => {
     await gotoReady(page, '/post-job');
-    await expect(page.locator('#title')).toHaveCount(0);
-    await expect(page.locator('a[href^="/login?next=/post-job"], a[href^="/employer/signup"]').first()).toBeVisible();
+    // Owner decision 2026-11-25: a signed-out visitor gets the form itself.
+    await expect(page.locator('#title')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('a[href="/login?next=/post-job"]').first()).toBeVisible();
     await assertNoHorizontalOverflow(page, '/post-job signed out');
   });
 

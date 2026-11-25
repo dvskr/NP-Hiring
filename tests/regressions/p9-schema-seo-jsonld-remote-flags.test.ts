@@ -34,6 +34,7 @@ import {
 } from '@/components/JobStructuredData';
 import { parseLocation } from '@/lib/location-parser';
 import { detectMode, reconcileWorkMode } from '@/lib/job-normalizer';
+import { readCode } from '../helpers/source';
 
 /* ─── fixtures ──────────────────────────────────────────────────────────── */
 
@@ -453,9 +454,15 @@ describe('7-vii — /post-job renders an h1', () => {
     expect(page).toMatch(/<h1[^>]*>\s*Post a \{brand\.niche\.long\} Job\s*<\/h1>/);
   });
 
-  it('the logged-out gate (what a crawler sees) also leads with an h1', () => {
-    const h1Count = (page.match(/<h1/g) || []).length;
-    expect(h1Count).toBeGreaterThanOrEqual(2);
+  it('a logged-out visitor (what a crawler sees) gets the wizard and its h1, not a gate without one', () => {
+    // Owner decision 2026-11-25: the sign-up gate card, which carried its own
+    // h1, is gone. A logged-out visitor renders the wizard state, so the h1
+    // above is the one they see; no early return for a missing user may come
+    // before it.
+    const code = readCode('app/post-job/page.tsx');
+    const renderPath = code.slice(code.indexOf('if (isAuthLoading) return <LoadingFallback />;'));
+    expect(renderPath).not.toMatch(/if\s*\(\s*!user\s*\)/);
+    expect(renderPath).toMatch(/<h1[^>]*>\s*Post a \{brand\.niche\.long\} Job\s*<\/h1>/);
   });
 });
 

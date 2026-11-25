@@ -70,12 +70,12 @@ test('employer: /pricing lists at least one tier', async ({ page }) => {
   expect(bodyText).toMatch(/\$|free|month|year/i);
 });
 
-test('employer: /post-job redirects unauthenticated user', async ({ page }) => {
+test('employer: /post-job shows a signed-out visitor the form, with no redirect', async ({ page }) => {
   await page.goto('/post-job');
-  await page.waitForLoadState('domcontentloaded');
-  // Either redirects to login OR renders a "sign up to post" gate
-  const url = page.url();
-  expect(url).toMatch(/\/post-job|\/login|\/employer|\/signup/);
+  // Owner decision 2026-11-25: no sign-up wall. The visitor stays on
+  // /post-job and gets the wizard; the account comes on the preview.
+  await expect(page).toHaveURL(/\/post-job\/?$/);
+  await expect(page.locator('#title')).toBeVisible({ timeout: BOOT_TIMEOUT });
 });
 
 test('employer: /employer/login renders auth form', async ({ page }) => {
@@ -545,13 +545,41 @@ test.describe('employer gating (unauthenticated)', () => {
     expect(missing.ok()).toBe(false);
   });
 
-  test('preview without wizard data bounces to /post-job, which shows the sign-in gate to visitors', async ({ page }) => {
+  test('preview without wizard data bounces to /post-job, which shows a visitor the form and a login link', async ({ page }) => {
     await page.goto('/post-job/preview');
     await expect(page).toHaveURL(/\/post-job\/?$/, { timeout: BOOT_TIMEOUT });
-    await bootExpect(page.getByText(/must be logged in as an employer to post jobs/i)).toBeVisible();
-    await expect(page.locator('#title')).toHaveCount(0);
-    await expect(page.locator('a[href="/signup?role=employer"]').first()).toBeVisible();
-    await expectNoDashCopy(page, '/post-job sign-in gate');
+    // Owner decision 2026-11-25: no sign-up wall. The form, a note that no
+    // account is needed to start, and a login link for an existing account.
+    await bootExpect(page.locator('#title')).toBeVisible();
+    await expect(page.getByText(/no account needed to start/i)).toBeVisible();
+    await expect(page.locator('a[href="/login?next=/post-job"]').first()).toBeVisible();
+    await expect(page.getByText(/must be logged in as an employer/i)).toHaveCount(0);
+    await expectNoDashCopy(page, '/post-job signed out');
+  });
+
+  test('a visitor previews the draft on this device and is offered an employer account before publishing', async ({ page }) => {
+    // Seed from another page: /post-job itself mirrors its own (empty) form
+    // into the same key as it renders.
+    await page.goto('/for-employers');
+    await page.evaluate(() => {
+      localStorage.setItem('jobFormData', JSON.stringify({
+        title: 'Signed-out preview probe NP', companyName: 'Preview Probe Co', contactEmail: 'hiring@example.invalid',
+        location: 'Remote', mode: 'Remote', jobType: 'Full-Time', description: '<p>' + 'x'.repeat(220) + '</p>',
+        salaryMin: 120000, salaryMax: 150000, salaryPeriod: 'annual', applyUrl: 'https://example.invalid/apply',
+        applyOnPlatform: false, pricingTier: 'pro', benefits: [], minYearsExperience: 2, maxYearsExperience: 4,
+      }));
+    });
+    await page.goto('/post-job/preview');
+    await bootExpect(page.getByRole('heading', { name: /preview your job post/i })).toBeVisible();
+    // The quote request answers 401 for a visitor, which turns the publish
+    // button into the way to an account that comes back here.
+    await bootExpect(page.locator('a.preview-btn-primary')).toHaveText(/create account to publish/i);
+    await expect(page.locator('a.preview-btn-primary')).toHaveAttribute('href', '/signup?role=employer&redirectTo=/post-job/preview');
+    await expect(page.getByRole('link', { name: /create employer account/i })).toBeVisible();
+    await expect(page.locator('a[href="/login?next=/post-job/preview"]')).toBeVisible();
+    await expect(page.locator('button.preview-btn-primary')).toHaveCount(0);
+    await expectNoDashCopy(page, '/post-job/preview (signed out)');
+    await page.evaluate(() => localStorage.removeItem('jobFormData'));
   });
 
   test('public employer marketing surfaces carry no em/en dash copy', async ({ page }) => {
