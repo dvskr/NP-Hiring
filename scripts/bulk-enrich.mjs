@@ -63,7 +63,7 @@ async function extractWithLLM(description, title, employer, location) {
   try {
     const truncated = description.substring(0, 2500);
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-6.1-terra',
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -121,7 +121,7 @@ async function main() {
   }, 60000);
 
   console.log('\n══════════════════════════════════════════════');
-  console.log('  BULK RE-ENRICHMENT — gpt-5-mini');
+  console.log('  BULK RE-ENRICHMENT — gpt-6.1-terra');
   console.log('══════════════════════════════════════════════\n');
 
   // Fetch all published jobs with at least one missing field

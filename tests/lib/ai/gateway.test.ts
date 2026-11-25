@@ -93,7 +93,7 @@ describe('lib/ai/gateway.complete', () => {
         expect(openaiComplete).toHaveBeenCalledOnce();
         expect(anthropicComplete).not.toHaveBeenCalled();
         expect(result.provider).toBe('openai');
-        expect(result.model).toBe('gpt-5-mini');
+        expect(result.model).toBe('gpt-6.1-terra');
         expect(result.cacheHit).toBe(false);
         expect(result.fallbackUsed).toBe(false);
         expect(result.parsed).toEqual({ score: 87 });
@@ -105,7 +105,7 @@ describe('lib/ai/gateway.complete', () => {
         expect(logged).toMatchObject({
             task: 'candidate_scoring',
             provider: 'openai',
-            model: 'gpt-5-mini',
+            model: 'gpt-6.1-terra',
             cacheHit: false,
             fallbackUsed: false,
         });
@@ -117,7 +117,7 @@ describe('lib/ai/gateway.complete', () => {
             response: {
                 content: JSON.stringify({ score: 42 }),
                 provider: 'openai',
-                model: 'gpt-5-mini',
+                model: 'gpt-6.1-terra',
                 usage: { inputTokens: 0, cachedTokens: 0, outputTokens: 0, costUsd: 0 },
                 latencyMs: 0,
                 cacheHit: true,

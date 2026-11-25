@@ -49,7 +49,7 @@ export const openaiProvider: ProviderClient = {
             // param when the model name signals it; otherwise the legacy
             // one. Send temperature only when the model supports it
             // (some reasoning models reject anything other than 1.0).
-            const usesCompletionTokens = /^(gpt-5|o1|o3|o4)/.test(args.model);
+            const usesCompletionTokens = /^(gpt-5|gpt-6|o1|o3|o4)/.test(args.model);
             const tokenParam = usesCompletionTokens
                 ? { max_completion_tokens: args.maxTokens }
                 : { max_tokens: args.maxTokens };
@@ -57,7 +57,7 @@ export const openaiProvider: ProviderClient = {
             // temperature with a 400 ("only the default (1) value is
             // supported"). Suppress the param for those; older chat
             // models still accept it as before.
-            const fixedTempOnly = /^(gpt-5|o1|o3|o4)/.test(args.model);
+            const fixedTempOnly = /^(gpt-5|gpt-6|o1|o3|o4)/.test(args.model);
             const temperatureParam = fixedTempOnly ? {} : { temperature: args.temperature };
 
             const response = await client.chat.completions.create(

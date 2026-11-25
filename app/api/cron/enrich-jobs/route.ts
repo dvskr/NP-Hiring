@@ -15,9 +15,9 @@ const MAX_JOBS_PER_RUN = 200; // Process up to 200 jobs per run
 const TIME_BUDGET_MS = 250_000; // 250s (Vercel 300s max)
 const BATCH_DELAY_MS = 200;
 
-// GPT-5-mini pricing (per 1M tokens)
-const INPUT_COST_PER_1M = 0.30;  // $0.30 per 1M input tokens
-const OUTPUT_COST_PER_1M = 1.25; // $1.25 per 1M output tokens
+// gpt-6.1-terra pricing (per 1M tokens, Standard tier)
+const INPUT_COST_PER_1M = 1.00;  // $1.00 per 1M input tokens
+const OUTPUT_COST_PER_1M = 5.00; // $5.00 per 1M output tokens
 
 // US state name -> code mapping
 const STATE_CODES: Record<string, string> = {
@@ -419,7 +419,7 @@ export async function GET(req: Request) {
         benefits: stats.benefitsUpdated,
       },
       gptUsage: {
-        model: 'gpt-5-mini',
+        model: 'gpt-6.1-terra',
         inputTokens: stats.totalInputTokens,
         outputTokens: stats.totalOutputTokens,
         totalTokens: stats.totalInputTokens + stats.totalOutputTokens,
