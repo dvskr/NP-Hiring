@@ -549,7 +549,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                             padding: '12px 24px', fontSize: '14px',
                             boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                         }}>
-                            Post a Featured Job to Unlock →
+                            Post a Job to Unlock →
                         </Link>
                     </div>
                 )}
