@@ -46,6 +46,7 @@ import {
 } from '@/components/seo/pseo';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { getListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
+import { landingJobCount } from '@/lib/pseo/landing-job-count';
 import {
   buildListingsAuthoritySentence,
   buildLowInventoryIntro,
@@ -176,7 +177,7 @@ async function getRelatedCounts(): Promise<Map<string, number>> {
   const slugs = EXPLORE_CARDS.flatMap((card) => { const slug = cardSlug(card.href); return slug ? [slug] : []; });
   const rows = await Promise.all(slugs.map(async (slug) => {
     try {
-      return [slug, await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(slug)) })] as const;
+      return [slug, await landingJobCount(slug)] as const;
     } catch (error) {
       console.error(`[jobs/${SLUG}] sibling count failed for "${slug}":`, error);
       return [slug, null] as const;

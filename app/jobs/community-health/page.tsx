@@ -31,6 +31,7 @@ import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore'
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { getListingFacts, type ListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
+import { landingJobCount } from '@/lib/pseo/landing-job-count';
 import { MIN_JOBS_FOR_INDEX, shouldRenderCategoryLanding } from '@/lib/pseo/render-gate';
 import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
 import {
@@ -154,7 +155,7 @@ async function getExploreCounts(): Promise<Map<string, number>> {
     const slug = exploreSlug(card.href);
     if (!slug) return;
     try {
-      counts.set(slug, await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(slug)) }));
+      counts.set(slug, await landingJobCount(slug));
     } catch (error) {
       console.error(`[${SLUG}] explore count failed for "${slug}":`, error);
     }

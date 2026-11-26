@@ -93,23 +93,33 @@ describe('the live company directory', () => {
     });
 
     it('lists each live company with its live job count, under the profile page\'s own predicate', async () => {
+        db.job.groupBy.mockResolvedValue([
+            { companyId: 'company-one', _count: { _all: 89 } },
+            { companyId: 'company-lifestance', _count: { _all: 314 } },
+        ]);
         db.company.findMany.mockResolvedValue([
-            { name: 'One Medical', normalizedName: 'one', _count: { jobs: 89 } },
-            { name: 'LifeStance Health', normalizedName: 'life-stance', _count: { jobs: 314 } },
+            { id: 'company-one', name: 'One Medical', normalizedName: 'one' },
+            { id: 'company-lifestance', name: 'LifeStance Health', normalizedName: 'life-stance' },
         ]);
         expect(await readLiveCompanies()).toEqual([
             { name: 'One Medical', normalizedName: 'one', activeJobs: 89 },
             { name: 'LifeStance Health', normalizedName: 'life-stance', activeJobs: 314 },
         ]);
-        const args = db.company.findMany.mock.calls[0][0];
+        // The live predicate runs once, in one grouped count over the jobs
+        // (Sentry NP-HIRING-2); the companies are then read by id.
+        const grouped = db.job.groupBy.mock.calls[0][0];
         const live = activeIndexableJobWhere(new Date());
-        expect(Object.keys(args.where.jobs.some).sort()).toEqual(Object.keys(live).sort());
-        expect(args.select._count.select.jobs.where).toEqual(args.where.jobs.some);
-        expect(Object.keys(args.select).sort()).toEqual(['_count', 'name', 'normalizedName']);
+        expect(grouped.by).toEqual(['companyId']);
+        const { companyId, ...predicate } = grouped.where;
+        expect(companyId).toEqual({ not: null });
+        expect(Object.keys(predicate).sort()).toEqual(Object.keys(live).sort());
+        const named = db.company.findMany.mock.calls[0][0];
+        expect([...named.where.id.in].sort()).toEqual(['company-lifestance', 'company-one']);
+        expect(Object.keys(named.select).sort()).toEqual(['id', 'name', 'normalizedName']);
     });
 
     it('lets a failed read through when there is no cached copy (a 5xx, never a cached 404)', async () => {
-        db.company.findMany.mockRejectedValue(new Error('timeout exceeded when trying to connect'));
+        db.job.groupBy.mockRejectedValue(new Error('timeout exceeded when trying to connect'));
         await expect(loadLiveCompanies()).rejects.toThrow('timeout exceeded when trying to connect');
     });
 });
@@ -150,6 +160,7 @@ describe('every shared read', () => {
             "'homepage-top-state-counts'",
             "'jobs-board-count'",
             "'jobs-board-rows'",
+            "'landing-job-count'",
             "'live-company-directory'",
             "'live-company-directory-recheck'",
         ]);

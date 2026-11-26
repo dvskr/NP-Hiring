@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { brand } from '@/config/brand';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -67,7 +68,7 @@ describe('B75 — Resend webhook status updates are precedence-guarded', () => {
     data: {
       email_id: 'resend-abc',
       to: ['user@example.com'],
-      from: 'noreply@example.com',
+      from: `noreply@${brand.domain}`,
       subject: 'Test',
       created_at: new Date().toISOString(),
     },
@@ -113,6 +114,38 @@ describe('B75 — Resend webhook status updates are precedence-guarded', () => {
     };
     expect(statusCall.data.status).toBe('bounced');
     expect(statusCall.where.status.in).not.toContain('complained');
+  });
+});
+
+describe('the Resend webhook writes nothing for an event it does not act on', () => {
+  const event = (type: string, from: string) => ({
+    type,
+    data: { email_id: 'resend-xyz', to: ['user@example.com'], from, subject: 'Test', created_at: new Date().toISOString() },
+  });
+
+  it("answers another product's bounce with a 200 and no database write", async () => {
+    const { POST } = await import('@/app/api/webhooks/resend/route');
+    const res = await POST(resendWebhookRequest(event('email.bounced', 'Alerts <alerts@other-product.example>')) as never);
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.processedStripeEvent.create).not.toHaveBeenCalled();
+    expect(prismaMock.emailLead.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('answers an event type nothing handles with a 200 and no database write', async () => {
+    const { POST } = await import('@/app/api/webhooks/resend/route');
+    const res = await POST(resendWebhookRequest(event('email.sent', `noreply@${brand.domain}`)) as never);
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.processedStripeEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('still suppresses a bounce of its own mail sent from a subdomain', async () => {
+    const { POST } = await import('@/app/api/webhooks/resend/route');
+    await POST(resendWebhookRequest(event('email.bounced', `Alerts <alerts@mail.${brand.domain}>`)) as never);
+
+    expect(prismaMock.processedStripeEvent.create).toHaveBeenCalledTimes(1);
+    expect(prismaMock.emailLead.updateMany).toHaveBeenCalled();
   });
 });
 

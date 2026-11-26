@@ -44,21 +44,34 @@ export interface LiveCompany {
     activeJobs: number;
 }
 
-/** The directory, straight from the database. A failed read throws. */
+/**
+ * The directory, straight from the database. A failed read throws.
+ *
+ * The read's cost is the live predicate itself: the board's whole title and
+ * employer exclusion list, tested on every live job. As a relation filter
+ * plus a relation count, Postgres tested it twice, once for the EXISTS and
+ * once for the grouped count (2.4 to 3.3 s per refill, Sentry NP-HIRING-2).
+ * One groupBy on the jobs tests it once; the names then come by primary key.
+ */
 export async function readLiveCompanies(): Promise<LiveCompany[]> {
     const liveWhere = activeIndexableJobWhere(new Date());
-    const rows = await prisma.company.findMany({
-        where: { jobs: { some: liveWhere } },
-        select: {
-            name: true,
-            normalizedName: true,
-            _count: { select: { jobs: { where: liveWhere } } },
-        },
+    const groups = await prisma.job.groupBy({
+        by: ['companyId'],
+        where: { ...liveWhere, companyId: { not: null } },
+        _count: { _all: true },
     });
-    return rows.map((row) => ({
-        name: row.name,
-        normalizedName: row.normalizedName,
-        activeJobs: row._count.jobs,
+    const activeJobsById = new Map<string, number>();
+    for (const group of groups) {
+        if (group.companyId) activeJobsById.set(group.companyId, group._count._all);
+    }
+    const companies = await prisma.company.findMany({
+        where: { id: { in: Array.from(activeJobsById.keys()) } },
+        select: { id: true, name: true, normalizedName: true },
+    });
+    return companies.map((company) => ({
+        name: company.name,
+        normalizedName: company.normalizedName,
+        activeJobs: activeJobsById.get(company.id) ?? 0,
     }));
 }
 

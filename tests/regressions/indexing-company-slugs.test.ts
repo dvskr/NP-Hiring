@@ -149,14 +149,30 @@ const ONE_MEDICAL_LIVE = { name: 'One Medical', normalizedName: 'one', _count: {
 
 interface LiveRow { name: string; normalizedName: string; _count: { jobs: number } }
 
+/** The id the fixtures give a company. */
+const idOf = (row: LiveRow): string => `company-${row.normalizedName.replace(/s+/g, '-')}`;
+
 /**
- * A company table in miniature: `live` are the rows with live jobs (what the
- * resolver's findMany returns), `rows` every row by normalizedName. The
+ * One read of the live directory (./live-companies.ts readLiveCompanies): the
+ * live jobs counted per company in one groupBy, then those companies by id.
+ * Any other groupBy answers as the bare mock did.
+ */
+function mockLiveRead(groupBy: () => LiveRow[], companies: () => LiveRow[]) {
+    m(prisma.job.groupBy).mockImplementation(async (args?: { by?: string[] }) => {
+        if (!args?.by?.includes('companyId')) return undefined;
+        return groupBy().map((row) => ({ companyId: idOf(row), _count: { _all: row._count.jobs } }));
+    });
+    m(prisma.company.findMany).mockImplementation(async () => companies().map((row) => ({ ...row, id: idOf(row) })));
+}
+
+/**
+ * A company table in miniature: `live` are the rows with live jobs (what one
+ * directory read returns), `rows` every row by normalizedName. The
  * loader's include query returns each row's live jobs, so a row outside
  * `live` loads with none, exactly as activeIndexableJobWhere would leave it.
  */
 function mockDirectory(live: LiveRow[], rows: Record<string, { name: string; normalizedName: string }>) {
-    m(prisma.company.findMany).mockResolvedValue(live);
+    mockLiveRead(() => live, () => live);
     m(prisma.company.findUnique).mockImplementation(async (args: { where: { normalizedName: string }; include?: unknown }) => {
         const row = rows[args.where.normalizedName];
         if (!row) return null;
@@ -256,8 +272,14 @@ describe('/companies/[slug]: display-name slug is canonical, every old slug 308s
 
     /** The hourly copy predates One Medical's first live job; the later copy has it. */
     function mockNewlyLive() {
+        let groupReads = 0;
+        let companyReads = 0;
+        m(prisma.job.groupBy).mockReset();
         m(prisma.company.findMany).mockReset();
-        m(prisma.company.findMany).mockResolvedValueOnce([]).mockResolvedValue([ONE_MEDICAL_LIVE]);
+        mockLiveRead(
+            () => (++groupReads === 1 ? [] : [ONE_MEDICAL_LIVE]),
+            () => (++companyReads === 1 ? [] : [ONE_MEDICAL_LIVE]),
+        );
     }
 
     it('serves the profile of a company that went live after the hourly copy was read', async () => {

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { captureException } from '@/lib/sentry';
+import { isDroppedConnection } from '@/lib/dropped-connection';
 import { brand } from '@/config/brand';
 
 /* ═══ Clay Tokens ═══ */
@@ -29,10 +30,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   // with a full server stack. The instance that lands here is a redacted copy
   // in another runtime, so the markSentryCaptured dedupe cannot match it and a
   // second capture would double-count one failure. See app/error.tsx.
+  // Page data cut off mid-download (lib/dropped-connection.ts): not reported,
+  // and the retry is a full load.
+  const dropped = isDroppedConnection(error);
   useEffect(() => {
     if (error.digest) return;
+    if (dropped) return;
     captureException(error, { tags: { boundary: 'global-error', origin: 'client' } });
-  }, [error]);
+  }, [error, dropped]);
 
   return (
     <html lang="en">
@@ -91,7 +96,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 )}
 
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={reset} style={{
+                    <button onClick={dropped ? () => window.location.reload() : reset} style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '12px 24px', borderRadius: '16px',
                         fontSize: '15px', fontWeight: 600, color: '#FFFFFF',

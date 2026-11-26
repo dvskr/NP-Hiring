@@ -86,6 +86,7 @@ import { getCategoryLandingContent } from '@/lib/pseo/category-landing-content';
 import { CATEGORY_AXES, STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { getListingFacts, type ListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
+import { landingJobCount } from '@/lib/pseo/landing-job-count';
 import {
     buildListingsAuthoritySentence,
     buildLiveRolesBadge,
@@ -349,7 +350,7 @@ async function getRelatedCategories(slug: string): Promise<RelatedCategory[]> {
     return Promise.all(axisSiblings(slug).map(async (sibling): Promise<RelatedCategory> => {
         let count: number | null = null;
         try {
-            count = await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(sibling)) });
+            count = await landingJobCount(sibling);
         } catch (error) {
             console.error(`[category-landing] sibling count failed for "${sibling}":`, error);
         }

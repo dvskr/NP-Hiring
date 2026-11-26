@@ -1,9 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { brand } from '@/config/brand';
 import { Webhook } from 'svix';
 
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || '';
+
+/** The domain of a sender written as `Name <local@domain>` or `local@domain`, or null. */
+function senderDomain(from: unknown): string | null {
+  if (typeof from !== 'string') return null;
+  const address = /<([^<>]*)>\s*$/.exec(from)?.[1] ?? from;
+  const at = address.lastIndexOf('@');
+  if (at < 0) return null;
+  const domain = address.slice(at + 1).trim().toLowerCase();
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain) ? domain : null;
+}
+
+/** The domains this site mails from: the brand's, and the sender addresses this deployment sets. */
+const OWN_SENDER_DOMAINS: readonly string[] = [
+  brand.domain.toLowerCase(),
+  ...[process.env.EMAIL_FROM, process.env.EMAIL_FROM_MARKETING, process.env.EMAIL_FROM_PD_OUTREACH]
+    .map(senderDomain)
+    .filter((domain): domain is string => domain !== null),
+];
+
+/**
+ * True when the event is for mail another product sent. The mail account is
+ * shared, and the provider posts every product's events to every endpoint on
+ * it, a large send's worth within seconds. Only a sender that can be read and
+ * is on none of this site's domains counts, so an own bounce is never dropped.
+ */
+function isAnotherProductsMail(from: unknown): boolean {
+  const domain = senderDomain(from);
+  if (domain === null) return false;
+  return !OWN_SENDER_DOMAINS.some((own) => domain === own || domain.endsWith(`.${own}`));
+}
+
+/** The event types handled below. Any other type is answered without a database write. */
+const HANDLED_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'email.delivered',
+  'email.opened',
+  'email.clicked',
+  'email.bounced',
+  'email.complained',
+]);
 
 // B75: Svix dedupe (below) blocks replays of the SAME event, but distinct
 // events can still arrive out of order (e.g. `email.delivered` after
@@ -66,6 +106,16 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       logger.error('Webhook signature verification failed', e);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // Before any database work: another product's mail, and an event type
+    // nothing below acts on, are answered 200 (so they are not sent again)
+    // and never open a database connection.
+    if (isAnotherProductsMail(payload.data?.from)) {
+      return NextResponse.json({ received: true, action: 'ignored', reason: 'another sender' });
+    }
+    if (!HANDLED_EVENT_TYPES.has(payload.type)) {
+      return NextResponse.json({ received: true, action: 'ignored' });
     }
 
     // P5.A idempotency (2026-06-01): Svix re-delivers webhooks on

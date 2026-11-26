@@ -46,6 +46,7 @@ import {
   type LocationSpreadPlace,
 } from '@/components/seo/pseo';
 import { getListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
+import { landingJobCount } from '@/lib/pseo/landing-job-count';
 import {
   NATIONAL_MEDIAN_SENTENCE,
   buildListingsAuthoritySentence,
@@ -136,7 +137,7 @@ async function getRelatedCounts(): Promise<Map<string, number>> {
   const slugs = EXPLORE_CARDS.flatMap((card) => (card.slug ? [card.slug] : []));
   const rows = await Promise.all(slugs.map(async (slug) => {
     try {
-      return [slug, await prisma.job.count({ where: canonicalBucketWhere(landingBucketWhere(slug)) })] as const;
+      return [slug, await landingJobCount(slug)] as const;
     } catch (error) {
       console.error(`[jobs/${SLUG}] sibling count failed for "${slug}":`, error);
       return [slug, null] as const;

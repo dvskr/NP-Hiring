@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Home, RefreshCw, AlertTriangle } from 'lucide-react';
 import { captureException } from '@/lib/sentry';
+import { isDroppedConnection } from '@/lib/dropped-connection';
 import { brand } from '@/config/brand';
 
 /* ═══ Clay Tokens ═══ */
@@ -46,10 +47,15 @@ export default function Error({ error, reset }: ErrorProps) {
   // The gate cannot silently drop a server error into a blind spot, because
   // sentry.server.config.ts falls back to NEXT_PUBLIC_SENTRY_DSN — there is no
   // configuration where the browser can report but the server cannot.
+  //
+  // Page data cut off mid-download (lib/dropped-connection.ts) is not
+  // reported either, and its retry is a full load.
+  const dropped = isDroppedConnection(error);
   useEffect(() => {
     if (error.digest) return;
+    if (dropped) return;
     captureException(error, { tags: { boundary: 'app-error', origin: 'client' } });
-  }, [error]);
+  }, [error, dropped]);
 
   return (
     <main style={{ 
@@ -113,7 +119,7 @@ export default function Error({ error, reset }: ErrorProps) {
                 )}
 
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={reset} className="clay-btn-primary" style={{
+                    <button onClick={dropped ? () => window.location.reload() : reset} className="clay-btn-primary" style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '12px 24px', borderRadius: '16px',
                         fontSize: '15px', fontWeight: 600, color: '#FFFFFF',
