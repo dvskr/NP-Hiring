@@ -17,7 +17,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Aggregator, RawJobData } from '@/lib/aggregators/types';
+import type { Aggregator, FetchOptions, RawJobData } from '@/lib/aggregators/types';
 
 type Row = Record<string, unknown>;
 
@@ -30,6 +30,8 @@ const state = vi.hoisted(() => ({
     health: new Map<string, { checkType: string; alive: boolean }>(),
     created: [] as Array<Record<string, unknown>>,
     updates: [] as Array<{ id: string; data: Record<string, unknown> }>,
+    /** External-id prefixes the stand-in adapters report as unread on their next fetch. */
+    unreadable: [] as string[],
 }));
 
 vi.mock('@/lib/prisma', () => {
@@ -102,7 +104,8 @@ vi.mock('@/lib/aggregators/registry', () => {
         ({
             key,
             chunkCount: 1,
-            async fetch(): Promise<RawJobData[]> {
+            async fetch(opts?: FetchOptions): Promise<RawJobData[]> {
+                for (const prefix of state.unreadable) opts?.onUnavailable?.(prefix);
                 return state.rows as RawJobData[];
             },
         }) as unknown as Aggregator;
@@ -173,6 +176,7 @@ vi.mock('@/lib/ingestion-monitor', () => ({ generateIngestionSummary: () => '' }
 
 import { prisma } from '@/lib/prisma';
 import { ingestJobs } from '@/lib/ingestion-service';
+import { recordSourcePresence } from '@/lib/health/source-presence';
 
 const DESCRIPTION = 'The clinic is hiring for this role. Duties, schedule and supervision are described to candidates at interview. '.repeat(3);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -221,7 +225,9 @@ beforeEach(() => {
     state.health = new Map();
     state.created = [];
     state.updates = [];
+    state.unreadable = [];
     vi.mocked(prisma.rejectedJob.createMany).mockClear();
+    vi.mocked(recordSourcePresence).mockClear();
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
@@ -328,5 +334,33 @@ describe('a posting that may not bring the stored job back', () => {
         expect(state.updates).toEqual([]);
         expect(state.created).toEqual([]);
         expect(state.jobs[0].isPublished).toBe(false);
+    });
+});
+
+/**
+ * A tenant the adapter could not read (a Lever board that answered 429 or 5xx,
+ * or did not answer) is named to the presence check, which leaves that
+ * tenant's postings alone instead of counting every one of them as missing.
+ */
+describe('a part of the source the adapter could not read', () => {
+    it('is handed to the presence check by its external-id prefix', async () => {
+        state.rows = [posting('wk-9')];
+        state.unreadable = ['workable-acme-busy-', 'workable-acme-busy-', 'workable-acme-down-'];
+
+        await ingestJobs(['workable']);
+
+        expect(vi.mocked(recordSourcePresence)).toHaveBeenCalledTimes(1);
+        const [, input] = vi.mocked(recordSourcePresence).mock.calls[0] as unknown as [unknown, { source: string; unavailableExternalIdPrefixes?: string[] }];
+        expect(input.source).toBe('workable');
+        expect([...(input.unavailableExternalIdPrefixes ?? [])].sort()).toEqual(['workable-acme-busy-', 'workable-acme-down-']);
+    });
+
+    it('is an empty list on a run that read everything', async () => {
+        state.rows = [posting('wk-9')];
+
+        await ingestJobs(['workable']);
+
+        const [, input] = vi.mocked(recordSourcePresence).mock.calls[0] as unknown as [unknown, { unavailableExternalIdPrefixes?: string[] }];
+        expect(input.unavailableExternalIdPrefixes).toEqual([]);
     });
 });

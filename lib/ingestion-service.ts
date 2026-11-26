@@ -115,7 +115,7 @@ import { inngest } from './inngest/client';
 // JobSource is defined in lib/aggregators/types.ts and re-exported here
 // so legacy callers (scripts, cron route) keep working unchanged.
 export type { JobSource } from './aggregators/types';
-import type { JobSource } from './aggregators/types';
+import type { FetchOptions, JobSource } from './aggregators/types';
 import { aggregators } from './aggregators/registry';
 
 /** Single source of truth — derived from the registry. */
@@ -462,16 +462,17 @@ export function mergeLlmIntoNormalized(job: any, llm: LLMExtractResult): any {
  */
 async function fetchFromSource(
   source: JobSource,
-  options?: { chunk?: number; fantasticEndpoint?: '24h' | '7d' | '6m' },
+  options?: { chunk?: number; fantasticEndpoint?: '24h' | '7d' | '6m'; onUnavailable?: FetchOptions['onUnavailable'] },
 ): Promise<Array<Record<string, unknown>>> {
   const aggregator = aggregators[source];
   if (!aggregator) {
     console.warn(`[Ingestion] Unknown source: ${source}`);
     return [];
   }
-  const fetchOpts: { chunk?: number; endpoint?: '24h' | '7d' | '6m' } = {};
+  const fetchOpts: FetchOptions = {};
   if (options?.chunk !== undefined) fetchOpts.chunk = options.chunk;
   if (options?.fantasticEndpoint !== undefined) fetchOpts.endpoint = options.fantasticEndpoint;
+  if (options?.onUnavailable) fetchOpts.onUnavailable = options.onUnavailable;
   return (await aggregator.fetch(fetchOpts)) as unknown as Array<Record<string, unknown>>;
 }
 
@@ -525,8 +526,14 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
   try {
     console.log(`\n[${source.toUpperCase()}] Starting ingestion...`);
 
-    // Fetch raw jobs from source
-    const rawJobs = await fetchFromSource(source, options);
+    // Fetch raw jobs from source. A part the adapter could not read (a Lever
+    // tenant that errored) is named here, and the presence check below leaves
+    // its postings alone.
+    const unavailablePrefixes = new Set<string>();
+    const rawJobs = await fetchFromSource(source, {
+      ...options,
+      onUnavailable: (prefix) => unavailablePrefixes.add(prefix),
+    });
     fetched = rawJobs.length;
     if (source === 'fantastic-jobs-db') {
       apiCallsUsed = getFantasticJobsDiag().apiCallsUsed;
@@ -1197,6 +1204,7 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
               fetchedExternalIds,
               fetchedCount: fetched,
               historicalAvgFetched: baseline,
+              unavailableExternalIdPrefixes: [...unavailablePrefixes],
               recorder,
             });
             await recorder.flush();

@@ -25,13 +25,23 @@ import type { PrismaClient } from '@prisma/client';
 import { logger } from '@/lib/logger';
 import type { HealthRecorder } from './recorder';
 
-export const PRESENCE_CHECKER_VERSION = 'v1.0.0';
+export const PRESENCE_CHECKER_VERSION = 'v1.1.0';
 
 /** Default minimum ratio of fetched/historicalAvg required to trust the run. */
 export const DEFAULT_MIN_FETCH_RATIO = 0.5;
 
 /** Cap how many missing-job updates we will issue per run, for safety. */
 export const DEFAULT_MAX_UPDATES_PER_RUN = 5_000;
+
+/**
+ * How long a job on a part of the source that could not be read is left
+ * alone. A board that has answered 403, 5xx or timed out on every run for
+ * this long is treated as gone, so a company that left the platform does not
+ * keep its dead jobs up until they expire. Measured from the job's last
+ * sighting, or from its creation when it was never seen. A board that comes
+ * back renews its jobs.
+ */
+export const UNREADABLE_PART_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 
 export interface PresenceCheckInput {
     /** The aggregator source name (matches `jobs.source_provider`). */
@@ -49,6 +59,15 @@ export interface PresenceCheckInput {
     minFetchRatio?: number;
     /** Cap update fan-out for safety. */
     maxUpdates?: number;
+    /**
+     * External-id prefixes of the parts of the source this run could not
+     * read (a tenant board that errored, timed out or refused the request).
+     * A published job under one of them that was not fetched is left as it
+     * is, neither struck nor reset: the run says nothing about it. See
+     * FetchOptions.onUnavailable. Past UNREADABLE_PART_GRACE_MS without a
+     * sighting it is struck after all.
+     */
+    unavailableExternalIdPrefixes?: ReadonlyArray<string>;
     /**
      * Optional audit recorder. When supplied, a single summary row is
      * staged per run, anchored to a representative job_id from this
@@ -173,14 +192,25 @@ export async function recordSourcePresence(
             isPublished: true,
             externalId: { not: null },
         },
-        select: { id: true, externalId: true },
+        select: { id: true, externalId: true, healthLastSeenAt: true, createdAt: true },
     });
 
+    const unavailable = input.unavailableExternalIdPrefixes ?? [];
     const seenAgainIds: string[] = [];
     const missingIds: string[] = [];
+    let heldBack = 0;
+    let unreadableTooLong = 0;
     for (const job of published) {
         if (job.externalId && fetchedSet.has(job.externalId)) {
             seenAgainIds.push(job.id);
+        } else if (job.externalId && unavailable.some((prefix) => job.externalId!.startsWith(prefix))) {
+            const lastSighting = job.healthLastSeenAt ?? job.createdAt ?? null;
+            if (lastSighting && start - new Date(lastSighting).getTime() > UNREADABLE_PART_GRACE_MS) {
+                unreadableTooLong++;
+                missingIds.push(job.id);
+            } else {
+                heldBack++;
+            }
         } else {
             missingIds.push(job.id);
         }
@@ -221,6 +251,9 @@ export async function recordSourcePresence(
         publishedFromSource: result.publishedFromSource,
         seenAgain: result.seenAgain,
         missing: result.missingThisRun,
+        heldBackUnreadable: heldBack,
+        struckUnreadableTooLong: unreadableTooLong,
+        unreadableParts: unavailable.length,
         updates: result.updatesIssued,
         elapsedMs: result.elapsedMs,
     });

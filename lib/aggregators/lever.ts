@@ -1,6 +1,9 @@
 ﻿import { LEVER_SLUGS as LEVER_COMPANIES, LEVER_NAMES as COMPANY_NAMES } from './tenants/lever';
-import type { Aggregator, RawJobData } from './types';
+import type { Aggregator, FetchOptions, RawJobData } from './types';
 import { checkJobHealth, type HealthDecision } from '@/lib/health/check-job-health';
+
+/** Per-tenant ceiling, so one hung board cannot hold its batch until the function is killed. */
+const LEVER_FETCH_TIMEOUT_MS = 15_000;
 
 interface LeverPosting {
   id: string;
@@ -99,15 +102,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchCompanyPostings(companySlug: string): Promise<LeverJobRaw[]> {
+async function fetchCompanyPostings(
+  companySlug: string,
+  onUnavailable?: FetchOptions['onUnavailable'],
+): Promise<LeverJobRaw[]> {
   const url = `https://api.lever.co/v0/postings/${companySlug}`;
   const companyName = formatCompanyName(companySlug);
+  // A board that could not be read is not a board with no jobs: an empty list
+  // from a 429, a 5xx, a 401 or 403, or a network error left every live
+  // posting of the tenant reading as missing, and enough such runs in a row
+  // (DEAD_LINK_MISS_THRESHOLD) took them all off the site. The presence check
+  // leaves a reported tenant's postings alone.
+  const reportUnavailable = () => onUnavailable?.(`lever-${companySlug}-`);
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(LEVER_FETCH_TIMEOUT_MS) });
 
     if (!response.ok) {
       console.warn(`[Lever] ${companySlug}: API error ${response.status}`);
+      // 404 and 410: the board is gone, so its jobs really are missing.
+      if (response.status !== 404 && response.status !== 410) reportUnavailable();
       return [];
     }
 
@@ -147,11 +161,12 @@ async function fetchCompanyPostings(companySlug: string): Promise<LeverJobRaw[]>
     return relevantJobs;
   } catch (error) {
     console.error(`[Lever] ${companySlug}: Error -`, error);
+    reportUnavailable();
     return [];
   }
 }
 
-export async function fetchLeverJobs(): Promise<LeverJobRaw[]> {
+export async function fetchLeverJobs(options?: Pick<FetchOptions, 'onUnavailable'>): Promise<LeverJobRaw[]> {
   console.log(`[Lever] Checking ${LEVER_COMPANIES.length} companies for PMHNP jobs...`);
 
   const allJobs: LeverJobRaw[] = [];
@@ -163,7 +178,7 @@ export async function fetchLeverJobs(): Promise<LeverJobRaw[]> {
       const batch = LEVER_COMPANIES.slice(i, i + BATCH_SIZE);
 
       const results = await Promise.allSettled(
-        batch.map(companySlug => fetchCompanyPostings(companySlug))
+        batch.map(companySlug => fetchCompanyPostings(companySlug, options?.onUnavailable))
       );
 
       for (let j = 0; j < results.length; j++) {
@@ -173,6 +188,7 @@ export async function fetchLeverJobs(): Promise<LeverJobRaw[]> {
         } else {
           failedCompanies.push(batch[j]);
           console.error(`[Lever] Failed to fetch from ${batch[j]}`);
+          options?.onUnavailable?.(`lever-${batch[j]}-`);
         }
       }
 
@@ -190,6 +206,8 @@ export async function fetchLeverJobs(): Promise<LeverJobRaw[]> {
     return allJobs;
   } catch (error) {
     console.error('[Lever] Error in main fetch:', error);
+    // The boards after the failure were never read.
+    options?.onUnavailable?.('lever-');
     return allJobs;
   }
 }
@@ -203,8 +221,8 @@ export async function fetchLeverJobs(): Promise<LeverJobRaw[]> {
 export const leverAggregator: Aggregator = {
     key: 'lever',
     chunkCount: 1,
-    async fetch(): Promise<RawJobData[]> {
-        return fetchLeverJobs() as unknown as RawJobData[];
+    async fetch(opts: FetchOptions = {}): Promise<RawJobData[]> {
+        return fetchLeverJobs({ onUnavailable: opts.onUnavailable }) as unknown as RawJobData[];
     },
     async probeJob(externalId: string, applyLink: string): Promise<HealthDecision | null> {
         return checkJobHealth(applyLink, 'lever', { externalId });

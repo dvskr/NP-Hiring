@@ -60,6 +60,16 @@ export interface FetchOptions {
     chunk?: number;
     /** fantastic-jobs-db endpoint selector. */
     endpoint?: '24h' | '7d' | '6m';
+    /**
+     * Called when part of the source could not be read this run (a tenant
+     * board that errored, timed out or refused the request), with the
+     * external-id prefix of the postings that part would have returned. The
+     * presence check leaves those postings' miss counters alone
+     * (lib/health/source-presence.ts unavailableExternalIdPrefixes): a board
+     * having a bad day is not every one of its jobs being taken down. A board
+     * that answers 404 or 410 is gone and is not reported.
+     */
+    onUnavailable?: (externalIdPrefix: string) => void;
 }
 
 export interface Aggregator {
