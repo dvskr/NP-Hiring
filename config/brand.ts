@@ -212,10 +212,17 @@ export const brand = {
     indexerUserAgent: 'NPHiringIndexer',
 
     /**
-     * Public social handles — used in footer + Organization schema.
-     * NOTE: placeholder URLs matching the brand handle pattern. Claim the
-     * actual accounts before launch, or they will 404 / point at unrelated
-     * profiles.
+     * Public social profiles: the footer icons (components/Footer.tsx) and
+     * the Organization schema's sameAs (app/layout.tsx).
+     *
+     * facebook and youtube are the board's own profiles, created by the owner
+     * on 2026-11-26. x, instagram and linkedin are still placeholder URLs on
+     * the brand handle pattern: claim those accounts, or they point at a 404
+     * or an unrelated profile.
+     *
+     * Only official profiles belong here. The Facebook group
+     * (facebook.com/groups/nphiringjobs) is a community, not the board's
+     * profile, so it never goes in sameAs.
      */
     social: {
         x: 'https://x.com/nphiring',
