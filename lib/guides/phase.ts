@@ -1,97 +1,80 @@
 /**
- * lib/guides/phase.ts: which way the guides store hands out a guide right
- * now, and the copy that changes with it.
+ * lib/guides/phase.ts: which way the guides store hands out a guide, and the
+ * price block every store surface prints.
  *
- * Owner decision (2026-11-07): the guides take their catalog prices from the
- * same instant the paid posting ladder starts (config.promoEndsAt). Until then
- * every product, bundles included, is free to claim with an email address
- * (POST /api/guides/claim) and Stripe is never called; after it, the guides are
- * sold through Stripe Checkout (POST /api/guides/checkout), all sales final.
+ * Owner decision (2026-11-26): the guides are sold at their catalog prices as
+ * soon as this deployment can take the payment, and never on the posting
+ * promo's clock (job posting stays free to config.promoEndsAt either way).
+ * guidePhase() is the one check, read by the store pages, the claim route and
+ * the checkout alike:
+ *   - 'paid' when the Stripe key and STRIPE_WEBHOOK_SECRET are both set
+ *     (trimmed, as lib/stripe.ts and the Stripe webhook read them): checkout
+ *     opens (POST /api/guides/checkout) and the claim route refuses;
+ *   - 'free' otherwise: every product, bundles included, is free to claim
+ *     with an email address (POST /api/guides/claim), checkout refuses, and
+ *     no page offers a Buy button, because none could work.
+ * ENABLE_PAID_POSTING plays no part: it opens the paid posting routes and the
+ * renewals, which stay closed until the owner turns it on.
  *
- * guideSaleClosedReason is the one copy of the paid gate, in the same order as
- * the 5-post pack's (lib/post-pack-sale.ts): paid posting on, the Stripe key and
- * STRIPE_WEBHOOK_SECRET set, the promo over. An environment that will not parse
- * reads as closed, and is logged.
- *
- * Every phase-dependent sentence comes from guidePriceCopy, decided at render or
- * send time, so no page prints "Free through ..." after the promo ends
- * (tests/regressions/promo-copy-static-guard.test.ts).
+ * A Vercel deployment reads its environment when it is built and when it
+ * runs, and a change to it takes a redeploy, so a page and the routes of one
+ * deployment always see the same phase. A claim made in the free phase keeps
+ * its library link and its downloads after the switch.
  */
-import { getEnv, getPaidPostingStatus } from '@/lib/env';
-import { config } from '@/lib/config';
-import { logger } from '@/lib/logger';
+import { cleanSecret } from '@/lib/clean-secret';
 import { formatPrice, savingsCents, separatePriceCents, type Product } from '@/lib/guides/catalog';
 
 /** Checkout Session and PaymentIntent metadata.type of a guide purchase. */
 export const GUIDE_CHECKOUT_TYPE = 'guide';
 
-export type GuidePhase = 'promo' | 'paid';
+export type GuidePhase = 'free' | 'paid';
 
-export function guidePhase(now: Date = new Date()): GuidePhase {
-    return config.isPromoActive(now) ? 'promo' : 'paid';
-}
-
-/** True while a guide can be claimed free (the launch promo). */
-export function isGuideClaimOpen(now: Date = new Date()): boolean {
-    return guidePhase(now) === 'promo';
-}
-
-/** Why a guide cannot be bought through Stripe right now; each is the code POST /api/guides/checkout answers. */
-export type GuideSaleClosedReason = 'PAID_POSTING_DISABLED' | 'STRIPE_NOT_CONFIGURED' | 'PROMO_ACTIVE';
-
-/** The first condition of the paid gate that fails at `now` (see the file header); null while guides can be sold. */
-export function guideSaleClosedReason(now: Date = new Date()): GuideSaleClosedReason | null {
-    try {
-        const paidPosting = getPaidPostingStatus();
-        if (!paidPosting.enabled) return 'PAID_POSTING_DISABLED';
-        if (!paidPosting.stripeConfigured || !getEnv().STRIPE_WEBHOOK_SECRET) return 'STRIPE_NOT_CONFIGURED';
-        return config.isPromoActive(now) ? 'PROMO_ACTIVE' : null;
-    } catch (err) {
-        logger.error('[GuideSale] The environment would not parse; the guides sale reads as closed', err);
-        return 'STRIPE_NOT_CONFIGURED';
-    }
-}
-
-/** True when a guide can be bought right now. */
-export function isGuideSaleOpen(now: Date = new Date()): boolean {
-    return guideSaleClosedReason(now) === null;
+/** 'paid' when this deployment can sell a guide (the Stripe key and the webhook secret are set), else 'free'. */
+export function guidePhase(): GuidePhase {
+    const stripeKey = cleanSecret(process.env.STRIPE_SECRET_KEY);
+    const webhookSecret = cleanSecret(process.env.STRIPE_WEBHOOK_SECRET);
+    return stripeKey && webhookSecret ? 'paid' : 'free';
 }
 
 export interface GuidePriceCopy {
     readonly phase: GuidePhase;
-    /** The price as shown on a card: "Free" during the promo, else "$19". */
+    /** The price as shown on a card: "Free" in the free phase, else "$29". */
     readonly price: string;
     /**
-     * The price struck through beside the one shown: the catalog price beside "Free" during the promo; after it,
-     * a bundle's guides bought one at a time; null for a single guide after the promo.
+     * The price struck through beside the one shown: the catalog price beside "Free"; in the paid phase, a
+     * bundle's guides bought one at a time; null for a single guide in the paid phase.
      */
     readonly listPrice: string | null;
-    /** The line under the price: when the free period ends and what it costs after, or what a bundle saves. */
+    /** What a screen reader hears before listPrice when the note is not printed. */
+    readonly listPriceLabel: string | null;
+    /** The line under the price: the price after the free period, or what a bundle saves. */
     readonly note: string | null;
     /** The button label. */
     readonly cta: string;
 }
 
-/** The price block for one product at `now`. */
-export function guidePriceCopy(product: Product, now: Date = new Date()): GuidePriceCopy {
-    const listPrice = formatPrice(product.priceCents);
-    if (config.isPromoActive(now)) {
+/** The price block for one product in `phase`, every figure from the catalog. */
+export function guidePriceCopy(product: Product, phase: GuidePhase = guidePhase()): GuidePriceCopy {
+    const price = formatPrice(product.priceCents);
+    if (phase === 'free') {
         return {
-            phase: 'promo',
+            phase,
             price: 'Free',
-            listPrice,
-            note: `Free through ${config.promoEndsLabel}, then ${listPrice}`,
+            listPrice: price,
+            listPriceLabel: 'Regular price',
+            note: `Free for a limited time, then ${price}`,
             cta: product.kind === 'bundle' ? 'Get them free' : 'Get it free',
         };
     }
     if (product.kind === 'bundle') {
         return {
-            phase: 'paid',
-            price: listPrice,
+            phase,
+            price,
             listPrice: formatPrice(separatePriceCents(product)),
+            listPriceLabel: 'Bought one at a time',
             note: `Save ${formatPrice(savingsCents(product))} on buying them one at a time`,
-            cta: `Buy for ${listPrice}`,
+            cta: `Buy for ${price}`,
         };
     }
-    return { phase: 'paid', price: listPrice, listPrice: null, note: null, cta: `Buy for ${listPrice}` };
+    return { phase, price, listPrice: null, listPriceLabel: null, note: null, cta: `Buy for ${price}` };
 }

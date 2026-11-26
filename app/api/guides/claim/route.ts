@@ -1,12 +1,15 @@
 /**
  * POST /api/guides/claim  { product, email, newsletter? }  ->  { ok: true, emailed, guides, inLibrary }
  *
- * The launch promo's way to the guides: until config.promoEndsAt every
- * product, bundles included, is free to claim with an email address
- * (lib/guides/phase.ts#isGuideClaimOpen). Stripe is never called.
+ * The free phase's way to the guides: while this deployment cannot take a
+ * payment (lib/guides/phase.ts#guidePhase is 'free': the Stripe key or the
+ * webhook secret is missing), every product, bundles included, is free to
+ * claim with an email address. Stripe is never called. The posting promo's
+ * clock plays no part.
  *
- *   409 PROMO_ENDED  the promo is over: guides are bought through
- *                    POST /api/guides/checkout from then on
+ *   409 CLAIM_CLOSED checkout is set up (guidePhase is 'paid'): guides are
+ *                    bought through POST /api/guides/checkout, and a claim
+ *                    made before keeps its access
  *   400              a malformed body or an unknown product
  *   429              5 claims a minute from this IP, or 6 new claims an hour
  *                    for this email address from any IP
@@ -42,7 +45,7 @@ import { verifyCsrf } from '@/lib/csrf';
 import { subscribeNewAddressToNewsletter, subscribeToNewsletter } from '@/lib/newsletter';
 import { getProduct, isGuideSlug, productGuides } from '@/lib/guides/catalog';
 import { GUIDES_COOKIE, addToLibraryCookie, libraryCookieOptions } from '@/lib/guides/access';
-import { isGuideClaimOpen } from '@/lib/guides/phase';
+import { guidePhase } from '@/lib/guides/phase';
 import { emailDelivered, findReusableClaim, fulfillPromoClaim } from '@/lib/guides/fulfill';
 
 /** The email lead source of a newsletter opt-in made on the claim form. */
@@ -118,10 +121,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const limited = await rateLimit(req, 'guides:claim', RATE_LIMITS.guideClaim);
     if (limited) return limited;
 
-    const now = new Date();
-    if (!isGuideClaimOpen(now)) {
-        return noStore(NextResponse.json({ error: 'This offer has ended.', code: 'PROMO_ENDED' }, { status: 409 }));
+    if (guidePhase() !== 'free') {
+        return noStore(NextResponse.json(
+            { error: 'The guides are no longer free to claim. Refresh the page to see the price.', code: 'CLAIM_CLOSED' },
+            { status: 409 },
+        ));
     }
+    const now = new Date();
 
     let raw: unknown;
     try {

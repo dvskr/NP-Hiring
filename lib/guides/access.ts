@@ -8,7 +8,7 @@ import { randomBytes } from 'node:crypto';
  * the GUIDES_COOKIE and redirects to the clean /guides/library page, so the
  * token never sits in an address that analytics tags, the browser history or
  * a referrer header would carry. The success page (after a checkout) and the
- * claim route (during the launch promo) set the same cookie. Downloads are
+ * claim route (while the guides are free to claim) set the same cookie. Downloads are
  * authorised by the cookie, never by a URL.
  *
  * Tokens are lowercase hex because middleware lowercases every page path.

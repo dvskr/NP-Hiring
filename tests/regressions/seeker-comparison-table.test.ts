@@ -72,8 +72,9 @@ interface MarkedRow {
 /** The judge's final table, in order. No row carries a note. */
 const JUDGED_ROWS: readonly MarkedRow[] = [
     { feature: `Focused on ${brand.niche.short} and APRN Jobs`, us: true, indeed: false, linkedin: false },
-    // "Free for Job Seekers" until the guides store (2026-11-07): from 2027 a
-    // job seeker can buy an optional career guide, so the row names the search.
+    // "Free for Job Seekers" until the guides store (2026-11-07): once
+    // checkout is set up a job seeker can buy an optional career guide, so the
+    // row names the search.
     { feature: 'Free Job Search and Applications', us: true, indeed: true, linkedin: 'partial' },
     { feature: 'Licensure Guides for All 50 States and DC', us: true, indeed: 'partial', linkedin: false },
     { feature: 'Saved Jobs and Application Tracking', us: true, indeed: true, linkedin: true },
@@ -405,8 +406,8 @@ describe('D25: /for-job-seekers renders the rows with the audited markup', () =>
     it('keeps the true half of each sentence it cut', () => {
         const text = textOf(html);
         expect(text).toContain("Pay is shown whenever the employer's posting includes it.");
-        // 2026-11-07: "100% free" left with the career guides store (sold from
-        // 2027); what stays free is searching and applying.
+        // 2026-11-07: "100% free" left with the career guides store (sold once
+        // checkout is set up); what stays free is searching and applying.
         expect(text).toContain('Free to search and apply. No sign-up required to browse. Create a profile to apply.');
     });
 });

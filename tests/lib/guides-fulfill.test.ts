@@ -5,7 +5,8 @@
  * only (the success page passes sendEmail: false). Refunds and
  * chargebacks take access back; a partial refund or a won dispute does not.
  *
- * During the launch promo a claim (fulfillPromoClaim) records a 'promo' row:
+ * While the guides are free to claim (lib/guides/phase.ts#guidePhase), a
+ * claim (fulfillPromoClaim) records a 'promo' row:
  * no amount, no Stripe ids, the product's own guides and never the add-on.
  * A claim the same email already holds is re-used, its email re-sent at most
  * once per ten minutes; claims for one address run under a transaction lock,

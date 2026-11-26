@@ -30,8 +30,8 @@
 | About 2026-11-11 | Quarterly NLC roster and scope-of-practice review is due (last 2026-08-11) | CLAUDE, section 6 |
 | After 2026-11-14 | NP Week 2026 is over | CLAUDE refreshes or redirects the NP Week post (2.24) |
 | About 2026-11-21 | First expiry warning emails for promo posts (sent 5 days before a 60-day post ends) | Only if the $199 renewal should be on sale by then: Stripe live and paid posting on (1.1, 1.2), with the 2027 re-price shipped first (code that predates it would sell the renewal at the old price). Otherwise the email offers a free repost, which is fine |
+| When the Stripe key and webhook secret are set in Production (and redeployed) | The career guides at /guides go on sale at their catalog prices ($9 to $49 a guide, bundles $49, $59 and $99; owner decision of 2026-11-26), whatever the posting promo does. Until then every guide and bundle stays free to claim with an email, and no page shows a Buy button. A guide claimed before stays in its reader's library | Stripe live (1.1) and the two Stripe values of 1.2. `ENABLE_PAID_POSTING` is not needed for the guides, so posting stays free and renewals stay closed until it is turned on |
 | Before 2027-01-01 10:00 UTC | The promo ends (midnight Hawaii time, `config.promoEndsAt`) and the paid ladder starts on its own. With no deploy, the pricing copy switches: emails at send time, the employer app on its next render, and each page when its cached render is replaced. A page re-renders at most once an hour (the homepage once a minute), and the first request after that window is still answered with the old render while it triggers the new one, so a page shows the promo once more to its first visitor after the switch, however late that visit comes. /terms does not switch (2.15) | Stripe live (1.1), paid posting on (1.2), pricing decisions made (3.1) |
-| Same instant | The career guides at /guides go on sale at their catalog prices ($9 to $39 a guide, bundles $39, $49 and $69); until then every guide and bundle is free to claim with an email. The store pages switch within the hour, like /pricing | Nothing beyond the paid ladder's steps: the guides use the same Stripe account, webhook events, paid posting flag and 2.33 checks |
 | 2026-12-31 | The DEA telemedicine flexibilities for prescribing controlled substances expire unless the special registration rule is published first | CLAUDE re-checks the prescribing post, the remote guide and the telehealth FAQ on the remote, telehealth and psychiatric hubs (2.24) |
 | About 2027-03-01 | Promo posts made on 2026-12-31 reach their 60 days | CLAUDE may retire the promo code paths (`docs/pricing-system.md` section 11) |
 | 2030-07-01 | New York's NP Modernization Act sunset date | Re-check New York before then (section 6) |
@@ -45,7 +45,7 @@ you retired the Employer plan on 2026-10-24, its code was deleted on 2026-10-27,
 pack checkout prices itself from `lib/config.ts`. In test mode, archive the plan's Product, Price and
 Payment Link, and drop the four plan events from the test endpoint: a session from that link is alerted
 for a refund and never fulfilled.
-- Why: nothing can be sold without it. Hard deadline 2027-01-01, or about 2026-11-21 if renewals should sell for the first expiry warnings.
+- Why: nothing can be sold without it. The career guides go on sale as soon as the live key and the webhook secret are set (owner decision 2026-11-26), so they wait on it today. Hard deadline for posting 2027-01-01, or about 2026-11-21 if renewals should sell for the first expiry warnings.
 - Where: Stripe Dashboard, live mode. Step list with exact values: `docs/LAUNCH_RUNBOOK.md` section 8a.
 
 **1.2 Vercel Production env for paid posting.** Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
@@ -53,7 +53,7 @@ for a refund and never fulfilled.
 The retired plan's Payment Link variable is gone from the code (2026-10-27): nothing reads it, and
 `npm run fork:preflight` no longer checks it. Keep `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`,
 `DISCORD_WEBHOOK_URL` and `SENTRY_DSN` set.
-- Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 to every Stripe event until both are set. After 2027-01-01, no test-mode key may stay in Production.
+- Why: without the flag and the key, checkout answers 503. Turning the flag on during the promo only opens renewals; new posts stay free. The career guides need only the key and the webhook secret, never the flag, and their checkout opens as soon as both are set: set the live key, never a test-mode one. Set the key and the webhook secret before the flag, or in the same deploy: the webhook answers 503 to every Stripe event until both are set. After 2027-01-01, no test-mode key may stay in Production.
 - Where: Vercel, then redeploy. Table: `docs/LAUNCH_RUNBOOK.md` section 8b. A restricted live key can stand in for the secret key; its permissions are in `docs/pricing-system.md` section 9b.
 
 **1.3 Google Analytics.** Done 2026-09-28 (`G-PT7KQ9ZEXQ`, 14 month retention). Optional: `GA_API_SECRET`

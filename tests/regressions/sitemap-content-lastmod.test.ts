@@ -196,14 +196,6 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
 ];
 
 /**
- * The UTC day the guides store follow-ups shipped, and the pages whose copy
- * they changed: the claim form's newsletter box, the promo FAQ answer and the
- * guides' page counts on the store and product pages, and the guide sections
- * of the privacy policy with its "Last updated" line. /guides and
- * /guides/[slug] left the store's own group, /privacy the AI apps group. Same
- * rule: move the constant and these entries together if they ship later.
- */
-/**
  * The UTC day the definition guides shipped, and the pages whose copy that
  * release changed: /resources (the new guides' cards; it left the guides
  * store group). The two guides and /press shipped here too and moved on to
@@ -213,17 +205,18 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
 const DEFINITION_GUIDES_DAY = '2026-11-23';
 const DEFINITION_GUIDES_PAGES: readonly string[] = ['/resources'];
 
-const GUIDES_FOLLOW_UPS_DAY = '2026-11-07';
-const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides/[slug]'];
-
 /**
- * The UTC day the store got its pointer to the sister board's guides (owner
- * decision 2026-11-26), and the page whose copy that changed: /guides, which
- * left the store follow-ups group (the product pages stay there). Same rule:
- * move the constant and these entries together if it ships later.
+ * The UTC day of the guides store's two changes of 2026-11-26 (owner
+ * decisions), and the pages whose copy they changed: /guides got its pointer
+ * to the sister board's guides, and /guides with every product page got the
+ * new catalog prices, a phase read from the Stripe settings instead of the
+ * promo clock, free copy with no end date, and Product and ItemList JSON-LD.
+ * Both came from the store follow-ups group (2026-11-07, which has no page
+ * left: /privacy moved on to the AI apps group) and left PROMO_SWITCH_PATHS.
+ * Same rule: move the constant and these entries together if they ship later.
  */
-const SISTER_GUIDES_DAY = '2026-11-26';
-const SISTER_GUIDES_PAGES: readonly string[] = ['/guides'];
+const GUIDES_UPDATE_DAY = '2026-11-26';
+const GUIDES_UPDATE_PAGES: readonly string[] = ['/guides', '/guides/[slug]'];
 
 /**
  * The UTC day the AI app connector was rebuilt on PMHNP Hiring's design, and
@@ -273,7 +266,7 @@ const TOOLS_SUITE_PAGES: readonly string[] = [
     '/tools/interview-scorecard-builder',
 ];
 
-/** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */
+/** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1). The guides store left on 2026-11-26. */
 const PROMO_SWITCH_PAGES = [
     '/pricing',
     '/for-employers',
@@ -287,9 +280,6 @@ const PROMO_SWITCH_PAGES = [
     '/tools/salary-benchmark',
     '/tools/cost-per-hire-calculator',
     ...COMPARE_PAGE_PATHS,
-    // Every price block reads "Free" with its end date while the promo runs (lib/guides/phase.ts).
-    '/guides',
-    '/guides/[slug]',
 ];
 
 /** The sitemaps read the clock (lastmods, the canonical predicate), so sections 4 and 5 pin it. */
@@ -464,7 +454,7 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, SISTER_GUIDES_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES, SALARY_BUILD_PAGES, TOOLS_SUITE_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_UPDATE_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES, SALARY_BUILD_PAGES, TOOLS_SUITE_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -476,8 +466,7 @@ describe('lastmod helpers', () => {
             ...PRICING_RELEASE_PAGES,
             ...AI_APPS_RELEASE_PAGES,
             ...GUIDES_RELEASE_PAGES,
-            ...GUIDES_FOLLOW_UPS_PAGES,
-            ...SISTER_GUIDES_PAGES,
+            ...GUIDES_UPDATE_PAGES,
             ...DEFINITION_GUIDES_PAGES,
             ...CONNECTOR_REBUILD_PAGES,
             ...SALARY_BUILD_PAGES,
@@ -494,10 +483,8 @@ describe('lastmod helpers', () => {
                 ? DEFINITION_GUIDES_DAY
                 : CONNECTOR_REBUILD_PAGES.includes(pagePath)
                 ? CONNECTOR_REBUILD_DAY
-                : SISTER_GUIDES_PAGES.includes(pagePath)
-                ? SISTER_GUIDES_DAY
-                : GUIDES_FOLLOW_UPS_PAGES.includes(pagePath)
-                ? GUIDES_FOLLOW_UPS_DAY
+                : GUIDES_UPDATE_PAGES.includes(pagePath)
+                ? GUIDES_UPDATE_DAY
                 : GUIDES_RELEASE_PAGES.includes(pagePath)
                 ? GUIDES_RELEASE_DAY
                 : AI_APPS_RELEASE_PAGES.includes(pagePath)
@@ -551,12 +538,13 @@ describe('lastmod helpers', () => {
         }
     });
 
-    it('guides store: the store and its product pages carry their last ship day until the promo ends, then the switch', () => {
-        for (const [pagePath, day] of [['/guides', SISTER_GUIDES_DAY], ['/guides/[slug]', GUIDES_FOLLOW_UPS_DAY]] as const) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(day);
-            expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(true);
-            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(new Date(`${day}T00:00:00.000Z`));
-            expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
+    it('guides store: the store and its product pages carry 2026-11-26 on both sides of the promo end', () => {
+        for (const pagePath of ['/guides', '/guides/[slug]']) {
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(GUIDES_UPDATE_DAY);
+            expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(false);
+            for (const at of [LAST_PROMO_MS, AFTER_SWITCH]) {
+                expect(pageContentDate(pagePath, at), pagePath).toEqual(new Date(`${GUIDES_UPDATE_DAY}T00:00:00.000Z`));
+            }
         }
     });
 
@@ -875,8 +863,8 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
 
     it('guides store: /guides and one page per product are listed with their last ship day, and none of the private pages', async () => {
         const entries = await byUrl();
-        const shipDay = new Date(`${GUIDES_FOLLOW_UPS_DAY}T00:00:00.000Z`);
-        expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(new Date(`${SISTER_GUIDES_DAY}T00:00:00.000Z`));
+        const shipDay = new Date(`${GUIDES_UPDATE_DAY}T00:00:00.000Z`);
+        expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(shipDay);
         for (const product of allProducts()) {
             expect(entries.get(`${BASE}/guides/${product.slug}`)?.lastModified, product.slug).toEqual(shipDay);
         }
@@ -928,10 +916,11 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         const templatePages = [...entries.values()].filter((entry) => entry.url.includes('/job-description-templates/'));
         expect(templatePages.length).toBeGreaterThan(0);
         for (const entry of templatePages) expect(entry.lastModified, entry.url).toEqual(SWITCH);
-        // Every guide and bundle page prints its price block, which switched too.
-        const productPages = [...entries.values()].filter((entry) => entry.url.startsWith(`${BASE}/guides/`));
-        expect(productPages).toHaveLength(allProducts().length);
-        for (const entry of productPages) expect(entry.lastModified, entry.url).toEqual(SWITCH);
+        // The guides switch on the Stripe settings, not the promo clock, so the
+        // store and its product pages keep their date.
+        const storePages = [...entries.values()].filter((entry) => entry.url.startsWith(`${BASE}/guides`));
+        expect(storePages).toHaveLength(allProducts().length + 1);
+        for (const entry of storePages) expect(entry.lastModified, entry.url).toEqual(new Date(`${GUIDES_UPDATE_DAY}T00:00:00.000Z`));
         // Pages whose copy does not follow the promo clock keep their dates.
         expect(entries.get(`${BASE}/about`)?.lastModified).toEqual(pageContentDate('/about', PROMO_RUNNING));
         expect(entries.get(`${BASE}/tools/licensure-checker`)?.lastModified)

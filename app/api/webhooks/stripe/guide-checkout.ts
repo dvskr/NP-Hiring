@@ -1,6 +1,6 @@
 /**
  * The guides store's events in the Stripe webhook (./route.ts). Only paid
- * guide sales reach Stripe: a launch-promo claim (POST /api/guides/claim)
+ * guide sales reach Stripe: a free claim (POST /api/guides/claim)
  * has no payment, so no event ever names one.
  *
  *   checkout paid   lib/guides/fulfill.ts#fulfillGuideSession records the

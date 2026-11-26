@@ -209,7 +209,7 @@ function bundleTitles(bundle: Bundle): string[] {
   return bundle.guides.map((slug) => GUIDES[slug].title);
 }
 
-/** The price as the store shows it today: free during the launch offer, then the catalog price (lib/guides/phase.ts). */
+/** The price as the store shows it: free to claim until checkout is set up, then the catalog price (lib/guides/phase.ts). */
 function priceText(product: Product): string {
   const copy = guidePriceCopy(product);
   return copy.note ? `${copy.price} (${copy.note})` : copy.price;

@@ -821,7 +821,7 @@ export function trackShare(contentType: string, itemId: string, method: string) 
 }
 
 /**
- * A guide claimed free during the launch promo (app/api/guides/claim). Its
+ * A guide claimed free (app/api/guides/claim, while checkout is not set up). Its
  * own event, so the application leads that generate_lead counts stay apart.
  */
 export function trackGuideClaim(product: string) {

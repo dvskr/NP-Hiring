@@ -207,11 +207,11 @@ describe('section 1: the copy and the switch at config.promoEndsAt', () => {
             '/compare/np-hiring-vs-indeed': 'the three comparison pages',
             '/compare/np-hiring-vs-aanp-jobcenter': 'the three comparison pages',
             '/compare/np-hiring-vs-enp-network': 'the three comparison pages',
-            // The guides store (2026-11-07): its price blocks read "Free" until the switch (section 2i).
-            '/guides': 'the guides store',
-            '/guides/[slug]': 'its guide pages',
+            // The guides store left the set on 2026-11-26: it switches on the
+            // Stripe settings, not the promo clock (section 2i).
         };
         const bullet = lineWith(section1d, '**Sitemap lastmod:**');
+        expect(bullet).not.toMatch(/guides store|guide pages/);
         for (const switchPath of PROMO_SWITCH_PATHS) {
             const name = NAMED_AS[switchPath];
             expect(name, `${switchPath} joined PROMO_SWITCH_PATHS: name it in the section 1d lastmod bullet and in NAMED_AS`).toBeDefined();

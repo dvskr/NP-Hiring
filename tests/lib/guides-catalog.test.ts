@@ -1,7 +1,8 @@
 /**
  * The guides store catalog is the only source of what the store charges.
- * These tests pin the published prices and the bundle promises the store
- * pages make from them, so a price edit that breaks a promise fails here
+ * These tests pin the published prices (owner, 2026-11-26) and the bundle
+ * promises the store pages make from them, so a price edit that breaks a
+ * promise fails here
  * instead of on the live page. The store copy rules ride along: no en or em
  * dash anywhere in a product, and share cards that are short, carry no
  * figures and never a price.
@@ -41,14 +42,14 @@ describe('guide prices', () => {
     it('charges the published price for every product', () => {
         expect(Object.fromEntries(allProducts().map((p) => [p.slug, p.priceCents]))).toEqual({
             'compensation-report': 900,
-            'first-year-playbook': 1900,
-            'interview-prep-pack': 1900,
-            'negotiate-like-an-np': 2900,
-            'telehealth-playbook': 2900,
-            'launch-your-practice': 3900,
-            'career-bundle': 3900,
-            'practice-owner-bundle': 4900,
-            'complete-library': 6900,
+            'first-year-playbook': 2900,
+            'interview-prep-pack': 2900,
+            'negotiate-like-an-np': 3900,
+            'telehealth-playbook': 3900,
+            'launch-your-practice': 4900,
+            'career-bundle': 4900,
+            'practice-owner-bundle': 5900,
+            'complete-library': 9900,
         });
         expect(ADD_ON).toEqual({ guide: 'compensation-report', priceCents: 500 });
     });
@@ -61,11 +62,22 @@ describe('guide prices', () => {
         }
     });
 
-    it('keeps the Complete Library promise: all six guides for less than half the separate price', () => {
+    it('keeps the Complete Library promise: all six guides and the largest saving of any bundle', () => {
         const library = BUNDLES['complete-library'];
         expect([...library.guides].sort()).toEqual([...GUIDE_SLUGS].sort());
-        expect(library.priceCents * 2).toBeLessThan(separatePriceCents(library));
         expect(library.bestValue).toBe(true);
+        for (const slug of BUNDLE_ORDER) {
+            if (slug !== library.slug) expect(savingsCents(library), slug).toBeGreaterThan(savingsCents(BUNDLES[slug]));
+        }
+        // $194 bought one at a time, $99 together: the "Save $95" the store prints.
+        expect(separatePriceCents(library)).toBe(19400);
+        expect(savingsCents(library)).toBe(9500);
+    });
+
+    it('makes no product copy promise a fraction of the separate price', () => {
+        for (const product of allProducts()) {
+            expect(`${product.subtitle} ${product.summary}`, product.slug).not.toMatch(/\bhalf\b|\bthird\b|%/i);
+        }
     });
 
     it('makes the Complete Library the cheapest way to own every guide', () => {

@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   // same way (2026-10-06): it was still a count claim, just a vaguer one.
   // The description names what a seeker can do, with no number at all.
   description:
-    // 2026-11-07: "read free career guides" became untrue in 2027, when the
+    // 2026-11-07: "read free career guides" stops being true once the
     // career guides at /guides are sold; the free articles are resources.
     `Find your next ${brand.niche.long} position. Search ${brand.niche.descriptor} jobs in every specialty, see pay whenever the employer posts it, get daily alerts, and read career resources.`,
   openGraph: {

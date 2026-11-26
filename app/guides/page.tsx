@@ -7,6 +7,7 @@ import { StickerAccordion, StickerFooter, StickerHead, StickerStage, StickerStyl
 import GuideAction from '@/components/guides/GuideAction';
 import GuideCover, { COVER_PALETTES, CoverStack } from '@/components/guides/GuideCover';
 import GuidePrice from '@/components/guides/GuidePrice';
+import GuideSchema from '@/components/guides/GuideSchema';
 import { GUIDES_CSS } from '@/components/guides/styles';
 import SisterBoardGuidesSection from '@/components/sister-board/SisterBoardGuidesSection';
 import { stickerFill } from '@/lib/design/sticker-css';
@@ -20,8 +21,9 @@ import {
     type Bundle,
     type ProductSlug,
 } from '@/lib/guides/catalog';
-import { guidePriceCopy, type GuidePriceCopy } from '@/lib/guides/phase';
+import { guidePhase, guidePriceCopy, type GuidePriceCopy } from '@/lib/guides/phase';
 import { GUIDES_STORE_OG_CARD, guideOgImageUrl } from '@/lib/guides/og';
+import { storeItemListJsonLd } from '@/lib/guides/schema';
 import { guidesFaqs, guidesMetaSentence, guidesStorePills, type GuidesPill } from './guides-copy';
 
 /**
@@ -29,11 +31,13 @@ import { guidesFaqs, guidesMetaSentence, guidesStorePills, type GuidesPill } fro
  * bundles, the single guides, a comparison table, the FAQ and a short pointer
  * to the sister board's own guides (in every phase).
  *
- * Every price block is guidePriceCopy(product, now) and every action follows
- * its phase: the claim form while the guides are free (through
- * config.promoEndsAt), checkout after it. The page reads the clock per
- * render and re-renders hourly, like /pricing, so the switch shows within the
- * hour without a deploy; it is in PROMO_SWITCH_PATHS for its sitemap date.
+ * Every price block is guidePriceCopy(product, phase) and every action
+ * follows the phase (lib/guides/phase.ts#guidePhase, read once per render):
+ * the claim form while checkout is not set up, checkout once it is. No Buy
+ * button renders in the free phase, where it could not work. The phase comes
+ * from this deployment's Stripe settings, never the promo clock; the page
+ * still re-renders hourly, so it follows the same settings the claim route
+ * and checkout read.
  */
 export const revalidate = 3600;
 
@@ -46,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const summary = `Six PDF guides for ${brand.niche.descriptor}s: pay data, the first year, interviews, negotiation, telehealth and starting a practice.`;
     return {
         title,
-        description: `${summary} ${guidesMetaSentence(new Date())}`,
+        description: `${summary} ${guidesMetaSentence(guidePhase())}`,
         openGraph: {
             title: `${brand.niche.short} Career Guides`,
             description: summary,
@@ -232,16 +236,17 @@ function ComparisonTable({ copies }: { readonly copies: PriceCopies }) {
 }
 
 export default function GuidesStorePage() {
-    // One clock read per render: every price block, action, pill and answer switches together.
-    const now = new Date();
-    const copies = Object.fromEntries(allProducts().map((product) => [product.slug, guidePriceCopy(product, now)])) as PriceCopies;
-    const pills = guidesStorePills(now);
-    const faqs = guidesFaqs(now);
+    // One phase read per render: every price block, action, pill and answer switches together.
+    const phase = guidePhase();
+    const copies = Object.fromEntries(allProducts().map((product) => [product.slug, guidePriceCopy(product, phase)])) as PriceCopies;
+    const pills = guidesStorePills(phase);
+    const faqs = guidesFaqs(phase);
 
     return (
         <>
             <StickerStyles />
             <style>{GUIDES_CSS}</style>
+            <GuideSchema data={storeItemListJsonLd()} />
 
             <div className="pseo-crumb-band">
                 <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Career Guides' }]} />

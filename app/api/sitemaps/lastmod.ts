@@ -149,8 +149,13 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // guides' page counts.
   // 2026-11-26 (sister board guides): the store's pointer to the sister
   // board's guides, after the FAQ.
+  // 2026-11-26 (guides sold once checkout is set up, owner decision): the new
+  // catalog prices, a phase read from the Stripe settings instead of the
+  // promo clock, free copy that names no end date, and Product and ItemList
+  // JSON-LD. Both pages left PROMO_SWITCH_PATHS the same day. Their copy
+  // switches again when the Stripe settings are added, which takes a deploy.
   '/guides': '2026-11-26',
-  '/guides/[slug]': '2026-11-07',
+  '/guides/[slug]': '2026-11-26',
   // 2026-10-25 (2027 re-price): §6 to §8 state the new prices and both renewal prices, drop the plan, and "Last updated" moved;
   // 2026-10-26 (Phase 3): §6 and §7 add the 5-post pack and §8 says all sales are final.
   '/terms': '2026-10-26',
@@ -329,11 +334,8 @@ export const PROMO_SWITCH_PATHS: ReadonlySet<string> = new Set([
   '/compare/np-hiring-vs-indeed',
   '/compare/np-hiring-vs-aanp-jobcenter',
   '/compare/np-hiring-vs-enp-network',
-  // The guides store: every price block reads "Free" with its date while the
-  // promo runs and the catalog price after it (lib/guides/phase.ts
-  // guidePriceCopy), and the claim form gives way to checkout.
-  '/guides',
-  '/guides/[slug]',
+  // The guides store left the set on 2026-11-26: it switches on this
+  // deployment's Stripe settings, not the promo clock (lib/guides/phase.ts).
 ]);
 
 /**

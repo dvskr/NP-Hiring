@@ -2,7 +2,7 @@
  * The reader's side of the guides store: what a browser's library cookie
  * unlocks, and the download counter behind each purchase.
  *
- * A purchase is a paid Stripe sale or a launch-promo claim; both unlock their
+ * A purchase is a paid Stripe sale or a free claim; both unlock their
  * guides the same way. A refunded or disputed sale unlocks nothing (a promo
  * claim is never either: it has no payment).
  */

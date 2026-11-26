@@ -2,14 +2,14 @@
  * POST /api/guides/checkout  { product, addOn? }  ->  { url, amountCents }
  *
  * Opens a Stripe Checkout session for one product from the guides store,
- * from config.promoEndsAt on. Until then every guide is claimed free
- * (POST /api/guides/claim) and this route never calls Stripe. Refused, in
- * this order, by lib/guides/phase.ts#guideSaleClosedReason:
- *   503 PAID_POSTING_DISABLED  ENABLE_PAID_POSTING is off
+ * once this deployment can take the payment: lib/guides/phase.ts#guidePhase
+ * is 'paid' when the Stripe key and the webhook secret are both set, and the
+ * pages show a Buy button only then. ENABLE_PAID_POSTING and the posting
+ * promo play no part. Otherwise every guide is claimed free
+ * (POST /api/guides/claim) and this route refuses before calling Stripe:
  *   503 STRIPE_NOT_CONFIGURED  the Stripe key or the webhook secret is
  *                              missing: without the secret the webhook could
  *                              not record the sale
- *   409 PROMO_ACTIVE           the launch promo is still running
  *
  * Creates nothing in the database: the purchase is recorded by
  * lib/guides/fulfill.ts once Stripe reports the session paid, keyed on the
@@ -25,7 +25,6 @@ import type Stripe from 'stripe';
 import { z } from 'zod';
 import { getStripe } from '@/lib/stripe';
 import { getBaseUrl } from '@/lib/env';
-import { config } from '@/lib/config';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -33,7 +32,7 @@ import { verifyCsrf } from '@/lib/csrf';
 import { gaCheckoutMetadata } from '@/lib/analytics-server';
 import { ADD_ON, GUIDES, addOnEligible, getProduct, productGuides, type Product } from '@/lib/guides/catalog';
 import { GUIDE_CHECKOUT_COOKIE, addToCheckoutCookie, checkoutCookieOptions } from '@/lib/guides/access';
-import { GUIDE_CHECKOUT_TYPE, guideSaleClosedReason, type GuideSaleClosedReason } from '@/lib/guides/phase';
+import { GUIDE_CHECKOUT_TYPE, guidePhase } from '@/lib/guides/phase';
 import { ADD_ON_METADATA_VALUE } from '@/lib/guides/fulfill';
 
 const BODY = z.object({
@@ -79,15 +78,16 @@ async function optionalUser(): Promise<{ id: string; email: string | null } | nu
     }
 }
 
-/** The answer while guides cannot be bought (see the file header). */
-function saleClosed(reason: GuideSaleClosedReason): NextResponse {
-    if (reason === 'PROMO_ACTIVE') {
-        return NextResponse.json({ error: `The guides go on sale on ${config.ladderStartsLabel}.`, code: reason }, { status: 409 });
-    }
-    if (reason === 'STRIPE_NOT_CONFIGURED') {
-        logger.error('Guide checkout attempted but Stripe or its webhook secret is not configured', null);
-    }
-    return NextResponse.json({ error: 'Checkout is unavailable right now. Please try again later.', code: reason }, { status: 503 });
+/**
+ * The answer while guides cannot be bought (see the file header). The pages
+ * offer the free claim then, so the reader is sent back to it.
+ */
+function saleClosed(): NextResponse {
+    logger.warn('Guide checkout attempted while the guides are free to claim (Stripe or its webhook secret is not set)');
+    return NextResponse.json(
+        { error: 'The guides are free to claim right now. Refresh the page to claim one.', code: 'STRIPE_NOT_CONFIGURED' },
+        { status: 503 },
+    );
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -97,9 +97,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const limited = await rateLimit(req, 'guides:checkout', RATE_LIMITS.guideCheckout);
     if (limited) return limited;
 
-    const closed = guideSaleClosedReason(new Date());
-    const stripe = closed ? null : getStripe();
-    if (closed || !stripe) return saleClosed(closed ?? 'STRIPE_NOT_CONFIGURED');
+    const stripe = guidePhase() === 'paid' ? getStripe() : null;
+    if (!stripe) return saleClosed();
 
     let body: z.infer<typeof BODY>;
     try {

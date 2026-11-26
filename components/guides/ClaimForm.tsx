@@ -12,7 +12,7 @@ const NEWSLETTER_SOURCE = 'guide_claim';
 
 interface ClaimFormProps {
     readonly product: string;
-    /** The button label: guidePriceCopy(product, now).cta, decided by the page. */
+    /** The button label: guidePriceCopy(product, phase).cta, decided by the page. */
     readonly cta: string;
 }
 
@@ -32,7 +32,7 @@ interface ClaimAnswer {
 
 /** What to tell the reader when the claim route refused. */
 function refusal(status: number, answer: ClaimAnswer | null): string {
-    if (answer?.code === 'PROMO_ENDED') return 'This guide is no longer free to claim. Refresh the page to see its price.';
+    if (answer?.code === 'CLAIM_CLOSED') return 'This guide is no longer free to claim. Refresh the page to see its price.';
     if (status === 429) return 'Too many requests from this connection. Please wait a minute and try again.';
     return answer?.error ?? 'We could not add the guide. Please try again.';
 }
@@ -45,8 +45,8 @@ function accepted(answer: ClaimAnswer, email: string): ClaimState {
 }
 
 /**
- * The promo action: an email address, an unticked newsletter box and the
- * copy's button. POST /api/guides/claim records the claim and emails the
+ * The free phase's action: an email address, an unticked newsletter box and
+ * the copy's button. POST /api/guides/claim records the claim and emails the
  * library link; only a reader signed in with that address gets the guides in
  * this browser at once. The route checks the request's Origin
  * (lib/csrf.ts), which a same-origin fetch sends on its own, so the form

@@ -96,7 +96,7 @@ export const RATE_LIMITS = {
     shortlinkRedirect: { limit: 120, windowSeconds: 60 },
     /** Guides store: starting a checkout, 10 per minute per IP. */
     guideCheckout: { limit: 10, windowSeconds: 60 },
-    /** Guides store: claiming a guide during the launch promo, 5 per minute per IP (each claim can send an email). */
+    /** Guides store: claiming a guide while the guides are free to claim, 5 per minute per IP (each claim can send an email). */
     guideClaim: { limit: 5, windowSeconds: 60 },
     /** Guides store: claims for one email address, 6 per hour across every IP, so nobody can flood an inbox with delivery emails. */
     guideClaimPerEmail: { limit: 6, windowSeconds: 3600 },

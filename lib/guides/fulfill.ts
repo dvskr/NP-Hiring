@@ -8,8 +8,9 @@
  *     keyed on the Checkout session. Only the webhook sends the delivery
  *     email (sendEmail: false on the success page), so a send that fails is
  *     always the webhook's, and Stripe's retry sends it again.
- *   - a launch-promo claim (source 'promo'): fulfillPromoClaim, called by
- *     POST /api/guides/claim while lib/guides/phase.ts#isGuideClaimOpen. No
+ *   - a free claim (source 'promo', the name it kept from the launch
+ *     promo): fulfillPromoClaim, called by POST /api/guides/claim while
+ *     lib/guides/phase.ts#guidePhase is 'free'. No
  *     payment and no Stripe ids; a claim the same email already holds is
  *     re-used rather than duplicated (claims for one address are serialised
  *     with a transaction lock), and its email re-sent at most once per
@@ -237,8 +238,8 @@ async function findOrCreateClaim(
 }
 
 /**
- * A launch-promo claim of `product` for `email` (already trimmed and
- * lowercased). The caller checks lib/guides/phase.ts#isGuideClaimOpen first.
+ * A free claim of `product` for `email` (already trimmed and lowercased).
+ * The caller checks lib/guides/phase.ts#guidePhase first.
  * Unlocks the product's own guides, never the checkout add-on. `known` is the
  * caller's findReusableClaim answer, when it found one; otherwise the claim
  * is found or created here, under the address's lock.

@@ -1,132 +1,124 @@
 /**
- * lib/guides/phase.ts: the guides take their catalog prices from the same
- * instant the paid posting ladder starts (config.promoEndsAt). Until then
- * every product is free to claim and Stripe is never called; after it the
- * guides are sold, behind the same gate as the 5-post pack: paid posting on,
- * the Stripe key and STRIPE_WEBHOOK_SECRET set, the promo over. Every
- * phase-dependent sentence comes from guidePriceCopy, decided at the instant
- * it is asked.
+ * lib/guides/phase.ts: guidePhase() is the one check the store pages, the
+ * claim route and the checkout read (owner decision 2026-11-26). It is
+ * 'paid' when the Stripe key and STRIPE_WEBHOOK_SECRET are both set
+ * (trimmed), else 'free'. ENABLE_PAID_POSTING and the posting promo's clock
+ * play no part, so the guides never wait on the posting ladder and never open
+ * the renewals. guidePriceCopy prints the free offer (no end date: the free
+ * period ends when the Stripe settings are added) or the catalog price.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { config } from '@/lib/config';
-import { logger } from '@/lib/logger';
+import { BUNDLES, GUIDES, allProducts, formatPrice } from '@/lib/guides/catalog';
+import { GUIDE_CHECKOUT_TYPE, guidePhase, guidePriceCopy } from '@/lib/guides/phase';
 
-const env = vi.hoisted(() => ({
-    getPaidPostingStatus: vi.fn(),
-    getEnv: vi.fn(),
-}));
-vi.mock('@/lib/env', () => env);
+const PROMO_RUNNING = new Date('2026-11-26T12:00:00.000Z');
+const AFTER_PROMO = new Date(Date.parse(config.promoEndsAt) + 60 * 60 * 1000);
 
-import { BUNDLES, GUIDES } from '@/lib/guides/catalog';
-import {
-    GUIDE_CHECKOUT_TYPE,
-    guidePhase,
-    guidePriceCopy,
-    guideSaleClosedReason,
-    isGuideClaimOpen,
-    isGuideSaleOpen,
-} from '@/lib/guides/phase';
+function stripeSettings(key: string, webhookSecret: string): void {
+    vi.stubEnv('STRIPE_SECRET_KEY', key);
+    vi.stubEnv('STRIPE_WEBHOOK_SECRET', webhookSecret);
+}
 
-const LAST_PROMO_INSTANT = new Date(Date.parse(config.promoEndsAt) - 1);
-const LADDER_START = new Date(config.promoEndsAt);
-
-beforeEach(() => {
-    vi.clearAllMocks();
-    env.getPaidPostingStatus.mockReturnValue({ enabled: true, stripeConfigured: true, available: true });
-    env.getEnv.mockReturnValue({ STRIPE_WEBHOOK_SECRET: 'whsec_x' });
+afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
 });
 
-describe('the phase', () => {
-    it('is the promo until config.promoEndsAt, then paid, to the millisecond', () => {
-        expect(guidePhase(LAST_PROMO_INSTANT)).toBe('promo');
-        expect(guidePhase(LADDER_START)).toBe('paid');
-        expect(isGuideClaimOpen(LAST_PROMO_INSTANT)).toBe(true);
-        expect(isGuideClaimOpen(LADDER_START)).toBe(false);
-    });
-
-    it('is decided at the instant it is asked: the default is now', () => {
-        const promoClock = vi.spyOn(config, 'isPromoActive').mockReturnValueOnce(false);
-        expect(isGuideClaimOpen()).toBe(false);
-        expect(promoClock).toHaveBeenCalledWith(expect.any(Date));
-        promoClock.mockRestore();
-    });
-
+describe('guidePhase', () => {
     it('tags a guide checkout and its payment intent as "guide"', () => {
         expect(GUIDE_CHECKOUT_TYPE).toBe('guide');
     });
-});
 
-describe('guideSaleClosedReason: the paid gate, in the order the checkout answers it', () => {
-    it('is null once the promo is over with paid posting on and Stripe fully configured', () => {
-        expect(guideSaleClosedReason(LADDER_START)).toBeNull();
-        expect(isGuideSaleOpen(LADDER_START)).toBe(true);
+    it('is paid only when the Stripe key and the webhook secret are both set', () => {
+        stripeSettings('sk_live_x', 'whsec_x');
+        expect(guidePhase()).toBe('paid');
+        for (const [key, secret] of [['', ''], ['sk_live_x', ''], ['', 'whsec_x'], ['  ', 'whsec_x'], ['sk_live_x', '\n']] as const) {
+            stripeSettings(key, secret);
+            expect(guidePhase(), JSON.stringify([key, secret])).toBe('free');
+        }
     });
 
-    it('is PROMO_ACTIVE until config.promoEndsAt', () => {
-        expect(guideSaleClosedReason(LAST_PROMO_INSTANT)).toBe('PROMO_ACTIVE');
-        expect(isGuideSaleOpen(LAST_PROMO_INSTANT)).toBe(false);
+    it('never reads ENABLE_PAID_POSTING', () => {
+        for (const flag of ['true', 'false', '']) {
+            vi.stubEnv('ENABLE_PAID_POSTING', flag);
+            stripeSettings('', '');
+            expect(guidePhase(), flag).toBe('free');
+            stripeSettings('sk_live_x', 'whsec_x');
+            expect(guidePhase(), flag).toBe('paid');
+        }
     });
 
-    it('names paid posting first, then the Stripe key or the webhook secret, then the promo', () => {
-        env.getPaidPostingStatus.mockReturnValue({ enabled: false, stripeConfigured: false, available: false });
-        env.getEnv.mockReturnValue({ STRIPE_WEBHOOK_SECRET: undefined });
-        expect(guideSaleClosedReason(LAST_PROMO_INSTANT)).toBe('PAID_POSTING_DISABLED');
-
-        env.getPaidPostingStatus.mockReturnValue({ enabled: true, stripeConfigured: false, available: false });
-        expect(guideSaleClosedReason(LAST_PROMO_INSTANT)).toBe('STRIPE_NOT_CONFIGURED');
-
-        env.getPaidPostingStatus.mockReturnValue({ enabled: true, stripeConfigured: true, available: true });
-        expect(guideSaleClosedReason(LADDER_START)).toBe('STRIPE_NOT_CONFIGURED');
-
-        env.getEnv.mockReturnValue({ STRIPE_WEBHOOK_SECRET: 'whsec_x' });
-        expect(guideSaleClosedReason(LAST_PROMO_INSTANT)).toBe('PROMO_ACTIVE');
-    });
-
-    it('reads an environment that will not parse as closed, and logs why', () => {
-        const logged = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
-        env.getPaidPostingStatus.mockImplementation(() => { throw new Error('env invalid'); });
-
-        expect(guideSaleClosedReason(LADDER_START)).toBe('STRIPE_NOT_CONFIGURED');
-        expect(logged).toHaveBeenCalledWith(expect.stringContaining('would not parse'), expect.objectContaining({ message: 'env invalid' }));
-        logged.mockRestore();
+    it('never reads the promo clock: the same answer while the posting promo runs and after it', () => {
+        const promoClock = vi.spyOn(config, 'isPromoActive');
+        for (const at of [PROMO_RUNNING, AFTER_PROMO]) {
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(at);
+            stripeSettings('', '');
+            expect(guidePhase(), at.toISOString()).toBe('free');
+            stripeSettings('sk_live_x', 'whsec_x');
+            expect(guidePhase(), at.toISOString()).toBe('paid');
+            for (const product of allProducts()) guidePriceCopy(product);
+            vi.useRealTimers();
+        }
+        expect(promoClock).not.toHaveBeenCalled();
+        promoClock.mockRestore();
     });
 });
 
 describe('guidePriceCopy', () => {
-    it('says free through the promo end, with the catalog price struck beside it', () => {
-        const copy = guidePriceCopy(GUIDES['interview-prep-pack'], LAST_PROMO_INSTANT);
-        expect(copy).toEqual({
-            phase: 'promo',
+    it('free: "Free" beside the struck catalog price, with no end date, and the claim button', () => {
+        const guide = GUIDES['interview-prep-pack'];
+        const price = formatPrice(guide.priceCents);
+        expect(guidePriceCopy(guide, 'free')).toEqual({
+            phase: 'free',
             price: 'Free',
-            listPrice: '$19',
-            note: `Free through ${config.promoEndsLabel}, then $19`,
+            listPrice: price,
+            listPriceLabel: 'Regular price',
+            note: `Free for a limited time, then ${price}`,
             cta: 'Get it free',
         });
-        expect(guidePriceCopy(BUNDLES['complete-library'], LAST_PROMO_INSTANT).cta).toBe('Get them free');
+        expect(price).toBe('$29');
+        expect(guidePriceCopy(BUNDLES['complete-library'], 'free').cta).toBe('Get them free');
+        for (const product of allProducts()) {
+            expect(JSON.stringify(guidePriceCopy(product, 'free')), product.slug).not.toContain(config.promoEndsLabel);
+        }
     });
 
-    it('states only the price of a single guide once the promo is over: nothing says free', () => {
-        const copy = guidePriceCopy(GUIDES['interview-prep-pack'], LADDER_START);
-        expect(copy).toEqual({ phase: 'paid', price: '$19', listPrice: null, note: null, cta: 'Buy for $19' });
+    it('paid: only the catalog price of a single guide, and nothing says free', () => {
+        const copy = guidePriceCopy(GUIDES['interview-prep-pack'], 'paid');
+        expect(copy).toEqual({ phase: 'paid', price: '$29', listPrice: null, listPriceLabel: null, note: null, cta: 'Buy for $29' });
         expect(JSON.stringify(copy)).not.toMatch(/free/i);
     });
 
-    it('gives a bundle its separate total struck through and what it saves once the promo is over', () => {
-        // 9 + 19 + 19 + 29 + 29 + 39 = $144 one at a time, $69 together.
-        const copy = guidePriceCopy(BUNDLES['complete-library'], LADDER_START);
-        expect(copy).toEqual({
+    it('paid: a bundle\'s separate total struck through and what it saves', () => {
+        // 9 + 29 + 29 + 39 + 39 + 49 = $194 one at a time, $99 together.
+        expect(guidePriceCopy(BUNDLES['complete-library'], 'paid')).toEqual({
             phase: 'paid',
-            price: '$69',
-            listPrice: '$144',
-            note: 'Save $75 on buying them one at a time',
-            cta: 'Buy for $69',
+            price: '$99',
+            listPrice: '$194',
+            listPriceLabel: 'Bought one at a time',
+            note: 'Save $95 on buying them one at a time',
+            cta: 'Buy for $99',
         });
-        expect(JSON.stringify(copy)).not.toMatch(/free/i);
+        // 29 + 29 + 39 + 9 = $106 one at a time, $49 together.
+        expect(guidePriceCopy(BUNDLES['career-bundle'], 'paid').note).toBe('Save $57 on buying them one at a time');
+        // 49 + 39 + 9 = $97 one at a time, $59 together.
+        expect(guidePriceCopy(BUNDLES['practice-owner-bundle'], 'paid').note).toBe('Save $38 on buying them one at a time');
     });
 
-    it('uses no dashes', () => {
-        for (const now of [LAST_PROMO_INSTANT, LADDER_START]) {
-            expect(JSON.stringify(guidePriceCopy(GUIDES['telehealth-playbook'], now))).not.toMatch(/[–—]/);
+    it('reads the phase from the environment when none is given', () => {
+        stripeSettings('', '');
+        expect(guidePriceCopy(GUIDES['compensation-report']).phase).toBe('free');
+        stripeSettings('sk_live_x', 'whsec_x');
+        expect(guidePriceCopy(GUIDES['compensation-report']).phase).toBe('paid');
+    });
+
+    it('uses no dashes in either phase', () => {
+        for (const phase of ['free', 'paid'] as const) {
+            for (const product of allProducts()) {
+                expect(JSON.stringify(guidePriceCopy(product, phase)), `${phase} ${product.slug}`).not.toMatch(/[–—]/);
+            }
         }
     });
 });

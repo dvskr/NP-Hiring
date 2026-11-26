@@ -15,7 +15,7 @@ export interface AddOnOffer {
 
 interface BuyButtonProps {
     readonly product: string;
-    /** The button label: guidePriceCopy(product, now).cta, decided by the page. */
+    /** The button label: guidePriceCopy(product, phase).cta, decided by the page. */
     readonly label: string;
     /** Offered when the product does not already include the add-on guide. */
     readonly addOn?: AddOnOffer | null;

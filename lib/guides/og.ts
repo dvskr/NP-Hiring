@@ -17,7 +17,7 @@ export const GUIDES_STORE_OG_CARD: GuideOgCard = {
  * Share card for a store product. Card copy stays short and carries no
  * figures (tests/lib/guides-catalog.test.ts): the year in a title is
  * dropped, and a price never appears on a card, because a card is cached
- * by the networks that fetch it and a price on it would outlive the promo.
+ * by the networks that fetch it and a price on it would outlive a price change.
  */
 export function productOgCard(product: Product): GuideOgCard {
     return {

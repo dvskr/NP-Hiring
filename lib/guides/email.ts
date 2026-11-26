@@ -1,7 +1,7 @@
 /**
  * The delivery email of the guides store: the reader's link back to their
  * library from any device. One email type for both ways a reader gets
- * guides, a Stripe purchase and a launch-promo claim (POST /api/guides/claim);
+ * guides, a Stripe purchase and a free claim (POST /api/guides/claim);
  * the claim wording names no amount and no receipt, because nothing was paid.
  *
  * Transactional ('guide_purchase', the transactional sender, no unsubscribe

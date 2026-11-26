@@ -45,10 +45,10 @@
  *      Us: searching, alerts, saving and applying open no checkout. Every
  *      Stripe Checkout session the code opens buys an employer post, a
  *      renewal or a 5-post pack (app/api/create-checkout,
- *      app/api/create-renewal-checkout, app/api/create-pack-checkout), or,
- *      from 2027, an optional PDF career guide (app/api/guides/checkout,
- *      free to claim until then), which is why the label names the search
- *      and not the job seeker. The Terms price list covers postings,
+ *      app/api/create-renewal-checkout, app/api/create-pack-checkout), or
+ *      an optional PDF career guide (app/api/guides/checkout, once checkout
+ *      is set up; free to claim until then), which is why the label names
+ *      the search and not the job seeker. The Terms price list covers postings,
  *      renewals and packs (the Employer plan is retired and its code
  *      deleted). The autofill
  *      extension code defines pro and premium tiers

@@ -8,6 +8,7 @@ import { StickerHead, StickerStage, StickerStyles } from '@/components/sticker';
 import GuideAction, { addOnOffer } from '@/components/guides/GuideAction';
 import GuideCover, { COVER_PALETTES, CoverStack } from '@/components/guides/GuideCover';
 import GuidePrice from '@/components/guides/GuidePrice';
+import GuideSchema from '@/components/guides/GuideSchema';
 import { GUIDES_CSS } from '@/components/guides/styles';
 import { stickerFill } from '@/lib/design/sticker-css';
 import {
@@ -20,16 +21,18 @@ import {
     type Guide,
     type Product,
 } from '@/lib/guides/catalog';
-import { guidePriceCopy, type GuidePriceCopy } from '@/lib/guides/phase';
+import { guidePhase, guidePriceCopy, type GuidePhase, type GuidePriceCopy } from '@/lib/guides/phase';
 import { guideOgImageUrl, productOgCard } from '@/lib/guides/og';
+import { productJsonLd } from '@/lib/guides/schema';
 import { guidesFinePrint, guidesMetaSentence } from '../guides-copy';
 
 /**
  * /guides/<slug>: one guide or bundle. Its chapters (or the guides in the
- * bundle), who it is for, the bundles that contain the guide, and the price
- * block and action of the phase: the claim form while the guides are free,
- * checkout with the add-on checkbox after. Reads the clock per render and
- * re-renders hourly, like /guides.
+ * bundle), who it is for, the bundles that contain the guide, the price
+ * block and action of the phase (lib/guides/phase.ts#guidePhase): the claim
+ * form while checkout is not set up, checkout with the add-on checkbox once
+ * it is, and the Product JSON-LD with the same offer. Reads the phase per
+ * render and re-renders hourly, like /guides.
  */
 export const revalidate = 3600;
 export const dynamicParams = false;
@@ -50,7 +53,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const ogImage = guideOgImageUrl(productOgCard(product));
     return {
         title: `${product.title}: ${kindLabel(product)}`,
-        description: `${product.summary} ${guidesMetaSentence(new Date())}`,
+        description: `${product.summary} ${guidesMetaSentence(guidePhase())}`,
         openGraph: {
             title: product.title,
             description: product.summary,
@@ -108,7 +111,7 @@ function BundleContents({ bundle }: { readonly bundle: Bundle }) {
     );
 }
 
-function BundleUpsell({ guide, now }: { readonly guide: Guide; readonly now: Date }) {
+function BundleUpsell({ guide, phase }: { readonly guide: Guide; readonly phase: GuidePhase }) {
     const bundles = bundlesContaining(guide.slug);
     if (!bundles.length) return null;
     return (
@@ -124,7 +127,7 @@ function BundleUpsell({ guide, now }: { readonly guide: Guide; readonly now: Dat
                         <h3 className="stk-title font-heading" style={{ margin: 0 }}>{bundle.title}</h3>
                         <p className="stk-desc" style={{ margin: 0 }}>{bundle.subtitle}</p>
                         <div style={{ marginTop: 'auto' }}>
-                            <GuidePrice copy={guidePriceCopy(bundle, now)} size="sm" withNote={false} />
+                            <GuidePrice copy={guidePriceCopy(bundle, phase)} size="sm" withNote={false} />
                         </div>
                     </Link>
                 ))}
@@ -164,17 +167,18 @@ export default async function GuideProductPage({ params }: PageProps) {
     const product = getProduct(slug);
     if (!product) notFound();
 
-    // One clock read per render: the price block, the action, the add-on and the fine print switch together.
-    const now = new Date();
-    const copy = guidePriceCopy(product, now);
-    const addOn = copy.phase === 'paid' ? addOnOffer(product, now) : null;
-    const finePrint = guidesFinePrint(now);
+    // One phase read per render: the price block, the action, the add-on, the fine print and the JSON-LD switch together.
+    const phase = guidePhase();
+    const copy = guidePriceCopy(product, phase);
+    const addOn = phase === 'paid' ? addOnOffer(product) : null;
+    const finePrint = guidesFinePrint(phase);
     const isGuide = product.kind === 'guide';
 
     return (
         <>
             <StickerStyles />
             <style>{GUIDES_CSS}</style>
+            <GuideSchema data={productJsonLd(product, phase)} />
 
             <div className="pseo-crumb-band">
                 <Breadcrumbs items={[
@@ -225,7 +229,7 @@ export default async function GuideProductPage({ params }: PageProps) {
                 </div>
             </StickerStage>
 
-            {isGuide ? <BundleUpsell guide={product} now={now} /> : null}
+            {isGuide ? <BundleUpsell guide={product} phase={phase} /> : null}
 
             <StickerStage variant="blush" maxWidth={760}>
                 <p style={{ fontSize: '15px', color: '#5A4A42', margin: '0 0 14px', textAlign: 'center' }}>

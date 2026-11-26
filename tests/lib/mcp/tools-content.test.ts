@@ -5,8 +5,9 @@
  *  - Articles come from the blog's own merged list (lib/blog.ts: blog_posts,
  *    the license guides and the MDX posts), and an article's text reaches the
  *    model labelled as reference material.
- *  - The guides tool gives the store's own price wording (free during the
- *    launch offer, then the catalog price) and is not offered to ChatGPT.
+ *  - The guides tool gives the store's own price wording (free to claim
+ *    until the Stripe settings are added, then the catalog price, whatever
+ *    the posting promo does) and is not offered to ChatGPT.
  *  - The W-2 and 1099 comparison returns what the site's calculator returns
  *    for the same inputs (components/tools/take-home-model.ts) and names
  *    what was counted as zero; the converter states its assumptions and
@@ -42,7 +43,7 @@ import { compareW2And1099, convertPay, getPracticeAuthority } from '@/lib/mcp/to
 import { BLOG_CATEGORIES } from '@/lib/blog';
 import { resetBlogSearchCacheForTests } from '@/lib/blog-search';
 import { resetPayCacheForTests } from '@/lib/mcp/tools/np-pay';
-import { allProducts, formatPrice } from '@/lib/guides/catalog';
+import { BUNDLES, allProducts, formatPrice, savingsCents } from '@/lib/guides/catalog';
 import { computeTakeHome } from '@/components/tools/take-home-model';
 import { getStatePracticeAuthority, STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 import { CANDIDATE_ENDPOINT } from '@/lib/mcp/endpoints/candidate';
@@ -87,6 +88,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
 });
 
 describe('search_articles', () => {
@@ -152,24 +154,33 @@ describe('the tools each host is offered', () => {
 });
 
 describe('find_guides', () => {
-  it('gives every guide during the launch offer as free, with when the offer ends and the price after it', async () => {
+  it('gives every guide as free while checkout is not set up, with the price after it and no end date, even after the posting promo', async () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', '');
+    vi.stubEnv('STRIPE_WEBHOOK_SECRET', '');
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-11-23T12:00:00Z'));
+    vi.setSystemTime(new Date('2027-02-01T12:00:00Z'));
     const out = await findGuides.run({}, ctx);
     const items = (out.structured as ListViewData).items;
     expect(items).toHaveLength(allProducts().length);
     for (const item of items) expect(item.badge).toBe('Free');
     const first = allProducts()[0];
-    expect(out.text).toContain(`${first.title}, Free (Free through December 31, 2026, then ${formatPrice(first.priceCents)})`);
+    expect(out.text).toContain(`${first.title}, Free (Free for a limited time, then ${formatPrice(first.priceCents)})`);
+    expect(out.text).not.toContain('December 31');
     expect(out.text).toContain(`All guides: ${brand.baseUrl}/guides`);
   });
 
-  it('gives the catalog price once the offer is over', async () => {
+  it('gives the catalog price, and a bundle\'s saving, once checkout is set up, even while the posting promo runs', async () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_x');
+    vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_x');
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2027-02-01T12:00:00Z'));
+    vi.setSystemTime(new Date('2026-11-26T12:00:00Z'));
     const out = await findGuides.run({}, ctx);
-    const first = allProducts()[0];
-    expect((out.structured as ListViewData).items[0].badge).toBe(formatPrice(first.priceCents));
+    const items = (out.structured as ListViewData).items;
+    expect(items.map((item) => item.badge)).toEqual(allProducts().map((product) => formatPrice(product.priceCents)));
+    const library = BUNDLES['complete-library'];
+    expect(out.text).toContain(
+      `${library.title}, ${formatPrice(library.priceCents)} (Save ${formatPrice(savingsCents(library))} on buying them one at a time)`,
+    );
     expect(out.text).not.toContain('Free');
   });
 

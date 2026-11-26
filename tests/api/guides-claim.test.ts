@@ -1,9 +1,11 @@
 /**
- * POST /api/guides/claim: the launch promo's way to the guides. Until
- * config.promoEndsAt every product, bundles included, is free to claim with
- * an email address, and Stripe is never called:
+ * POST /api/guides/claim: the free phase's way to the guides. While this
+ * deployment cannot take a payment (lib/guides/phase.ts#guidePhase: the
+ * Stripe key or the webhook secret is missing), every product, bundles
+ * included, is free to claim with an email address, and Stripe is never
+ * called. The posting promo's clock and ENABLE_PAID_POSTING play no part:
  *   - CSRF checked, then 5 claims a minute per IP;
- *   - 409 PROMO_ENDED once lib/guides/phase.ts#isGuideClaimOpen is false;
+ *   - 409 CLAIM_CLOSED once both Stripe values are set;
  *   - a 'promo' row (amount 0, no Stripe ids, the product's guides and
  *     never the checkout add-on), found or created under a transaction lock
  *     on the address, and the delivery email;
@@ -15,7 +17,7 @@
  *   - newsletter: true opts the address in, and never fails the claim.
  * The route runs the real lib/guides/fulfill.ts against the Prisma mock.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -28,17 +30,13 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => ({
     rateLimit: vi.fn().mockResolvedValue(null),
     checkRateLimit: vi.fn().mockResolvedValue({ success: true, reset: 0, remaining: 5 }),
 }));
-vi.mock('@/lib/guides/phase', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('@/lib/guides/phase')>()),
-    isGuideClaimOpen: vi.fn(() => true),
-}));
 vi.mock('@/lib/guides/email', () => ({ sendGuidePurchaseEmail: vi.fn() }));
 vi.mock('@/lib/stripe', () => ({ getStripe: vi.fn() }));
 vi.mock('@/lib/newsletter', () => ({ subscribeToNewsletter: vi.fn(), subscribeNewAddressToNewsletter: vi.fn() }));
 
 import { NextResponse } from 'next/server';
 import { checkRateLimit, rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { isGuideClaimOpen } from '@/lib/guides/phase';
+import { config } from '@/lib/config';
 import { sendGuidePurchaseEmail } from '@/lib/guides/email';
 import { getStripe } from '@/lib/stripe';
 import { subscribeNewAddressToNewsletter, subscribeToNewsletter } from '@/lib/newsletter';
@@ -77,7 +75,9 @@ function echoCreate(): void {
 beforeEach(() => {
     vi.clearAllMocks();
     auth.getUser.mockResolvedValue({ data: { user: null } });
-    vi.mocked(isGuideClaimOpen).mockReturnValue(true);
+    // The free phase: no Stripe settings on this deployment.
+    vi.stubEnv('STRIPE_SECRET_KEY', '');
+    vi.stubEnv('STRIPE_WEBHOOK_SECRET', '');
     vi.mocked(sendGuidePurchaseEmail).mockResolvedValue('sent');
     gp.findFirst.mockReset().mockResolvedValue(null);
     gp.create.mockReset();
@@ -91,6 +91,11 @@ beforeEach(() => {
         typeof arg === 'function'
             ? (arg as (tx: unknown) => Promise<unknown>)({ $executeRaw: executeRaw, guidePurchase: prisma.guidePurchase })
             : Promise.all(arg as Promise<unknown>[])) as never);
+});
+
+afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
 });
 
 describe('the gate', () => {
@@ -136,15 +141,41 @@ describe('the gate', () => {
         expect(sendGuidePurchaseEmail).toHaveBeenCalledTimes(2);
     });
 
-    it('answers 409 PROMO_ENDED after the promo, and records nothing', async () => {
-        vi.mocked(isGuideClaimOpen).mockReturnValue(false);
+    it('answers 409 CLAIM_CLOSED once the Stripe key and the webhook secret are set, and records nothing', async () => {
+        vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_x');
+        vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_x');
         const res = await POST(claim({ product: 'career-bundle', email: 'np@example.com' }));
         expect(res.status).toBe(409);
-        expect(await res.json()).toEqual({ error: 'This offer has ended.', code: 'PROMO_ENDED' });
+        expect(await res.json()).toEqual({
+            error: 'The guides are no longer free to claim. Refresh the page to see the price.',
+            code: 'CLAIM_CLOSED',
+        });
         expect(gp.findFirst).not.toHaveBeenCalled();
         expect(gp.create).not.toHaveBeenCalled();
         expect(sendGuidePurchaseEmail).not.toHaveBeenCalled();
         expect(res.cookies.get(GUIDES_COOKIE)).toBeUndefined();
+    });
+
+    it('stays open with only one Stripe value set, a blank one, or paid posting on', async () => {
+        for (const [key, secret, paidPosting] of [
+            ['sk_test_x', '', 'true'],
+            ['', 'whsec_x', 'true'],
+            ['   ', 'whsec_x', 'false'],
+        ] as const) {
+            vi.stubEnv('STRIPE_SECRET_KEY', key);
+            vi.stubEnv('STRIPE_WEBHOOK_SECRET', secret);
+            vi.stubEnv('ENABLE_PAID_POSTING', paidPosting);
+            const res = await POST(claim({ product: 'career-bundle', email: 'np@example.com' }));
+            expect(res.status, `${key}|${secret}|${paidPosting}`).toBe(200);
+        }
+    });
+
+    it('stays open after the posting promo ends while checkout is not set up', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(Date.parse(config.promoEndsAt) + 24 * 60 * 60 * 1000));
+        const res = await POST(claim({ product: 'career-bundle', email: 'np@example.com' }));
+        expect(res.status).toBe(200);
+        expect(gp.create).toHaveBeenCalledTimes(1);
     });
 
     it('refuses an unknown product, a malformed body and a bad email', async () => {

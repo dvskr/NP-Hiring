@@ -2,9 +2,10 @@
  * The NP guides store catalog: six PDF guides, three bundles and one
  * checkout add-on. Every price the store shows or charges comes from here;
  * the checkout route resolves a product slug against this file and never
- * takes an amount from the request. The prices apply from the end of the
- * launch promotion (config.promoEndsAt); until then every product is free
- * to claim (lib/guides/phase.ts).
+ * takes an amount from the request. The prices are the owner's of
+ * 2026-11-26. They apply as soon as this deployment can take the payment
+ * (the Stripe key and the webhook secret set); until then every product is
+ * free to claim (lib/guides/phase.ts#guidePhase).
  *
  * Files live in the private Supabase Storage bucket GUIDES_BUCKET under
  * `<slug>.pdf` (scripts/guides/upload-guides.ts puts them there). Replacing a
@@ -86,7 +87,7 @@ export const GUIDES: Readonly<Record<GuideSlug, Guide>> = {
         slug: 'first-year-playbook',
         title: 'First-Year NP Playbook',
         subtitle: 'From boards to your first contract in any specialty',
-        priceCents: 1900,
+        priceCents: 2900,
         pages: 33,
         sourceFile: 'nphiring-first-year-np-playbook.pdf',
         audience: 'Final-semester NP students, new graduates waiting on boards, and NPs in their first year of practice, in every population focus.',
@@ -108,7 +109,7 @@ export const GUIDES: Readonly<Record<GuideSlug, Guide>> = {
         slug: 'interview-prep-pack',
         title: 'NP Interview Prep Pack',
         subtitle: 'Primary care, urgent care, acute care and telehealth questions with model answers',
-        priceCents: 1900,
+        priceCents: 2900,
         pages: 37,
         sourceFile: 'nphiring-np-interview-prep-pack.pdf',
         audience: 'New-grad and experienced NPs interviewing for primary care, urgent care, acute care, pediatric, women\'s health and telehealth roles.',
@@ -128,7 +129,7 @@ export const GUIDES: Readonly<Record<GuideSlug, Guide>> = {
         slug: 'negotiate-like-an-np',
         title: 'Negotiate Like an NP',
         subtitle: 'Scripts, offer math and contract red flags for every NP specialty',
-        priceCents: 2900,
+        priceCents: 3900,
         pages: 38,
         sourceFile: 'nphiring-negotiate-like-an-np.pdf',
         audience: 'NPs weighing a first offer, a job change, a 1099 or telehealth contract, a shift-based role or a raise after year one.',
@@ -150,7 +151,7 @@ export const GUIDES: Readonly<Record<GuideSlug, Guide>> = {
         slug: 'telehealth-playbook',
         title: 'The Telehealth NP Playbook',
         subtitle: 'Licensing across state lines, platform jobs and pricing your time (2026 to 2027)',
-        priceCents: 2900,
+        priceCents: 3900,
         pages: 44,
         sourceFile: 'nphiring-telehealth-np-playbook.pdf',
         audience: 'NPs in any population focus who work for a telehealth platform, plan to join one, or want to run their own multistate telehealth practice.',
@@ -176,7 +177,7 @@ export const GUIDES: Readonly<Record<GuideSlug, Guide>> = {
         slug: 'launch-your-practice',
         title: 'Launch Your NP Practice',
         subtitle: 'The 2026 toolkit for independent primary care, urgent care, women\'s health and specialty practices',
-        priceCents: 3900,
+        priceCents: 4900,
         pages: 53,
         sourceFile: 'nphiring-launch-your-np-practice.pdf',
         audience: 'Board-certified NPs in any population focus who want to own a solo or small-group practice, in person, by telehealth or both.',
@@ -205,7 +206,7 @@ export const BUNDLES: Readonly<Record<BundleSlug, Bundle>> = {
         slug: 'career-bundle',
         title: 'Career Bundle',
         subtitle: 'Land the job and negotiate the offer',
-        priceCents: 3900,
+        priceCents: 4900,
         guides: ['first-year-playbook', 'interview-prep-pack', 'negotiate-like-an-np', 'compensation-report'],
         audience: 'Students, new grads and anyone changing jobs.',
         summary: 'Everything for a job search: the first-year roadmap, interview answers, negotiation scripts and the pay data behind your ask.',
@@ -215,7 +216,7 @@ export const BUNDLES: Readonly<Record<BundleSlug, Bundle>> = {
         slug: 'practice-owner-bundle',
         title: 'Practice Owner Bundle',
         subtitle: 'Open and grow your own NP practice',
-        priceCents: 4900,
+        priceCents: 5900,
         guides: ['launch-your-practice', 'telehealth-playbook', 'compensation-report'],
         audience: 'NPs opening a practice or working independently by telehealth.',
         summary: 'The practice launch toolkit, the multistate telehealth rules and the pay data to set your rates.',
@@ -225,7 +226,7 @@ export const BUNDLES: Readonly<Record<BundleSlug, Bundle>> = {
         slug: 'complete-library',
         title: 'Complete NP Library',
         subtitle: 'All six guides',
-        priceCents: 6900,
+        priceCents: 9900,
         guides: [...GUIDE_SLUGS],
         audience: 'Every NP, from final semester to practice owner.',
         summary: 'Every guide in the store: the pay data, the first-year roadmap, interview answers, negotiation scripts, the telehealth rules and the practice launch toolkit.',

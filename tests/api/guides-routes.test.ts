@@ -1,14 +1,15 @@
 /**
  * The guides store's paid routes:
- *  - checkout is closed while lib/guides/phase.ts#guideSaleClosedReason
- *    names a reason (409 PROMO_ACTIVE during the launch promo, 503 for the
- *    other two), and once open charges catalog prices only, whatever the
- *    request says;
+ *  - checkout opens only when lib/guides/phase.ts#guidePhase is 'paid' (the
+ *    Stripe key and the webhook secret both set), whatever ENABLE_PAID_POSTING
+ *    or the posting promo say; until then it answers 503 STRIPE_NOT_CONFIGURED
+ *    and sends the reader back to the free claim. Once open it charges catalog
+ *    prices only, whatever the request says;
  *  - verify hands the library cookie only to the browser that paid;
  *  - download is authorised by that cookie and answers with a short-lived link.
- * The claim route (the promo's way in) is tests/api/guides-claim.test.ts.
+ * The claim route (the free phase's way in) is tests/api/guides-claim.test.ts.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const stripeMock = vi.hoisted(() => ({
@@ -34,10 +35,6 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/rate-limit')>()),
     rateLimit: vi.fn().mockResolvedValue(null),
 }));
-vi.mock('@/lib/guides/phase', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('@/lib/guides/phase')>()),
-    guideSaleClosedReason: vi.fn(() => null),
-}));
 vi.mock('@/lib/guides/fulfill', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/guides/fulfill')>()),
     fulfillGuideSession: vi.fn(),
@@ -50,7 +47,8 @@ vi.mock('@/lib/guides/library', () => ({
 vi.mock('@/lib/guides/storage', () => ({ signedGuideUrl: vi.fn() }));
 
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { guideSaleClosedReason } from '@/lib/guides/phase';
+import { config } from '@/lib/config';
+import { ADD_ON, BUNDLES, GUIDES } from '@/lib/guides/catalog';
 import { fulfillGuideSession } from '@/lib/guides/fulfill';
 import { authorizeDownload, releaseDownload } from '@/lib/guides/library';
 import { signedGuideUrl } from '@/lib/guides/storage';
@@ -85,24 +83,40 @@ beforeEach(() => {
     stripeMock.configured = true;
     stripeMock.create.mockResolvedValue({ id: SESSION_ID, url: 'https://checkout.stripe.com/c/pay/x' });
     auth.getUser.mockResolvedValue({ data: { user: null } });
-    vi.mocked(guideSaleClosedReason).mockReturnValue(null);
+    // The paid phase: both Stripe values set on this deployment.
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_x');
+    vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_x');
+});
+
+afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
 });
 
 describe('POST /api/guides/checkout', () => {
-    it('refuses with each closed reason before calling Stripe', async () => {
-        for (const [reason, status] of [['PROMO_ACTIVE', 409], ['PAID_POSTING_DISABLED', 503], ['STRIPE_NOT_CONFIGURED', 503]] as const) {
-            vi.mocked(guideSaleClosedReason).mockReturnValueOnce(reason);
+    it('refuses in the free phase before calling Stripe, even with paid posting on, and points to the claim', async () => {
+        vi.stubEnv('ENABLE_PAID_POSTING', 'true');
+        for (const [key, secret] of [['', 'whsec_x'], ['sk_test_x', ''], ['   ', '   ']] as const) {
+            vi.stubEnv('STRIPE_SECRET_KEY', key);
+            vi.stubEnv('STRIPE_WEBHOOK_SECRET', secret);
             const res = await checkout(post({ product: 'complete-library' }));
-            expect(res.status, reason).toBe(status);
-            expect(await res.json(), reason).toMatchObject({ code: reason, error: expect.any(String) });
+            expect(res.status, `${key}|${secret}`).toBe(503);
+            expect(await res.json()).toEqual({
+                code: 'STRIPE_NOT_CONFIGURED',
+                error: 'The guides are free to claim right now. Refresh the page to claim one.',
+            });
         }
         expect(stripeMock.create).not.toHaveBeenCalled();
     });
 
-    it('names the day the guides go on sale while the promo runs, with no dashes', async () => {
-        vi.mocked(guideSaleClosedReason).mockReturnValueOnce('PROMO_ACTIVE');
-        const { error } = await (await checkout(post({ product: 'complete-library' }))).json();
-        expect(error).toBe('The guides go on sale on January 1, 2027.');
+    it('sells with paid posting off and while the posting promo runs: neither is part of the gate', async () => {
+        vi.stubEnv('ENABLE_PAID_POSTING', 'false');
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-11-26T12:00:00.000Z'));
+        expect(config.isPromoActive()).toBe(true);
+        const res = await checkout(post({ product: 'complete-library' }));
+        expect(res.status).toBe(200);
+        expect(stripeMock.create).toHaveBeenCalledTimes(1);
     });
 
     it('answers 503 when the Stripe client is missing even with the gate open', async () => {
@@ -124,13 +138,14 @@ describe('POST /api/guides/checkout', () => {
     it('charges the catalog price and tags the session and the payment intent as a guide checkout', async () => {
         const res = await checkout(post({ product: 'complete-library', priceCents: 1 }));
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ url: 'https://checkout.stripe.com/c/pay/x', amountCents: 6900 });
+        const library = BUNDLES['complete-library'];
+        expect(await res.json()).toEqual({ url: 'https://checkout.stripe.com/c/pay/x', amountCents: library.priceCents });
 
         const params = stripeMock.create.mock.calls[0][0];
         expect(params.mode).toBe('payment');
         expect(params.payment_method_types).toEqual(['card']);
         expect(params.line_items).toHaveLength(1);
-        expect(params.line_items[0].price_data.unit_amount).toBe(6900);
+        expect(params.line_items[0].price_data.unit_amount).toBe(library.priceCents);
         expect(params.metadata).toEqual({ type: 'guide', product: 'complete-library', addOn: '', userId: '' });
         expect(params.success_url).toBe('https://nphiring.com/guides/success?session_id={CHECKOUT_SESSION_ID}');
         expect(params.cancel_url).toBe('https://nphiring.com/guides/complete-library');
@@ -148,10 +163,11 @@ describe('POST /api/guides/checkout', () => {
     });
 
     it('adds the add-on line only where the product is eligible', async () => {
-        const priced = await checkout(post({ product: 'interview-prep-pack', addOn: true }));
-        expect(await priced.json()).toMatchObject({ amountCents: 2400 });
+        const guide = GUIDES['interview-prep-pack'];
+        const priced = await checkout(post({ product: guide.slug, addOn: true }));
+        expect(await priced.json()).toMatchObject({ amountCents: guide.priceCents + ADD_ON.priceCents });
         const withAddOn = stripeMock.create.mock.calls[0][0];
-        expect(withAddOn.line_items.map((l: { price_data: { unit_amount: number } }) => l.price_data.unit_amount)).toEqual([1900, 500]);
+        expect(withAddOn.line_items.map((l: { price_data: { unit_amount: number } }) => l.price_data.unit_amount)).toEqual([guide.priceCents, ADD_ON.priceCents]);
         expect(withAddOn.metadata.addOn).toBe('compensation-report');
 
         await checkout(post({ product: 'career-bundle', addOn: true }));
