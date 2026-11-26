@@ -159,6 +159,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // right after the store's hero that replaces the pointer after the FAQ.
   // Their own pages are new, canonical to the sister board's pages and so not
   // listed; the Complete Library's summary now says every NP guide.
+  // This board's six own guides render a preview page (lib/guides/previews)
+  // and the sitemap dates each by its preview's contentDate when that is
+  // later; the bundles keep this template date.
   '/guides': '2026-11-26',
   '/guides/[slug]': '2026-11-26',
   // 2026-10-25 (2027 re-price): §6 to §8 state the new prices and both renewal prices, drop the plan, and "Last updated" moved;

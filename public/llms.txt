@@ -58,6 +58,12 @@ Canonical figures, as cited across the site (last verified 2026-10-06):
 - /blog: Career guides, licensure guides, and industry insights
 - /resources: Career resources, state licensure guides and tools
 - /guides: NP career guides (PDF): the compensation report, the first-year playbook, interview prep, negotiation, telehealth and launching a practice, alone or in bundles
+- /guides/compensation-report: The 2026 NP Compensation Report: its summary and methodology chapter with the national pay curve, the full table of contents, key figures with sources and an FAQ on NP pay
+- /guides/first-year-playbook: Collaborative agreements for new NPs, a chapter of the First-Year NP Playbook, with the full table of contents, key figures and an FAQ
+- /guides/interview-prep-pack: How NP interviews are structured, the first chapter of the NP Interview Prep Pack, with the full table of contents, key figures and an FAQ
+- /guides/negotiate-like-an-np: Total compensation in an NP offer, a chapter of Negotiate Like an NP, with the full table of contents, key figures and an FAQ on contract negotiation
+- /guides/telehealth-playbook: How to get an NP license in multiple states, a chapter of The Telehealth NP Playbook, with the full table of contents, key figures and an FAQ
+- /guides/launch-your-practice: Whether you can own an NP practice where you are licensed, the first chapter of Launch Your NP Practice, with the full table of contents, key figures and an FAQ
 - /job-alerts: Set up email alerts for new NP jobs
 - /companies: Employers with active listings
 - /faq: Frequently asked questions

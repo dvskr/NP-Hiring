@@ -58,6 +58,7 @@ import { ALL_CATEGORY_CONFIGS } from '@/lib/pseo/category-city-template';
 import { stateDioramaSrc } from '@/components/StateImage';
 import { allProducts } from '@/lib/guides/catalog';
 import { isSelfCanonical } from '@/lib/guides/canonical';
+import { GUIDE_PREVIEWS, getGuidePreview } from '@/lib/guides/previews';
 import {
     jobContentDate,
     lastmodTag,
@@ -218,6 +219,18 @@ const DEFINITION_GUIDES_PAGES: readonly string[] = ['/resources'];
  */
 const GUIDES_UPDATE_DAY = '2026-11-26';
 const GUIDES_UPDATE_PAGES: readonly string[] = ['/guides', '/guides/[slug]'];
+
+/**
+ * The UTC day this board's six own guides got their preview pages
+ * (lib/guides/previews): each page is listed with its preview's
+ * contentDate, the later of that and the template's copy date. The bundles
+ * keep the template's date. Same rule: move this constant and the previews'
+ * contentDate together if they ship later.
+ */
+const GUIDE_PREVIEWS_DAY = '2026-11-27';
+
+/** The day a listed product page carries: its preview's day, or the template's. */
+const guidePageDay = (slug: string): string => (getGuidePreview(slug) ? GUIDE_PREVIEWS_DAY : GUIDES_UPDATE_DAY);
 
 /**
  * The UTC day the AI app connector was rebuilt on PMHNP Hiring's design, and
@@ -868,8 +881,11 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(shipDay);
         const listed = allProducts().filter(isSelfCanonical);
         for (const product of listed) {
-            expect(entries.get(`${BASE}/guides/${product.slug}`)?.lastModified, product.slug).toEqual(shipDay);
+            expect(entries.get(`${BASE}/guides/${product.slug}`)?.lastModified, product.slug).toEqual(new Date(`${guidePageDay(product.slug)}T00:00:00.000Z`));
         }
+        // The constant and the preview data move together.
+        for (const preview of Object.values(GUIDE_PREVIEWS)) expect(preview.contentDate).toBe(GUIDE_PREVIEWS_DAY);
+        expect(listed.filter((product) => getGuidePreview(product.slug))).toHaveLength(Object.keys(GUIDE_PREVIEWS).length);
         // A psych edition's canonical is the sister board's page for the same guide, so it is not listed.
         for (const product of allProducts().filter((p) => !isSelfCanonical(p))) {
             expect(entries.has(`${BASE}/guides/${product.slug}`), product.slug).toBe(false);
@@ -926,7 +942,11 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         // store and its product pages keep their date.
         const storePages = [...entries.values()].filter((entry) => entry.url.startsWith(`${BASE}/guides`));
         expect(storePages).toHaveLength(allProducts().filter(isSelfCanonical).length + 1);
-        for (const entry of storePages) expect(entry.lastModified, entry.url).toEqual(new Date(`${GUIDES_UPDATE_DAY}T00:00:00.000Z`));
+        for (const entry of storePages) {
+            const slug = entry.url.slice(`${BASE}/guides/`.length);
+            const day = entry.url === `${BASE}/guides` ? GUIDES_UPDATE_DAY : guidePageDay(slug);
+            expect(entry.lastModified, entry.url).toEqual(new Date(`${day}T00:00:00.000Z`));
+        }
         // Pages whose copy does not follow the promo clock keep their dates.
         expect(entries.get(`${BASE}/about`)?.lastModified).toEqual(pageContentDate('/about', PROMO_RUNNING));
         expect(entries.get(`${BASE}/tools/licensure-checker`)?.lastModified)

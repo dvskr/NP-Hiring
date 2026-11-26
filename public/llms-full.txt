@@ -147,6 +147,12 @@ All tools are free and live under https://nphiring.com/tools.
 - /scope-of-practice: Practice authority rules by state
 - /resources/private-practice-guide: Starting an NP private practice
 - /guides: NP career guides store: six PDF guides (the NP compensation report, the first-year playbook, interview prep, negotiation, telehealth and launching a practice) and three bundles. Each guide's page lists its chapters and page count. Searching and applying for jobs never require a guide
+- /guides/compensation-report: The 2026 NP Compensation Report: its summary and methodology chapter with the national pay curve, the full table of contents, key figures with sources and an FAQ on NP pay
+- /guides/first-year-playbook: Collaborative agreements for new NPs, a chapter of the First-Year NP Playbook, with the full table of contents, key figures and an FAQ
+- /guides/interview-prep-pack: How NP interviews are structured, the first chapter of the NP Interview Prep Pack, with the full table of contents, key figures and an FAQ
+- /guides/negotiate-like-an-np: Total compensation in an NP offer, a chapter of Negotiate Like an NP, with the full table of contents, key figures and an FAQ on contract negotiation
+- /guides/telehealth-playbook: How to get an NP license in multiple states, a chapter of The Telehealth NP Playbook, with the full table of contents, key figures and an FAQ
+- /guides/launch-your-practice: Whether you can own an NP practice where you are licensed, the first chapter of Launch Your NP Practice, with the full table of contents, key figures and an FAQ
 - /blog: Career guides, per-state licensure guides, and industry insights
 - /job-alerts: Email alerts for new NP jobs
 - /faq: Frequently asked questions

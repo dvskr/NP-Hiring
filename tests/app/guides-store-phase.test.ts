@@ -18,6 +18,11 @@
  * follow the same phase as this board's own, the sister board is credited
  * once on /guides, and every dollar amount comes from the catalog. The phase
  * is set through the environment the pages read, as in production.
+ *
+ * This board's own six guides render a preview page (lib/guides/previews)
+ * whose figures quote the guide; the dollar check reads its price blocks
+ * with that copy set aside, and tests/app/guide-preview-page.test.ts pins the
+ * preview pages themselves, in both phases.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
@@ -40,6 +45,7 @@ import {
 } from '@/lib/guides/catalog';
 import { isSelfCanonical } from '@/lib/guides/canonical';
 import { guidePriceCopy, type GuidePhase } from '@/lib/guides/phase';
+import { GUIDE_PREVIEWS } from '@/lib/guides/previews';
 import GuideAction, { addOnOffer } from '@/components/guides/GuideAction';
 import GuidePrice from '@/components/guides/GuidePrice';
 import * as storePage from '@/app/guides/page';
@@ -87,6 +93,18 @@ async function renderProduct(slug: string): Promise<string> {
 
 /** Every "$N" amount in a text. */
 const dollarAmounts = (text: string): string[] => [...text.matchAll(/\$\d+(?:\.\d{2})?/g)].map((m) => m[0]);
+
+/**
+ * A preview page's markup without the copy that quotes its guide
+ * (components/guides/GuidePreviewPage.tsx): the intro under the H1 and the
+ * excerpt, contents, figures, audience and FAQ bands. What is left is the
+ * page's own chrome and its price blocks. A page without a preview is
+ * returned whole.
+ */
+const withoutPreviewCopy = (html: string): string =>
+    html
+        .replace(/<p class="gd-intro">[\s\S]*?<\/p>/, ' ')
+        .replace(/<section\b[^>]*aria-labelledby="guide-(?:excerpt|contents|figures|audience|faq)-heading"[^>]*>[\s\S]*?<\/section>/g, ' ');
 
 /** Every bundle in the store: this board's own, then the psych editions' library. */
 const ALL_BUNDLES = [...BUNDLE_ORDER, ...PSYCH_BUNDLE_ORDER];
@@ -290,11 +308,17 @@ describe('/guides/[slug]', () => {
     });
 
     it('lists every chapter of a guide, the guides of a bundle, and the bundles that hold a guide', async () => {
+        // This board's own guides list the full contents of their preview
+        // (lib/guides/previews); a guide without preview copy, such as a psych
+        // edition, lists the catalog's chapters.
         const guide = textOf(await renderProduct('launch-your-practice'));
-        for (const chapter of GUIDES['launch-your-practice'].contents) expect(guide).toContain(chapter);
+        for (const entry of GUIDE_PREVIEWS['launch-your-practice'].toc) expect(guide).toContain(entry.title);
         expect(guide).toContain(BUNDLES['practice-owner-bundle'].title);
         expect(guide).toContain(BUNDLES['complete-library'].title);
         expect(guide).not.toContain(BUNDLES['career-bundle'].title);
+
+        const edition = textOf(await renderProduct('psych-launch-your-practice'));
+        for (const chapter of GUIDES['psych-launch-your-practice'].contents) expect(edition).toContain(chapter);
 
         const bundle = await renderProduct('practice-owner-bundle');
         for (const slug of BUNDLES['practice-owner-bundle'].guides) expect(bundle).toContain(`href="/guides/${slug}"`);
@@ -308,21 +332,40 @@ describe('/guides/[slug]', () => {
             ...allProducts().map((product) => formatPrice(product.priceCents + ADD_ON.priceCents)),
         ]);
         for (const product of allProducts()) {
-            const amounts = dollarAmounts(textOf(await renderProduct(product.slug)));
+            // A preview page's intro, excerpt, contents, figures, audience and
+            // FAQ quote the guide's own figures (wages, fees); none of them is
+            // a price, and tests/app/guide-preview-page.test.ts holds that copy
+            // to no catalog price. Every other dollar amount is a price block.
+            const amounts = dollarAmounts(textOf(withoutPreviewCopy(await renderProduct(product.slug))));
             expect(amounts.filter((amount) => !allowed.has(amount)), product.slug).toEqual([]);
         }
     });
 
+    it('a preview page still prints its price blocks with the catalog price', async () => {
+        setPhase('paid');
+        const page = textOf(withoutPreviewCopy(await renderProduct('compensation-report')));
+        expect(dollarAmounts(page)).toContain(formatPrice(GUIDES['compensation-report'].priceCents));
+    });
+
     it('states the phase in its metadata and never a price on the share card', async () => {
         setPhase('free');
-        const free = await productPage.generateMetadata({ params: Promise.resolve({ slug: 'negotiate-like-an-np' }) });
+        const free = await productPage.generateMetadata({ params: Promise.resolve({ slug: 'career-bundle' }) });
         expect(free.description).toContain('Free to claim for a limited time.');
         setPhase('paid');
-        const paid = await productPage.generateMetadata({ params: Promise.resolve({ slug: 'negotiate-like-an-np' }) });
+        const paid = await productPage.generateMetadata({ params: Promise.resolve({ slug: 'career-bundle' }) });
         expect(paid.description).toContain('All sales are final.');
         const images = JSON.stringify(paid.openGraph?.images ?? []);
         expect(decodeURIComponent(images)).not.toMatch(/\$\d|\bfree\b/i);
         expect(await productPage.generateMetadata({ params: Promise.resolve({ slug: 'nope' }) })).toEqual({});
+    });
+
+    it('a preview page carries its own description in both phases, with no phase sentence', async () => {
+        for (const phase of PHASES) {
+            setPhase(phase);
+            const metadata = await productPage.generateMetadata({ params: Promise.resolve({ slug: 'negotiate-like-an-np' }) });
+            expect(metadata.description).toBe(GUIDE_PREVIEWS['negotiate-like-an-np'].seo.description);
+            expect(String(metadata.description)).not.toMatch(/Free to claim|All sales are final|\$\d/);
+        }
     });
 });
 
@@ -358,13 +401,23 @@ describe('guides copy: no dashes, in either phase', () => {
             'components/guides/PsychEditionsShelf.tsx',
             'components/guides/PsychGuidesCard.tsx',
             'components/guides/styles.ts',
+            'components/guides/GuidePreviewPage.tsx',
+            'components/guides/GuideExcerpt.tsx',
+            'components/guides/GuideFaq.tsx',
+            'components/guides/GuideKeyFigures.tsx',
+            'components/guides/GuideToc.tsx',
+            'components/guides/LinkedText.tsx',
+            'components/guides/ProductBlocks.tsx',
+            'components/guides/preview-styles.ts',
             'config/psych-editions.ts',
             'lib/guides/canonical.ts',
             'lib/guides/catalog.ts',
+            'lib/guides/excerpt.ts',
             'lib/guides/job-guide.ts',
             'lib/guides/og.ts',
             'lib/guides/phase.ts',
             'lib/guides/schema.ts',
+            ...fs.readdirSync(path.join(ROOT, 'lib/guides/previews')).map((file) => `lib/guides/previews/${file}`),
         ];
         const found = files.filter((file) => DASHES.test(read(file)));
         expect(found).toEqual([]);

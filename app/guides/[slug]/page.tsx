@@ -5,26 +5,28 @@ import { ArrowRight, BookOpen, Check, Download, FileText, Users } from 'lucide-r
 import { brand } from '@/config/brand';
 import { psychEditions } from '@/config/psych-editions';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { StickerHead, StickerStage, StickerStyles } from '@/components/sticker';
+import { StickerStage, StickerStyles } from '@/components/sticker';
 import GuideAction, { addOnOffer } from '@/components/guides/GuideAction';
 import GuideCover, { COVER_PALETTES, CoverStack } from '@/components/guides/GuideCover';
+import GuidePreviewPage from '@/components/guides/GuidePreviewPage';
 import GuidePrice from '@/components/guides/GuidePrice';
 import GuideSchema from '@/components/guides/GuideSchema';
+import { BundleUpsell, productPromises } from '@/components/guides/ProductBlocks';
 import { GUIDES_CSS } from '@/components/guides/styles';
 import { stickerFill } from '@/lib/design/sticker-css';
 import {
     GUIDES,
     allProducts,
-    bundlesContaining,
     getProduct,
     totalPages,
     type Bundle,
     type Guide,
     type Product,
 } from '@/lib/guides/catalog';
-import { guidePhase, guidePriceCopy, type GuidePhase, type GuidePriceCopy } from '@/lib/guides/phase';
+import { guidePhase, guidePriceCopy, type GuidePriceCopy } from '@/lib/guides/phase';
 import { productCanonicalUrl, productPageUrl } from '@/lib/guides/canonical';
 import { guideOgImageUrl, productOgCard } from '@/lib/guides/og';
+import { getGuidePreview, previewSearchTitle, type GuidePreview } from '@/lib/guides/previews';
 import { productJsonLd } from '@/lib/guides/schema';
 import { guidesFinePrint, guidesMetaSentence } from '../guides-copy';
 
@@ -35,6 +37,14 @@ import { guidesFinePrint, guidesMetaSentence } from '../guides-copy';
  * form while checkout is not set up, checkout with the add-on checkbox once
  * it is, and the Product JSON-LD with the same offer. Reads the phase per
  * render and re-renders hourly, like /guides.
+ *
+ * This board's own six guides have preview copy (lib/guides/previews) and
+ * render the deep page instead (components/guides/GuidePreviewPage.tsx):
+ * an answer intro, part of the guide, the full contents, key figures and an
+ * FAQ, with the same phase price block and action. Their search title and
+ * description are written for the page's search and carry no phase
+ * sentence, so they hold true in both phases. Bundles and the psych
+ * editions keep the plain page and its metadata.
  *
  * A psych edition (the sister board's guide, sold here) says who wrote it,
  * and its canonical is the sister board's page for the same guide
@@ -61,10 +71,38 @@ function chipLabel(product: Product): string {
     return product.edition === 'psych' ? psychEditions.labels.edition : COVER_PALETTES[product.slug].label;
 }
 
+/** Preview copy for one of this board's own guides; bundles and psych editions have none. */
+function previewFor(product: Product): GuidePreview | null {
+    return product.kind === 'guide' ? getGuidePreview(product.slug) : null;
+}
+
+/**
+ * A preview page's metadata: the search title set absolute (the brand
+ * suffix only when the whole fits the SERP budget), the preview's own
+ * description, and the share card every product page uses.
+ */
+function previewMetadata(product: Guide, preview: GuidePreview): Metadata {
+    const ogImage = guideOgImageUrl(productOgCard(product));
+    return {
+        title: { absolute: previewSearchTitle(preview) },
+        description: preview.seo.description,
+        openGraph: {
+            title: preview.seo.title,
+            description: preview.seo.description,
+            url: productPageUrl(product),
+            images: [{ url: ogImage, width: 1200, height: 630, alt: product.title }],
+        },
+        twitter: { card: 'summary_large_image', images: [ogImage] },
+        alternates: { canonical: productCanonicalUrl(product) },
+    };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const { slug } = await params;
     const product = getProduct(slug);
     if (!product) return {};
+    const preview = previewFor(product);
+    if (preview && product.kind === 'guide') return previewMetadata(product, preview);
     const ogImage = guideOgImageUrl(productOgCard(product));
     return {
         title: `${product.title}: ${kindLabel(product)}`,
@@ -126,36 +164,7 @@ function BundleContents({ bundle }: { readonly bundle: Bundle }) {
     );
 }
 
-function BundleUpsell({ guide, phase }: { readonly guide: Guide; readonly phase: GuidePhase }) {
-    const bundles = bundlesContaining(guide.slug);
-    if (!bundles.length) return null;
-    return (
-        <StickerStage variant="peach" aria-labelledby="bundles-heading" maxWidth={1000}>
-            <StickerHead eyebrow="Bundles" title="This guide is also in" id="bundles-heading" />
-            <div className="stk-grid stk-cols-3">
-                {bundles.map((bundle, index) => (
-                    <Link key={bundle.slug} href={`/guides/${bundle.slug}`} className="stk-card" style={{ gap: '14px' }}>
-                        <span className="stk-chip" style={{ background: stickerFill(index) }}>{bundle.guides.length} guides</span>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            <CoverStack guides={bundle.guides} width={52} />
-                        </div>
-                        <h3 className="stk-title font-heading" style={{ margin: 0 }}>{bundle.title}</h3>
-                        <p className="stk-desc" style={{ margin: 0 }}>{bundle.subtitle}</p>
-                        <div style={{ marginTop: 'auto' }}>
-                            <GuidePrice copy={guidePriceCopy(bundle, phase)} size="sm" withNote={false} />
-                        </div>
-                    </Link>
-                ))}
-            </div>
-        </StickerStage>
-    );
-}
-
-/** What a reader gets with any product, in both phases. */
-const WITH_EVERY_GUIDE: readonly string[] = ['Read on any device or print', 'The latest edition on every download', 'No account needed'];
-
 function Aside({ product, copy }: { readonly product: Product; readonly copy: GuidePriceCopy }) {
-    const lines = copy.phase === 'paid' ? ['Pay once, keep it', ...WITH_EVERY_GUIDE] : WITH_EVERY_GUIDE;
     return (
         <aside className="stk-card stk-static" style={{ gap: '18px' }}>
             <div>
@@ -169,7 +178,7 @@ function Aside({ product, copy }: { readonly product: Product; readonly copy: Gu
                 <p className="stk-desc" style={{ fontSize: '13.5px', margin: 0 }}>{product.summary}</p>
             </div>
             <ul className="gd-checks">
-                {lines.map((line) => (
+                {productPromises(copy).map((line) => (
                     <li key={line}><Check size={15} aria-hidden="true" /> {line}</li>
                 ))}
             </ul>
@@ -188,6 +197,11 @@ export default async function GuideProductPage({ params }: PageProps) {
     const addOn = phase === 'paid' ? addOnOffer(product) : null;
     const finePrint = guidesFinePrint(phase);
     const isGuide = product.kind === 'guide';
+
+    const preview = previewFor(product);
+    if (preview && product.kind === 'guide') {
+        return <GuidePreviewPage guide={product} preview={preview} phase={phase} copy={copy} addOn={addOn} finePrint={finePrint} />;
+    }
 
     return (
         <>

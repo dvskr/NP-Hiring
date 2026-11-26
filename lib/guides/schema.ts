@@ -1,8 +1,9 @@
 import { brand } from '@/config/brand';
-import { allProducts, type Product } from './catalog';
+import { allProducts, type Guide, type Product } from './catalog';
 import { isSelfCanonical, productPageUrl } from './canonical';
 import { guideOgImageUrl, productOgCard } from './og';
 import type { GuidePhase } from './phase';
+import { previewSummary, type GuidePreview } from './previews';
 
 /**
  * Structured data for the guides store. The offer is the one the page makes
@@ -36,6 +37,45 @@ export function productJsonLd(product: Product, phase: GuidePhase): Record<strin
             availability: 'https://schema.org/InStock',
             seller: { '@id': ORGANIZATION_ID },
         },
+    };
+}
+
+/** Every sale is final once checkout is set up: the guides are instant digital downloads. */
+const NO_RETURNS = {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'US',
+    returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+};
+
+/**
+ * The Product block of a guide page with a preview (lib/guides/previews):
+ * the same Product and Offer as productJsonLd, described in the words of the
+ * page's "In short" line, and once the guides are sold, the no-returns
+ * policy the page states ("All sales are final"). Product stays a plain
+ * Product: adding Book waits on a Rich Results Test showing the Product
+ * snippet still valid with both types.
+ */
+export function previewProductJsonLd(guide: Guide, preview: GuidePreview, phase: GuidePhase): Record<string, unknown> {
+    const product = productJsonLd(guide, phase);
+    const offers = product.offers as Record<string, unknown>;
+    return {
+        ...product,
+        description: previewSummary(guide, preview),
+        offers: phase === 'paid' ? { ...offers, hasMerchantReturnPolicy: NO_RETURNS } : offers,
+    };
+}
+
+/** schema.org FAQPage holding exactly the questions and answers a preview page shows. */
+export function previewFaqJsonLd(guide: Guide, preview: GuidePreview): Record<string, unknown> {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        '@id': `${productPageUrl(guide)}#faq`,
+        mainEntity: preview.faq.map((item) => ({
+            '@type': 'Question',
+            name: item.question,
+            acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
     };
 }
 
