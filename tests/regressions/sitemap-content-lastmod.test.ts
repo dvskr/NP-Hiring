@@ -214,7 +214,16 @@ const DEFINITION_GUIDES_DAY = '2026-11-23';
 const DEFINITION_GUIDES_PAGES: readonly string[] = ['/resources'];
 
 const GUIDES_FOLLOW_UPS_DAY = '2026-11-07';
-const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides', '/guides/[slug]'];
+const GUIDES_FOLLOW_UPS_PAGES: readonly string[] = ['/guides/[slug]'];
+
+/**
+ * The UTC day the store got its pointer to the sister board's guides (owner
+ * decision 2026-11-26), and the page whose copy that changed: /guides, which
+ * left the store follow-ups group (the product pages stay there). Same rule:
+ * move the constant and these entries together if it ships later.
+ */
+const SISTER_GUIDES_DAY = '2026-11-26';
+const SISTER_GUIDES_PAGES: readonly string[] = ['/guides'];
 
 /**
  * The UTC day the AI app connector was rebuilt on PMHNP Hiring's design, and
@@ -455,7 +464,7 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES, SALARY_BUILD_PAGES, TOOLS_SUITE_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, SISTER_GUIDES_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES, SALARY_BUILD_PAGES, TOOLS_SUITE_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -468,6 +477,7 @@ describe('lastmod helpers', () => {
             ...AI_APPS_RELEASE_PAGES,
             ...GUIDES_RELEASE_PAGES,
             ...GUIDES_FOLLOW_UPS_PAGES,
+            ...SISTER_GUIDES_PAGES,
             ...DEFINITION_GUIDES_PAGES,
             ...CONNECTOR_REBUILD_PAGES,
             ...SALARY_BUILD_PAGES,
@@ -484,6 +494,8 @@ describe('lastmod helpers', () => {
                 ? DEFINITION_GUIDES_DAY
                 : CONNECTOR_REBUILD_PAGES.includes(pagePath)
                 ? CONNECTOR_REBUILD_DAY
+                : SISTER_GUIDES_PAGES.includes(pagePath)
+                ? SISTER_GUIDES_DAY
                 : GUIDES_FOLLOW_UPS_PAGES.includes(pagePath)
                 ? GUIDES_FOLLOW_UPS_DAY
                 : GUIDES_RELEASE_PAGES.includes(pagePath)
@@ -540,10 +552,10 @@ describe('lastmod helpers', () => {
     });
 
     it('guides store: the store and its product pages carry their last ship day until the promo ends, then the switch', () => {
-        for (const pagePath of ['/guides', '/guides/[slug]']) {
-            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(GUIDES_FOLLOW_UPS_DAY);
+        for (const [pagePath, day] of [['/guides', SISTER_GUIDES_DAY], ['/guides/[slug]', GUIDES_FOLLOW_UPS_DAY]] as const) {
+            expect(PAGE_CONTENT_DATES[pagePath], pagePath).toBe(day);
             expect(PROMO_SWITCH_PATHS.has(pagePath), pagePath).toBe(true);
-            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(new Date(`${GUIDES_FOLLOW_UPS_DAY}T00:00:00.000Z`));
+            expect(pageContentDate(pagePath, LAST_PROMO_MS), pagePath).toEqual(new Date(`${day}T00:00:00.000Z`));
             expect(pageContentDate(pagePath, AFTER_SWITCH), pagePath).toEqual(SWITCH);
         }
     });
@@ -864,7 +876,7 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
     it('guides store: /guides and one page per product are listed with their last ship day, and none of the private pages', async () => {
         const entries = await byUrl();
         const shipDay = new Date(`${GUIDES_FOLLOW_UPS_DAY}T00:00:00.000Z`);
-        expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(shipDay);
+        expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(new Date(`${SISTER_GUIDES_DAY}T00:00:00.000Z`));
         for (const product of allProducts()) {
             expect(entries.get(`${BASE}/guides/${product.slug}`)?.lastModified, product.slug).toEqual(shipDay);
         }

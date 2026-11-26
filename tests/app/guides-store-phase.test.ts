@@ -296,6 +296,7 @@ describe('guides copy: no dashes, in either phase', () => {
             'components/guides/GuidePrice.tsx',
             'components/guides/GuidePromo.tsx',
             'components/guides/styles.ts',
+            'components/sister-board/SisterBoardGuidesSection.tsx',
             'lib/guides/job-guide.ts',
             'lib/guides/og.ts',
         ];

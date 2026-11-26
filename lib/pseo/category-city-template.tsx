@@ -32,6 +32,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { CSSProperties } from 'react';
 import ImmersiveImage from '@/components/ImmersiveImage';
+import SisterBoardGuidesCallout from '@/components/sister-board/SisterBoardGuidesCallout';
 import type { Metadata } from 'next';
 import type { Prisma } from '@prisma/client';
 import {
@@ -1935,6 +1936,10 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   </Link>
                 </div>
               </div>
+
+              {/* The sister board's career guides (owner decision
+                  2026-11-26): renders on its specialty only. */}
+              <SisterBoardGuidesCallout categorySlug={categoryKey} />
 
               <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>

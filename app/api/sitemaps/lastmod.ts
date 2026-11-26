@@ -147,7 +147,9 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // 2026-11-07, later the same UTC day (store follow-ups): the claim form's
   // newsletter box, the promo FAQ answer (the link goes by email) and the
   // guides' page counts.
-  '/guides': '2026-11-07',
+  // 2026-11-26 (sister board guides): the store's pointer to the sister
+  // board's guides, after the FAQ.
+  '/guides': '2026-11-26',
   '/guides/[slug]': '2026-11-07',
   // 2026-10-25 (2027 re-price): §6 to §8 state the new prices and both renewal prices, drop the plan, and "Last updated" moved;
   // 2026-10-26 (Phase 3): §6 and §7 add the 5-post pack and §8 says all sales are final.

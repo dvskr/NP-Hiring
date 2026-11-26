@@ -8,6 +8,7 @@ import GuideAction from '@/components/guides/GuideAction';
 import GuideCover, { COVER_PALETTES, CoverStack } from '@/components/guides/GuideCover';
 import GuidePrice from '@/components/guides/GuidePrice';
 import { GUIDES_CSS } from '@/components/guides/styles';
+import SisterBoardGuidesSection from '@/components/sister-board/SisterBoardGuidesSection';
 import { stickerFill } from '@/lib/design/sticker-css';
 import {
     BUNDLES,
@@ -25,7 +26,8 @@ import { guidesFaqs, guidesMetaSentence, guidesStorePills, type GuidesPill } fro
 
 /**
  * /guides: the guides store. The Complete Library leads, then the other
- * bundles, the single guides, a comparison table and the FAQ.
+ * bundles, the single guides, a comparison table, the FAQ and a short pointer
+ * to the sister board's own guides (in every phase).
  *
  * Every price block is guidePriceCopy(product, now) and every action follows
  * its phase: the claim form while the guides are free (through
@@ -279,6 +281,10 @@ export default function GuidesStorePage() {
             <StickerStage variant="blush" aria-labelledby="faq-heading" maxWidth={820}>
                 <StickerHead eyebrow="Questions" title="Common questions" id="faq-heading" />
                 <StickerAccordion items={faqs.map(({ question, answer }) => ({ question, answer }))} />
+            </StickerStage>
+
+            <StickerStage variant="grid" as="div" maxWidth={760}>
+                <SisterBoardGuidesSection />
             </StickerStage>
         </>
     );

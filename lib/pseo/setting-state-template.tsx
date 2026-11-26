@@ -23,6 +23,7 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import type { Prisma } from '@prisma/client';
 import ImmersiveImage from '@/components/ImmersiveImage';
+import SisterBoardGuidesCallout from '@/components/sister-board/SisterBoardGuidesCallout';
 import { getCitiesByState } from './city-data/cities';
 import {
   isPseoStatsFresh,
@@ -733,6 +734,10 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   </Link>
                 </div>
               </div>
+
+              {/* The sister board's career guides (owner decision
+                  2026-11-26): renders on its specialty only. */}
+              <SisterBoardGuidesCallout categorySlug={settingKey} />
 
               {/* Tips */}
               <div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>

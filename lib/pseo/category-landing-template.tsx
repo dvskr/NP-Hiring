@@ -60,6 +60,7 @@ import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore'
 import CategoryHero from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import SisterBoardHubCallout from '@/components/sister-board/SisterBoardHubCallout';
+import SisterBoardGuidesCallout from '@/components/sister-board/SisterBoardGuidesCallout';
 import {
     ClayCard,
     ClayHead,
@@ -795,6 +796,9 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         {/* Sister board routing (owner decision 2026-10-12):
                             renders on the sister board's specialty only. */}
                         <SisterBoardHubCallout categorySlug={slug} />
+                        {/* Its career guides (owner decision 2026-11-26): the
+                            same specialty only. */}
+                        <SisterBoardGuidesCallout categorySlug={slug} />
                     </div>
                 </div>
             </div>

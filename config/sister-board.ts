@@ -7,6 +7,11 @@
  * from three places: a homepage band, the psychiatric category landing, and a
  * hint under the post-job specialty select.
  *
+ * Its career guides, written for psychiatric NPs, are pointed to from two
+ * more (owner decision 2026-11-26): a sidebar card on the psychiatric
+ * specialty pages (the category landing and its state and city pages), and a
+ * small "For psychiatric NPs" section on this board's own guides store.
+ *
  * Every literal for the sister board lives here because config/ is the one
  * folder the niche-copy and brand-leak scanners skip
  * (tests/regressions/brand-leak-scan.ts). Code reads these tokens through
@@ -16,15 +21,16 @@
  *   - House style: no em or en dash, no spaced hyphen.
  *   - No figures. The sister board charges per post while this board runs a
  *     promo, and its prices change, so neither prices nor counts appear here.
+ *     That holds for its guides too: their prices live on its own store.
  *   - Never call the sister board free. Employers are told to post on BOTH
  *     boards (owner's pick), never to leave this one.
  */
 
 import { brand } from './brand';
 
-export type SisterBoardPath = 'jobs' | 'employers';
+export type SisterBoardPath = 'jobs' | 'employers' | 'guides';
 
-export type SisterBoardCampaign = 'homeSeekers' | 'homeEmployers' | 'hub' | 'postJob';
+export type SisterBoardCampaign = 'homeSeekers' | 'homeEmployers' | 'hub' | 'postJob' | 'guidesStore' | 'guidesSpecialty';
 
 interface SisterBoardCard {
     chip: string;
@@ -56,6 +62,12 @@ export interface SisterBoardConfig {
         };
         hub: { heading: string; body: string; action: string };
         postJob: { body: string; action: string };
+        guides: {
+            /** The small section on this board's guides store. */
+            store: { eyebrow: string; heading: string; body: string; action: string };
+            /** The sidebar card on the psychiatric specialty pages. */
+            specialty: { heading: string; body: string; action: string };
+        };
     };
 }
 
@@ -71,6 +83,8 @@ export const sisterBoard: SisterBoardConfig = {
         // The employer landing, not /post-job: that route is a login wall for
         // visitors without an employer account.
         employers: '/for-employers',
+        // The sister board's guides store.
+        guides: '/guides',
     },
     utm: { source: 'nphiring', medium: 'referral' },
     campaigns: {
@@ -78,6 +92,8 @@ export const sisterBoard: SisterBoardConfig = {
         homeEmployers: 'sister-home-employers',
         hub: 'sister-psych-hub',
         postJob: 'sister-post-job',
+        guidesStore: 'sister-guides-store',
+        guidesSpecialty: 'sister-psych-guides',
     },
     copy: {
         home: {
@@ -108,6 +124,21 @@ export const sisterBoard: SisterBoardConfig = {
         postJob: {
             body: `Hiring a psychiatric NP? Post this role here on ${HOME}, and list it on ${NAME} as well, our sister board for psychiatric mental health nurse practitioners.`,
             action: `Post on ${NAME}`,
+        },
+        // The topics are its six guides: the compensation report, the first
+        // year, interviews, negotiation, telepsychiatry and a practice launch.
+        guides: {
+            store: {
+                eyebrow: 'Our sister board',
+                heading: 'For psychiatric NPs',
+                body: `${NAME}, our sister board, publishes its own PDF guides written for psychiatric mental health nurse practitioners: pay data, the first year, interviews, negotiation, telepsychiatry and starting a practice.`,
+                action: `See the guides on ${NAME}`,
+            },
+            specialty: {
+                heading: 'Career guides for psychiatric NPs',
+                body: `${NAME}, our sister board, publishes PDF guides written for psychiatric mental health nurse practitioners: pay data, interviews, negotiation, telepsychiatry and starting a practice.`,
+                action: `See the ${NAME} guides`,
+            },
         },
     },
 };

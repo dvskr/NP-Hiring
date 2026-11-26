@@ -8,6 +8,11 @@
  *   - a callout on the psychiatric category landing;
  *   - a hint under the post-job specialty select, shown only for the psych
  *     specialty. Employers are told to post on BOTH boards, never to leave.
+ * Its career guides are pointed to as well (owner decision 2026-11-26), and
+ * only from two places:
+ *   - a sidebar card on the psychiatric specialty pages: the category
+ *     landing, its state pages and its city pages;
+ *   - a small "For psychiatric NPs" section on this board's /guides.
  *
  * Contract pinned here:
  *   - Every sister literal (name, domain, copy) lives in config/, the one
@@ -22,7 +27,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import React from 'react';
+import React, { type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { brand } from '@/config/brand';
 import { sisterBoard } from '@/config/sister-board';
@@ -31,6 +36,9 @@ import { CATEGORY_AXES, PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registr
 import SisterBoardBand, { SISTER_BOARD_BAND_CSS } from '@/components/sister-board/SisterBoardBand';
 import SisterBoardHubCallout from '@/components/sister-board/SisterBoardHubCallout';
 import SisterBoardPostJobHint from '@/components/sister-board/SisterBoardPostJobHint';
+import SisterBoardGuidesCallout from '@/components/sister-board/SisterBoardGuidesCallout';
+import SisterBoardGuidesSection from '@/components/sister-board/SisterBoardGuidesSection';
+import GuidesStorePage from '@/app/guides/page';
 
 const ROOT = path.resolve(__dirname, '../..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf-8');
@@ -185,6 +193,79 @@ describe('psych landing callout', () => {
     });
 });
 
+describe('the sister board guides (owner decision 2026-11-26)', () => {
+    it('link its guides store, tagged per placement', () => {
+        for (const campaign of ['guidesStore', 'guidesSpecialty'] as const) {
+            const url = new URL(sisterBoardUrl('guides', campaign));
+            expect(`${url.origin}${url.pathname}`).toBe('https://pmhnphiring.com/guides');
+            expect(url.searchParams.get('utm_source')).toBe(sisterBoard.utm.source);
+            expect(url.searchParams.get('utm_campaign')).toBe(sisterBoard.campaigns[campaign]);
+        }
+    });
+
+    it('the specialty card renders only on the psych specialty, links the guides in a new tab and names no price', () => {
+        for (const slug of OTHER_SPECIALTIES) {
+            expect(renderToStaticMarkup(React.createElement(SisterBoardGuidesCallout, { categorySlug: slug })), slug).toBe('');
+        }
+        const html = renderToStaticMarkup(React.createElement(SisterBoardGuidesCallout, { categorySlug: PSYCH }));
+        expect(html).toMatch(/<aside[^>]*data-sister-board/);
+        expect(html).toContain(sisterBoard.copy.guides.specialty.heading);
+        expect(html).toContain(sisterBoard.copy.guides.specialty.body);
+        const links = anchors(html);
+        expect(links.map((l) => l.href)).toEqual([sisterBoardUrl('guides', 'guidesSpecialty')]);
+        expect(links[0].tag).toContain('target="_blank"');
+        expect(links[0].tag).toMatch(/rel="[^"]*noopener/);
+        expect(html).not.toMatch(/\$\d/);
+    });
+
+    it('the specialty card is wired into the sidebar of the landing, state and city templates, right under the alert card', () => {
+        // [template, the page's specialty prop, the first thing after the card in that sidebar]
+        for (const [file, prop, after] of [
+            ['lib/pseo/category-landing-template.tsx', 'slug', 'LAND-L1 MARKET SNAPSHOT'],
+            ['lib/pseo/setting-state-template.tsx', 'settingKey', '{config.label} Tips'],
+            ['lib/pseo/category-city-template.tsx', 'categoryKey', '{config.label} Tips'],
+        ] as const) {
+            const template = read(file);
+            expect(template, file).toMatch(/import SisterBoardGuidesCallout from '@\/components\/sister-board\/SisterBoardGuidesCallout'/);
+            const sidebar = template.indexOf('lg:col-span-1');
+            const alertCard = template.indexOf('Create Alert', sidebar);
+            const callout = template.indexOf(`<SisterBoardGuidesCallout categorySlug={${prop}} />`);
+            const next = template.indexOf(after, alertCard);
+            expect(sidebar, file).toBeGreaterThan(-1);
+            expect(alertCard, file).toBeGreaterThan(sidebar);
+            expect(callout, file).toBeGreaterThan(alertCard);
+            expect(callout, file).toBeLessThan(next);
+            expect(template.match(/<SisterBoardGuidesCallout /g), file).toHaveLength(1);
+        }
+        // Each psych specialty route renders one of those three templates with the psych slug.
+        expect(read(`app/jobs/${PSYCH}/page.tsx`)).toContain('<CategoryLandingPage slug={CATEGORY_SLUG}');
+        expect(read(`app/jobs/${PSYCH}/[state]/page.tsx`)).toContain('<SettingStatePage settingKey={SETTING_KEY}');
+        expect(read(`app/jobs/${PSYCH}/city/[slug]/page.tsx`)).toContain('<CategoryCityPage categoryKey={CATEGORY_KEY}');
+    });
+
+    it('the store section is a small "For psychiatric NPs" card linking the sister guides store in a new tab', () => {
+        const html = renderToStaticMarkup(React.createElement(SisterBoardGuidesSection));
+        expect(html).toMatch(/<aside[^>]*data-sister-board/);
+        expect(sisterBoard.copy.guides.store.heading).toBe('For psychiatric NPs');
+        expect(html).toContain(`>${sisterBoard.copy.guides.store.heading}</h2>`);
+        const links = anchors(html);
+        expect(links.map((l) => l.href)).toEqual([sisterBoardUrl('guides', 'guidesStore')]);
+        expect(links[0].tag).toContain('target="_blank"');
+        expect(html).not.toMatch(/\$\d/);
+    });
+
+    it('the store section sits on /guides after the FAQ, and is the store\'s only link to the sister board', () => {
+        const store = renderToStaticMarkup(GuidesStorePage() as ReactElement);
+        const faq = store.indexOf('id="faq-heading"');
+        const section = store.indexOf('data-sister-board');
+        expect(faq).toBeGreaterThan(-1);
+        expect(section).toBeGreaterThan(faq);
+        expect(store.match(/data-sister-board/g)).toHaveLength(1);
+        const sisterLinks = anchors(store).filter((l) => l.href.startsWith(sisterBoard.baseUrl));
+        expect(sisterLinks.map((l) => l.href)).toEqual([sisterBoardUrl('guides', 'guidesStore')]);
+    });
+});
+
 describe('post-job specialty hint', () => {
     it('appears only when the psych specialty is selected', () => {
         for (const value of [undefined, '', ...OTHER_SPECIALTIES]) {
@@ -249,6 +330,8 @@ describe('E2E donor-copy guards exempt only the sister marker', () => {
             renderToStaticMarkup(React.createElement(SisterBoardBand)),
             renderToStaticMarkup(React.createElement(SisterBoardHubCallout, { categorySlug: PSYCH })),
             renderToStaticMarkup(React.createElement(SisterBoardPostJobHint, { specialty: PSYCH })),
+            renderToStaticMarkup(React.createElement(SisterBoardGuidesCallout, { categorySlug: PSYCH })),
+            renderToStaticMarkup(React.createElement(SisterBoardGuidesSection)),
         ];
         for (const html of blocks) expect(text(html).length).toBeLessThan(maxText);
     });
