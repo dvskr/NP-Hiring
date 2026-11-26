@@ -37,32 +37,34 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
           width: '100%',
           margin: '0 auto',
         }}>
-          {/* Logo — same as navbar */}
+          {/* Logo: sized to match the 1024x1024 mark's 25% side padding with clean gap */}
           <Link
             href="/"
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              textDecoration: 'none', marginBottom: '4px', alignSelf: 'center',
+              textDecoration: 'none', marginBottom: '12px', alignSelf: 'center',
             }}
           >
-            <img
+            <Image
               src="/logo.png"
               alt={brand.name}
-              width="100"
-              height="100"
-              style={{ width: 100, height: 100, objectFit: 'contain', flexShrink: 0 }}
+              width={76}
+              height={76}
+              sizes="152px"
+              priority
+              quality={90}
+              style={{ width: 76, height: 76, objectFit: 'contain', flexShrink: 0 }}
             />
             <span
               className="font-heading"
               style={{
-                fontSize: '28px',
+                fontSize: 'clamp(24px, 5vw, 28px)',
                 fontWeight: 700,
                 color: '#1F2937',
                 letterSpacing: '-0.02em',
                 whiteSpace: 'nowrap',
-                lineHeight: 1,
-                transform: 'translateY(4px)',
-                marginLeft: '-24px',
+                lineHeight: 1.1,
+                marginLeft: '-6px',
               }}
             >
               {brand.name}

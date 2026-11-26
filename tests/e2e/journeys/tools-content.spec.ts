@@ -253,6 +253,23 @@ const TOOL_PATHS = [
     '/tools/specialty-finder',
     '/tools/private-practice-revenue-calculator',
     '/tools/cost-per-hire-calculator',
+    '/tools/offer-analyzer',
+    '/tools/salary-converter',
+    '/tools/total-comp-comparator',
+    '/tools/wrvu-calculator',
+    '/tools/em-coding-calculator',
+    '/tools/prescriptive-authority-checker',
+    '/tools/clinical-hours-tracker',
+    '/tools/travel-stipend-calculator',
+    '/tools/loan-repayment-calculator',
+    '/tools/tail-coverage-calculator',
+    '/tools/job-description-generator',
+    '/tools/pay-transparency-checker',
+    '/tools/cost-of-vacancy-calculator',
+    '/tools/clinic-profitability-calculator',
+    '/tools/incident-to-roi-calculator',
+    '/tools/credentialing-timeline-planner',
+    '/tools/interview-scorecard-builder',
 ];
 
 const CONTENT_PATHS = [

@@ -1,57 +1,63 @@
 /**
- * /tools — hub for the free tools (P2 #4, #5, #6, #17; P3 #2, #6a, #6b).
+ * /tools — hub for the free tools (P2 #4, #5, #6, #17; P3 #2, #6a, #6b;
+ * Tools Suite 2026-11-26).
  *
  * Cards render from TOOLS in ./tools-registry.ts, the same array the
  * /resources tools band reads, so the hub can never advertise a tool that
  * does not exist. The visible count derives from that array too — a
- * hand-typed "four tools" went stale the moment the fifth shipped. The meta
- * description is hand-written for length (see PAGE_DESCRIPTION): when a tool
- * is added or retired, update it alongside the registry.
+ * hand-typed count goes stale whenever a tool ships.
  */
 import { brand } from '@/config/brand';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
+  Activity,
+  ArrowLeftRight,
   ArrowRight,
   BarChart3,
   Briefcase,
   Building2,
   Calculator,
+  CheckCircle2,
   ClipboardCheck,
+  Clock,
   Compass,
+  DollarSign,
+  FileText,
+  GraduationCap,
+  Layers,
   Scale,
+  ShieldCheck,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import GuidePromo from '@/components/guides/GuidePromo';
-import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, clayCard, iconTile } from '@/components/tools/tool-theme';
-import { TOOLS, TOOLS_HUB_PATH, type ToolAudience, type ToolIconKey } from './tools-registry';
+import ToolsHubFilterClient, { type HubToolCardItem } from '@/components/tools/ToolsHubFilterClient';
+import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG } from '@/components/tools/tool-theme';
+import { TOOLS, TOOLS_HUB_PATH, type ToolIconKey } from './tools-registry';
 
 const PAGE_URL = `${brand.baseUrl}${TOOLS_HUB_PATH}`;
-// The title and description spell out the full role name, which is how
-// searchers phrase it (research/seo-tools.md, 2026-10-06). The description is
-// hand-written and kept under 160 characters so it is not cut in results; the
-// full tool list renders from the registry in the body, not here.
 const PAGE_TITLE = `Free ${brand.niche.long} Tools and Calculators`;
-const PAGE_DESCRIPTION = `Free ${brand.niche.descriptor} tools and calculators: 1099 vs W-2 pay, cost of living, licensure, a specialty quiz, practice income, pay benchmarks and cost to hire.`;
+const PAGE_DESCRIPTION = `Free ${brand.niche.descriptor} tools for clinicians and employers: pay calculators, wRVU and E/M coding, licensure, loan repayment, pay transparency, and clinic ROI.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Free ${brand.niche.long} Tools`)}&type=page`;
 
 export const metadata: Metadata = {
   // P7 runtime fix D7: no manual brand suffix — the root layout's title
-  // template (`%s | ${brand.name}`) appends it, and doubling it rendered
-  // "… | NP Hiring | NP Hiring".
+  // template (`%s | ${brand.name}`) appends it.
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `${brand.niche.descriptor} tools and calculators`,
     `free ${brand.niche.short.toLowerCase()} tools`,
     `${brand.niche.descriptor} salary calculator`,
+    `${brand.niche.short.toLowerCase()} wrvu calculator`,
+    `${brand.niche.short.toLowerCase()} em coding calculator`,
     `${brand.niche.short.toLowerCase()} licensure checker`,
-    `${brand.niche.short.toLowerCase()} cost of living comparison`,
+    `${brand.niche.short.toLowerCase()} loan repayment calculator`,
     `${brand.niche.short.toLowerCase()} salary benchmark`,
-    `${brand.niche.short.toLowerCase()} specialty quiz`,
-    `${brand.niche.short.toLowerCase()} private practice income calculator`,
     'cost per hire calculator',
+    'pay transparency checker',
   ],
   openGraph: {
     title: PAGE_TITLE,
@@ -72,17 +78,35 @@ const ICONS: Record<ToolIconKey, LucideIcon> = {
   compass: Compass,
   building: Building2,
   briefcase: Briefcase,
-};
-
-const AUDIENCE_META: Record<ToolAudience, { label: string; color: string; bg: string }> = {
-  seeker: { label: 'For clinicians', color: '#BE185D', bg: '#FDF2F8' },
-  employer: { label: 'For employers', color: '#4338CA', bg: '#EEF2FF' },
+  shield: ShieldCheck,
+  clock: Clock,
+  sparkles: Sparkles,
+  layers: Layers,
+  check: CheckCircle2,
+  graduation: GraduationCap,
+  activity: Activity,
+  fileText: FileText,
+  arrows: ArrowLeftRight,
+  dollar: DollarSign,
 };
 
 const jsonLd = (obj: object): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
 export default function ToolsHubPage() {
+  const hubItems: HubToolCardItem[] = TOOLS.map((tool) => {
+    const Icon = ICONS[tool.icon];
+    return {
+      path: tool.path,
+      title: tool.title,
+      blurb: tool.blurb,
+      badge: tool.badge,
+      audience: tool.audience,
+      category: tool.category ?? 'Compensation & Offers',
+      iconNode: <Icon size={23} />,
+    };
+  });
+
   return (
     <>
       <script
@@ -113,47 +137,20 @@ export default function ToolsHubPage() {
       <div style={{ background: TOOL_HERO_BG }}>
         <section style={{ maxWidth: '1080px', margin: '0 auto', padding: '32px 20px 64px' }}>
           <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Tools' }]} />
-          <div style={{ maxWidth: '720px', marginBottom: '40px' }}>
+          <div style={{ maxWidth: '760px', marginBottom: '32px' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: TOOL_ACCENT, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '10px' }}>
-              Free Tools
+              Free Tools Suite
             </p>
             <h1 className="font-lora" style={{ fontSize: 'clamp(2rem, 4.4vw, 3rem)', fontWeight: 800, lineHeight: 1.12, color: '#1A2E35', margin: '0 0 16px' }}>
-              {brand.niche.short} career tools
+              {brand.niche.short} career & hiring tools
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               {TOOLS.length} tools built on the same data as the rest of this site: live postings, published
-              federal tax figures, sourced regulatory data, and our own published prices.
+              federal tax and fee schedules, sourced regulatory data, and our own published prices.
             </p>
           </div>
 
-          <div className="tools-hub-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-            {TOOLS.map((tool) => {
-              const Icon = ICONS[tool.icon];
-              const audience = AUDIENCE_META[tool.audience];
-              return (
-                <Link
-                  key={tool.path}
-                  href={tool.path}
-                  className="tool-card"
-                  style={{ ...clayCard, padding: '26px 24px 22px', textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: '13px' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                    <span style={{ ...iconTile, background: audience.bg, color: audience.color }} aria-hidden="true">
-                      <Icon size={23} />
-                    </span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: audience.color, background: audience.bg, padding: '4px 11px', borderRadius: '20px' }}>
-                      {tool.badge}
-                    </span>
-                  </div>
-                  <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1A2E35', margin: 0, lineHeight: 1.3 }}>{tool.title}</h2>
-                  <p style={{ fontSize: '13.5px', color: '#5A4A42', lineHeight: 1.6, margin: 0, flex: 1 }}>{tool.blurb}</p>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: TOOL_ACCENT }}>
-                    Open the tool <ArrowRight size={14} />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+          <ToolsHubFilterClient items={hubItems} />
 
           <GuidePromo
             slug="career-bundle"

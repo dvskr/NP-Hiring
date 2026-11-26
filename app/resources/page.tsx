@@ -3,8 +3,9 @@ import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  ArrowRight, BarChart3, Briefcase, Building2, Calculator, ClipboardCheck, Compass, DollarSign,
-  Globe, GraduationCap, MapPin, Rocket, Scale, Search, ShieldCheck, Star,
+  Activity, ArrowLeftRight, ArrowRight, BarChart3, Briefcase, Building2, Calculator,
+  CheckCircle2, ClipboardCheck, Clock, Compass, DollarSign, FileText,
+  Globe, GraduationCap, Layers, MapPin, Rocket, Scale, Search, ShieldCheck, Sparkles, Star,
   TrendingUp, Users, type LucideIcon,
 } from 'lucide-react';
 // P2 tools band — paths come from the registry that renders /tools, so this
@@ -77,6 +78,16 @@ const TOOL_ICONS: Record<ToolIconKey, LucideIcon> = {
   compass: Compass,
   building: Building2,
   briefcase: Briefcase,
+  shield: ShieldCheck,
+  clock: Clock,
+  sparkles: Sparkles,
+  layers: Layers,
+  check: CheckCircle2,
+  graduation: GraduationCap,
+  activity: Activity,
+  fileText: FileText,
+  arrows: ArrowLeftRight,
+  dollar: DollarSign,
 };
 
 function StickerFooter({ index, action }: { index: number; action: string }) {

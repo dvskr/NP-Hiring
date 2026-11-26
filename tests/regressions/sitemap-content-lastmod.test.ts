@@ -191,7 +191,6 @@ const GUIDES_RELEASE_PAGES: readonly string[] = [
     '/resources/fpa-guide',
     '/resources/private-practice-guide',
     '/resources/1099-vs-w2',
-    '/tools',
     '/tools/1099-vs-w2-calculator',
     '/tools/licensure-checker',
 ];
@@ -241,6 +240,28 @@ const SALARY_BUILD_PAGES: readonly string[] = [
     '/press',
     '/resources/what-is-a-nurse-practitioner',
     '/resources/np-vs-pa',
+];
+
+const TOOLS_SUITE_DAY = '2026-11-26';
+const TOOLS_SUITE_PAGES: readonly string[] = [
+    '/tools',
+    '/tools/offer-analyzer',
+    '/tools/salary-converter',
+    '/tools/total-comp-comparator',
+    '/tools/wrvu-calculator',
+    '/tools/em-coding-calculator',
+    '/tools/prescriptive-authority-checker',
+    '/tools/clinical-hours-tracker',
+    '/tools/travel-stipend-calculator',
+    '/tools/loan-repayment-calculator',
+    '/tools/tail-coverage-calculator',
+    '/tools/job-description-generator',
+    '/tools/pay-transparency-checker',
+    '/tools/cost-of-vacancy-calculator',
+    '/tools/clinic-profitability-calculator',
+    '/tools/incident-to-roi-calculator',
+    '/tools/credentialing-timeline-planner',
+    '/tools/interview-scorecard-builder',
 ];
 
 /** The pages whose rendered copy follows the promo clock today (packages M1 and M2 of backlog 2.1, and the guides store). */
@@ -434,7 +455,7 @@ describe('lastmod helpers', () => {
         // 2027 re-price the eight pages that print the ladder, the plan or
         // the renewal price, and the guides store its own pages and ten more.
         // Pinning every entry makes a partial move fail, and a blanket move too.
-        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES, SALARY_BUILD_PAGES];
+        const groups = [UNTOUCHED_PAGE_DATES, SECURITY_BATCH_PAGES, FOLLOW_UPS_PAGES, PRICING_RELEASE_PAGES, AI_APPS_RELEASE_PAGES, GUIDES_RELEASE_PAGES, GUIDES_FOLLOW_UPS_PAGES, DEFINITION_GUIDES_PAGES, CONNECTOR_REBUILD_PAGES, SALARY_BUILD_PAGES, TOOLS_SUITE_PAGES];
         for (const group of groups) {
             const pages = Array.isArray(group) ? group : Object.keys(group);
             expect(pages.filter((pagePath) => !(pagePath in PAGE_CONTENT_DATES))).toEqual([]);
@@ -450,11 +471,14 @@ describe('lastmod helpers', () => {
             ...DEFINITION_GUIDES_PAGES,
             ...CONNECTOR_REBUILD_PAGES,
             ...SALARY_BUILD_PAGES,
+            ...TOOLS_SUITE_PAGES,
             ...Object.keys(UNTOUCHED_PAGE_DATES),
         ];
         expect(new Set(grouped).size).toBe(grouped.length);
         for (const [pagePath, day] of Object.entries(PAGE_CONTENT_DATES)) {
-            const expected = SALARY_BUILD_PAGES.includes(pagePath)
+            const expected = TOOLS_SUITE_PAGES.includes(pagePath)
+                ? TOOLS_SUITE_DAY
+                : SALARY_BUILD_PAGES.includes(pagePath)
                 ? SALARY_BUILD_DAY
                 : DEFINITION_GUIDES_PAGES.includes(pagePath)
                 ? DEFINITION_GUIDES_DAY

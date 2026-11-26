@@ -204,7 +204,8 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   '/resources/np-vs-pa': '2026-11-25',
   '/scope-of-practice': '2026-10-13',
   // 2026-11-07 (guides store): a Career Bundle card under the tools.
-  '/tools': '2026-11-07',
+  // 2026-11-26 (tools suite): interactive filter bar and 17 new clinician & employer tools.
+  '/tools': '2026-11-26',
   // 2026-11-07 (guides store): a Negotiate Like an NP card under the calculator.
   '/tools/1099-vs-w2-calculator': '2026-11-07',
   // 2026-09-29: a curated metro's jobs link now opens its metro guide (L-05).
@@ -219,6 +220,24 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // 2026-10-25 (2027 re-price): no plan mode or months field; renewals priced by the post they renew;
   // 2026-10-26 (Phase 3): the 5-post pack mode, its method note and the pack in the ladder lines.
   '/tools/cost-per-hire-calculator': '2026-10-26',
+  // 2026-11-26 (tools suite): 17 new interactive clinician & employer tools.
+  '/tools/offer-analyzer': '2026-11-26',
+  '/tools/salary-converter': '2026-11-26',
+  '/tools/total-comp-comparator': '2026-11-26',
+  '/tools/wrvu-calculator': '2026-11-26',
+  '/tools/em-coding-calculator': '2026-11-26',
+  '/tools/prescriptive-authority-checker': '2026-11-26',
+  '/tools/clinical-hours-tracker': '2026-11-26',
+  '/tools/travel-stipend-calculator': '2026-11-26',
+  '/tools/loan-repayment-calculator': '2026-11-26',
+  '/tools/tail-coverage-calculator': '2026-11-26',
+  '/tools/job-description-generator': '2026-11-26',
+  '/tools/pay-transparency-checker': '2026-11-26',
+  '/tools/cost-of-vacancy-calculator': '2026-11-26',
+  '/tools/clinic-profitability-calculator': '2026-11-26',
+  '/tools/incident-to-roi-calculator': '2026-11-26',
+  '/tools/credentialing-timeline-planner': '2026-11-26',
+  '/tools/interview-scorecard-builder': '2026-11-26',
   '/for-employers/resources': '2026-10-13',
   // 2026-10-20 (register 2.23): the credential checklist and the first FAQ
   // answer name the certifying body AANPCB.
