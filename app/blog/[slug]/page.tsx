@@ -47,6 +47,8 @@ import EditorialToolbar from '@/components/blog/EditorialToolbar';
 import EditorialShare from '@/components/blog/EditorialShare';
 import EditorialStickyFix from '@/components/blog/EditorialStickyFix';
 import VideoLightbox from '@/components/blog/VideoLightbox';
+import GuideMention from '@/components/guides/GuideMention';
+import { guideMentionForPost } from '@/lib/guides/blog-guide';
 import '@/app/editorial.css';
 
 // ISR: blog post bodies change infrequently; 1-hour revalidate is appropriate.
@@ -321,6 +323,7 @@ export default async function BlogPostPage({ params }: Props) {
 
     const relatedPosts = await getRelatedPosts(post.category, post.slug);
     const currentUrl = `${brand.baseUrl}/blog/${slug}`;
+    const guideMention = guideMentionForPost(slug);
 
     // License guides (slug like "<prefix>{state}", see config/niche/content-map.ts)
     // get the live branch: nearby-states table, market snapshot, HowTo schema
@@ -703,6 +706,10 @@ export default async function BlogPostPage({ params }: Props) {
                             dangerouslySetInnerHTML={{ __html: contentHtml }}
                         />
                     </article>
+
+                    {/* The guide whose preview page goes deeper on this post's
+                        topic, as one sentence with one link (lib/guides/blog-guide.ts). */}
+                    {guideMention && <GuideMention mention={guideMention} />}
 
                     {/* Share row */}
                     <EditorialShare title={post.title} url={currentUrl} />
