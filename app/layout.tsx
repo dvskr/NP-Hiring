@@ -235,13 +235,10 @@ export default function RootLayout({
                     "postalCode": brand.legal.addressPostalCode,
                     "addressCountry": brand.legal.addressCountry,
                   },
-                  "sameAs": [
-                    brand.social.linkedin,
-                    brand.social.facebook,
-                    brand.social.x,
-                    brand.social.instagram,
-                    brand.social.youtube,
-                  ],
+                  // Every profile in brand.social, which holds only profiles
+                  // the board owns: a sameAs naming someone else's handle
+                  // would tie this entity to it.
+                  "sameAs": Object.values(brand.social),
                   "contactPoint": {
                     "@type": "ContactPoint",
                     "email": brand.email.contact,

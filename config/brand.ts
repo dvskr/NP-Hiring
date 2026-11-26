@@ -213,22 +213,22 @@ export const brand = {
 
     /**
      * Public social profiles: the footer icons (components/Footer.tsx) and
-     * the Organization schema's sameAs (app/layout.tsx).
+     * the Organization schema's sameAs (app/layout.tsx), which lists every
+     * entry here.
      *
-     * facebook and youtube are the board's own profiles, created by the owner
-     * on 2026-11-26. x, instagram and linkedin are still placeholder URLs on
-     * the brand handle pattern: claim those accounts, or they point at a 404
-     * or an unrelated profile.
+     * Only profiles the board owns belong here. facebook and youtube are the
+     * board's own, created by the owner on 2026-11-26. The x, instagram and
+     * linkedin placeholders on the brand handle pattern were removed that day:
+     * a sameAs that names a handle the board does not hold is worse than none.
+     * Add each again, here and as a footer icon, once the owner sends the real
+     * profile (tests/regressions/brand-social-profiles.test.ts holds the two
+     * lists to each other).
      *
-     * Only official profiles belong here. The Facebook group
-     * (facebook.com/groups/nphiringjobs) is a community, not the board's
-     * profile, so it never goes in sameAs.
+     * The Facebook group (facebook.com/groups/nphiringjobs) is a community,
+     * not the board's profile, so it never goes in sameAs.
      */
     social: {
-        x: 'https://x.com/nphiring',
         facebook: 'https://www.facebook.com/nphiring',
-        instagram: 'https://www.instagram.com/nphiring',
-        linkedin: 'https://www.linkedin.com/company/nphiring',
         youtube: 'https://www.youtube.com/@nphiring',
     },
 } as const;
