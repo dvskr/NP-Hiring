@@ -14,9 +14,10 @@
  * sales are final, nothing offers a free claim, and the JSON-LD carries the
  * catalog price.
  *
- * In both phases the sister board pointer stays on /guides, and every dollar
- * amount comes from the catalog. The phase is set through the environment the
- * pages read, as in production.
+ * In both phases the psych editions (the sister board's guides, sold here)
+ * follow the same phase as this board's own, the sister board is credited
+ * once on /guides, and every dollar amount comes from the catalog. The phase
+ * is set through the environment the pages read, as in production.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
@@ -30,12 +31,14 @@ import {
     BUNDLES,
     BUNDLE_ORDER,
     GUIDES,
+    PSYCH_BUNDLE_ORDER,
     allProducts,
     formatPrice,
     savingsCents,
     separatePriceCents,
     type Product,
 } from '@/lib/guides/catalog';
+import { isSelfCanonical } from '@/lib/guides/canonical';
 import { guidePriceCopy, type GuidePhase } from '@/lib/guides/phase';
 import GuideAction, { addOnOffer } from '@/components/guides/GuideAction';
 import GuidePrice from '@/components/guides/GuidePrice';
@@ -85,10 +88,13 @@ async function renderProduct(slug: string): Promise<string> {
 /** Every "$N" amount in a text. */
 const dollarAmounts = (text: string): string[] => [...text.matchAll(/\$\d+(?:\.\d{2})?/g)].map((m) => m[0]);
 
+/** Every bundle in the store: this board's own, then the psych editions' library. */
+const ALL_BUNDLES = [...BUNDLE_ORDER, ...PSYCH_BUNDLE_ORDER];
+
 /** Catalog prices, plus the two figures guidePriceCopy derives from them for a bundle: its guides bought one at a time, and what it saves. */
 const CATALOG_PRICES = new Set([
     ...allProducts().map((product: Product) => formatPrice(product.priceCents)),
-    ...BUNDLE_ORDER.flatMap((slug) => [formatPrice(separatePriceCents(BUNDLES[slug])), formatPrice(savingsCents(BUNDLES[slug]))]),
+    ...ALL_BUNDLES.flatMap((slug) => [formatPrice(separatePriceCents(BUNDLES[slug])), formatPrice(savingsCents(BUNDLES[slug]))]),
 ]);
 
 /** Words that offer a guide at no cost. */
@@ -158,7 +164,9 @@ describe('/guides', () => {
         const text = textOf(html);
         expect(text).toContain(guidePriceCopy(BUNDLES['complete-library'], 'free').note);
         expect(text).toContain(guidePriceCopy(BUNDLES['career-bundle'], 'free').note);
-        expect(html.match(/type="email"/g)?.length).toBe(3);
+        expect(text).toContain(guidePriceCopy(BUNDLES['psych-library'], 'free').note);
+        // A claim form for every bundle: this board's three and the psych library.
+        expect(html.match(/type="email"/g)?.length).toBe(ALL_BUNDLES.length);
         expect(text).toContain('Get them free');
         expect(text).not.toContain('Buy for');
         expect(text).not.toContain('One-time purchase');
@@ -181,7 +189,7 @@ describe('/guides', () => {
         vi.setSystemTime(new Date('2026-11-26T12:00:00.000Z'));
         const html = renderStore();
         const text = textOf(html);
-        for (const slug of BUNDLE_ORDER) {
+        for (const slug of ALL_BUNDLES) {
             expect(text).toContain(`Buy for ${formatPrice(BUNDLES[slug].priceCents)}`);
         }
         expect(html).not.toContain('type="email"');
@@ -198,12 +206,14 @@ describe('/guides', () => {
         expect(amounts.filter((amount) => !CATALOG_PRICES.has(amount))).toEqual([]);
     });
 
-    it.each(PHASES)('%s: links every product page, lists them in its ItemList JSON-LD, and keeps the sister board pointer', (phase) => {
+    it.each(PHASES)('%s: links every product page, lists the self canonical ones in its ItemList JSON-LD, and credits the sister board once', (phase) => {
         setPhase(phase);
         const html = renderStore();
         for (const product of allProducts()) expect(html, product.slug).toContain(`href="/guides/${product.slug}"`);
         const list = jsonLdBlocks(html).find((block) => block['@type'] === 'ItemList') as { itemListElement: Array<{ url: string }> };
-        expect(list.itemListElement.map((item) => item.url)).toEqual(allProducts().map((product) => `${brand.baseUrl}/guides/${product.slug}`));
+        const listed = allProducts().filter(isSelfCanonical);
+        expect(listed.map((product) => product.edition)).not.toContain('psych');
+        expect(list.itemListElement.map((item) => item.url)).toEqual(listed.map((product) => `${brand.baseUrl}/guides/${product.slug}`));
         expect(html.match(/data-sister-board/g)).toHaveLength(1);
     });
 
@@ -345,8 +355,12 @@ describe('guides copy: no dashes, in either phase', () => {
             'components/guides/GuidePrice.tsx',
             'components/guides/GuidePromo.tsx',
             'components/guides/GuideSchema.tsx',
+            'components/guides/PsychEditionsShelf.tsx',
+            'components/guides/PsychGuidesCard.tsx',
             'components/guides/styles.ts',
-            'components/sister-board/SisterBoardGuidesSection.tsx',
+            'config/psych-editions.ts',
+            'lib/guides/canonical.ts',
+            'lib/guides/catalog.ts',
             'lib/guides/job-guide.ts',
             'lib/guides/og.ts',
             'lib/guides/phase.ts',

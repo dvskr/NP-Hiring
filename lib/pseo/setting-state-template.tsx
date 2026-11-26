@@ -23,7 +23,7 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import type { Prisma } from '@prisma/client';
 import ImmersiveImage from '@/components/ImmersiveImage';
-import SisterBoardGuidesCallout from '@/components/sister-board/SisterBoardGuidesCallout';
+import PsychGuidesCard from '@/components/guides/PsychGuidesCard';
 import { getCitiesByState } from './city-data/cities';
 import {
   isPseoStatsFresh,
@@ -648,6 +648,10 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           {/* Job Listings */}
           <div className="grid lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3">
+              {/* The psych editions of the guides store (owner decision
+                  2026-11-26) on a phone or tablet, where the sidebar falls
+                  below every listing; the sister board's specialty only. */}
+              <PsychGuidesCard categorySlug={settingKey} placement="inline" />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
                   {config.label} Positions in {stateName} ({facts.total})
@@ -710,9 +714,14 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               )}
             </div>
 
-            {/* Sidebar: the ONE alert CTA on the page, then the category's
-                tips and benefits, each rendered once. */}
+            {/* Sidebar: the psych editions on the sister board's specialty,
+                then the ONE alert CTA on the page, then the category's tips
+                and benefits, each rendered once. */}
             <div className="lg:col-span-1">
+              {/* The psych editions on a desktop: first in the sidebar,
+                  beside the first listings. */}
+              <PsychGuidesCard categorySlug={settingKey} placement="sidebar" />
+
               {/* Alert CTA. "Delivered daily" is the send-alerts cron cadence
                   (config/cron-schedule.ts, daily group). */}
               <div style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
@@ -734,10 +743,6 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   </Link>
                 </div>
               </div>
-
-              {/* The sister board's career guides (owner decision
-                  2026-11-26): renders on its specialty only. */}
-              <SisterBoardGuidesCallout categorySlug={settingKey} />
 
               {/* Tips */}
               <div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>

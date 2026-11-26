@@ -1,6 +1,8 @@
 /**
  * The guides store's search and crawl surface: the store and its product
- * pages are crawlable, linked sitewide and self canonical, with share cards
+ * pages are crawlable, linked sitewide and self canonical (a psych edition,
+ * the sister board's guide sold here, names that board's page for the same
+ * guide instead: tests/lib/guides-psych-editions.test.ts), with share cards
  * from the site's own /api/og renderer; a reader's library and the
  * post-checkout page are private (noindex, no referrer, blocked in
  * robots.txt). The sitemap entries are pinned in
@@ -12,6 +14,7 @@ import path from 'node:path';
 import robotsHandler from '@/app/robots';
 import { brand } from '@/config/brand';
 import { allProducts } from '@/lib/guides/catalog';
+import { isSelfCanonical } from '@/lib/guides/canonical';
 import * as storePage from '@/app/guides/page';
 import * as productPage from '@/app/guides/[slug]/page';
 import { metadata as successMetadata } from '@/app/guides/success/layout';
@@ -59,10 +62,14 @@ describe('the store pages are indexable and share on the site renderer', () => {
         expect(image).toContain('&type=page');
     });
 
-    it('every product page is self canonical with its own card', async () => {
+    it('every page of this board\'s own products is self canonical, and every product page has its own card and no noindex', async () => {
+        const own = allProducts().filter(isSelfCanonical);
+        expect(own.length).toBeGreaterThan(0);
         for (const product of allProducts()) {
             const metadata = await productPage.generateMetadata({ params: Promise.resolve({ slug: product.slug }) });
-            expect(metadata.alternates?.canonical, product.slug).toBe(`${brand.baseUrl}/guides/${product.slug}`);
+            if (isSelfCanonical(product)) {
+                expect(metadata.alternates?.canonical, product.slug).toBe(`${brand.baseUrl}/guides/${product.slug}`);
+            }
             expect(metadata.robots, product.slug).toBeUndefined();
             expect(JSON.stringify(metadata.openGraph?.images), product.slug).toContain('/api/og?title=');
         }

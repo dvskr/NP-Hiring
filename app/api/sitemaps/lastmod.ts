@@ -154,6 +154,11 @@ export const PAGE_CONTENT_DATES: Readonly<Record<string, string>> = {
   // promo clock, free copy that names no end date, and Product and ItemList
   // JSON-LD. Both pages left PROMO_SWITCH_PATHS the same day. Their copy
   // switches again when the Stripe settings are added, which takes a deploy.
+  // 2026-11-26, later that day (the psych editions, owner decision): the
+  // sister board's six guides and their library are sold here, in a shelf
+  // right after the store's hero that replaces the pointer after the FAQ.
+  // Their own pages are new, canonical to the sister board's pages and so not
+  // listed; the Complete Library's summary now says every NP guide.
   '/guides': '2026-11-26',
   '/guides/[slug]': '2026-11-26',
   // 2026-10-25 (2027 re-price): §6 to §8 state the new prices and both renewal prices, drop the plan, and "Last updated" moved;

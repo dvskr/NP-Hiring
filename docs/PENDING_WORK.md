@@ -148,6 +148,24 @@ To list it, in this order (steps and copy in `docs/ai-apps/submission.md`):
 - Why: the directories are where candidates find the app; a custom connector works for anyone today.
 - Where: Vercel, nphiring.com, claude.ai, platform.openai.com.
 
+**1.16 The psychiatric NP editions' PDFs.** Since 2026-11-26 the guides store sells PMHNP Hiring's six guides as
+the psychiatric NP editions, with a Psychiatric NP Library of all six (`config/psych-editions.ts`). Each needs
+its PDF in the private Supabase Storage bucket `guides` under the name on the left; the file on the right is in
+PMHNP Hiring's ignored `PMHNP Guides` folder (the library has no file of its own):
+- `psych-compensation-report.pdf`: `pmhnphiring-2026-pmhnp-compensation-report.pdf`
+- `psych-first-year-playbook.pdf`: `pmhnphiring-first-year-pmhnp-playbook.pdf`
+- `psych-interview-prep-pack.pdf`: `pmhnphiring-pmhnp-interview-prep-pack.pdf`
+- `psych-negotiation-guide.pdf`: `pmhnphiring-negotiate-like-a-pmhnp.pdf`
+- `psych-telepsychiatry-playbook.pdf`: `pmhnphiring-telepsychiatry-np-playbook.pdf`
+- `psych-launch-your-practice.pdf`: `pmhnphiring-launch-your-pmhnp-practice.pdf`
+
+Upload each in the Supabase dashboard under its new name, or copy the six files into this repo's `NP Guides`
+folder and run `scripts/guides/upload-guides.ts` with `--edition=psych` (a dry run first, then `--apply`; its
+header says which project each flag reaches). The bucket stays private.
+- Why: until its file is there, a reader who claims or buys an edition gets "That file is not available right
+  now" from the download link. The editions are free to claim, like every guide, until checkout is set up (1.2).
+- Where: Supabase Storage on the production project, or a terminal in the main checkout.
+
 ## 2. Engineering (CLAUDE)
 
 **2.3 Repair garbled city slugs.** `PseoStats` and the snippet tables still hold slugs such as

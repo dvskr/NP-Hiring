@@ -30,10 +30,10 @@ import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { verifyCsrf } from '@/lib/csrf';
 import { gaCheckoutMetadata } from '@/lib/analytics-server';
-import { ADD_ON, GUIDES, addOnEligible, getProduct, productGuides, type Product } from '@/lib/guides/catalog';
+import { GUIDES, addOnEligible, addOnFor, getProduct, productGuides, type Product } from '@/lib/guides/catalog';
 import { GUIDE_CHECKOUT_COOKIE, addToCheckoutCookie, checkoutCookieOptions } from '@/lib/guides/access';
 import { GUIDE_CHECKOUT_TYPE, guidePhase } from '@/lib/guides/phase';
-import { ADD_ON_METADATA_VALUE } from '@/lib/guides/fulfill';
+import { addOnMetadataValue } from '@/lib/guides/fulfill';
 
 const BODY = z.object({
     product: z.string().min(1).max(64),
@@ -55,13 +55,15 @@ function productLineItem(product: Product): Stripe.Checkout.SessionCreateParams.
     };
 }
 
-function addOnLineItem(): Stripe.Checkout.SessionCreateParams.LineItem {
-    const guide = GUIDES[ADD_ON.guide];
+/** The add-on of the product's own edition (lib/guides/catalog.ts#addOnFor). */
+function addOnLineItem(product: Product): Stripe.Checkout.SessionCreateParams.LineItem {
+    const addOn = addOnFor(product);
+    const guide = GUIDES[addOn.guide];
     return {
         quantity: 1,
         price_data: {
             currency: 'usd',
-            unit_amount: ADD_ON.priceCents,
+            unit_amount: addOn.priceCents,
             product_data: { name: `Add-on: ${guide.title}`, description: `${guide.pages}-page PDF.` },
         },
     };
@@ -123,11 +125,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             customer_email: user?.email ?? undefined,
             // No promotion codes: any unrestricted code in the account would
             // apply here. Turn on only with codes limited to guide products.
-            line_items: withAddOn ? [productLineItem(product), addOnLineItem()] : [productLineItem(product)],
+            line_items: withAddOn ? [productLineItem(product), addOnLineItem(product)] : [productLineItem(product)],
             metadata: {
                 type: GUIDE_CHECKOUT_TYPE,
                 product: product.slug,
-                addOn: withAddOn ? ADD_ON_METADATA_VALUE : '',
+                addOn: withAddOn ? addOnMetadataValue(product) : '',
                 userId: user?.id ?? '',
                 ...gaCheckoutMetadata(req),
             },
@@ -144,7 +146,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }
 
         // amountCents is for the button's GA begin_checkout; Stripe charges the line items.
-        const amountCents = product.priceCents + (withAddOn ? ADD_ON.priceCents : 0);
+        const amountCents = product.priceCents + (withAddOn ? addOnFor(product).priceCents : 0);
         const res = NextResponse.json({ url: session.url, amountCents });
         // Ties the success page to this browser: only it receives the
         // library cookie straight away. Anyone else holding the session id

@@ -226,6 +226,21 @@ describe('a new claim', () => {
         expect(gp.create.mock.calls[0][0].data.guideSlugs).toEqual(['interview-prep-pack']);
     });
 
+    it('claims a psych edition and the psych library like any other product', async () => {
+        const single = await POST(claim({ product: 'psych-negotiation-guide', email: 'np@example.com', addOn: true }));
+        expect(single.status).toBe(200);
+        expect(gp.create.mock.calls[0][0].data).toMatchObject({
+            source: 'promo',
+            amountCents: 0,
+            productSlug: 'psych-negotiation-guide',
+            guideSlugs: ['psych-negotiation-guide'],
+        });
+
+        const library = await POST(claim({ product: 'psych-library', email: 'np@example.com' }));
+        expect(await library.json()).toEqual({ ok: true, emailed: true, guides: [...BUNDLES['psych-library'].guides], inLibrary: false });
+        expect(gp.create.mock.calls[1][0].data).toMatchObject({ productSlug: 'psych-library', guideSlugs: [...BUNDLES['psych-library'].guides] });
+    });
+
     it('keeps the signed-in reader\'s user id', async () => {
         auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-7', email: 'other@example.com' } } });
         await POST(claim({ product: 'first-year-playbook', email: 'np@example.com' }));

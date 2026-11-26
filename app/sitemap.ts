@@ -48,6 +48,7 @@ import { TOOL_PATHS, TOOLS_HUB_PATH } from '@/app/tools/tools-registry'
 import { COMPARE_HUB_PATH, COMPARE_PAGE_PATHS, COMPARE_REVIEW_DATE } from '@/lib/compare-data'
 import { REPORTS_HUB_PATH, ALL_REPORTS } from '@/lib/reports/editions'
 import { allProducts } from '@/lib/guides/catalog'
+import { isSelfCanonical } from '@/lib/guides/canonical'
 // P2 #12: per-state city directories. These helpers ARE the render gate:
 // app/jobs/locations/[state]/page.tsx notFound()s on
 // !shouldRenderStateCityDirectory and the locations hub links with the
@@ -390,12 +391,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
   // The guides store and one page per guide and bundle (lib/guides/catalog.ts,
   // the list the product route builds from). Code-authored, so each carries
-  // its copy date, raised to the promo switch once that has passed (the price
-  // blocks change then; PROMO_SWITCH_PATHS). /guides/library and
-  // /guides/success are private and never listed.
+  // its copy date; the guides left PROMO_SWITCH_PATHS on 2026-11-26, so no
+  // promo switch raises it. A psych edition's page names the sister board's
+  // page for the same guide as its canonical (lib/guides/canonical.ts), so it
+  // is not listed. /guides/library and /guides/success are private and never
+  // listed.
   const guidePages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/guides`, lastModified: pageContentDate('/guides'), changeFrequency: 'monthly', priority: 0.7 },
-    ...allProducts().map(product => ({
+    ...allProducts().filter(isSelfCanonical).map(product => ({
       url: `${baseUrl}/guides/${product.slug}`,
       lastModified: pageContentDate('/guides/[slug]'),
       changeFrequency: 'monthly' as const,

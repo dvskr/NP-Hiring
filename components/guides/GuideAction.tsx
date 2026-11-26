@@ -1,20 +1,21 @@
-import { ADD_ON, GUIDES, addOnEligible, formatPrice, type Product } from '@/lib/guides/catalog';
+import { GUIDES, addOnEligible, addOnFor, formatPrice, type Product } from '@/lib/guides/catalog';
 import { guidePriceCopy, type GuidePriceCopy } from '@/lib/guides/phase';
 import BuyButton, { type AddOnOffer } from './BuyButton';
 import ClaimForm from './ClaimForm';
 
 /**
- * The add-on offer for a product that does not include the add-on guide, or
- * null. Checkout is the only place it is offered, so its button label is the
- * paid guidePriceCopy for the combined amount: even the add-on total comes
- * from the one price source.
+ * The add-on offer for a product that does not include its edition's add-on
+ * guide, or null. Checkout is the only place it is offered, so its button
+ * label is the paid guidePriceCopy for the combined amount: even the add-on
+ * total comes from the one price source.
  */
 export function addOnOffer(product: Product): AddOnOffer | null {
     if (!addOnEligible(product)) return null;
+    const addOn = addOnFor(product);
     return {
-        title: GUIDES[ADD_ON.guide].title,
-        price: formatPrice(ADD_ON.priceCents),
-        ctaWithAddOn: guidePriceCopy({ ...product, priceCents: product.priceCents + ADD_ON.priceCents }, 'paid').cta,
+        title: GUIDES[addOn.guide].title,
+        price: formatPrice(addOn.priceCents),
+        ctaWithAddOn: guidePriceCopy({ ...product, priceCents: product.priceCents + addOn.priceCents }, 'paid').cta,
     };
 }
 

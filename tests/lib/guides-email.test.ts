@@ -11,7 +11,7 @@ vi.mock('@/lib/email-service', () => ({ sendAndLog: vi.fn() }));
 
 import { sendAndLog } from '@/lib/email-service';
 import { guidePurchaseEmailContent, libraryLink, sendGuidePurchaseEmail } from '@/lib/guides/email';
-import { GUIDE_SLUGS } from '@/lib/guides/catalog';
+import { BUNDLES } from '@/lib/guides/catalog';
 import type { GuidePurchase } from '@prisma/client';
 
 const TOKEN = 'e'.repeat(48);
@@ -21,7 +21,7 @@ const purchase = {
     email: 'buyer@example.com',
     accessToken: TOKEN,
     productSlug: 'complete-library',
-    guideSlugs: [...GUIDE_SLUGS],
+    guideSlugs: [...BUNDLES['complete-library'].guides],
 } as unknown as GuidePurchase;
 
 /** Visible text only: the shared shell's CSS comments are not copy. */

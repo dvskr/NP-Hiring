@@ -57,6 +57,7 @@ import { loadStateHubVerdicts, type StateHubVerdict } from '@/lib/pseo/state-hub
 import { ALL_CATEGORY_CONFIGS } from '@/lib/pseo/category-city-template';
 import { stateDioramaSrc } from '@/components/StateImage';
 import { allProducts } from '@/lib/guides/catalog';
+import { isSelfCanonical } from '@/lib/guides/canonical';
 import {
     jobContentDate,
     lastmodTag,
@@ -861,15 +862,20 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         }
     });
 
-    it('guides store: /guides and one page per product are listed with their last ship day, and none of the private pages', async () => {
+    it('guides store: /guides and one page per self canonical product are listed with their last ship day, and none of the private pages', async () => {
         const entries = await byUrl();
         const shipDay = new Date(`${GUIDES_UPDATE_DAY}T00:00:00.000Z`);
         expect(entries.get(`${BASE}/guides`)?.lastModified).toEqual(shipDay);
-        for (const product of allProducts()) {
+        const listed = allProducts().filter(isSelfCanonical);
+        for (const product of listed) {
             expect(entries.get(`${BASE}/guides/${product.slug}`)?.lastModified, product.slug).toEqual(shipDay);
         }
+        // A psych edition's canonical is the sister board's page for the same guide, so it is not listed.
+        for (const product of allProducts().filter((p) => !isSelfCanonical(p))) {
+            expect(entries.has(`${BASE}/guides/${product.slug}`), product.slug).toBe(false);
+        }
         const guideUrls = [...entries.keys()].filter((url) => url.startsWith(`${BASE}/guides`));
-        expect(guideUrls).toHaveLength(allProducts().length + 1);
+        expect(guideUrls).toHaveLength(listed.length + 1);
         expect(guideUrls.some((url) => /\/guides\/(?:library|success)/.test(url))).toBe(false);
     });
 
@@ -919,7 +925,7 @@ describe('/sitemap.xml dates from content and agrees with the page robots', () =
         // The guides switch on the Stripe settings, not the promo clock, so the
         // store and its product pages keep their date.
         const storePages = [...entries.values()].filter((entry) => entry.url.startsWith(`${BASE}/guides`));
-        expect(storePages).toHaveLength(allProducts().length + 1);
+        expect(storePages).toHaveLength(allProducts().filter(isSelfCanonical).length + 1);
         for (const entry of storePages) expect(entry.lastModified, entry.url).toEqual(new Date(`${GUIDES_UPDATE_DAY}T00:00:00.000Z`));
         // Pages whose copy does not follow the promo clock keep their dates.
         expect(entries.get(`${BASE}/about`)?.lastModified).toEqual(pageContentDate('/about', PROMO_RUNNING));

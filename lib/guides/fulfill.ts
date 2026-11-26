@@ -25,15 +25,17 @@ import type { GuidePurchase, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import type { PaymentIntentReader } from '@/lib/payment-intent-reader';
-import { ADD_ON, getProduct, isGuideSlug, productGuides, resolvePurchaseGuides, type Product } from './catalog';
+import { addOnFor, getProduct, isGuideSlug, productGuides, resolvePurchaseGuides, type Product } from './catalog';
 import { GUIDE_CHECKOUT_TYPE } from './phase';
 import { newAccessToken } from './access';
 import { sendGuidePurchaseEmail } from './email';
 
 export { GUIDE_CHECKOUT_TYPE };
 
-/** Checkout Session metadata.addOn when the add-on guide was bought. */
-export const ADD_ON_METADATA_VALUE: string = ADD_ON.guide;
+/** Checkout Session metadata.addOn when the add-on was bought: the slug of the product's edition's add-on guide. */
+export function addOnMetadataValue(product: Product): string {
+    return addOnFor(product).guide;
+}
 
 /** How often a re-used promo claim may re-send its email. */
 export const PROMO_RESEND_INTERVAL_MS = 10 * 60 * 1000;
@@ -137,7 +139,7 @@ export async function fulfillGuideSession(session: Stripe.Checkout.Session, opti
         logger.error('Guide checkout paid for an unknown product', null, { sessionId: session.id, product: session.metadata?.product });
         return { status: 'invalid' };
     }
-    const withAddOn = session.metadata?.addOn === ADD_ON_METADATA_VALUE;
+    const withAddOn = session.metadata?.addOn === addOnMetadataValue(product);
     const guideSlugs = resolvePurchaseGuides(product, withAddOn).filter(isGuideSlug);
 
     const purchase = await recordPurchase(session, {

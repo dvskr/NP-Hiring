@@ -1,5 +1,6 @@
 import { brand } from '@/config/brand';
 import { allProducts, type Product } from './catalog';
+import { isSelfCanonical, productPageUrl } from './canonical';
 import { guideOgImageUrl, productOgCard } from './og';
 import type { GuidePhase } from './phase';
 
@@ -7,18 +8,16 @@ import type { GuidePhase } from './phase';
  * Structured data for the guides store. The offer is the one the page makes
  * in the same phase: free to claim (price 0) until checkout is set up, then
  * the catalog price the checkout charges. No rating or review markup: there
- * are no reviews to describe.
+ * are no reviews to describe. A psych edition's Product offers this store's
+ * price at this store's page, the one where it is claimed or bought, while
+ * its canonical names the sister board's page (lib/guides/canonical.ts).
  */
 
 const ORGANIZATION_ID = `${brand.baseUrl}/#organization`;
 
-function productUrl(product: Product): string {
-    return `${brand.baseUrl}/guides/${product.slug}`;
-}
-
 /** schema.org Product with a single USD Offer for one guide or bundle, priced for `phase`. */
 export function productJsonLd(product: Product, phase: GuidePhase): Record<string, unknown> {
-    const url = productUrl(product);
+    const url = productPageUrl(product);
     return {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -40,16 +39,16 @@ export function productJsonLd(product: Product, phase: GuidePhase): Record<strin
     };
 }
 
-/** schema.org ItemList of every product the store offers, in catalog order. */
+/** schema.org ItemList of the store's products whose page here is their canonical, in catalog order. */
 export function storeItemListJsonLd(): Record<string, unknown> {
     return {
         '@context': 'https://schema.org',
         '@type': 'ItemList',
         name: `${brand.niche.short} Career Guides`,
-        itemListElement: allProducts().map((product, index) => ({
+        itemListElement: allProducts().filter(isSelfCanonical).map((product, index) => ({
             '@type': 'ListItem',
             position: index + 1,
-            url: productUrl(product),
+            url: productPageUrl(product),
             name: product.title,
         })),
     };

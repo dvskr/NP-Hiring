@@ -5,7 +5,10 @@
  * promise fails here
  * instead of on the live page. The store copy rules ride along: no en or em
  * dash anywhere in a product, and share cards that are short, carry no
- * figures and never a price.
+ * figures and never a price. The psych editions (the sister board's guides,
+ * sold here since 2026-11-26) are pinned in
+ * tests/lib/guides-psych-editions.test.ts; their prices are pinned here too,
+ * beside this board's own.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -13,7 +16,8 @@ import {
     BUNDLES,
     BUNDLE_ORDER,
     GUIDES,
-    GUIDE_SLUGS,
+    OWN_GUIDE_SLUGS,
+    PSYCH_BUNDLE_ORDER,
     addOnEligible,
     allProducts,
     bundlesContaining,
@@ -50,21 +54,29 @@ describe('guide prices', () => {
             'career-bundle': 4900,
             'practice-owner-bundle': 5900,
             'complete-library': 9900,
+            // The psych editions: the same prices as this board's guide on each subject.
+            'psych-compensation-report': 900,
+            'psych-first-year-playbook': 2900,
+            'psych-interview-prep-pack': 2900,
+            'psych-negotiation-guide': 3900,
+            'psych-telepsychiatry-playbook': 3900,
+            'psych-launch-your-practice': 4900,
+            'psych-library': 9900,
         });
         expect(ADD_ON).toEqual({ guide: 'compensation-report', priceCents: 500 });
     });
 
     it('prices every bundle below its guides bought one at a time', () => {
-        for (const slug of BUNDLE_ORDER) {
+        for (const slug of [...BUNDLE_ORDER, ...PSYCH_BUNDLE_ORDER]) {
             const bundle = BUNDLES[slug];
             expect(savingsCents(bundle), slug).toBeGreaterThan(0);
             expect(separatePriceCents(bundle) - savingsCents(bundle)).toBe(bundle.priceCents);
         }
     });
 
-    it('keeps the Complete Library promise: all six guides and the largest saving of any bundle', () => {
+    it('keeps the Complete Library promise: all six of this board\'s guides and the largest saving of any bundle', () => {
         const library = BUNDLES['complete-library'];
-        expect([...library.guides].sort()).toEqual([...GUIDE_SLUGS].sort());
+        expect([...library.guides].sort()).toEqual([...OWN_GUIDE_SLUGS].sort());
         expect(library.bestValue).toBe(true);
         for (const slug of BUNDLE_ORDER) {
             if (slug !== library.slug) expect(savingsCents(library), slug).toBeGreaterThan(savingsCents(BUNDLES[slug]));
@@ -122,7 +134,7 @@ describe('catalog lookups', () => {
     });
 
     it('adds up page counts across a bundle', () => {
-        expect(totalPages(BUNDLES['complete-library'])).toBe(GUIDE_SLUGS.reduce((sum, slug) => sum + GUIDES[slug].pages, 0));
+        expect(totalPages(BUNDLES['complete-library'])).toBe(OWN_GUIDE_SLUGS.reduce((sum, slug) => sum + GUIDES[slug].pages, 0));
     });
 
     it('uses lowercase slugs, which survive the middleware path lowercasing, and none collides with a store route', () => {

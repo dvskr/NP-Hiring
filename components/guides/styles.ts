@@ -172,6 +172,47 @@ export const GUIDES_CSS = `
   .gd-table-none { color: #c9b8bd; }
   .stk-table td.gd-cell-center, .stk-table th.gd-cell-center { text-align: center; }
 
+  /* The psych editions (components/guides/PsychEditionsShelf.tsx): the hero's
+     pointer, and the shelf on the lavender ground the sister board's blocks use. */
+  .gd-jump { margin: -20px 0 36px; text-align: center; }
+  .gd-jump-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 10px 18px;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #7A1C2B;
+    background: #EFE8F7;
+    border: 2px solid #7A1C2B;
+    box-shadow: 3px 3px 0 #7A1C2B;
+    text-decoration: none;
+    transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .gd-jump-link:hover { transform: translateY(-2px); background: #E4D9F2; }
+  .gd-jump-link:focus-visible { outline: 3px solid #BE185D; outline-offset: 3px; }
+  .stk-stage.gd-stage-psych {
+    background-color: #EFE8F7;
+    background-image: radial-gradient(rgba(122,28,43,0.12) 1.2px, transparent 1.4px);
+    background-size: 22px 22px;
+  }
+  .gd-attribution { display: block; margin-top: 10px; font-size: 13px; font-weight: 700; color: #7A1C2B; }
+  .gd-psych { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+  .gd-psych-library { gap: 16px; }
+  .gd-psych-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .gd-psych-item-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 14px; }
+
+  @media (max-width: 960px) {
+    .gd-psych { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .gd-psych-grid { grid-template-columns: 1fr; }
+  }
   @media (max-width: 860px) {
     .gd-hero { grid-template-columns: 1fr; }
     .gd-hero-art { border-right: 0; border-bottom: 2px solid #7A1C2B; }
@@ -186,7 +227,7 @@ export const GUIDES_CSS = `
     .gd-price-lg .gd-price-now { font-size: 42px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .gd-btn { transition: none; }
-    .gd-btn:hover:not(:disabled) { transform: none; }
+    .gd-btn, .gd-jump-link { transition: none; }
+    .gd-btn:hover:not(:disabled), .gd-jump-link:hover { transform: none; }
   }
 `;

@@ -8,14 +8,14 @@ import GuideAction from '@/components/guides/GuideAction';
 import GuideCover, { COVER_PALETTES, CoverStack } from '@/components/guides/GuideCover';
 import GuidePrice from '@/components/guides/GuidePrice';
 import GuideSchema from '@/components/guides/GuideSchema';
+import PsychEditionsShelf, { PsychEditionsJump } from '@/components/guides/PsychEditionsShelf';
 import { GUIDES_CSS } from '@/components/guides/styles';
-import SisterBoardGuidesSection from '@/components/sister-board/SisterBoardGuidesSection';
 import { stickerFill } from '@/lib/design/sticker-css';
 import {
     BUNDLES,
     BUNDLE_ORDER,
     GUIDES,
-    GUIDE_SLUGS,
+    OWN_GUIDE_SLUGS,
     allProducts,
     totalPages,
     type Bundle,
@@ -27,9 +27,11 @@ import { storeItemListJsonLd } from '@/lib/guides/schema';
 import { guidesFaqs, guidesMetaSentence, guidesStorePills, type GuidesPill } from './guides-copy';
 
 /**
- * /guides: the guides store. The Complete Library leads, then the other
- * bundles, the single guides, a comparison table, the FAQ and a short pointer
- * to the sister board's own guides (in every phase).
+ * /guides: the guides store. The Complete Library leads, with a pointer under
+ * the pills to the psych editions; their shelf follows right after the hero
+ * (owner decision 2026-11-26: the sister board's six guides, sold here), then
+ * this board's other bundles, its single guides, a comparison table and the
+ * FAQ.
  *
  * Every price block is guidePriceCopy(product, phase) and every action
  * follows the phase (lib/guides/phase.ts#guidePhase, read once per render):
@@ -144,7 +146,7 @@ function BundleCard({ bundle, copy, index }: { readonly bundle: Bundle; readonly
 function SingleGuides({ copies }: { readonly copies: PriceCopies }) {
     return (
         <div className="stk-grid stk-cols-3">
-            {GUIDE_SLUGS.map((slug, index) => {
+            {OWN_GUIDE_SLUGS.map((slug, index) => {
                 const guide = GUIDES[slug];
                 return (
                     <Link key={slug} href={`/guides/${slug}`} className="stk-card">
@@ -197,7 +199,7 @@ function ComparisonTable({ copies }: { readonly copies: PriceCopies }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {GUIDE_SLUGS.map((slug) => (
+                    {OWN_GUIDE_SLUGS.map((slug) => (
                         <tr key={slug}>
                             <th scope="row">
                                 <Link href={`/guides/${slug}`}>{GUIDES[slug].title}</Link>
@@ -261,8 +263,11 @@ export default function GuidesStorePage() {
                     lede={`Six PDF guides for ${brand.niche.descriptor}s in every specialty: pay data, your first year, interviews, negotiation, telehealth rules and a practice launch toolkit.`}
                 />
                 <Pills pills={pills} />
+                <PsychEditionsJump />
                 <LibraryHero copy={copies[LIBRARY.slug]} />
             </StickerStage>
+
+            <PsychEditionsShelf copies={copies} />
 
             <StickerStage variant="peach" aria-labelledby="bundles-heading">
                 <StickerHead eyebrow="Bundles" title="Pick the set for where you are" id="bundles-heading" />
@@ -286,10 +291,6 @@ export default function GuidesStorePage() {
             <StickerStage variant="blush" aria-labelledby="faq-heading" maxWidth={820}>
                 <StickerHead eyebrow="Questions" title="Common questions" id="faq-heading" />
                 <StickerAccordion items={faqs.map(({ question, answer }) => ({ question, answer }))} />
-            </StickerStage>
-
-            <StickerStage variant="grid" as="div" maxWidth={760}>
-                <SisterBoardGuidesSection />
             </StickerStage>
         </>
     );

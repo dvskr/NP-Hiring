@@ -20,6 +20,15 @@ export function sisterBoardUrl(path: SisterBoardPath, campaign: SisterBoardCampa
     return url.toString();
 }
 
+/**
+ * The sister board's own page for one of its guides or bundles, by its slug
+ * there: the canonical of the same product's page in this board's store
+ * (lib/guides/canonical.ts). No utm tags: a canonical names the page itself.
+ */
+export function sisterBoardGuidePageUrl(sisterSlug: string): string {
+    return new URL(`${sisterBoard.paths.guides}/${encodeURIComponent(sisterSlug)}`, sisterBoard.baseUrl).toString();
+}
+
 /** True only for the specialty the sister board serves (the taxonomy slug, never a guess). */
 export function isSisterBoardSpecialty(slug: string | null | undefined): boolean {
     return Boolean(slug) && PSYCH_SPECIALTY_SLUG !== undefined && slug === PSYCH_SPECIALTY_SLUG;

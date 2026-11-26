@@ -32,7 +32,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { CSSProperties } from 'react';
 import ImmersiveImage from '@/components/ImmersiveImage';
-import SisterBoardGuidesCallout from '@/components/sister-board/SisterBoardGuidesCallout';
+import PsychGuidesCard from '@/components/guides/PsychGuidesCard';
 import type { Metadata } from 'next';
 import type { Prisma } from '@prisma/client';
 import {
@@ -1838,6 +1838,10 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
           {/* Job Listings */}
           <div className="grid lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3">
+              {/* The psych editions of the guides store (owner decision
+                  2026-11-26) on a phone or tablet, where the sidebar falls
+                  below every listing; the sister board's specialty only. */}
+              <PsychGuidesCard categorySlug={categoryKey} placement="inline" />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
                   {config.label} Positions in {city!.name} ({stats.totalJobs})
@@ -1920,8 +1924,13 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
               )}
             </div>
 
-            {/* Sidebar: the page's one alert CTA, then the tips (rendered once). */}
+            {/* Sidebar: the psych editions on the sister board's specialty,
+                then the page's one alert CTA, then the tips (rendered once). */}
             <div className="lg:col-span-1">
+              {/* The psych editions on a desktop: first in the sidebar,
+                  beside the first listings. */}
+              <PsychGuidesCard categorySlug={categoryKey} placement="sidebar" />
+
               <div className="pseo-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
                 <div style={{ padding: '24px' }}>
                   <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
@@ -1936,10 +1945,6 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   </Link>
                 </div>
               </div>
-
-              {/* The sister board's career guides (owner decision
-                  2026-11-26): renders on its specialty only. */}
-              <SisterBoardGuidesCallout categorySlug={categoryKey} />
 
               <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>

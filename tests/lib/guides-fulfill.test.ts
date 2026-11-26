@@ -21,7 +21,7 @@ vi.mock('@/lib/guides/email', () => ({ sendGuidePurchaseEmail: vi.fn() }));
 import { sendGuidePurchaseEmail } from '@/lib/guides/email';
 import { BUNDLES, GUIDES } from '@/lib/guides/catalog';
 import {
-    ADD_ON_METADATA_VALUE,
+    addOnMetadataValue,
     GUIDE_CHECKOUT_TYPE,
     PROMO_RESEND_INTERVAL_MS,
     claimLockKey,
@@ -81,9 +81,10 @@ beforeEach(() => {
 const executeRaw = vi.fn();
 
 describe('the metadata the checkout and the webhook share', () => {
-    it('tags a guide checkout and its add-on', () => {
+    it('tags a guide checkout and its add-on, the report of the product\'s own edition', () => {
         expect(GUIDE_CHECKOUT_TYPE).toBe('guide');
-        expect(ADD_ON_METADATA_VALUE).toBe('compensation-report');
+        expect(addOnMetadataValue(GUIDES['interview-prep-pack'])).toBe('compensation-report');
+        expect(addOnMetadataValue(GUIDES['psych-interview-prep-pack'])).toBe('psych-compensation-report');
     });
 });
 
@@ -134,6 +135,17 @@ describe('fulfillGuideSession', () => {
     it('unlocks the add-on guide when it was bought', async () => {
         await fulfillGuideSession(session({ metadata: { type: 'guide', product: 'interview-prep-pack', addOn: 'compensation-report' } }));
         expect(gp.upsert.mock.calls[0][0].create.guideSlugs).toEqual(['interview-prep-pack', 'compensation-report']);
+    });
+
+    it('unlocks a psych edition with its own add-on, and never the other edition\'s report', async () => {
+        await fulfillGuideSession(session({ metadata: { type: 'guide', product: 'psych-negotiation-guide', addOn: 'psych-compensation-report' } }));
+        expect(gp.upsert.mock.calls[0][0].create).toMatchObject({
+            productSlug: 'psych-negotiation-guide',
+            guideSlugs: ['psych-negotiation-guide', 'psych-compensation-report'],
+        });
+        // A psych edition's session tagged with this board's own report unlocks no add-on.
+        await fulfillGuideSession(session({ id: 'cs_test_def', metadata: { type: 'guide', product: 'psych-negotiation-guide', addOn: 'compensation-report' } }));
+        expect(gp.upsert.mock.calls[1][0].create.guideSlugs).toEqual(['psych-negotiation-guide']);
     });
 
     it('finds the winning row when two callers create the same session at once', async () => {

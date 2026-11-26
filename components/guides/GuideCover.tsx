@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { brand } from '@/config/brand';
-import { GUIDES, type GuideSlug } from '@/lib/guides/catalog';
+import { GUIDES, type GuideSlug, type OwnGuideSlug } from '@/lib/guides/catalog';
 import { OXBLOOD } from './styles';
 
 /**
@@ -17,13 +17,24 @@ export interface CoverPalette {
     readonly label: string;
 }
 
-export const COVER_PALETTES: Readonly<Record<GuideSlug, CoverPalette>> = {
+const OWN_PALETTES: Readonly<Record<OwnGuideSlug, CoverPalette>> = {
     'compensation-report': { ink: '#134E4A', accent: '#5EEAD4', label: 'Pay data' },
     'first-year-playbook': { ink: '#7C2D12', accent: '#FDBA74', label: 'New grads' },
     'interview-prep-pack': { ink: '#1E3A8A', accent: '#93C5FD', label: 'Interviews' },
     'negotiate-like-an-np': { ink: '#14532D', accent: '#86EFAC', label: 'Offers' },
     'telehealth-playbook': { ink: '#4C1D95', accent: '#C4B5FD', label: 'Telehealth' },
     'launch-your-practice': { ink: '#1A2E35', accent: '#FCD34D', label: 'Practice' },
+};
+
+/** A psych edition wears the colours and label of this board's guide on the same subject, as its PDF cover does. */
+export const COVER_PALETTES: Readonly<Record<GuideSlug, CoverPalette>> = {
+    ...OWN_PALETTES,
+    'psych-compensation-report': OWN_PALETTES['compensation-report'],
+    'psych-first-year-playbook': OWN_PALETTES['first-year-playbook'],
+    'psych-interview-prep-pack': OWN_PALETTES['interview-prep-pack'],
+    'psych-negotiation-guide': OWN_PALETTES['negotiate-like-an-np'],
+    'psych-telepsychiatry-playbook': OWN_PALETTES['telehealth-playbook'],
+    'psych-launch-your-practice': OWN_PALETTES['launch-your-practice'],
 };
 
 /** Width the cover's type and spacing are drawn for; other widths scale from it. */

@@ -6,7 +6,10 @@
  *
  * Reads the PDFs from the repo's "NP Guides" folder (each guide's sourceFile
  * in lib/guides/catalog.ts), which is gitignored because the guides are sold,
- * not published in this public repo.
+ * not published in this public repo. The psych editions are the sister
+ * board's PDFs under their own file names (config/psych-editions.ts): copy
+ * the six from that board's guides folder into "NP Guides" first. Each file
+ * goes up under its slug here, `<slug>.pdf`.
  *
  *   npx ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/guides/upload-guides.ts [flags]
  *
@@ -14,6 +17,7 @@
  *   --apply           upload to the .env project
  *   --prod            dry run, .env.prod project
  *   --prod --apply    upload to the .env.prod project
+ *   --edition=psych   only the psych editions (--edition=own: only this board's guides)
  *
  * Run it from the main checkout: worktrees have neither .env nor "NP Guides".
  *
@@ -31,15 +35,24 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { config as dotenvConfig } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import { GUIDES, GUIDES_BUCKET, GUIDE_SLUGS, type GuideSlug } from '@/lib/guides/catalog';
+import { GUIDES, GUIDES_BUCKET, GUIDE_SLUGS, type GuideEdition, type GuideSlug } from '@/lib/guides/catalog';
 import { guideObjectKey } from '@/lib/guides/storage';
 
 const SOURCE_DIR = path.resolve(process.cwd(), 'NP Guides');
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const EDITION_FLAG = '--edition=';
 
 const args = new Set(process.argv.slice(2));
 const apply = args.has('--apply');
 const prod = args.has('--prod');
+
+/** The edition --edition= names, or null for every guide. */
+function editionToUpload(): GuideEdition | null {
+    const value = process.argv.slice(2).find((arg) => arg.startsWith(EDITION_FLAG))?.slice(EDITION_FLAG.length);
+    if (value === undefined) return null;
+    if (value === 'own' || value === 'psych') return value;
+    throw new Error(`${EDITION_FLAG}${value}: use ${EDITION_FLAG}own or ${EDITION_FLAG}psych`);
+}
 
 interface Credentials {
     url: string;
@@ -68,8 +81,10 @@ interface SourceFile {
 }
 
 async function sourceFiles(): Promise<SourceFile[]> {
+    const edition = editionToUpload();
+    const slugs = GUIDE_SLUGS.filter((slug) => edition === null || GUIDES[slug].edition === edition);
     return Promise.all(
-        GUIDE_SLUGS.map(async (slug) => {
+        slugs.map(async (slug) => {
             const file = path.join(SOURCE_DIR, GUIDES[slug].sourceFile);
             const info = await stat(file).catch(() => null);
             if (!info?.isFile()) throw new Error(`Missing PDF for ${slug}: ${file}`);

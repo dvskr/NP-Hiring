@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight, BookOpen, Check, Download, FileText, Users } from 'lucide-react';
 import { brand } from '@/config/brand';
+import { psychEditions } from '@/config/psych-editions';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { StickerHead, StickerStage, StickerStyles } from '@/components/sticker';
 import GuideAction, { addOnOffer } from '@/components/guides/GuideAction';
@@ -22,6 +23,7 @@ import {
     type Product,
 } from '@/lib/guides/catalog';
 import { guidePhase, guidePriceCopy, type GuidePhase, type GuidePriceCopy } from '@/lib/guides/phase';
+import { productCanonicalUrl, productPageUrl } from '@/lib/guides/canonical';
 import { guideOgImageUrl, productOgCard } from '@/lib/guides/og';
 import { productJsonLd } from '@/lib/guides/schema';
 import { guidesFinePrint, guidesMetaSentence } from '../guides-copy';
@@ -33,6 +35,10 @@ import { guidesFinePrint, guidesMetaSentence } from '../guides-copy';
  * form while checkout is not set up, checkout with the add-on checkbox once
  * it is, and the Product JSON-LD with the same offer. Reads the phase per
  * render and re-renders hourly, like /guides.
+ *
+ * A psych edition (the sister board's guide, sold here) says who wrote it,
+ * and its canonical is the sister board's page for the same guide
+ * (lib/guides/canonical.ts), while its offer stays this store's.
  */
 export const revalidate = 3600;
 export const dynamicParams = false;
@@ -43,8 +49,17 @@ export function generateStaticParams(): Array<{ slug: string }> {
 
 type PageProps = { params: Promise<{ slug: string }> };
 
-const kindLabel = (product: Product): string =>
-    product.kind === 'guide' ? `${brand.niche.short} Career Guide` : `${brand.niche.short} Guide Bundle`;
+function kindLabel(product: Product): string {
+    const guide = product.kind === 'guide';
+    if (product.edition === 'psych') return guide ? psychEditions.labels.guideKind : psychEditions.labels.bundleKind;
+    return guide ? `${brand.niche.short} Career Guide` : `${brand.niche.short} Guide Bundle`;
+}
+
+/** The chip over the title: a guide's subject, a psych edition's edition, a bundle's kind. */
+function chipLabel(product: Product): string {
+    if (product.kind === 'bundle') return kindLabel(product);
+    return product.edition === 'psych' ? psychEditions.labels.edition : COVER_PALETTES[product.slug].label;
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const { slug } = await params;
@@ -57,11 +72,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         openGraph: {
             title: product.title,
             description: product.summary,
-            url: `${brand.baseUrl}/guides/${product.slug}`,
+            url: productPageUrl(product),
             images: [{ url: ogImage, width: 1200, height: 630, alt: product.title }],
         },
         twitter: { card: 'summary_large_image', images: [ogImage] },
-        alternates: { canonical: `${brand.baseUrl}/guides/${product.slug}` },
+        alternates: { canonical: productCanonicalUrl(product) },
     };
 }
 
@@ -196,13 +211,14 @@ export default async function GuideProductPage({ params }: PageProps) {
                             : <CoverStack guides={product.guides} width={product.guides.length > 4 ? 96 : 110} />}
                     </div>
                     <div className="gd-product-copy">
-                        <span className="stk-chip" style={{ background: stickerFill(0) }}>
-                            {isGuide ? COVER_PALETTES[product.slug].label : kindLabel(product)}
-                        </span>
+                        <span className="stk-chip" style={{ background: stickerFill(0) }}>{chipLabel(product)}</span>
                         <h1 id="product-heading" className="stk-h1 font-heading" style={{ fontSize: 'clamp(1.9rem, 4.2vw, 2.8rem)' }}>
                             {product.title}
                         </h1>
                         <p className="gd-product-sub">{product.subtitle}</p>
+                        {product.edition === 'psych' && (
+                            <p className="gd-attribution" data-sister-board="" style={{ margin: 0 }}>{psychEditions.attribution}</p>
+                        )}
                         <Facts product={product} />
                         <GuidePrice copy={copy} size="lg" />
                         <div className="gd-product-action">

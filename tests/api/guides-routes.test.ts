@@ -48,7 +48,7 @@ vi.mock('@/lib/guides/storage', () => ({ signedGuideUrl: vi.fn() }));
 
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { config } from '@/lib/config';
-import { ADD_ON, BUNDLES, GUIDES } from '@/lib/guides/catalog';
+import { ADD_ON, BUNDLES, GUIDES, PSYCH_GUIDE_SLUGS } from '@/lib/guides/catalog';
 import { fulfillGuideSession } from '@/lib/guides/fulfill';
 import { authorizeDownload, releaseDownload } from '@/lib/guides/library';
 import { signedGuideUrl } from '@/lib/guides/storage';
@@ -174,6 +174,50 @@ describe('POST /api/guides/checkout', () => {
         const bundle = stripeMock.create.mock.calls[1][0];
         expect(bundle.line_items).toHaveLength(1);
         expect(bundle.metadata.addOn).toBe('');
+    });
+
+    it('accepts every psych edition and its library at the catalog price, tagged with its own slug', async () => {
+        for (const slug of [...PSYCH_GUIDE_SLUGS, 'psych-library'] as const) {
+            stripeMock.create.mockClear();
+            const product = slug === 'psych-library' ? BUNDLES[slug] : GUIDES[slug];
+            const res = await checkout(post({ product: slug, priceCents: 1 }));
+            expect(res.status, slug).toBe(200);
+            expect(await res.json(), slug).toEqual({ url: 'https://checkout.stripe.com/c/pay/x', amountCents: product.priceCents });
+            const params = stripeMock.create.mock.calls[0][0];
+            expect(params.line_items, slug).toHaveLength(1);
+            expect(params.line_items[0].price_data.unit_amount, slug).toBe(product.priceCents);
+            expect(params.line_items[0].price_data.product_data.name, slug).toBe(product.title);
+            expect(params.metadata, slug).toEqual({ type: 'guide', product: slug, addOn: '', userId: '' });
+            expect(params.payment_intent_data, slug).toEqual({ metadata: { type: 'guide', product: slug } });
+            expect(params.cancel_url, slug).toBe(`https://nphiring.com/guides/${slug}`);
+        }
+    });
+
+    it('offers a psych edition its own compensation report as the add-on, never this board\'s', async () => {
+        const guide = GUIDES['psych-telepsychiatry-playbook'];
+        const report = GUIDES['psych-compensation-report'];
+        const res = await checkout(post({ product: guide.slug, addOn: true }));
+        expect(await res.json()).toMatchObject({ amountCents: guide.priceCents + 500 });
+        const params = stripeMock.create.mock.calls[0][0];
+        expect(params.line_items.map((l: { price_data: { unit_amount: number } }) => l.price_data.unit_amount)).toEqual([guide.priceCents, 500]);
+        expect(params.line_items[1].price_data.product_data.name).toBe(`Add-on: ${report.title}`);
+        expect(params.metadata.addOn).toBe('psych-compensation-report');
+
+        // The library and the report itself already hold the report: no add-on line.
+        for (const slug of ['psych-library', 'psych-compensation-report']) {
+            stripeMock.create.mockClear();
+            await checkout(post({ product: slug, addOn: true }));
+            expect(stripeMock.create.mock.calls[0][0].line_items, slug).toHaveLength(1);
+            expect(stripeMock.create.mock.calls[0][0].metadata.addOn, slug).toBe('');
+        }
+    });
+
+    it('refuses a psych edition in the free phase like any other guide, before calling Stripe', async () => {
+        vi.stubEnv('STRIPE_SECRET_KEY', '');
+        const res = await checkout(post({ product: 'psych-library' }));
+        expect(res.status).toBe(503);
+        expect((await res.json()).code).toBe('STRIPE_NOT_CONFIGURED');
+        expect(stripeMock.create).not.toHaveBeenCalled();
     });
 
     it('ties the checkout to this browser with an httpOnly cookie', async () => {

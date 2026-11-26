@@ -60,7 +60,7 @@ import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore'
 import CategoryHero from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import SisterBoardHubCallout from '@/components/sister-board/SisterBoardHubCallout';
-import SisterBoardGuidesCallout from '@/components/sister-board/SisterBoardGuidesCallout';
+import PsychGuidesCard from '@/components/guides/PsychGuidesCard';
 import {
     ClayCard,
     ClayHead,
@@ -759,6 +759,11 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
             <div id="listings" style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px', scrollMarginTop: '80px' }}>
                 <div className="grid lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-3">
+                        {/* The psych editions of the guides store (owner
+                            decision 2026-11-26) on a phone or tablet, where
+                            the sidebar falls below every listing; the
+                            sister board's specialty only. */}
+                        <PsychGuidesCard categorySlug={slug} placement="inline" />
                         <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
                             {label} Positions ({facts.total}){page > 1 ? `, page ${page} of ${totalPages}` : ''}
                         </h2>
@@ -785,6 +790,9 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         <ListingPagination basePath={basePath} page={page} totalPages={totalPages} label={`${noun} jobs`} />
                     </div>
                     <div className="lg:col-span-1">
+                        {/* The psych editions on a desktop: first in the
+                            sidebar, beside the first listings. */}
+                        <PsychGuidesCard categorySlug={slug} placement="sidebar" />
                         {/* Alert cadence: /api/cron/send-alerts runs in the daily
                             group (config/cron-schedule.ts), so "daily" is true. */}
                         <div style={{ ...clayCard, padding: '24px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
@@ -796,9 +804,6 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         {/* Sister board routing (owner decision 2026-10-12):
                             renders on the sister board's specialty only. */}
                         <SisterBoardHubCallout categorySlug={slug} />
-                        {/* Its career guides (owner decision 2026-11-26): the
-                            same specialty only. */}
-                        <SisterBoardGuidesCallout categorySlug={slug} />
                     </div>
                 </div>
             </div>
