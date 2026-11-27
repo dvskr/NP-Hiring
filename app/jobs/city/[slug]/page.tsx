@@ -24,6 +24,7 @@ import { localJobsPath } from '@/lib/city-link-path';
 import { ogCitySalaryParams } from '@/app/api/og/city/salary-label';
 // CQ-02: a stored city value that is not a town is never counted or linked.
 import { isTallyCity } from '@/lib/pseo/city-tally';
+import { stateCityGroups } from './state-city-groups';
 import JobCard from '@/components/JobCard';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
@@ -256,33 +257,13 @@ interface StateCityLinks {
     directoryRenders: boolean;
 }
 
-/**
- * City groups read for the nearby-markets block. Twice the directory's
- * 12-row view, so stored values that are not towns (CQ-02: "Remote", a
- * street number, a facility), which are dropped below, cannot crowd real
- * cities out of the slice.
- */
-const STATE_CITY_GROUP_TAKE = 24;
 
 /**
  * Other cities in the same state for the nearby-markets block, plus the
- * directory verdict from the same rows. Only values that read as a town
- * count (isTallyCity, lib/pseo/city-tally.ts).
+ * directory verdict from the same rows.
  */
 async function getStateCityLinks(city: ParsedCitySlug): Promise<StateCityLinks> {
-    const rows = await prisma.job.groupBy({
-        by: ['city'],
-        where: canonicalBucketWhere({
-            city: { not: null },
-            OR: [{ state: city.stateName }, { stateCode: city.stateCode }],
-        }),
-        _count: { city: true },
-        orderBy: { _count: { city: 'desc' } },
-        take: STATE_CITY_GROUP_TAKE,
-    });
-    const named = rows.flatMap((row) =>
-        row.city && isTallyCity(row.city, city.stateCode) ? [{ city: row.city, count: row._count.city }] : [],
-    );
+    const named = await stateCityGroups(city.stateName, city.stateCode);
 
     // #4: only surface cities at/above the page's MIN_JOBS render gate so the
     // block never links to a city page that will notFound() (soft-404 trap).

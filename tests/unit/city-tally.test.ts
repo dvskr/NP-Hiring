@@ -175,7 +175,11 @@ describe('the pages read the rule', () => {
     it('the city page counts only towns for its nearby links and directory verdict, and never indexes a non-town slug', () => {
         const src = read('app/jobs/city/[slug]/page.tsx');
         expect(src).toContain("import { isTallyCity } from '@/lib/pseo/city-tally'");
-        expect(src).toContain('row.city && isTallyCity(row.city, city.stateCode)');
+        // The state's city tally moved into a shared cache (state-city-groups.ts)
+        // so city pages in one state stop re-running the same groupBy.
+        const groups = read('app/jobs/city/[slug]/state-city-groups.ts');
+        expect(groups).toContain("import { isTallyCity } from '@/lib/pseo/city-tally'");
+        expect(groups).toContain('row.city && isTallyCity(row.city, stateCode)');
         expect(src).toContain('const indexable = isTallyCity(parsed.cityName, stateCode) && shouldIndexLocalListingPage({');
     });
 

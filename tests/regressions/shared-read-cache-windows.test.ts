@@ -156,6 +156,7 @@ describe('every shared read', () => {
             .flatMap(({ file, text }) =>
                 [...text.matchAll(/sharedCachedRead\(\s*\w+,\s*\[([^\]]*)\]/g)].map((match) => ({ file, keyParts: match[1] })));
         expect(calls.map((call) => call.keyParts.split(',')[0]).sort()).toEqual([
+            "'city-page-state-city-groups'",
             "'homepage-employer-chips'",
             "'homepage-top-state-counts'",
             "'jobs-board-count'",
