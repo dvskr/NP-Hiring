@@ -307,8 +307,11 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
             ))}
 
             {/* The company's other job boards (lib/job-board-network.ts), as
-                plain links that open in the same tab: a board appears here
-                once it is open to the public. */}
+                links that open in the same tab: a board appears here once it
+                is open to the public. Each is rel="nofollow": sites with one
+                owner linking each other from every page is the sitewide
+                footer linking Google's link spam policy names, so these links
+                serve readers and vouch for nothing. */}
             {moreBoards.length > 0 && (
               <FooterFold title="More Job Boards">
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -316,6 +319,7 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
                     <li key={board.url}>
                       <a
                         href={board.url}
+                        rel="nofollow"
                         style={linkStyle}
                         onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = '#a8a29e'; }}

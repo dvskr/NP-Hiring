@@ -10,6 +10,12 @@
  * Anchors are the boards' names, never keyword phrases: these are links
  * between sites with one owner, and a name is what a reader looks for.
  *
+ * The footer marks every one of them rel="nofollow". Seven sites with one
+ * owner linking each other from every page is what Google's link spam policy
+ * calls widely distributed footer links: they would earn a sister board
+ * nothing in search and could cost the whole network trust. They are there
+ * for readers; ranking links have to come from other sites.
+ *
  * The sister board's name and address come from config/sister-board.ts and
  * this board's own from config/brand.ts: config/ is the one folder the
  * brand-leak and niche-copy scanners skip, so neither is spelled here.

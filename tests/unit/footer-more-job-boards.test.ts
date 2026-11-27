@@ -4,6 +4,10 @@
  * public boards by name, in the same tab, and never a board that is still
  * behind the host's sign-in wall: such a link would send visitors and
  * crawlers to a login page.
+ *
+ * Every link is rel="nofollow" (2026-11-28): sites with one owner linking
+ * each other from every page is the sitewide footer linking Google's link
+ * spam policy names, so the group is for readers and vouches for nothing.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
@@ -60,10 +64,11 @@ describe('the footer links the other public job boards', () => {
         expect(anchors.some((a) => hrefOf(a.attrs) === 'https://pmhnphiring.com' && a.text === 'PMHNP Hiring')).toBe(true);
     });
 
-    it('opens each board in the same tab, as a plain followed link', () => {
+    it('opens each board in the same tab, marked nofollow', () => {
+        expect(anchors.length).toBeGreaterThan(0);
         for (const a of anchors) {
             expect(a.attrs, a.text).not.toContain('target=');
-            expect(a.attrs, a.text).not.toContain('rel=');
+            expect(/rel="([^"]*)"/.exec(a.attrs)?.[1], a.text).toBe('nofollow');
         }
     });
 
