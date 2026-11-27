@@ -209,9 +209,16 @@ describe('P2 #9 — /accessibility exists and is honest about conformance', () =
 
         // The copy states both counts. If either moves, this fails and forces
         // the claim to be re-verified instead of silently going stale.
-        expect(gated.length, `gated: ${gated.join(', ')}`).toBe(5);
+        // Four since 2026-11-27: the header's animated phone menu was
+        // replaced by one that animates in CSS (components/phone-menu.ts),
+        // which the page now lists among the CSS animations switched off.
+        expect(gated.length, `gated: ${gated.join(', ')}`).toBe(4);
         expect(ungated.length, `ungated: ${ungated.join(', ')}`).toBe(0);
-        expect(a11yPage).toContain('All five of the JavaScript-animated sections');
+        expect(a11yPage).toContain('All four of the JavaScript-animated sections');
+        expect(a11yPage).toContain('the phone menu opening');
+        expect(read('components/phone-menu.ts')).toMatch(
+            /@media \(prefers-reduced-motion: reduce\) \{\s*\.phone-menu-card,\s*\.phone-menu-backdrop \{ animation: none; \}/,
+        );
     });
 
     it('carries a review date and canonical metadata, and links the sibling policies', () => {

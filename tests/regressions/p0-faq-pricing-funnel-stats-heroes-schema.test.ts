@@ -89,7 +89,10 @@ describe('P0 #8 — /faq hero and /pricing CTA serve local ladder assets', () =>
 
     it('/faq hero uses the exact-DPR ladder with LCP priority', () => {
         expect(faqSrc).toContain('/images/how-it-works/step-employer-browse-');
-        expect(faqSrc).toContain('sizes="280px"');
+        // 280 CSS pixels on a wide screen; a phone shows no hero (the phone
+        // restructure, tests/regressions/phone-restructure.test.ts), so the 1
+        // pixel hint sends it the smallest rung.
+        expect(faqSrc).toContain('sizes="(max-width: 760px) 1px, 280px"');
         expect(faqSrc).toContain('fetchPriority="high"');
     });
 

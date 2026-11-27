@@ -29,10 +29,13 @@
  *         components/post-job/JdStarterPanel.tsx;
  *       · reduced motion — app/globals.css gates the CSS animations, and
  *         framer-motion is JS-driven and cannot be reached from CSS. All
- *         five components that import it call useReducedMotion()
- *         (EmployerHowItWorks, FeaturedJobs, TopStatesList, HomepageHero,
- *         Header); there is still no <MotionConfig reducedMotion="user">,
- *         so any NEW importer must check the preference itself;
+ *         four components that import it call useReducedMotion()
+ *         (EmployerHowItWorks, FeaturedJobs, TopStatesList, HomepageHero);
+ *         the phone menu that replaced the Header's animated menu on
+ *         2026-11-27 animates in CSS (components/phone-menu.ts), which the
+ *         reduced motion rule turns off. There is still no
+ *         <MotionConfig reducedMotion="user">, so any NEW importer must
+ *         check the preference itself;
  *       · the lead-magnet PDF is printed by headless Chromium
  *         (scripts/generate-salary-pdf.ts), which emits an untagged PDF.
  *   - No conformance level is claimed outright. This is a self-assessment
@@ -153,7 +156,7 @@ const SHIPPED_CONTROLS: { claim: string; criterion: string }[] = [
         criterion: 'WCAG 4.1.2 Name, Role, Value',
     },
     {
-        claim: 'Motion honors prefers-reduced-motion in CSS: smooth scrolling becomes instant jumps, and CSS entrance animations, scroll reveals, and the skeleton shimmer are switched off. All five of the JavaScript-animated sections (the employer how-it-works steps, the featured-jobs grid, the top-states list, the homepage hero entrance, and the mobile navigation menu) check the preference themselves and render straight to their resting state.',
+        claim: 'Motion honors prefers-reduced-motion in CSS: smooth scrolling becomes instant jumps, and CSS entrance animations, scroll reveals, the phone menu opening, and the skeleton shimmer are switched off. All four of the JavaScript-animated sections (the employer how-it-works steps, the featured-jobs grid, the top-states list, and the homepage hero entrance) check the preference themselves and render straight to their resting state.',
         criterion: 'WCAG 2.3.3 Animation from Interactions',
     },
     {

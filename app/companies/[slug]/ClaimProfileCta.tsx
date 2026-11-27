@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useId } from 'react';
 import { BadgeCheck, Building2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { hasLikelyAuthCookie } from '@/lib/auth-cookie';
 
 /**
  * "Claim this profile" affordance for /companies/[slug].
@@ -73,11 +73,17 @@ export default function ClaimProfileCta({ companyId, companyName, intro, profile
     const [errorMsg, setErrorMsg] = useState('');
     const fieldId = useId();
 
+    // No session cookie (lib/auth-cookie.ts): signed out, said at once, and
+    // the sign in library is never downloaded with the profile page. A
+    // browser that may hold a session loads it and asks.
     useEffect(() => {
+        if (!hasLikelyAuthCookie()) {
+            setSignedIn(false);
+            return;
+        }
         let cancelled = false;
-        const supabase = createClient();
-        supabase.auth
-            .getUser()
+        void import('@/lib/supabase/client')
+            .then(({ createClient }) => createClient().auth.getUser())
             .then(({ data: { user } }) => {
                 if (!cancelled) setSignedIn(!!user);
             })

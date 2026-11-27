@@ -287,6 +287,35 @@ const css = `
         .fjs-steps-panel { padding: 20px 18px 24px; }
         .fjs-steps-panel .fjs-h2 { font-size: 24px; }
     }
+
+    /* ── Phone (760px and narrower), the phone restructure the owner
+       approved on 2026-11-27: How it works becomes a compact numbered list.
+       The step drawings are left out (data-phone-hide, app/globals.css);
+       they load lazily, so a phone never fetches them. Each step's number
+       is #7A1C2B on the drawing frame's own #D4E2D4 (7.7:1), on the same
+       dashed spine. ── */
+    @media (max-width: 760px) {
+        .fjs-spine { counter-reset: fjs-step; }
+        .fjs-spine::before { left: 17px; top: 18px; bottom: 18px; }
+        .fjs-step { counter-increment: fjs-step; align-items: flex-start; gap: 14px; padding-bottom: 18px; }
+        .fjs-step::before {
+            content: counter(fjs-step);
+            position: relative;
+            z-index: 1;
+            flex: 0 0 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #7A1C2B;
+            box-shadow: 3px 3px 0 #7A1C2B;
+            border-radius: 10px;
+            background: #D4E2D4;
+            color: #7A1C2B;
+            font-size: 15px;
+            font-weight: 800;
+        }
+    }
 `;
 
 export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
@@ -354,7 +383,8 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                                    can leave Chrome holding a stale low-res raster of
                                    the image (see EmployerHowItWorks + project memory). */
                                 <div key={step.title} className="fjs-step">
-                                    <div className="fjs-stimg-wrap">
+                                    {/* A step drawing: left out on a phone, where the step takes a number instead. */}
+                                    <div className="fjs-stimg-wrap" data-phone-hide="">
                                         {/* Exact-DPR ladder at the slot's 80px CSS size
                                             (scripts/regen-image-ladders.mjs) — 1:1
                                             physical pixels at every display scaling. */}

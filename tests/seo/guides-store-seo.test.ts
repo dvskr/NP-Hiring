@@ -18,6 +18,7 @@ import { isSelfCanonical } from '@/lib/guides/canonical';
 import * as storePage from '@/app/guides/page';
 import * as productPage from '@/app/guides/[slug]/page';
 import { metadata as successMetadata } from '@/app/guides/success/layout';
+import { PHONE_MENU_GROUPS } from '@/lib/nav/phone-menu-links';
 
 const read = (rel: string): string => fs.readFileSync(path.join(process.cwd(), rel), 'utf8');
 const asArray = (v: string | string[] | undefined): string[] => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
@@ -77,11 +78,12 @@ describe('the store pages are indexable and share on the site renderer', () => {
 });
 
 describe('the store is linked sitewide', () => {
-    it('from the footer and the mobile menu', () => {
+    it('from the footer and the phone menu', () => {
         expect(read('components/Footer.tsx')).toContain("href: '/guides'");
-        const header = read('components/Header.tsx');
-        const extra = header.slice(header.indexOf('const mobileExtraLinks = ['), header.indexOf('];', header.indexOf('const mobileExtraLinks = [')));
-        expect(extra).toContain("{ href: '/guides', label: 'Career Guides', icon: Library }");
+        // The phone menu, the same on every page since the phone restructure
+        // (2026-11-27): the store sits in its "Pay and careers" group.
+        const careers = PHONE_MENU_GROUPS.find((group) => group.title === 'Pay and careers');
+        expect(careers?.links).toContainEqual({ href: '/guides', label: 'Career Guides' });
     });
 
     it('from the job seeker dashboard', () => {

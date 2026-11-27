@@ -143,8 +143,10 @@ export default function ContactPage() {
                             We&apos;d love to <span style={{ color: '#BE185D' }}>hear from you</span>
                         </h1>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Image src="/images/contact/hero.webp" alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority quality={90} />
+                    {/* Decorative on a phone (760 pixels and narrower): not shown there,
+                        and the 1 pixel size hint sends a phone the smallest copy. */}
+                    <div data-phone-hide="" style={{ display: 'flex', justifyContent: 'center' }}>
+                        <Image src="/images/contact/hero.webp" alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} sizes="(max-width: 760px) 1px, 280px" style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority quality={90} />
                     </div>
                 </div>
             </section>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { hasLikelyAuthCookie } from '@/lib/auth-cookie';
 
 const STORAGE_KEY = 'appliedJobs';
 const API_PATH = '/api/applications';
@@ -109,16 +110,13 @@ export function findLocalOnlyJobIds(local: AppliedJobsMap, rows: AppliedJobRow[]
   return Object.keys(local).filter((id) => !known.has(id));
 }
 
-/**
- * Heuristic: if no Supabase auth cookie is present we are anonymous, and
- * `GET /api/applications` will return 401 -- which the browser logs to the
- * console even though we handle it. Skipping the call entirely keeps the
- * console clean on every anonymous page view.
- */
-function hasLikelyAuthCookie(): boolean {
-  if (typeof document === 'undefined') return false;
-  return /(?:^|;\s*)sb-[^=]+-auth-token=/.test(document.cookie);
-}
+// Heuristic (lib/auth-cookie.ts): if no Supabase auth cookie is present we
+// are anonymous, and `GET /api/applications` will return 401 -- which the
+// browser logs to the console even though we handle it. Skipping the call
+// entirely keeps the console clean on every anonymous page view. The shared
+// check also counts a split session (sb-<ref>-auth-token.0, .1), which the
+// copy that lived here missed, so a signed-in visitor with a large session
+// never synced.
 
 async function syncFromServer(force = false): Promise<void> {
   if (typeof window === 'undefined') return;

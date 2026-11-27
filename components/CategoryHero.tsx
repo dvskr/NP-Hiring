@@ -3,8 +3,13 @@ import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { brand } from '@/config/brand';
 
-/** The hero art is square and letterboxed to the panel height (380px, 240px under 900px). */
-const HERO_ART_SIZES = '(max-width: 900px) 240px, 380px';
+/**
+ * The hero art is square and letterboxed to the panel height (380px, 240px
+ * under 900px). A phone (760px and narrower) shows no panel (data-phone-hide
+ * below, app/globals.css), so the 1 pixel hint sends it the smallest copy of
+ * the art, the one picture here that loads at once.
+ */
+const HERO_ART_SIZES = '(max-width: 760px) 1px, (max-width: 900px) 240px, 380px';
 
 /* ═══════════════════════════════════════════════════════════════
    CategoryHero — Layout 5: Oversized type / asymmetric collage
@@ -253,7 +258,10 @@ export default function CategoryHero({
               <em>{headlineSub}</em>
             </span>
           </h1>
-          <div className="cath5-photo">
+          {/* Decorative on a phone (the phone restructure the owner approved
+              on 2026-11-27): not shown there, and the two edge copies load
+              lazily, so a phone never fetches them. */}
+          <div className="cath5-photo" data-phone-hide="">
             {/* The art is letterboxed so nothing is cropped. The bands beside
                 it are painted by the art's own outermost columns, stretched
                 across the band (one copy clamped to each edge), so the color

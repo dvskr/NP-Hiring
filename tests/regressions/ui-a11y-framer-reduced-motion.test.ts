@@ -16,8 +16,10 @@
  *
  * (components/HomepageHero.tsx also uses framer variants but is owner-locked;
  * its JS role-cycler already checks matchMedia and its CSS animations have a
- * local reduced-motion block. components/Header.tsx animates opacity only,
- * which is acceptable under reduced motion.)
+ * local reduced-motion block. components/Header.tsx and its phone menu use no
+ * animation library at all since the phone restructure of 2026-11-27: the
+ * menu drops in with CSS that reduced motion turns off, pinned in
+ * tests/regressions/p10-header-nav-a11y.test.ts.)
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';

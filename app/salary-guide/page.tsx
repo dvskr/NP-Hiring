@@ -10,6 +10,7 @@ import GuidePromo from '@/components/guides/GuidePromo';
 import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 import SalaryCalculator from '@/components/SalaryCalculator';
 import SalaryProvenance from '@/components/SalaryProvenance';
+import PhoneRowLimit from '@/components/PhoneRowLimit';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 // Report links derive from the edition config, so next year's edition and
 // any retitle reach this page without a hand-typed path or title.
@@ -537,6 +538,10 @@ export default async function SalaryGuidePage() {
             {snapshot ? ` Where at least ${BENCHMARK_MIN_EMPLOYERS} employers disclose pay in live postings, the live column shows the median advertised pay, each employer counted once.` : ''}
           </p>
 
+          {/* On a phone, the first ten rows and a Show all button; every row
+              stays in the page (components/PhoneRowLimit.tsx). 50 states and
+              DC, so the button counts rows rather than states. */}
+          <PhoneRowLimit total={BLS_TABLE_ROWS.length} noun="rows">
           <div className="emp-compare-table" style={{ ...clayCard, padding: 0, overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <caption style={{ captionSide: 'bottom', textAlign: 'left', padding: '12px 16px', fontSize: '11.5px', color: '#64748B', lineHeight: 1.5 }}>
@@ -601,6 +606,7 @@ export default async function SalaryGuidePage() {
               </tbody>
             </table>
           </div>
+          </PhoneRowLimit>
 
           {/* The highest and lowest paying states, five each, from the same
               rows: one generated sentence per state, figures and comparison

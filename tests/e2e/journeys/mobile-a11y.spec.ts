@@ -163,7 +163,7 @@ test.describe('mobile 375x812', () => {
     await assertNoHorizontalOverflow(page, 'home');
     await assertHeadingNotCovered(page, 'home');
     await expectTapTarget(page.locator('main form button[type="submit"]').first(), 'home: hero search submit');
-    await expectTapTarget(page.getByRole('button', { name: 'Toggle menu' }), 'home: menu toggle');
+    await expectTapTarget(page.getByRole('button', { name: 'Menu', exact: true }), 'home: menu toggle');
     const bottomNavLinks = page.locator('.md\\:hidden.fixed.bottom-0 a');
     const n = await bottomNavLinks.count();
     expect(n, 'home: bottom nav renders links at 375px').toBeGreaterThan(0);
@@ -545,8 +545,8 @@ test.describe('mobile 375x812', () => {
 
   test('header menu: opens as a dialog, Escape closes it, aria-expanded + scroll lock track state', async ({ page }) => {
     await gotoReady(page, '/');
-    const toggle = page.getByRole('button', { name: 'Toggle menu' });
-    const menu = page.getByRole('dialog', { name: 'Mobile navigation menu' });
+    const toggle = page.getByRole('button', { name: 'Menu', exact: true });
+    const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
     await expect(menu).toBeVisible();
@@ -567,11 +567,11 @@ test.describe('mobile 375x812', () => {
 
   test('DEFECT: mobile navigation menu (role=dialog, aria-modal) never receives focus and does not trap Tab', async ({ page }) => {
     await gotoReady(page, '/');
-    await page.getByRole('button', { name: 'Toggle menu' }).click();
-    const menu = page.getByRole('dialog', { name: 'Mobile navigation menu' });
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
     await expect(menu).toBeVisible();
     // Observed: focus stays on the toggle button; Tab walks the page behind the overlay.
-    // components/Header.tsx mobile menu handles Escape but has no useFocusTrap.
+    // Since fixed: components/PhoneMenu.tsx wires the shared useFocusTrap.
     await assertFocusTrapped(page, menu, 'mobile menu');
   });
 
@@ -810,8 +810,8 @@ test.describe('axe-core', () => {
 
     test('axe @375: home with the navigation menu open', async ({ page }, testInfo) => {
       await gotoReady(page, '/');
-      await page.getByRole('button', { name: 'Toggle menu' }).click();
-      await expect(page.getByRole('dialog', { name: 'Mobile navigation menu' })).toBeVisible();
+      await page.getByRole('button', { name: 'Menu', exact: true }).click();
+      await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toBeVisible();
       const result = await runAxe(page, { disableRules: SITE_WIDE_AXE_DEFECTS });
       annotateAxe(testInfo, result.all);
       expect(result.serious, 'home + mobile menu @375: serious/critical axe violations').toEqual([]);
@@ -1038,14 +1038,14 @@ test.describe('prefers-reduced-motion', () => {
     await gotoReady(page, '/');
     await readMotionLog(page, ENTRANCE_WINDOW_MS); // let the page's own entrance drain first
     const before = await readMotionLog(page, 0);
-    await page.getByRole('button', { name: 'Toggle menu' }).click();
-    const menu = page.getByRole('dialog', { name: 'Mobile navigation menu' });
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
     await expect(menu).toBeVisible();
     await expect(menu).toHaveCSS('opacity', '1');
-    // Observed: div#mobile-nav-menu animates opacity (components/Header.tsx AnimatePresence
-    // initial/animate/exit opacity, no useReducedMotion).
+    // Was: the old header menu faded in through framer AnimatePresence with no
+    // reduced-motion check. The phone menu's CSS drop-in is off under reduced motion.
     const after = await readMotionLog(page, before.observedMs + 600);
-    const newAnimations = after.runningAnimations.filter((a) => !before.runningAnimations.includes(a) && /mobile-nav-menu|dialog/i.test(a));
+    const newAnimations = after.runningAnimations.filter((a) => !before.runningAnimations.includes(a) && /phone-menu|dialog/i.test(a));
     expect(newAnimations, 'mobile menu animated opacity/transform under reduced motion').toEqual([]);
   });
 });
@@ -1090,8 +1090,8 @@ test.describe('copy rule: no em/en dashes', () => {
   test('no dashes: home with the mobile menu open @375', async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await gotoReady(page, '/');
-    await page.getByRole('button', { name: 'Toggle menu' }).click();
-    await expect(page.getByRole('dialog', { name: 'Mobile navigation menu' })).toBeVisible();
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toBeVisible();
     const hits = await findDashesInVisibleText(page, ['a[href^="/jobs/"]']);
     expect(hits, 'mobile menu: rendered copy with em/en dashes').toEqual([]);
   });

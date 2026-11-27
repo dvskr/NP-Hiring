@@ -137,6 +137,35 @@ const css = `
     @media (prefers-reduced-motion: reduce) {
         .ehw-dot::after { animation: none; }
     }
+
+    /* Phone (760px and narrower), the phone restructure the owner approved
+       on 2026-11-27: the four steps become a compact numbered list. The step
+       drawings are left out (data-phone-hide, app/globals.css); they load
+       lazily, so a phone never fetches them. Each number is white on the
+       berry of the step dots (6:1). */
+    @media (max-width: 760px) {
+        .ehw-grid { grid-template-columns: 1fr; gap: 16px; counter-reset: ehw-step; }
+        .ehw-step { counter-increment: ehw-step; text-align: left; min-height: 38px; padding-left: 52px; }
+        .ehw-step::before {
+            content: counter(ehw-step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #BE185D, #9D174D);
+            color: #FFFFFF;
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .ehw-dot { display: none; }
+        .ehw-step p { max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; }
+        .ehw-inner h2 { margin-bottom: 28px !important; }
+    }
 `;
 
 interface EmployerHowItWorksProps {
@@ -201,8 +230,10 @@ export default function EmployerHowItWorks({ promoActive: promoActiveProp }: Emp
                             <div key={step.title} className="ehw-step">
                                 {/* Diorama-style tile — identical treatment to the
                                     Top States cards: rounded, image fills the card,
-                                    hard-edged shadow, hover lift. */}
+                                    hard-edged shadow, hover lift. Left out on a
+                                    phone, where the step takes a number instead. */}
                                 <div
+                                    data-phone-hide=""
                                     style={{
                                         width: 280,
                                         height: 280,

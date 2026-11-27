@@ -294,7 +294,9 @@ export default function FAQPage() {
                       Frequently Asked <span style={{ color: '#E11D48' }}>Questions</span>
                   </h1>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+              {/* Decorative on a phone (760 pixels and narrower): not shown there,
+                  and the 1 pixel size hint sends a phone the smallest copy. */}
+              <div data-phone-hide="" style={{ display: 'flex', justifyContent: 'center' }}>
                   {/* Exact-DPR ladder (scripts/regen-image-ladders.mjs) — reuses the
                       already-laddered how-it-works illustration so the priority LCP
                       image paints 1:1 physical pixels at every display scale (the
@@ -306,7 +308,7 @@ export default function FAQPage() {
                       srcSet={[280, 350, 420, 490, 560, 630, 700, 840]
                           .map((w) => `/images/how-it-works/step-employer-browse-${w}.webp ${w}w`)
                           .join(', ')}
-                      sizes="280px"
+                      sizes="(max-width: 760px) 1px, 280px"
                       alt={`Illustration: browsing ${brand.niche.short} jobs and answers on ${brand.name}`}
                       width={280} height={280}
                       style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '20px', boxShadow: '0 20px 30px rgba(0,0,0,0.15)', display: 'block' }}

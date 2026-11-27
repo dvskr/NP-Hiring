@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { hasLikelyAuthCookie } from '@/lib/auth-cookie';
 // F2: localStorage shape + persistence live in the shared module so this hook
 // and SaveJobButton can never write incompatible serializations to the same key.
 import {
@@ -139,17 +140,11 @@ function emitNotice(kind: SavedJobsNoticeKind) {
   if (!first.done) first.value(kind);
 }
 
-/**
- * Heuristic: anonymous visitors have no Supabase auth cookie, so the GET
- * is guaranteed to 401. Skip it to keep the browser console clean.
- */
-function hasLikelyAuthCookie(): boolean {
-  if (typeof document === 'undefined') return false;
-  // @supabase/ssr splits large sessions into sb-<ref>-auth-token.0, .1, ...
-  // A chunked session must still count, or a signed-in user's saves would
-  // be treated as device-only and never reach the server.
-  return /(?:^|;\s*)sb-[^=]+-auth-token(?:\.\d+)?=/.test(document.cookie);
-}
+// Heuristic (lib/auth-cookie.ts): anonymous visitors have no Supabase auth
+// cookie, so the GET is guaranteed to 401. Skip it to keep the browser
+// console clean. A chunked session (sb-<ref>-auth-token.0, .1) still counts,
+// or a signed-in user's saves would be treated as device-only and never
+// reach the server.
 
 function withPendingOverlay(base: SavedJobsMap): SavedJobsMap {
   if (pendingOps.size === 0) return base;

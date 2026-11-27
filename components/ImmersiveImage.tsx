@@ -42,6 +42,10 @@ const edgeBox: CSSProperties = { position: 'absolute', top: 0, bottom: 0, height
  * The wrapper is painted the picture's sampled ground color as a placeholder
  * while the image loads (owner request, 2026-09-16: no padding, frame or
  * color seam around the art).
+ *
+ * data-immersive marks the cell for app/globals.css: on a phone (760px and
+ * narrower) a cell that shows one of the bento or call-to-action pictures is
+ * left out whole, so no empty painted block is left where the picture was.
  */
 export default function ImmersiveImage({
   src,
@@ -57,7 +61,7 @@ export default function ImmersiveImage({
   const hint = sizes ?? `${Math.round(minHeight * FOREGROUND_HEADROOM)}px`;
   const background = ART_GROUND[src] ?? ground;
   return (
-    <div className={className} style={{ ...style, position: 'relative', overflow: 'hidden', minHeight, background }}>
+    <div className={className} data-immersive="" style={{ ...style, position: 'relative', overflow: 'hidden', minHeight, background }}>
       <div aria-hidden="true" style={{ ...edgeBox, left: 0, aspectRatio, transformOrigin: 'left center', transform: `scaleX(${EDGE_STRETCH})` }}>
         <Image src={src} alt="" fill sizes={hint} style={{ objectFit: 'fill' }} quality={90} />
       </div>

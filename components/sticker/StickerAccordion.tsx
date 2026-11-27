@@ -27,7 +27,9 @@ export default function StickerAccordion({ items, headingLevel = 3, className }:
   return (
     <div className={['stk-acc-list', className].filter(Boolean).join(' ')}>
       {items.map((faq, i) => (
-        <details key={faq.question} className="stk-acc" open={i === 0}>
+        // The first question opens on a wide screen; on a phone every
+        // question starts closed (components/PhoneFold.tsx).
+        <details key={faq.question} className="stk-acc" open={i === 0} data-phone-fold="">
           <summary>
             <Heading className="stk-acc-q font-heading">{faq.question}</Heading>
             <span className="stk-icon stk-acc-chevron" aria-hidden="true">

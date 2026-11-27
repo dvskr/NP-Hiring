@@ -19,6 +19,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import LayoutShell from '@/components/LayoutShell';
 import MainContent from '@/components/MainContent';
 import MobileHideOnAppRoutes from '@/components/MobileHideOnAppRoutes';
+import PhoneFold from '@/components/PhoneFold';
 
 import AnalyticsConsentBoundary from '@/components/consent/AnalyticsConsentBoundary';
 import CookieConsentBoundary from '@/components/consent/CookieConsentBoundary';
@@ -311,6 +312,9 @@ export default function RootLayout({
                   <SiteFooter />
                 </MobileHideOnAppRoutes>
                 <BottomNav />
+                {/* Closes the long lists marked to fold on a phone (the footer's
+                    link columns, FAQ lists) and opens them again on a wider screen. */}
+                <PhoneFold />
                 <ScrollIndicator />
                 <ExitIntentPopup />
                 <PushNotificationPrompt />

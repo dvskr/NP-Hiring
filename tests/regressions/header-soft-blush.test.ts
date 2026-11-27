@@ -7,8 +7,11 @@
  *   2. Desktop nav pills: #3D2A2E text, hover rgba(190,24,93,0.08) with
  *      #7A1C2B text, current page #7A1C2B on rgba(190,24,93,0.12), a visible
  *      :focus-visible outline, and AA contrast for every state.
- *   3. The mobile menu toggle is white with the berry hairline, and the menu
- *      panel's rows, label and dividers follow the palette at AA.
+ *   3. The phone menu (components/PhoneMenu.tsx, its look in
+ *      components/phone-menu.ts; the phone restructure of 2026-11-27): the
+ *      round button is white with the berry hairline, and the card wears the
+ *      bar's fill, hairline and shadow, with its rows, labels, buttons and
+ *      divider in the palette at AA.
  *   4. Log in (white, #3D2A2E, rgba(122,28,43,0.14) border) and Sign up (solid
  *      #9D174D, white text, the berry shadow) are styled by a hoisted
  *      stylesheet with a focus-visible outline, never by inline styles or
@@ -19,12 +22,16 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { PHONE_MENU_CSS } from '@/components/phone-menu';
 
 const ROOT = process.cwd();
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n/g, '\n');
 
 const HEADER = read('components/Header.tsx');
 const AUTH = read('components/auth/HeaderAuth.tsx');
+const PHONE_MENU = read('components/PhoneMenu.tsx');
+/** The phone menu's stylesheet, line endings normalized like the sources above. */
+const MENU_CSS = PHONE_MENU_CSS.replace(/\r\n/g, '\n');
 
 // ── WCAG 2.x contrast ────────────────────────────────────────────────────────
 
@@ -55,7 +62,7 @@ const AA = 4.5;
 const NON_TEXT = 3;
 
 const BAR = '#FCEEF0';
-/** The mobile menu panel and the strip around the bar keep the page tone. */
+/** The strip around the bar keeps the page tone. */
 const PANEL = '#F5F0EB';
 
 // ── CSS helpers ──────────────────────────────────────────────────────────────
@@ -103,8 +110,8 @@ describe('soft blush bar', () => {
         expect(scrolled![1]).not.toContain('inset');
     });
 
-    it('carries no mint colour in the header or its auth pills', () => {
-        for (const [file, src] of [['Header.tsx', HEADER], ['HeaderAuth.tsx', AUTH]] as const) {
+    it('carries no mint colour in the header, its auth pills or the phone menu', () => {
+        for (const [file, src] of [['Header.tsx', HEADER], ['HeaderAuth.tsx', AUTH], ['PhoneMenu.tsx', PHONE_MENU], ['phone-menu.ts', MENU_CSS]] as const) {
             for (const mint of ['#D5F5F1', '#B9EBD6', '#EDF2EE', '#374151']) {
                 expect(src.toUpperCase(), `${file} still uses ${mint}`).not.toContain(mint);
             }
@@ -112,7 +119,7 @@ describe('soft blush bar', () => {
     });
 
     it('drops the neumorphic white inset highlights', () => {
-        for (const src of [HEADER, AUTH]) {
+        for (const src of [HEADER, AUTH, PHONE_MENU, MENU_CSS]) {
             expect(src).not.toMatch(/inset[^;'"`]*rgba\(255,\s*255,\s*255/);
             expect(src).not.toMatch(/-\d+px -\d+px \d+px rgba\(255,\s*255,\s*255/);
         }
@@ -170,45 +177,76 @@ describe('desktop nav pills', () => {
     });
 });
 
-// ── 3. Mobile toggle and menu panel ──────────────────────────────────────────
+// ── 3. The phone menu: its round button and its card ────────────────────────
 
-describe('mobile toggle and menu panel', () => {
-    it('the toggle is white with the berry hairline and keeps its focus ring hook', () => {
-        const toggle = HEADER.slice(HEADER.indexOf('ref={toggleRef}'), HEADER.indexOf('aria-label="Toggle menu"'));
-        expect(toggle).toContain('data-icon-btn');
-        expect(toggle).toContain("backgroundColor: '#FFFFFF',");
-        expect(toggle).toContain("border: '1px solid rgba(122,28,43,0.15)',");
-        expect(toggle).toContain("color: '#3D2A2E',");
-        // An inline box-shadow would beat the global focus ring.
-        expect(toggle).not.toContain('boxShadow');
+describe('phone menu button and card', () => {
+    const button = cssRule(MENU_CSS, '.phone-menu-button');
+    const card = cssRule(MENU_CSS, '.phone-menu-card');
+    const row = cssRule(MENU_CSS, '.phone-menu-link');
+    const current = cssRule(MENU_CSS, '.phone-menu-link[aria-current="page"]');
+    const label = cssRule(MENU_CSS, '.phone-menu-label');
+    const chevron = cssRule(MENU_CSS, '.phone-menu-chevron');
+    const small = cssRule(MENU_CSS, '.phone-menu-small-link');
+    const account = cssRule(MENU_CSS, '.phone-menu-account');
+    const browse = cssRule(MENU_CSS, '.phone-menu-browse');
+    const post = cssRule(MENU_CSS, '.phone-menu-post');
+    const create = cssRule(MENU_CSS, '.phone-menu-create');
+
+    it('the round button is white with the berry hairline, and no shadow competes with the focus ring', () => {
+        expect(decl(button, 'background-color')).toBe('#FFFFFF');
+        expect(decl(button, 'border')).toBe('1px solid rgba(122,28,43,0.15)');
+        expect(decl(button, 'color')).toBe('#3D2A2E');
+        expect(decl(button, 'border-radius')).toBe('999px');
+        expect(button).not.toContain('box-shadow');
         expect(contrast(hexRgb('#3D2A2E'), hexRgb('#FFFFFF'))).toBeGreaterThanOrEqual(AA);
+        // Its look is the stylesheet's: no inline style on the button to beat the ring.
+        const tag = PHONE_MENU.slice(PHONE_MENU.indexOf('<button'), PHONE_MENU.indexOf('</button>'));
+        expect(tag).toContain('className="phone-menu-button"');
+        expect(tag).not.toContain('style=');
     });
 
-    const menu = HEADER.slice(HEADER.indexOf('id="mobile-nav-menu"'), HEADER.indexOf('{/* Floating nav hover styles */}'));
-
-    it('the panel keeps the page tone under the blush pill', () => {
-        expect(menu).toContain(`style={{ backgroundColor: '${PANEL}' }}`);
+    it('the card wears the bar: the blush fill, the berry hairline and the berry shadow', () => {
+        expect(decl(card, 'background-color')).toBe(BAR);
+        expect(decl(card, 'border')).toBe('1px solid rgba(122,28,43,0.15)');
+        expect(decl(card, 'box-shadow')).toMatch(/^0 \d+px \d+px rgba\(122,28,43,0\.\d+\)/);
+        // No inset highlight in the shadow (those went with the mint bar).
+        // The card's sides do clear the phone's safe area insets, so the
+        // check reads the shadow, not the whole rule.
+        expect(decl(card, 'box-shadow')).not.toContain('inset');
     });
 
-    it('rows mark the current page and use the blush palette', () => {
-        const rows = [...menu.matchAll(/color: active \? '(#[0-9A-F]{6})' : '(#[0-9A-F]{6})',\s*\n\s*backgroundColor: active \? '(rgba\([^)]+\))' : 'transparent',/g)];
-        expect(rows).toHaveLength(2);
-        for (const [, activeText, idleText, activeTint] of rows) {
-            expect(activeText).toBe('#7A1C2B');
-            expect(activeTint).toBe('rgba(190,24,93,0.12)');
-            expect(contrast(hexRgb(idleText), hexRgb(PANEL)), idleText).toBeGreaterThanOrEqual(AA);
-            expect(contrast(hexRgb(activeText), over(activeTint, PANEL))).toBeGreaterThanOrEqual(AA);
+    it('rows use the bar ink and mark the page on screen as the desktop pills do, at AA', () => {
+        expect(decl(row, 'color')).toBe('#3D2A2E');
+        expect(decl(current, 'color')).toBe('#7A1C2B');
+        expect(decl(current, 'background-color')).toBe('rgba(190,24,93,0.12)');
+        expect(contrast(hexRgb(decl(row, 'color')), hexRgb(BAR))).toBeGreaterThanOrEqual(AA);
+        expect(contrast(hexRgb(decl(current, 'color')), over(decl(current, 'background-color'), BAR))).toBeGreaterThanOrEqual(AA);
+        expect(PHONE_MENU).toContain("aria-current={here ? 'page' : undefined}");
+    });
+
+    it('group labels, chevrons and small links clear AA on the card, and the account divider is the berry hairline', () => {
+        for (const [name, rule] of [['label', label], ['chevron', chevron], ['small link', small]] as const) {
+            expect(contrast(hexRgb(decl(rule, 'color')), hexRgb(BAR)), name).toBeGreaterThanOrEqual(AA);
         }
-        expect(rows[0][2]).toBe('#3D2A2E');
-        expect(menu.match(/aria-current=\{active \? 'page' : undefined\}/g)).toHaveLength(2);
+        expect(decl(account, 'border-top')).toBe('1px solid rgba(122,28,43,0.10)');
     });
 
-    it('the "More" label clears AA (it read 2.4:1 before) and the dividers use the berry hairline', () => {
-        const label = menu.match(/style=\{\{ color: '(#[0-9A-F]{6})' \}\}>More</);
-        expect(label).not.toBeNull();
-        expect(contrast(hexRgb(label![1]), hexRgb(PANEL))).toBeGreaterThanOrEqual(AA);
-        expect(menu).not.toContain('rgba(90,74,66,0.08)');
-        expect(menu.match(/borderTop: '1px solid rgba\(122,28,43,0\.10\)'/g)).toHaveLength(2);
+    it('Browse Jobs is the ink filled, Post a Job the solid berry of Sign up, Create account outlined in ink, all at AA', () => {
+        expect(decl(browse, 'background-color')).toBe('#3D2A2E');
+        expect(contrast(hexRgb(decl(browse, 'color')), hexRgb(decl(browse, 'background-color')))).toBeGreaterThanOrEqual(AA);
+        expect(decl(post, 'background-color')).toBe('#9D174D');
+        expect(contrast(hexRgb(decl(post, 'color')), hexRgb(decl(post, 'background-color')))).toBeGreaterThanOrEqual(AA);
+        expect(decl(create, 'border')).toBe('2px solid #3D2A2E');
+        expect(contrast(hexRgb(decl(create, 'color')), hexRgb(BAR))).toBeGreaterThanOrEqual(AA);
+    });
+
+    it('keyboard focus paints the header outline, visible on the card and on the white button', () => {
+        const focus = cssRule(MENU_CSS, '.phone-menu-card button:focus-visible');
+        const ring = decl(focus, 'outline').match(/^2px solid (#[0-9A-Fa-f]{6})$/);
+        expect(ring, 'outline: 2px solid <hex>').not.toBeNull();
+        expect(decl(focus, 'outline-offset')).toBe('2px');
+        expect(MENU_CSS).toContain('.phone-menu-button:focus-visible,');
+        for (const bg of [BAR, '#FFFFFF']) expect(contrast(hexRgb(ring![1]), hexRgb(bg)), bg).toBeGreaterThanOrEqual(NON_TEXT);
     });
 });
 
@@ -252,7 +290,7 @@ describe('HeaderAuth pills', () => {
         expect(contrast(hexRgb('#FFFFFF'), hexRgb(decl(hover, 'background-color')))).toBeGreaterThanOrEqual(AA);
     });
 
-    it('keyboard focus paints an outline visible on the bar and in the menu panel', () => {
+    it('keyboard focus paints an outline visible on the bar and on the strip around it', () => {
         const focus = cssRule(css, '.header-auth-pill:focus-visible');
         const ring = decl(focus, 'outline').match(/^2px solid (#[0-9A-Fa-f]{6})$/);
         expect(ring).not.toBeNull();
@@ -281,8 +319,11 @@ describe('Post Job CTA', () => {
     const css = headerCss();
 
     it('is styled by class, so hover never writes over the focus ring', () => {
-        expect(cta).toContain("className={mobile ? 'header-post-job header-post-job--compact' : 'header-post-job'}");
+        // Desktop only since the phone restructure (2026-11-27): on a phone
+        // the menu's Post a Job button does its work.
+        expect(cta).toContain('className="header-post-job"');
         expect(cta).not.toMatch(/style=|onMouseEnter|onMouseLeave/);
+        expect(HEADER).not.toContain('header-post-job--compact');
     });
 
     it('is the same solid berry as Sign up, with an outline on keyboard focus', () => {

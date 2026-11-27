@@ -30,7 +30,9 @@ export default function ClayAccordion({ items, headingLevel = 3, className }: Cl
       <ClayStyles />
       <div className={cx('pseo-clay-faq', className)} style={{ display: 'grid', gap: '12px' }}>
         {items.map((faq, i) => (
-          <details key={faq.question} style={{ ...clayCard, borderRadius: '16px', overflow: 'hidden' }} open={i === 0}>
+          // The first question opens on a wide screen; on a phone every
+          // question starts closed (components/PhoneFold.tsx).
+          <details key={faq.question} style={{ ...clayCard, borderRadius: '16px', overflow: 'hidden' }} open={i === 0} data-phone-fold="">
             <summary
               style={{
                 display: 'flex',

@@ -10,6 +10,8 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { PHONE_MENU_CSS } from '@/components/phone-menu';
+import { PHONE_MENU_GROUPS } from '@/lib/nav/phone-menu-links';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -87,152 +89,69 @@ describe('P2 #14: homepage free-tools band', () => {
 });
 
 describe('P2 #11/#12/#14: promotion in the header', () => {
-  it('surfaces both directories and the tools hub in the public mobile menu', () => {
-    const src = headerSrc();
-    expect(src).toContain("href: '/companies'");
-    expect(src).toContain("href: '/jobs/locations'");
-    expect(src).toContain("href: '/tools'");
+  it('surfaces both directories and the tools hub in the phone menu', () => {
+    // The phone restructure (2026-11-27): one menu on every page, its groups
+    // in lib/nav/phone-menu-links.ts.
+    const hrefs = PHONE_MENU_GROUPS.flatMap((group) => group.links.map((link) => link.href));
+    expect(hrefs).toContain('/companies');
+    expect(hrefs).toContain('/jobs/locations');
+    expect(hrefs).toContain('/tools');
   });
 
   it('leaves the four-item desktop nav intact', () => {
     const src = headerSrc();
     const start = src.indexOf('const publicNavLinks');
-    const block = src.slice(start, src.indexOf('const seekerNavLinks'));
+    expect(start, 'publicNavLinks not found').toBeGreaterThan(-1);
+    const block = src.slice(start, src.indexOf('];', start));
     expect([...block.matchAll(/href:\s*'/g)]).toHaveLength(4);
   });
 });
 
 /**
- * The nav promotion above adds three rows to a `position: fixed` overlay whose
- * open-state effect locks BOTH `html.overflow` and `body.overflow`. Anything
- * taller than that fixed box paints outside it with no page scroll to chase it
- * with — which silently pushed the signed-out Login / Sign up CTAs off-screen.
- *
- * These pins hold the reachability invariant rather than the specific CSS: the
- * menu must either fit the overlay at the repo's own declared mobile e2e
- * viewport, or scroll inside it.
- *
- * Measured in Chromium at 375x812 with the signed-out menu open: the content
- * container is 834px tall inside a 712px overlay (a 122px overflow), and with
- * the page lock on, `scrollingElement.scrollTop` stays 0 through a wheel event
- * — the Login CTA sat at y=901, off a 812px screen. The estimator below is a
- * deliberately conservative lower bound on that 834px (it assumes tight line
- * boxes and a 42px auth row), so a pass here means "definitely fits", never
- * "probably fits".
+ * The phone menu is a `position: fixed` card, and while it is open the page
+ * under it is locked (BOTH `html.overflow` and `body.overflow`). Anything
+ * taller than the card's box would paint outside it with no page scroll to
+ * chase it with, which is how the old menu once pushed the signed-out Log in
+ * and Sign up row off a 375x812 screen. So the card caps its height at the
+ * space between the bar and the bottom bar and scrolls inside, and the
+ * account row and the small links sit inside that scrolling card.
  */
-describe('P2 #11/#12: mobile menu stays reachable after the nav promotion', () => {
-  /** tests/e2e/mobile-phase-d-verify.spec.ts:6 declares 375x812. */
-  const E2E_VIEWPORT_HEIGHT = 812;
+describe('P2 #11/#12: the phone menu stays reachable on a short screen', () => {
+  const menuSrc = () => read('components/PhoneMenu.tsx');
+  const cardRule = () => {
+    const css = PHONE_MENU_CSS.replace(/\r\n/g, '\n');
+    const start = css.indexOf('.phone-menu-card {');
+    expect(start, '.phone-menu-card rule not found').toBeGreaterThan(-1);
+    return css.slice(start, css.indexOf('}', start));
+  };
 
-  /** Tailwind spacing scale (px) for the classes the menu chrome uses. */
-  const TW: Record<number, number> = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 };
-
-  /** The whole `<AnimatePresence>` mobile-menu block. */
-  function menuBlock(): string {
-    const src = headerSrc();
-    const start = src.indexOf('id="mobile-nav-menu"');
-    expect(start, 'mobile menu block not found').toBeGreaterThan(-1);
-    return src.slice(start, src.indexOf('{/* Floating nav hover styles */}'));
-  }
-
-  /** The overlay's `top` offset — the fixed nav footprint it sits below. */
-  function overlayTopOffset(): number {
-    const m = menuBlock().match(/style=\{\{\s*top:\s*(\d+)\s*\}\}/);
-    expect(m, 'overlay top offset not found').toBeTruthy();
-    return Number(m![1]);
-  }
-
-  /**
-   * Rendered height of one link row: vertical padding + the taller of the
-   * icon and the text line box + its bottom margin.
-   */
-  function rowHeight(rowSrc: string): number {
-    const pad = rowSrc.match(/padding:\s*'(\d+)px/);
-    const font = rowSrc.match(/fontSize:\s*'([\d.]+)px'/);
-    const margin = rowSrc.match(/marginBottom:\s*'(\d+)px'/);
-    const icon = rowSrc.match(/size=\{(\d+)\}/);
-    expect(pad && font && margin && icon, 'row metrics not parseable').toBeTruthy();
-    const lineBox = Math.round(Number(font![1]) * 1.2); // `line-height: normal`
-    return 2 * Number(pad![1]) + Math.max(Number(icon![1]), lineBox) + Number(margin![1]);
-  }
-
-  function countEntries(constName: string): number {
-    const src = headerSrc();
-    const start = src.indexOf(`const ${constName} = [`);
-    expect(start, `${constName} not found`).toBeGreaterThan(-1);
-    const block = src.slice(start, src.indexOf('];', start));
-    return [...block.matchAll(/href:\s*'/g)].length;
-  }
-
-  /** Content height of the signed-out public menu, in CSS px. */
-  function signedOutMenuHeight(): number {
-    const block = menuBlock();
-    const navRow = block.slice(block.indexOf('{navLinks.map('), block.indexOf('</nav>'));
-    const extraRow = block.slice(block.indexOf('{mobileExtraLinks.map('));
-
-    const navStack = countEntries('publicNavLinks') * rowHeight(navRow);
-    const extraStack = countEntries('mobileExtraLinks') * rowHeight(extraRow);
-    // "More" divider: mt-3 + pt-4 + the text-xs label's line box + mb-3.
-    const moreChrome = TW[3] + TW[4] + Math.round(12 * 1.33) + TW[3];
-    // Auth block: mt-6 + pt-5 + a ~42px button row.
-    const authChrome = TW[6] + TW[5] + 42;
-    // Container padding: pt-4 + pb-8.
-    const containerChrome = TW[4] + TW[8];
-    return navStack + moreChrome + extraStack + authChrome + containerChrome;
-  }
-
-  /** The menu content container is capped and scrolls inside the overlay. */
-  function hasScrollContainer(): boolean {
-    const src = headerSrc();
-    const applied = /className="relative px-6 pt-4 pb-8 mobile-menu-scroll"/.test(src);
-    const rule = src.slice(src.indexOf('.mobile-menu-scroll {'), src.indexOf('`}</style>'));
-    return applied && /overflow-y:\s*auto/.test(rule) && /max-height:\s*calc\(/.test(rule);
-  }
-
-  it('the signed-out menu either fits the overlay or scrolls inside it', () => {
-    const available = E2E_VIEWPORT_HEIGHT - overlayTopOffset();
-    const needed = signedOutMenuHeight();
-    expect(
-      needed <= available || hasScrollContainer(),
-      `signed-out menu needs ~${needed}px inside a ${available}px unscrollable overlay ` +
-        `— the Login / Sign up CTAs at the bottom are unreachable. Either trim links ` +
-        `or keep the .mobile-menu-scroll cap on the menu's content container.`,
-    ).toBe(true);
-  });
-
-  it('needs the scroll cap — the promoted link stack no longer fits', () => {
-    // Documents why the cap is load-bearing rather than decorative. If the
-    // link list is ever trimmed back under budget this flips, and the cap
-    // becomes a judgement call instead of a requirement — reconsider it
-    // deliberately at that point rather than deleting it silently.
-    const available = E2E_VIEWPORT_HEIGHT - overlayTopOffset();
-    expect(signedOutMenuHeight()).toBeGreaterThan(available);
-    expect(hasScrollContainer()).toBe(true);
-  });
-
-  it('caps at the overlay height, with a vh fallback ahead of dvh', () => {
-    const src = headerSrc();
-    const rule = src.slice(src.indexOf('.mobile-menu-scroll {'), src.indexOf('`}</style>'));
-    const caps = [...rule.matchAll(/max-height:\s*calc\(100(d?v)h\s*-\s*(\d+)px\)/g)];
-    // Fallback first, dvh second — declaration order is the fallback ladder.
+  it('the card scrolls inside itself, capped with a vh fallback ahead of dvh', () => {
+    const rule = cardRule();
+    expect(rule).toMatch(/overflow-y:\s*auto/);
+    expect(rule).toMatch(/overscroll-behavior:\s*contain/);
+    const caps = [...rule.matchAll(/max-height:\s*calc\(100(d?v)h\s*-\s*(\d+)px\s*-\s*var\(--bottom-nav-h, 0px\)\)/g)];
+    // Fallback first, dvh second: declaration order is the fallback ladder.
     expect(caps.map((m) => `${m[1]}h`)).toEqual(['vh', 'dvh']);
-    // Both cap values must track the overlay's own top offset.
-    const top = overlayTopOffset();
-    expect(caps.map((m) => Number(m[2]))).toEqual([top, top]);
+    // The card starts under the bar's 100px footprint, and both caps keep a
+    // 16px gap above the bottom bar (whose height BottomNav publishes).
+    const top = Number(rule.match(/top:\s*(\d+)px/)?.[1]);
+    expect(top).toBe(100);
+    expect(caps.map((m) => Number(m[2]))).toEqual([top + 16, top + 16]);
   });
 
-  it('keeps the auth CTAs inside the scrollable container', () => {
-    const block = menuBlock();
-    const containerStart = block.indexOf('mobile-menu-scroll');
-    const authStart = block.indexOf('<HeaderAuth onNavigate=');
-    expect(containerStart, 'scroll container not found').toBeGreaterThan(-1);
-    expect(authStart, 'signed-out auth block not found').toBeGreaterThan(containerStart);
+  it('keeps the account row and the small links inside the scrolling card', () => {
+    const src = menuSrc();
+    const cardStart = src.indexOf('className="phone-menu-card"');
+    expect(cardStart, 'card not found').toBeGreaterThan(-1);
+    expect(src.indexOf('className="phone-menu-account"', cardStart)).toBeGreaterThan(cardStart);
+    expect(src.indexOf('<HeaderAuth onNavigate={close} />', cardStart)).toBeGreaterThan(cardStart);
+    expect(src.indexOf('className="phone-menu-small"', cardStart)).toBeGreaterThan(cardStart);
   });
 
-  it('still locks html + body scroll while the overlay is open', () => {
+  it('still locks html + body scroll while the menu is open', () => {
     // The cap only works because the page behind stays locked; if that lock
-    // is ever dropped, this container becomes a nested-scroll trap instead.
-    const src = headerSrc();
+    // is ever dropped, the card becomes a nested-scroll trap instead.
+    const src = menuSrc();
     expect(src).toContain("document.body.style.overflow = 'hidden'");
     expect(src).toContain("document.documentElement.style.overflow = 'hidden'");
   });

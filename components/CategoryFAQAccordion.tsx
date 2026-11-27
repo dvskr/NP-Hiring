@@ -82,7 +82,9 @@ export default function CategoryFAQAccordion({ faqs }: CategoryFAQAccordionProps
         <div className="cfaq-list">
             <style>{ACCORDION_CSS}</style>
             {faqs.map((faq, index) => (
-                <details key={index} className="cfaq-item" open={index === 0}>
+                // The first question opens on a wide screen; on a phone every
+                // question starts closed (components/PhoneFold.tsx).
+                <details key={index} className="cfaq-item" open={index === 0} data-phone-fold="">
                     <summary className="cfaq-q">
                         <span>{faq.question}</span>
                         <span className="cfaq-chevron" aria-hidden="true">

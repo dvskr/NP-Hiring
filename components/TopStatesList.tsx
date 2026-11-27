@@ -31,6 +31,41 @@ interface TopStatesProps {
     states: { name: string; count: number; slug: string }[];
 }
 
+/**
+ * Phone (760px and narrower), the phone restructure the owner approved on
+ * 2026-11-27: the state tiles become rows, each with its diorama as a small
+ * 52px icon beside the name and the count, so the list takes a screen
+ * instead of five. The size hint on the picture asks a phone for the small
+ * copy. The count turns #6B5B53 on the white row (6.5:1); the grey it uses on
+ * the wide tiles would not clear 4.5:1 on white. Wider screens keep the
+ * tiles.
+ */
+const PHONE_ROWS_CSS = `
+@media (max-width: 760px) {
+  .tsl-grid { display: flex !important; flex-direction: column; gap: 8px !important; }
+  .tsl-card {
+    display: grid !important;
+    grid-template-columns: 52px 1fr;
+    column-gap: 12px;
+    align-items: center;
+    padding: 8px 14px 8px 8px;
+    border-radius: 16px;
+    background-color: #FFFFFF;
+    border: 1px solid rgba(122,28,43,0.10);
+  }
+  .tsl-pic {
+    grid-row: 1 / span 2;
+    width: 52px;
+    height: 52px;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+  }
+  .tsl-name, .tsl-count { text-align: left !important; margin: 0; }
+  .tsl-count { color: #6B5B53 !important; }
+}
+`;
+
 export default function TopStatesList({ states }: TopStatesProps) {
     // B60: honor prefers-reduced-motion for JS-driven framer entrance
     // animations. `initial={false}` renders elements in their visible
@@ -45,6 +80,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
     return (
         <LazyMotion features={domAnimation}>
         <section className="py-8 lg:py-12">
+            <style>{PHONE_ROWS_CSS}</style>
             <div className="max-w-7xl mx-auto px-6">
                 {/* Header */}
                 <m.div
@@ -64,7 +100,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
 
                 {/* Diorama grid: 5 columns */}
                 <m.div
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 mb-8"
+                    className="tsl-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 mb-8"
                     initial={reduceMotion ? false : 'hidden'}
                     whileInView="visible"
                     viewport={{ once: true, margin: '-60px' }}
@@ -74,11 +110,11 @@ export default function TopStatesList({ states }: TopStatesProps) {
                         <m.div key={state.slug} variants={fadeUp}>
                             <Link
                                 href={`/jobs/state/${state.slug}`}
-                                className="group block no-underline"
+                                className="tsl-card group block no-underline"
                                 style={{ textDecoration: 'none' }}
                             >
                                 <div
-                                    className="relative overflow-hidden aspect-square mb-2"
+                                    className="tsl-pic relative overflow-hidden aspect-square mb-2"
                                     style={{
                                         borderRadius: '24px',
                                         /* measured mid-tone of the artwork's baked-in rose
@@ -105,14 +141,14 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                             alt={`${state.name} ${brand.niche.short} jobs`}
                                             fill
                                             className="object-cover"
-                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                                            sizes="(max-width: 760px) 52px, (max-width: 1024px) 25vw, 20vw"
                                         />
                                     </div>
                                 </div>
-                                <p className="text-sm font-semibold text-gray-800 group-hover:text-pink-800 transition-colors text-center">
+                                <p className="tsl-name text-sm font-semibold text-gray-800 group-hover:text-pink-800 transition-colors text-center">
                                     {state.name}
                                 </p>
-                                <p className="text-xs text-gray-400 text-center">{state.count} {state.count === 1 ? 'opening' : 'openings'}</p>
+                                <p className="tsl-count text-xs text-gray-400 text-center">{state.count} {state.count === 1 ? 'opening' : 'openings'}</p>
                             </Link>
                         </m.div>
                     ))}

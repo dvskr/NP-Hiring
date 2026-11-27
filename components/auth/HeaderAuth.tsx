@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { usePathname } from 'next/navigation'
 import UserMenu from './UserMenu'
-import { User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
+import { hasLikelyAuthCookie } from '@/lib/auth-cookie'
+import { setAuthRole } from '@/lib/auth-role-store'
 import { calculateCompleteness, ProfileData } from '@/lib/profile-completeness'
 import { loadHeaderProfile, clearHeaderProfile } from './header-profile-store'
 
@@ -35,9 +37,14 @@ interface HeaderAuthProps {
  * Sign up pale pink until reload.
  *
  * React 19 hoists the <style> into <head> and keeps one copy however many
- * HeaderAuth instances render (desktop bar, compact bar, mobile menu). The
- * string is static: a plain style element with no interpolation, not
- * styled-jsx.
+ * HeaderAuth instances render (the desktop bar, and the phone menu's account
+ * row for a signed-in visitor). The string is static: a plain style element
+ * with no interpolation, not styled-jsx.
+ *
+ * Who is signed in is also told to lib/auth-role-store.ts, for the phone menu
+ * and the bottom bar. A browser with no session cookie never downloads the
+ * sign in library (lib/supabase/client): it is imported only once a cookie
+ * says a session may exist.
  */
 const HEADER_AUTH_CSS = `
 .header-auth-pill {
@@ -102,15 +109,48 @@ export default function HeaderAuth({ onNavigate, onRoleChange }: HeaderAuthProps
   const [profileCompleteness, setProfileCompleteness] = useState(100)
   const [loading, setLoading] = useState(true)
 
+  // Whether this browser may hold a session (lib/auth-cookie.ts), read again
+  // on every page, so a sign in shows on the next page without a reload. The
+  // server reads no cookie and renders the skeleton below for everyone; the
+  // browser starts from the cookie it holds. The re-read is deferred a tick
+  // (the repo's set-state-in-effect pattern); an unchanged hint changes
+  // nothing.
+  const pathname = usePathname()
+  const [sessionHint, setSessionHint] = useState<boolean>(() => hasLikelyAuthCookie())
   useEffect(() => {
-    const supabase = createClient()
+    const reread = setTimeout(() => setSessionHint(hasLikelyAuthCookie()), 0)
+    return () => clearTimeout(reread)
+  }, [pathname])
+
+  useEffect(() => {
+    // No session cookie: signed out, said one tick after mount, and the sign
+    // in library is never downloaded. Most visitors are signed out, so most
+    // pages load without it.
+    if (!sessionHint) {
+      const signedOut = setTimeout(() => {
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+        onRoleChange?.(null)
+        setAuthRole(null)
+      }, 0)
+      return () => clearTimeout(signedOut)
+    }
+
     let active = true
+    let unsubscribe: (() => void) | null = null
 
     // Every HeaderAuth instance (and UserMenu) shares one in-flight
     // /api/auth/profile request and its cached result via loadHeaderProfile.
     const applyProfile = async (authUser: User, force = false) => {
       const profileData = await loadHeaderProfile(authUser.id, { force })
-      if (!active || !profileData) return
+      if (!active) return
+      if (!profileData) {
+        // No profile: this control offers Log in and Sign up (below), so the
+        // phone menu and the bottom bar treat the visitor as signed out too.
+        setAuthRole(null)
+        return
+      }
       setProfile({
         email: authUser.email ?? '',
         role: profileData.role,
@@ -119,52 +159,72 @@ export default function HeaderAuth({ onNavigate, onRoleChange }: HeaderAuthProps
         avatarUrl: profileData.avatarUrl,
       })
       onRoleChange?.(profileData.role)
+      setAuthRole(profileData.role)
       if (profileData.role === 'job_seeker') {
         setProfileCompleteness(calculateCompleteness(profileData as unknown as ProfileData).percentage)
       }
     }
 
-    const getUser = async () => {
+    void (async () => {
       try {
+        // The sign in library, loaded only for a browser that may be signed in.
+        const { createClient } = await import('@/lib/supabase/client')
+        if (!active) return
+        const supabase = createClient()
+
         const { data: { user } } = await supabase.auth.getUser()
         if (!active) return
         setUser(user)
-        if (user) await applyProfile(user)
+        if (user) {
+          await applyProfile(user)
+        } else {
+          // A stale cookie: the session is gone.
+          setProfile(null)
+          onRoleChange?.(null)
+          setAuthRole(null)
+        }
+        if (!active) return
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event, session) => {
+            // INITIAL_SESSION and TOKEN_REFRESHED carry no profile change; the
+            // getUser call above already loads the profile.
+            if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
+
+            const authUser = session?.user ?? null
+            setUser(authUser)
+
+            if (authUser) {
+              // SIGNED_IN for an already-loaded user resolves from the cache;
+              // USER_UPDATED means name/avatar may have changed, so refetch.
+              void applyProfile(authUser, event === 'USER_UPDATED')
+            } else {
+              clearHeaderProfile()
+              setProfile(null)
+              onRoleChange?.(null)
+              setAuthRole(null)
+            }
+          }
+        )
+        unsubscribe = () => subscription.unsubscribe()
+        if (!active) unsubscribe()
       } catch (err) {
         console.error('Failed to load the signed-in user:', err)
+        // Unknown is shown as signed out, the way the Log in and Sign up below show it.
+        if (active) setAuthRole(null)
       } finally {
         if (active) setLoading(false)
       }
-    }
-
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        // INITIAL_SESSION and TOKEN_REFRESHED carry no profile change; the
-        // mount-time getUser above already loads the profile.
-        if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
-
-        const authUser = session?.user ?? null
-        setUser(authUser)
-
-        if (authUser) {
-          // SIGNED_IN for an already-loaded user resolves from the cache;
-          // USER_UPDATED means name/avatar may have changed, so refetch.
-          void applyProfile(authUser, event === 'USER_UPDATED')
-        } else {
-          clearHeaderProfile()
-          setProfile(null)
-          onRoleChange?.(null)
-        }
-      }
-    )
+    })()
 
     return () => {
       active = false
-      subscription.unsubscribe()
+      unsubscribe?.()
     }
-  }, [])
+    // onRoleChange is a fresh arrow on every render of the header; the
+    // session hint alone decides whether to look the visitor up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionHint])
 
   if (loading) {
     return (

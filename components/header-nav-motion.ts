@@ -1,6 +1,10 @@
 /**
- * Motion presets for the site header's mobile menu and the homepage hero,
- * with a reduced-motion variant for each.
+ * Motion presets for the homepage hero, with a reduced-motion variant.
+ *
+ * The header's phone menu used to take its fade from here too; since the
+ * phone restructure (2026-11-27) the header and its menu use no animation
+ * library at all (components/PhoneMenu.tsx animates in plain CSS, which
+ * prefers-reduced-motion turns off), so only the hero preset is left.
  *
  * Under prefers-reduced-motion every transition collapses to duration 0 with
  * no delay or stagger. framer-motion treats a zero-duration, zero-delay
@@ -17,7 +21,6 @@ const HERO_STAGGER_S = 0.08;
 const HERO_DELAY_CHILDREN_S = 0.1;
 const HERO_FADE_S = 0.4;
 const HERO_RISE_PX = 12;
-const MENU_FADE_S = 0.15;
 
 const INSTANT: Transition = { duration: 0, delay: 0 };
 
@@ -49,28 +52,5 @@ export function getHeroVariants(reduceMotion: boolean | null): HeroVariants {
             hidden: { opacity: 0, y: HERO_RISE_PX },
             show: { opacity: 1, y: 0, transition: { duration: HERO_FADE_S, ease: HERO_EASE } },
         },
-    };
-}
-
-export interface MenuMotionProps {
-    initial: false | { opacity: number };
-    animate: { opacity: number };
-    exit: { opacity: number };
-    transition: Transition;
-}
-
-/**
- * Props for the mobile menu overlay. Under reduced motion the menu mounts
- * already opaque (initial=false) and unmounts without an exit fade.
- */
-export function getMobileMenuMotion(reduceMotion: boolean | null): MenuMotionProps {
-    if (reduceMotion) {
-        return { initial: false, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: INSTANT };
-    }
-    return {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: { opacity: 0 },
-        transition: { duration: MENU_FADE_S },
     };
 }

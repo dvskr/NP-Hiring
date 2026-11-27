@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
 import { Settings, LogOut, ChevronDown, Shield } from 'lucide-react'
 
 interface UserMenuProps {
@@ -38,6 +37,8 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
   }, [])
 
   const handleSignOut = async () => {
+    // The sign in library is loaded only when it is needed (a signed-out page never loads it).
+    const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
     await supabase.auth.signOut()
     router.refresh()

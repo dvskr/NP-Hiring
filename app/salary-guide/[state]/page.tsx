@@ -829,14 +829,18 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         </p>
                     </div>
 
+                    {/* The state's own picture beside the heading. Decorative on
+                        a phone (760px and narrower): not shown there, and the 1
+                        pixel size hint sends a phone the smallest copy, since it
+                        loads at once. */}
                     {showHeroDiorama && (
-                        <div className="sg-hero-art">
+                        <div className="sg-hero-art" data-phone-hide="">
                             <StateImage
                                 slug={stateSlug}
                                 alt={`Illustrated diorama representing ${stateName}`}
                                 fill
                                 className="sg-hero-art-img"
-                                sizes="(max-width: 859px) 200px, 272px"
+                                sizes="(max-width: 760px) 1px, (max-width: 859px) 200px, 272px"
                                 priority
                             />
                         </div>

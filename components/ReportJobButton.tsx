@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Flag, X, CheckCircle, AlertCircle, Loader2, LogIn } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { hasLikelyAuthCookie } from '@/lib/auth-cookie';
 import Link from 'next/link';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
@@ -37,11 +37,21 @@ export default function ReportJobButton({ jobId, jobTitle }: ReportJobButtonProp
         onEscape: () => { if (status !== 'submitting') setIsOpen(false); },
     });
 
+    // No session cookie (lib/auth-cookie.ts): signed out, said at once, and
+    // the sign in library is never downloaded with the job page. A browser
+    // that may hold a session loads it and asks.
     useEffect(() => {
-        const supabase = createClient();
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setIsAuthenticated(!!user);
-        });
+        if (!hasLikelyAuthCookie()) {
+            setIsAuthenticated(false);
+            return;
+        }
+        let cancelled = false;
+        void import('@/lib/supabase/client')
+            .then(({ createClient }) => createClient().auth.getUser())
+            .then(({ data: { user } }) => {
+                if (!cancelled) setIsAuthenticated(!!user);
+            });
+        return () => { cancelled = true; };
     }, []);
 
     const handleSubmit = async () => {

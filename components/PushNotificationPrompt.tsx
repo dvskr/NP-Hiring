@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, X } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { hasLikelyAuthCookie } from '@/lib/auth-cookie';
 import { useOverlaySlot } from '@/components/OverlayCoordinator';
 
 const DISMISS_KEY = 'pmhnp_push_prompt_dismissed';
@@ -43,8 +43,13 @@ export default function PushNotificationPrompt() {
         // (audit 18 M-2), costing every visitor a serviceWorker.register
         // call regardless of login state or visit count — bandwidth +
         // hydration cost with no benefit until the prompt actually shows.
-        const supabase = createClient();
-        supabase.auth.getUser().then(({ data: { user } }) => {
+        // Only a signed-in visitor sees the prompt, so with no session cookie
+        // there is nothing to check, and the sign in library is never
+        // downloaded for it (lib/auth-cookie.ts; the header loads it the same
+        // way).
+        if (!hasLikelyAuthCookie()) return;
+        void import('@/lib/supabase/client').then(async ({ createClient }) => {
+            const { data: { user } } = await createClient().auth.getUser();
             if (!user) return;
 
             // Register SW only after we know we have a user who could

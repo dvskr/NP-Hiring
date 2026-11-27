@@ -93,8 +93,10 @@ export default function PrivacyPage() {
               </h1>
               <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: November 23, 2026</p>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Image src="/images/pages/privacy-hero.webp" alt="Privacy Policy" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority quality={90} />
+            {/* Decorative on a phone (760 pixels and narrower): not shown there,
+                and the 1 pixel size hint sends a phone the smallest copy. */}
+            <div data-phone-hide="" style={{ display: 'flex', justifyContent: 'center' }}>
+              <Image src="/images/pages/privacy-hero.webp" alt="Privacy Policy" width={140} height={140} sizes="(max-width: 760px) 1px, 140px" style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority quality={90} />
             </div>
           </div>
         </header>
@@ -308,8 +310,12 @@ export default function PrivacyPage() {
         </footer>
       </article>
       <style dangerouslySetInnerHTML={{ __html: `
-        @media (max-width: 600px) {
+        /* One column at 760px and narrower, where the hero icon is left out
+           (data-phone-hide), so no empty column sits beside the heading. */
+        @media (max-width: 760px) {
           .legal-hero-grid { grid-template-columns: 1fr !important; text-align: center; }
+        }
+        @media (max-width: 600px) {
           .legal-hero-grid > div:last-child { display: none; } /* Hide 3D icon on super small screens to save space */
         }
       `}} />

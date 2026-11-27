@@ -23,9 +23,9 @@ test.describe('Phase D mobile-render fixes', () => {
 
     test('L3: Header mobile overlay has role=dialog + responds to ESC', async ({ page }) => {
         await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
-        const hamburger = page.getByRole('button', { name: 'Toggle menu' });
+        const hamburger = page.getByRole('button', { name: 'Menu', exact: true });
         await hamburger.click();
-        const dialog = page.locator('#mobile-nav-menu');
+        const dialog = page.locator('#phone-menu');
         await expect(dialog).toHaveAttribute('role', 'dialog');
         await expect(dialog).toHaveAttribute('aria-modal', 'true');
         await expect(dialog).toBeVisible();

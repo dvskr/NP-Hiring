@@ -59,10 +59,18 @@ const DEFERRED: Array<[rel: string, arm: RegExp, cleanup: RegExp]> = [
         /const arm = setTimeout\(evaluate, 0\)/,
         /clearTimeout\(arm\);/,
     ],
+    // The phone menu closes on a new page (it left components/Header.tsx in
+    // the phone restructure of 2026-11-27).
     [
-        'components/Header.tsx',
-        /const close = setTimeout\(\(\) => setIsMenuOpen\(false\), 0\)/,
-        /return \(\) => clearTimeout\(close\)/,
+        'components/PhoneMenu.tsx',
+        /const pageChanged = setTimeout\(\(\) => setOpen\(false\), 0\)/,
+        /return \(\) => clearTimeout\(pageChanged\)/,
+    ],
+    // The account control re-reads the session cookie on every page.
+    [
+        'components/auth/HeaderAuth.tsx',
+        /const reread = setTimeout\(\(\) => setSessionHint\(hasLikelyAuthCookie\(\)\), 0\)/,
+        /return \(\) => clearTimeout\(reread\)/,
     ],
     [
         'components/ScreeningQuestionsBuilder.tsx',

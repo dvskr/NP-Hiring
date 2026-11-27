@@ -133,6 +133,84 @@ const linkStyle: React.CSSProperties = {
   transition: 'color 0.15s ease',
 };
 
+/**
+ * The fold's rules (FooterFold below). A plain stylesheet, not the styled-jsx
+ * block in Footer: styled-jsx scopes its rules to the elements Footer itself
+ * renders, and these sit in FooterFold. On a wide screen a column's summary
+ * looks and behaves like the plain heading it was: no marker, no pointer, and
+ * a click does not fold the column. On a phone it is a tappable row with a
+ * chevron, in the footer's link pink (#F9A8D4) on #1c1917.
+ */
+const FOOTER_FOLD_CSS = `
+.footer-fold-summary {
+  display: block;
+  list-style: none;
+  cursor: default;
+  pointer-events: none;
+}
+.footer-fold-summary::-webkit-details-marker {
+  display: none;
+}
+.footer-fold-summary::marker {
+  content: '';
+}
+@media (max-width: 760px) {
+  .footer-fold {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .footer-fold[open] {
+    padding-bottom: 14px;
+  }
+  .footer-fold-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .footer-fold-summary h3 {
+    margin: 0 !important;
+  }
+  .footer-fold-summary::after {
+    content: '';
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    border-right: 2px solid #F9A8D4;
+    border-bottom: 2px solid #F9A8D4;
+    transform: translateY(-2px) rotate(45deg);
+  }
+  .footer-fold[open] > .footer-fold-summary::after {
+    transform: translateY(2px) rotate(-135deg);
+  }
+}
+`;
+
+/**
+ * One footer link column, served open: a wide screen shows the heading and
+ * every link as before, and a reader with no script sees them all. On a
+ * phone (760 pixels and narrower) components/PhoneFold.tsx closes it after
+ * load, so the footer there is a short list of headings, each one tap from
+ * its links, which stay in the page (the phone restructure the owner
+ * approved on 2026-11-27). The heading stays inside the column's
+ * <nav aria-label>.
+ */
+function FooterFold({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
+  return (
+    <nav aria-label={title}>
+      <details className="footer-fold" open data-phone-fold="">
+        <summary className="footer-fold-summary">
+          <h3 style={columnTitleStyle}>{title}</h3>
+        </summary>
+        {children}
+      </details>
+    </nav>
+  );
+}
+
 interface FooterProps {
   /**
    * The two category columns (components/SiteFooter.tsx reads the index
@@ -188,10 +266,10 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
                 SEO Fix M12: <h4> with no preceding <h2>/<h3> in the footer
                 landmark broke heading order. Bumped to <h3> and wrapped the
                 column links in <nav aria-label> so the relationship is
-                exposed in the accessibility tree. */}
+                exposed in the accessibility tree. Each column folds on a
+                phone (FooterFold below). */}
             {linkColumns.map((col) => (
-              <nav key={col.title} aria-label={col.title}>
-                <h3 style={columnTitleStyle}>{col.title}</h3>
+              <FooterFold key={col.title} title={col.title}>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {col.links.map((link) => {
                     const isExternal = link.href.startsWith('http');
@@ -225,15 +303,14 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
                     );
                   })}
                 </ul>
-              </nav>
+              </FooterFold>
             ))}
 
             {/* The company's other job boards (lib/job-board-network.ts), as
                 plain links that open in the same tab: a board appears here
                 once it is open to the public. */}
             {moreBoards.length > 0 && (
-              <nav aria-label="More Job Boards">
-                <h3 style={columnTitleStyle}>More Job Boards</h3>
+              <FooterFold title="More Job Boards">
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {moreBoards.map((board) => (
                     <li key={board.url}>
@@ -248,7 +325,7 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
                     </li>
                   ))}
                 </ul>
-              </nav>
+              </FooterFold>
             )}
           </div>
 
@@ -446,7 +523,19 @@ export default function Footer({ categoryColumns }: FooterProps = {}) {
                 gap: 28px !important;
               }
             }
+            /* A phone: the folded columns are one list of headings, each a
+               row (FooterFold). Last, so it wins over the 480px rule. */
+            @media (max-width: 760px) {
+              .footer-link-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0 !important;
+                padding-top: 16px !important;
+                padding-bottom: 32px !important;
+              }
+            }
           `}</style>
+          {/* The column fold's rules (FOOTER_FOLD_CSS above). */}
+          <style>{FOOTER_FOLD_CSS}</style>
         </div>
       </footer>
     </>

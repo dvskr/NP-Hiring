@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { X, Send, Loader2, CheckCircle, MessageSquare, AlertTriangle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { hasLikelyAuthCookie } from '@/lib/auth-cookie';
 
 interface MessageEmployerModalProps {
     isOpen: boolean;
@@ -41,7 +41,16 @@ export default function MessageEmployerModal({
     // Check auth status and message gating on mount
     useEffect(() => {
         if (!isOpen) return;
+        // No session cookie (lib/auth-cookie.ts): signed out, said at once.
+        // Every job card carries this dialog, so the sign in library is
+        // loaded only here, for a visitor who may be signed in, and never
+        // with a page of job cards.
+        if (!hasLikelyAuthCookie()) {
+            setIsAuthenticated(false);
+            return;
+        }
         (async () => {
+            const { createClient } = await import('@/lib/supabase/client');
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             setIsAuthenticated(!!user);

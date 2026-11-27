@@ -305,9 +305,11 @@ describe('profile page — two badges that can never be read as one', () => {
         expect(profilePage).not.toContain('searchParams');
         expect(profilePage).not.toContain('supabase.auth');
         expect(profilePage).not.toContain("'use client'");
-        // The viewer is resolved in the browser instead.
+        // The viewer is resolved in the browser instead, with the sign in
+        // library loaded only when a session cookie may be there.
         expect(cta.startsWith("'use client'")).toBe(true);
-        expect(cta).toContain("import { createClient } from '@/lib/supabase/client'");
+        expect(cta).toContain('hasLikelyAuthCookie()');
+        expect(cta).toContain("import('@/lib/supabase/client')");
     });
 
     it('promises only review, never instant control', () => {

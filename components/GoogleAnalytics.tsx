@@ -210,10 +210,14 @@ export default function GoogleAnalytics({ initialConsent = null }: GoogleAnalyti
     <>
       {/* External loader only. Host-allowlisted in the middleware CSP
           (script-src https://www.googletagmanager.com), so no nonce and
-          no Dynamic API read anywhere in the layout tree. */}
+          no Dynamic API read anywhere in the layout tree. It loads once the
+          page has finished loading (lazyOnload), so it never competes with
+          the page's own scripts and pictures: the consent defaults, the
+          config and every page view queue in dataLayer until it runs, and
+          gtag.js replays them in order, so nothing is lost. */}
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
 
       {/* SPA Route Tracker */}

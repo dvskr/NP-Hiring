@@ -242,8 +242,11 @@ describe('sticker kit: server markup', () => {
         const html = renderToStaticMarkup(React.createElement(StickerAccordion, { items: faqs }));
         expect(html.match(/<details /g)).toHaveLength(2);
         expect(html.match(/<summary>/g)).toHaveLength(2);
-        expect(html).toContain('<details class="stk-acc" open="">');
+        // The first question opens on a wide screen; every question is marked
+        // to fold, so on a phone all start closed (components/PhoneFold.tsx).
+        expect(html).toContain('<details class="stk-acc" open="" data-phone-fold="">');
         expect(html.match(/ open=""/g)).toHaveLength(1);
+        expect(html.match(/ data-phone-fold=""/g)).toHaveLength(2);
         expect(html).toContain('<p class="faq-answer">First answer in the HTML.</p>');
         expect(html).toContain('<p class="faq-answer">Second answer, also in the HTML.</p>');
         expect(html).not.toContain('<button');

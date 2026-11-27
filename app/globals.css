@@ -1788,3 +1788,55 @@ textarea::placeholder {
     animation: none;
   }
 }
+
+/* ── Phone restructure (2026-11-27) ─────────────────────────────────────────
+   On a phone (760 pixels and narrower) big decorative pictures are left out:
+   anything marked data-phone-hide (the category hero painting, the how it
+   works step drawings, the state salary page's diorama), a frame that holds
+   nothing but one of the bento or call-to-action pictures, and an
+   ImmersiveImage cell (data-immersive) that shows one. A lazy picture that is
+   not shown is never fetched; one that loads at once also carries a 1 pixel
+   phone size hint, so a phone is sent the smallest copy. Small icons stay,
+   and wider screens are untouched.
+
+   The two picture rules are kept apart on purpose: a browser that does not
+   know :has() drops the whole rule it appears in, and data-phone-hide must
+   work in every browser. */
+@media (max-width: 760px) {
+  [data-phone-hide] {
+    display: none !important;
+  }
+}
+@media (max-width: 760px) {
+  :is(div, figure, span):has(> img:is([src*="bento-"], [src*="cta-illustration"], [src*="cta-dream-role"])):not(:has(> :not(img))),
+  [data-immersive]:has(img:is([src*="bento-"], [src*="cta-illustration"], [src*="cta-dream-role"])) {
+    display: none !important;
+  }
+}
+
+/* A long table on a phone: its first ten rows, then Show all
+   (components/PhoneRowLimit.tsx, PHONE_ROW_LIMIT). The button is the
+   header's berry on white, 7:1. */
+.phone-rows-more {
+  display: none;
+}
+@media (max-width: 760px) {
+  .phone-rows:not([data-phone-rows-all]) tbody tr:nth-child(n + 11) {
+    display: none;
+  }
+  .phone-rows:not([data-phone-rows-all]) .phone-rows-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    margin: 14px auto 0;
+    padding: 0 22px;
+    border-radius: 999px;
+    border: 2px solid #9D174D;
+    background-color: #FFFFFF;
+    color: #9D174D;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+}

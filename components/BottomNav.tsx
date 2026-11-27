@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useAuthRole, type AuthRole } from '@/lib/auth-role-store';
 
 /**
  * CSS custom property (on <html>) carrying the rendered height of the mobile
@@ -66,18 +67,21 @@ const employerNavItems = [
   { label: 'Messages', href: '/messages', icon: Mail },
 ];
 
-// Pathname prefixes that flag the page as an employer-shell surface so we
-// swap to the employer nav. Same set as MobileHideOnAppRoutes uses.
+// The bar follows who is signed in, on every page (the phone restructure the
+// owner approved on 2026-11-27): see bottomNavItems below. These page
+// prefixes matter only while the role is not known yet (the server render and
+// the first paint), so a signed-in visitor never sees the marketing tabs
+// flash on their own pages.
+//
+// The employer pages. Same set as MobileHideOnAppRoutes uses.
 const EMPLOYER_PREFIXES = ['/employer', '/admin'];
 
-// Seeker app-shell surfaces. Deliberately narrower than
-// MobileHideOnAppRoutes' APP_SHELL_PREFIXES, because BottomNav renders for
-// signed-out visitors too and has no session of its own:
+// The seeker app pages. Deliberately narrower than MobileHideOnAppRoutes'
+// APP_SHELL_PREFIXES, because the first paint knows no visitor:
 //   - /saved and /job-alerts are reachable while logged out (pSEO CTAs link
 //     straight to /job-alerts), so they keep the marketing nav — which is also
 //     the only nav that contains "Saved", so /saved stays self-highlighting.
-//   - /messages is shared with employers, and BottomNav can't tell the two
-//     roles apart here; the employer prefixes above are the only role signal.
+//   - /messages is shared with employers, so no page guess is made there.
 const SEEKER_APP_PREFIXES = [
   '/dashboard',
   '/my-applications',
@@ -92,9 +96,29 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+/**
+ * The four tabs for a visitor on a page. A signed-in employer gets the
+ * employer tabs and a signed-in job seeker the seeker tabs on every page;
+ * everyone else (signed out, or an admin) gets the marketing tabs on every
+ * page. While the role is not known yet, an employer page and a seeker app
+ * page keep their own tabs.
+ */
+export function bottomNavItems(role: AuthRole, pathname: string) {
+  if (role === 'employer') return employerNavItems;
+  if (role === 'job_seeker') return seekerAppNavItems;
+  if (role === undefined) {
+    if (EMPLOYER_PREFIXES.some((p) => matchesPrefix(pathname, p))) return employerNavItems;
+    if (SEEKER_APP_PREFIXES.some((p) => matchesPrefix(pathname, p))) return seekerAppNavItems;
+  }
+  return marketingNavItems;
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
+  // Who is signed in, as the header found out (lib/auth-role-store.ts). The
+  // server render and the first paint know no visitor.
+  const role = useAuthRole();
 
   // Publish the nav's real height for bottom-anchored overlays. A
   // ResizeObserver tracks label wrapping, safe-area changes and the md
@@ -117,14 +141,7 @@ export default function BottomNav() {
     };
   }, []);
 
-  const isEmployerShell = EMPLOYER_PREFIXES.some((p) => matchesPrefix(pathname, p));
-  const isSeekerAppShell = SEEKER_APP_PREFIXES.some((p) => matchesPrefix(pathname, p));
-
-  const navItems = isEmployerShell
-    ? employerNavItems
-    : isSeekerAppShell
-      ? seekerAppNavItems
-      : marketingNavItems;
+  const navItems = bottomNavItems(role, pathname);
 
   const isActive = (href: string) => {
     if (href === '/') {

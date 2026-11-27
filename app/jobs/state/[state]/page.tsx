@@ -1080,7 +1080,9 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             <h2 className="font-lora" style={bandTitle}>{NP} Jobs in {stateName}</h2>
             <div style={{ display: 'grid', gap: '12px' }}>
               {stateFaqs.map((faq, idx) => (
-                <details key={faq.question} className="faq-accordion" style={{ ...clayCard, overflow: 'hidden' }} open={idx === 0}>
+                // The first question opens on a wide screen; on a phone every
+                // question starts closed (components/PhoneFold.tsx).
+                <details key={faq.question} className="faq-accordion" style={{ ...clayCard, overflow: 'hidden' }} open={idx === 0} data-phone-fold="">
                   <summary style={{ padding: '20px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', listStyle: 'none', fontSize: '16px', fontWeight: 700, color: '#1A2E35', lineHeight: 1.4 }}>
                     <span>{faq.question}</span>
                     <span className="faq-chevron" style={{ flexShrink: 0, width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: '#FDF2F8', color: '#BE185D', fontSize: '18px', fontWeight: 700 }}>+</span>
