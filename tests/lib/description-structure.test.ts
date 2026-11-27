@@ -79,6 +79,23 @@ describe('structureDescription', () => {
     expect(wordsOf(lines.join(' '))).toEqual(wordsOf(one));
   });
 
+  it('reads a list cue only as a whole word: "Healthcare:" or "Analysis:" does not turn the prose after it into bullets', () => {
+    const wall = [
+      'About Acme Healthcare: Acme runs outpatient clinics across the region and treats adults and adolescents in person and by video.',
+      'Our clinicians share one record system and meet weekly to review complex cases together with the medical director.',
+      'Case Analysis: Each new patient receives a full evaluation before a treatment plan is set with the family.',
+      'The team works Monday to Friday and shares call one weekend a month, with protected time for notes every afternoon.',
+      'Each clinician keeps a steady panel and receives mentorship during the first year on the team.',
+      'Duties include: Evaluate new patients. Manage medications. Coordinate with therapists.',
+    ].join(' ');
+    expect(wall.length).toBeGreaterThan(LONG_LINE_CHARS);
+    const lines = structureDescription(wall).split('\n');
+    const bullets = lines.filter((line) => line.startsWith('•'));
+    // Only the real list, after "Duties include:", is bulleted.
+    expect(bullets).toEqual(['• Evaluate new patients.', '• Manage medications.', '• Coordinate with therapists.']);
+    expect(wordsOf(lines.join(' '))).toEqual(wordsOf(wall));
+  });
+
   it('keeps a long line with no sentence end as it is, and a long bullet as it is', () => {
     const run = 'word '.repeat(200).trim();
     expect(structureDescription(run)).toBe(run);

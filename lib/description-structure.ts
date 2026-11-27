@@ -51,8 +51,13 @@ const ABBREVIATIONS = new Set([
   'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec',
 ]);
 
-/** The phrase before a colon that announces a list: "the following:", "duties include:". */
-const LIST_INTRO_RE = /(?:following|include|includes|including|as follows|such as|below|are|is|duties|responsibilities|requirements|qualifications|limited to)$/i;
+/**
+ * The phrase before a colon that announces a list: "the following:", "duties
+ * include:". Whole words only: without the leading \b, "Healthcare:" and
+ * "Software:" ended in "are", "Analysis:" and "This:" in "is", and the prose
+ * after them was turned into bullets (found 2026-11-27).
+ */
+const LIST_INTRO_RE = /\b(?:following|include|includes|including|as follows|such as|below|are|is|duties|responsibilities|requirements|qualifications|limited to)$/i;
 
 /** Small words a Title Case label may hold in lower case. */
 const LABEL_CONNECTORS = new Set(['and', 'or', 'of', 'for', 'to', 'the', 'in', 'with', 'a', 'an', 'on', 'at', 'by', '&']);
