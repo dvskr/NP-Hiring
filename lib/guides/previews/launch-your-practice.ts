@@ -28,7 +28,7 @@ export const LAUNCH_YOUR_PRACTICE_PREVIEW: GuidePreview = {
     },
     h1: 'How to Open Your Own Clinic as a Nurse Practitioner: Launch Your NP Practice',
     intro: "Step one is confirming that you may own and run a practice in your state. As of October 2026, AANP classifies 27 states and DC as full practice and the other 23 as reduced or restricted, where a collaborative agreement, a protocol or supervision covers some or all of an NP's practice. Some states add transition hours first, and your certification limits what the clinic can offer.",
-    edition: { name: 'October 2026', updated: '2026-10-24' },
+    edition: { name: 'January 2027', updated: '2026-11-27' },
     contentDate: '2026-11-27',
     excerpt: {
         heading: 'Read Chapter 1: Can You Own a Practice in Your State?',
@@ -117,7 +117,7 @@ Acute-care NPs (AGACNP) are educated for hospital and acute settings. An outpati
 
 ### Telehealth across state lines
 
-Your practice must hold an APRN license in every state where a patient is located during the visit. The Nurse Licensure Compact covers RNs and LPNs only, never APRNs.
+Each clinician must hold an APRN license in every state where a patient is located during the visit. The Nurse Licensure Compact covers RNs and LPNs only, never APRNs.
 
 The APRN Compact has been enacted in 4 states (North Dakota, Delaware, Utah and South Dakota) and needs 7 to start. It is not operational, and no multistate APRN license exists.
 
@@ -222,7 +222,7 @@ The APRN Compact has been enacted in 4 states (North Dakota, Delaware, Utah and 
                 'Urgent care codes and considerations',
                 "Women's health codes",
                 'Aesthetics and weight management',
-                'The 2026 fee schedule changes',
+                'The 2026 and 2027 fee schedule changes',
                 'Telehealth claims',
                 'Documentation habits that protect you',
             ],

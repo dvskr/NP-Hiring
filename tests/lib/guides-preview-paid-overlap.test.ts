@@ -95,6 +95,8 @@ function fieldStrings(value: unknown, field = ''): Array<{ field: string; text: 
 interface GuideText {
     /** Text per PDF page, index 0 = the cover, so an index is the printed page number. */
     readonly pages: readonly string[];
+    /** The same pages read in the order a reader sees them (see readingOrderText). */
+    readonly readingPages: readonly string[];
     /** The PDF's bookmark titles, every level. */
     readonly bookmarks: ReadonlySet<string>;
     /** Page indexes the preview may quote: the front matter and the excerpt's pages. */
@@ -107,22 +109,63 @@ interface OutlineItem {
     readonly items?: readonly OutlineItem[];
 }
 
+interface PdfTextItem {
+    readonly str?: string;
+    readonly transform?: readonly number[];
+}
+
+interface PdfDocument {
+    readonly numPages: number;
+    getPage(pageNumber: number): Promise<{ getTextContent(): Promise<{ readonly items: readonly PdfTextItem[] }>; cleanup(): void }>;
+}
+
 interface PdfParser {
     getText(): Promise<{ readonly pages: ReadonlyArray<{ readonly num: number; readonly text: string }> }>;
     getInfo(): Promise<{ readonly outline?: readonly OutlineItem[] | null }>;
+    /** pdf-parse's own loaded pdf.js document. */
+    load(): Promise<PdfDocument>;
     destroy(): Promise<void>;
 }
 
 const flatten = (items: readonly OutlineItem[]): string[] => items.flatMap((item) => [item.title, ...flatten(item.items ?? [])]);
 
-async function readPdf(file: string): Promise<{ pages: string[]; bookmarks: string[] }> {
+/** Points between two baselines that still read as one line. */
+const LINE_TOLERANCE = 2;
+
+/**
+ * A page's text in the order a reader sees it: lines top to bottom, words
+ * left to right. getText reads the order the PDF stores its text in, and an
+ * edition that redraws a changed line stores that line after the page's
+ * footer, so a sentence that crosses it reads as two pieces there although
+ * the page shows it whole (2026-11-27, the January 2027 edition: "one paid
+ * admin hour per clinic day" on Negotiate's printed page 9).
+ */
+async function readingOrderText(doc: PdfDocument, pageNumber: number): Promise<string> {
+    const page = await doc.getPage(pageNumber);
+    try {
+        const { items } = await page.getTextContent();
+        const placed = items
+            .filter((item): item is Required<PdfTextItem> => typeof item.str === 'string' && item.str.trim() !== '' && Array.isArray(item.transform))
+            .map((item) => ({ text: item.str, x: item.transform[4], line: Math.round(item.transform[5] / LINE_TOLERANCE) }));
+        placed.sort((a, b) => b.line - a.line || a.x - b.x);
+        return placed.map((item) => item.text).join(' ');
+    } finally {
+        page.cleanup();
+    }
+}
+
+async function readPdf(file: string): Promise<{ pages: string[]; readingPages: string[]; bookmarks: string[] }> {
     const { PDFParse } = (await import('pdf-parse')) as unknown as { PDFParse: new (options: Record<string, unknown>) => PdfParser };
     const parser = new PDFParse({ data: new Uint8Array(fs.readFileSync(file)), disableWorker: true, verbosity: 0 });
     try {
         const result = await parser.getText();
         const info = await parser.getInfo();
+        const doc = await parser.load();
+        const readingPages: string[] = [];
+        for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) readingPages.push(await readingOrderText(doc, pageNumber));
         return {
             pages: [...result.pages].sort((a, b) => a.num - b.num).map((page) => page.text),
+            readingPages,
             bookmarks: flatten(info.outline ?? []),
         };
     } finally {
@@ -135,7 +178,7 @@ const texts = new Map<OwnGuideSlug, GuideText>();
 /** A bookmark or a heading as the contents print it: case, quotes and spacing evened out. */
 const headingKey = (text: string): string => tokens(text).join(' ');
 
-function guideText(pages: string[], bookmarks: string[], preview: GuidePreview): GuideText {
+function guideText(pages: string[], readingPages: string[], bookmarks: string[], preview: GuidePreview): GuideText {
     const disclaimer = normalize(preview.disclaimer).replace(/\s+/g, ' ');
     const firstChapter = pages.findIndex((page) => /\bchapter 1:/.test(normalize(page).replace(/\s+/g, ' ')));
     expect(firstChapter, 'a page that opens Chapter 1').toBeGreaterThan(0);
@@ -144,7 +187,15 @@ function guideText(pages: string[], bookmarks: string[], preview: GuidePreview):
         if (index < firstChapter || normalize(page).replace(/\s+/g, ' ').includes(disclaimer)) frontMatter.add(index);
     });
     const shown = new Set<number>([...frontMatter, ...preview.excerpt.pages]);
-    return { pages, bookmarks: new Set(bookmarks.map(headingKey)), shown, frontMatter };
+    return { pages, readingPages, bookmarks: new Set(bookmarks.map(headingKey)), shown, frontMatter };
+}
+
+/** Runs on the given pages, read both in stored order and in the order a reader sees them. */
+function pageRuns(guide: GuideText, keep: (index: number) => boolean): Set<string> {
+    return new Set([
+        ...runsOf(guide.pages.filter((_page, index) => keep(index))),
+        ...runsOf(guide.readingPages.filter((_page, index) => keep(index))),
+    ]);
 }
 
 const ENTRIES = OWN_GUIDE_SLUGS.map((slug) => [slug, GUIDE_PREVIEWS[slug]] as const);
@@ -152,8 +203,8 @@ const ENTRIES = OWN_GUIDE_SLUGS.map((slug) => [slug, GUIDE_PREVIEWS[slug]] as co
 describe.skipIf(!AVAILABLE)('previews copy nothing from the paid chapters', () => {
     beforeAll(async () => {
         for (const [slug, preview] of ENTRIES) {
-            const { pages, bookmarks } = await readPdf(pdfPath(slug));
-            texts.set(slug, guideText(pages, bookmarks, preview));
+            const { pages, readingPages, bookmarks } = await readPdf(pdfPath(slug));
+            texts.set(slug, guideText(pages, readingPages, bookmarks, preview));
         }
     }, 120_000);
 
@@ -164,7 +215,7 @@ describe.skipIf(!AVAILABLE)('previews copy nothing from the paid chapters', () =
 
     it.each(ENTRIES)('%s: the excerpt quotes only the pages it names', (slug, preview) => {
         const guide = texts.get(slug)!;
-        const shownRuns = runsOf(guide.pages.filter((_page, index) => guide.shown.has(index)));
+        const shownRuns = pageRuns(guide, (index) => guide.shown.has(index));
         const soldRuns = runsOf(guide.pages.filter((_page, index) => !guide.shown.has(index)));
         const pieces = excerptText(parseExcerpt(preview.excerpt.body));
         const copied = [...runsOf(pieces)].filter((run) => soldRuns.has(run) && !shownRuns.has(run));
@@ -177,7 +228,7 @@ describe.skipIf(!AVAILABLE)('previews copy nothing from the paid chapters', () =
         const soldRuns = runsOf(guide.pages.filter((_page, index) => !guide.shown.has(index)));
         const allowed = new Set([
             ...runsOf(excerptText(parseExcerpt(preview.excerpt.body))),
-            ...runsOf(guide.pages.filter((_page, index) => guide.frontMatter.has(index))),
+            ...pageRuns(guide, (index) => guide.frontMatter.has(index)),
             ...runsOf(preview.toc.flatMap((entry) => [entry.title, ...entry.sections])),
             ...runsOf([catalog.title, catalog.subtitle, catalog.audience, catalog.summary, ...catalog.contents]),
         ]);

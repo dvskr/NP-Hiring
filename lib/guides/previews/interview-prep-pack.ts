@@ -22,7 +22,7 @@ export const INTERVIEW_PREP_PACK_PREVIEW: GuidePreview = {
     },
     h1: 'Nurse Practitioner Interview Questions and Answers: The NP Interview Prep Pack',
     intro: 'Most NP hiring processes use up to four rounds: a recruiter screen, a clinical interview, a team and culture interview and, at many telehealth employers, a mock video visit followed by a written note. Chapter 1, below, shows what each round tests and how to prepare for it. The full PDF adds 12 clinical scenarios with model answers across five NP specialties.',
-    edition: { name: 'October 2026', updated: '2026-10-24' },
+    edition: { name: 'January 2027', updated: '2026-11-27' },
     contentDate: '2026-11-27',
     excerpt: {
         heading: 'Read Chapter 1: How NP Interviews Are Structured',

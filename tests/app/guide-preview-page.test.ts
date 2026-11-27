@@ -151,7 +151,7 @@ const DEFECT_PHRASES = [
  * out of every field but a chapter title in the contents, which prints the
  * chapter's name as the PDF does.
  */
-const DATE_PHRASES = [/January 1, 2027/, /January 2027/, /December 31, 2026/, /flexibilities/i, /special registration/i, /\bDEA change\b/i, /October 30, 2026/, /November 7, 2026/];
+const DATE_PHRASES = [/January 1, 2027/, /December 31, 2026/, /flexibilities/i, /special registration/i, /\bDEA change\b/i, /October 30, 2026/, /November 7, 2026/];
 const CHAPTER_TITLE = /^toc\[\d+\]\.title$/;
 
 /**
@@ -506,7 +506,7 @@ describe.each(PREVIEW_ENTRIES)('the %s preview page', (SLUG, preview) => {
         expect(firstAction).toBeLessThan(excerptAt);
         expect(html.split(`>${copy.cta}<`), copy.cta).toHaveLength(3);
         expect(html.indexOf(`>${copy.cta}<`, html.indexOf('id="buy-guide"'))).toBeGreaterThan(-1);
-        expect(visibleText(html)).toContain(`${preview.edition.name} edition, updated October 24, 2026`);
+        expect(visibleText(html)).toContain(`${preview.edition.name} edition, updated November 27, 2026`);
     });
 
     it('free: claims, with no Buy button, no add-on and no checkout copy', async () => {

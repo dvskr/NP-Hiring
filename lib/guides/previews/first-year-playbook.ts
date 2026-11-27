@@ -22,7 +22,7 @@ export const FIRST_YEAR_PLAYBOOK_PREVIEW: GuidePreview = {
     },
     h1: 'Collaborative Agreements for Nurse Practitioners, from the First-Year NP Playbook',
     intro: 'If your first NP job is in one of the 23 states AANP classifies as reduced or restricted practice, a collaborative, supervisory or similar agreement shapes your daily work, and several full-practice states require one during a transition period. Chapter 5 of the First-Year NP Playbook, below, shows where you will need one, how to find a collaborator, what to pay and every term to check.',
-    edition: { name: 'October 2026', updated: '2026-10-24' },
+    edition: { name: 'January 2027', updated: '2026-11-27' },
     contentDate: '2026-11-27',
     excerpt: {
         heading: 'Read Chapter 5: Collaborative Agreements',
@@ -187,7 +187,7 @@ This chapter is educational and is not legal advice. Have a licensed healthcare 
             chapter: 7,
             title: 'Your Credential Stack and CE Plan',
             page: 23,
-            sections: ['Credential tracker', 'Your CE plan: 15 to 20 hours a year, including 5 in pharmacology', 'Where year-one CE comes from', 'CE log'],
+            sections: ['Credential tracker', 'Your CE plan: 15 to 30 hours a year for most certifying bodies', 'Where year-one CE comes from', 'CE log'],
         },
         {
             chapter: 8,

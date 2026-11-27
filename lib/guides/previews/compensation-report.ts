@@ -23,7 +23,7 @@ export const COMPENSATION_REPORT_PREVIEW: GuidePreview = {
     },
     h1: 'Nurse Practitioner Compensation: The 2026 NP Compensation Report',
     intro: "Nurse practitioner compensation in 2026 starts from one baseline: a $132,300 median wage, or $63.61 an hour, in May 2025, according to BLS. The middle half of NPs earned $117,990 to $156,700, and the top 10% more than $174,420. California paid the most, with a $168,520 median. The summary's pay tables and all of Chapter 1 are below, with the pay curve from Chapter 2.",
-    edition: { name: 'October 2026', updated: '2026-10-24' },
+    edition: { name: 'January 2027', updated: '2026-11-27' },
     contentDate: '2026-11-27',
     excerpt: {
         heading: "Read the summary's pay tables and Chapter 1",
@@ -104,7 +104,7 @@ The middle half of U.S. nurse practitioners earned $117,990 to $156,700 in May 2
 | 75th | $156,700 | $75.34 | Experienced NPs, high-cost states, higher-paying specialties |
 | 90th | $174,420 | $83.86 | Top states, dermatology and acute care roles, heavy productivity pay |
 
-BLS counted 323,040 employed NPs in May 2025. Its hourly figures assume 2,080 paid hours a year, so annual equals hourly × 2,080.
+BLS counted 323,040 employed NPs in May 2025. Its annual figures assume 2,080 paid hours a year, so annual equals hourly × 2,080.
 `,
         bridge: 'That is the summary, Chapter 1 and the start of Chapter 2 of 10. The full report adds the state-by-state table for all 50 states and DC, specialty and setting pay, telehealth and 1099 math, RVU pay, pay bands by career stage, five market risks and a negotiation method.',
     },

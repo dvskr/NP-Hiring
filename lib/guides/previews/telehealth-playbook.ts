@@ -24,7 +24,7 @@ export const TELEHEALTH_PLAYBOOK_PREVIEW: GuidePreview = {
     },
     h1: 'How to Get an NP License in Multiple States: The Telehealth NP Playbook',
     intro: "For a telehealth visit, the patient's physical location decides which state's law applies, so plan on an RN license or NLC privilege and an APRN license in your population focus for each state where your patients sit. The NLC covers only the RN license, and the APRN Compact is enacted in 4 of the 7 states it needs, so a multistate APRN license does not exist yet.",
-    edition: { name: 'October 2026', updated: '2026-10-24' },
+    edition: { name: 'January 2027', updated: '2026-11-27' },
     summary: 'How to license across states, decide whether you need DEA, plan controlled-substance prescribing by telehealth, bill correctly, judge a platform job and price your time.',
     contentDate: '2026-11-27',
     excerpt: {
@@ -77,7 +77,7 @@ The APRN Compact would create a true multistate APRN license, but it activates o
 
 **Counting disputes:** some 2026 websites count Wyoming as a fifth state. Wyoming passed an earlier version of the compact, which does not count toward the revised one. The official NCSBN count is 4.
 
-**Pending bills:** New York's S3916 has been in committee since January 7, 2026. 2025 bills in Arizona, Arkansas, Kansas and Montana died or were withdrawn. Check NCSBN's news releases and your board of nursing for new enactments.
+**Bills:** New York's S3916 was still in committee on October 23, 2026. 2025 bills in Arizona, Arkansas, Kansas and Montana died or were withdrawn. Check NCSBN's news releases and your board of nursing for new enactments.
 
 **What it will do once live:**
 
@@ -158,7 +158,7 @@ Platforms hire by state, and the states they want depend on what they sell. Matc
             chapter: 8,
             title: 'Medicare, Medicaid and Commercial Telehealth Billing',
             page: 24,
-            sections: ['Medicare in 2026', 'The codes telehealth NPs bill most', 'Medicaid', 'Commercial payers'],
+            sections: ['Medicare in 2026 and 2027', 'The codes telehealth NPs bill most', 'Medicaid', 'Commercial payers'],
         },
         {
             chapter: 9,

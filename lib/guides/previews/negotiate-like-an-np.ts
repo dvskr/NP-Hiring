@@ -23,7 +23,7 @@ export const NEGOTIATE_LIKE_AN_NP_PREVIEW: GuidePreview = {
     },
     h1: 'Nurse Practitioner Contract Negotiation: Negotiate Like an NP',
     intro: 'Negotiate the whole package, not the salary alone. Around a $150,000 W-2 salary, benefits and costs the employer pays are worth about $34,883 a year, because replacing them as a 1099 contractor costs $184,883. Before the first call, set three numbers, a walk-away, a target and an ask, and tie each one to a source you can name.',
-    edition: { name: 'October 2026', updated: '2026-10-24' },
+    edition: { name: 'January 2027', updated: '2026-11-27' },
     contentDate: '2026-11-27',
     excerpt: {
         heading: 'Read Chapter 2: Total Compensation, Not Salary',
@@ -76,7 +76,7 @@ Unpaid inbox and charting time is the biggest leak in primary care and specialty
 
 At $150,000, your hourly equivalent is $72.12 ($150,000 ÷ 2,080). Those 230 hours are worth $16,588 of unpaid work.
 
-- Ask for documentation and inbox time built into the template, such as one paid admin hour per half-day.
+- Ask for documentation and inbox time built into the template, such as one paid admin hour per clinic day.
 - Ask how many patient messages, refill requests, lab results and prior authorizations each NP handles per day.
 - In urgent care and hospital roles, ask whether you are paid for charting after the shift ends and for handoff time.
 
@@ -90,7 +90,7 @@ PTO is already inside the salary, so do not add it again. Use the $576.92 daily 
 
 - **A collaborative agreement.** In reduced and restricted practice states, ask who pays the collaborating physician and what happens if that physician leaves.
 - **DEA registrations in more than one state.** Each state where you prescribe controlled substances needs its own $888 registration. A primary care or urgent care telehealth role that prescribes no controlled substances may not need one; confirm before you pay.
-- **State controlled-substance registrations.** Some states, such as Illinois, Massachusetts, Michigan, Missouri and New Jersey, require one before DEA. Check your state.
+- **State controlled-substance registrations (CSRs).** Some states, such as Illinois, Massachusetts, Michigan, Missouri and New Jersey, require one before DEA. Check your state.
 - **MATE Act training.** You attest once to 8 hours of OUD/SUD training at your first new DEA registration or renewal. Ask the employer to pay for the course if you still need it.
 - **Tail on a claims-made policy.** A family NP who leaves after 3 years may face a tail bill of 150 to 250% of one year's premium.
 - **Procedure training.** Ask the employer to pay for training in procedures within your scope, such as skin biopsy or joint injection, because they raise your production.
