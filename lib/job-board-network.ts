@@ -2,10 +2,9 @@
  * The job boards run by the same company, linked from each other's footers
  * ("More Job Boards", components/Footer.tsx).
  *
- * A board is linked only once it is open to the public. The five Jobs Hub
- * boards still sit behind the host's sign-in wall, so a link to one of them
- * would send visitors and crawlers to a login page; each turns on with its
- * own `live` flag when it launches.
+ * A board is linked only once it is open to the public: a link to a board
+ * still behind the host's sign-in wall would send visitors and crawlers to
+ * a login page. The five Jobs Hub boards opened on 2026-11-28.
  *
  * Anchors are the boards' names, never keyword phrases: these are links
  * between sites with one owner, and a name is what a reader looks for.
@@ -35,11 +34,11 @@ export interface NetworkBoard {
 export const JOB_BOARD_NETWORK: readonly NetworkBoard[] = [
     { name: sisterBoard.name, url: sisterBoard.baseUrl, live: true },
     { name: brand.name, url: brand.baseUrl, live: true },
-    { name: 'ABA Jobs Hub', url: 'https://abajobshub.com', live: false },
-    { name: 'PA Jobs Hub', url: 'https://pajobshub.com', live: false },
-    { name: 'Therapist Jobs Hub', url: 'https://therapistjobshub.com', live: false },
-    { name: 'CRNA Jobs Hub', url: 'https://crnajobshub.com', live: false },
-    { name: 'SLP Jobs Hub', url: 'https://slpjobshub.com', live: false },
+    { name: 'ABA Jobs Hub', url: 'https://abajobshub.com', live: true },
+    { name: 'PA Jobs Hub', url: 'https://pajobshub.com', live: true },
+    { name: 'Therapist Jobs Hub', url: 'https://therapistjobshub.com', live: true },
+    { name: 'CRNA Jobs Hub', url: 'https://crnajobshub.com', live: true },
+    { name: 'SLP Jobs Hub', url: 'https://slpjobshub.com', live: true },
 ];
 
 /** This site's own host, which its footer never links. */
